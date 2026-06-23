@@ -96,6 +96,8 @@ class SiteUserInfo:
         if not site_url:
             return
         site_cookie = site_info.get("cookie")
+        api_key = site_info.get("api_key")
+        bearer_token = site_info.get("bearer_token")
         ua = site_info.get("ua")
         headers = site_info.get("headers") or ""
         if JsonUtils.is_valid_json(headers):
@@ -115,6 +117,8 @@ class SiteUserInfo:
                 site_headers=headers,
                 emulate=chrome,
                 proxy=proxy,
+                api_key=api_key,
+                bearer_token=bearer_token,
             )
             if site_user_info:
                 log.debug(f"[Sites]站点 {site_name} 开始以 {site_user_info.site_schema()} 模型解析")
@@ -161,8 +165,20 @@ class SiteUserInfo:
             ExceptionUtils.exception_traceback(e)
             log.error(f"[Sites]站点 {site_name} 获取流量数据失败：{e!s}")
 
-    def build(self, url, site_id, site_name, site_cookie=None, site_headers=None, ua=None, emulate=None, proxy=False):
-        if not site_cookie and not site_headers:
+    def build(
+        self,
+        url,
+        site_id,
+        site_name,
+        site_cookie=None,
+        site_headers=None,
+        ua=None,
+        emulate=None,
+        proxy=False,
+        api_key=None,
+        bearer_token=None,
+    ):
+        if not site_cookie and not site_headers and not api_key and not bearer_token:
             return None
         if site_headers is None:
             return None
@@ -188,6 +204,8 @@ class SiteUserInfo:
                 ua=ua or "",
                 emulate=emulate or False,
                 proxy=proxy,
+                api_key=api_key,
+                bearer_token=bearer_token,
             ) or _log_error(site_name)
 
         html_text = None
@@ -227,6 +245,8 @@ class SiteUserInfo:
             ua=ua or "",
             emulate=emulate or False,
             proxy=proxy,
+            api_key=api_key,
+            bearer_token=bearer_token,
         ) or _log_error(site_name)
 
     def _notify_unread_msg(self, site_name, site_user_info, unread_msg_notify):

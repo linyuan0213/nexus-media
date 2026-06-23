@@ -39,6 +39,8 @@ class ConfigApiUserInfo:
         proxy=False,
         session=None,
         json_data=None,
+        api_key=None,
+        bearer_token=None,
     ):
         self.site_name = site_name
         self.site_url = url
@@ -52,6 +54,8 @@ class ConfigApiUserInfo:
         self._json_data = json_data
         self._proxies = get_proxies() if proxy else None
         self._site_engine = site_engine
+        self._api_key = api_key
+        self._bearer_token = bearer_token
 
         self.username = None
         self.userid = None
@@ -219,6 +223,8 @@ class ConfigApiUserInfo:
                 "ua": self._ua,
                 "proxy": self._proxy,
                 "headers": self._headers,
+                "api_key": self._api_key,
+                "bearer_token": self._bearer_token,
             },
         )
 
@@ -323,6 +329,8 @@ def _api_factory(
     emulate=False,
     proxy=False,
     session=None,
+    api_key=None,
+    bearer_token=None,
 ):
     engine = site_engine
     site_def, resp = engine.prefetch_user_profile(
@@ -332,6 +340,8 @@ def _api_factory(
         ua=ua,
         proxy=proxy,
         session=session,
+        api_key=api_key,
+        bearer_token=bearer_token,
     )
     if not site_def or not site_def.user_info or not site_def.user_info.get("profile"):
         return None
@@ -346,6 +356,8 @@ def _api_factory(
         proxy=proxy,
         session=session,
         json_data=resp,
+        api_key=api_key,
+        bearer_token=bearer_token,
     )
 
 

@@ -25,6 +25,8 @@ class ProgressTracker:
             ptype = ptype.value
         if not self._process_detail.get(ptype):
             return
+        self._process_detail[ptype]["value"] = 100
+        self._process_detail[ptype]["text"] = "处理完成"
         self._process_detail[ptype]["enable"] = False
 
     def update(self, value=None, text=None, ptype=ProgressKey.Search):

@@ -10,6 +10,7 @@ from sqlalchemy import Integer, and_, case, cast, func, or_
 
 from app.db.models import CONFIGSITE, SITEBRUSHRULE, SITEBRUSHTASK, SITEBRUSHTORRENTS
 from app.db.repositories.base_repository import BaseRepository
+from app.domain.entities.brush import BrushTaskState
 from app.utils.json_utils import JsonUtils
 
 
@@ -121,13 +122,12 @@ class BrushRepository(BaseRepository):
         """
         改变刷流任务的状态
         """
+        normalized = BrushTaskState.from_value(state).value
         with self.session() as db:
             if tid:
-                db.query(SITEBRUSHTASK).filter(int(tid) == SITEBRUSHTASK.ID).update(
-                    {"STATE": "Y" if state == "Y" else "N"}
-                )
+                db.query(SITEBRUSHTASK).filter(int(tid) == SITEBRUSHTASK.ID).update({"STATE": normalized})
             else:
-                db.query(SITEBRUSHTASK).update({"STATE": "Y" if state == "Y" else "N"})
+                db.query(SITEBRUSHTASK).update({"STATE": normalized})
 
     def add_brushtask_download_count(self, brush_id: int | None) -> None:
         """

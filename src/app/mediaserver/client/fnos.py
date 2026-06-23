@@ -430,15 +430,25 @@ class FnOS(_IMediaClient):
             yield {}
             return
         try:
-            items = self._fnos.fetch_all_pages(parent_id=parent)
+            # 先尝试按库过滤；若接口不支持或结果为空，回退到全量获取后本地过滤
+            items = list(self._fnos.fetch_all_pages(parent_id=parent))
+            if not items:
+                items = [item for item in self._fnos.fetch_all_pages() if item and item.get("ancestor_guid") == parent]
             for item in items:
                 if not item:
                     continue
+                item_type = item.get("type")
+                if item_type == "Movie":
+                    normalized_type = MediaType.MOVIE.value
+                elif item_type == "TV":
+                    normalized_type = MediaType.TV.value
+                else:
+                    normalized_type = item_type
                 path = None
                 yield {
                     "id": item.get("guid"),
                     "library": item.get("ancestor_guid"),
-                    "type": item.get("type"),
+                    "type": normalized_type,
                     "title": item.get("title"),
                     "originalTitle": item.get("title"),
                     "year": item.get("air_date", "")[:4],

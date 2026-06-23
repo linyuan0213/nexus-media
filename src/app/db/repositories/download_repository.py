@@ -24,11 +24,9 @@ class DownloadRepository(BaseRepository):
 
     def is_exists_download_history(self, enclosure: str | None, downloader: str, download_id: str) -> bool:
         """
-        查询下载历史是否存在
+        查询下载历史是否存在，按 downloader + download_id 唯一键判断。
         """
         with self.session() as db:
-            if enclosure:
-                return db.query(DOWNLOADHISTORY.ID).filter(enclosure == DOWNLOADHISTORY.ENCLOSURE).first() is not None
             return (
                 db.query(DOWNLOADHISTORY.ID)
                 .filter(downloader == DOWNLOADHISTORY.DOWNLOADER, download_id == DOWNLOADHISTORY.DOWNLOAD_ID)
@@ -77,7 +75,6 @@ class DownloadRepository(BaseRepository):
         with self.session() as db:
             if self.is_exists_download_history(enclosure=enclosure, downloader=downloader, download_id=download_id):
                 db.query(DOWNLOADHISTORY).filter(
-                    media_info.enclosure == DOWNLOADHISTORY.ENCLOSURE,
                     downloader == DOWNLOADHISTORY.DOWNLOADER,
                     download_id == DOWNLOADHISTORY.DOWNLOAD_ID,
                 ).update(
@@ -90,7 +87,7 @@ class DownloadRepository(BaseRepository):
                         "POSTER": media_info.get_poster_image() or "",
                         "OVERVIEW": media_info.overview or "",
                         "TORRENT": media_info.org_string,
-                        "ENCLOSURE": media_info.enclosure,
+                        "ENCLOSURE": media_info.enclosure or "",
                         "DESC": media_info.description or "",
                         "SITE": media_info.site or "",
                         "DOWNLOADER": downloader,
@@ -112,7 +109,7 @@ class DownloadRepository(BaseRepository):
                         POSTER=media_info.get_poster_image() or "",
                         OVERVIEW=media_info.overview or "",
                         TORRENT=media_info.org_string,
-                        ENCLOSURE=media_info.enclosure,
+                        ENCLOSURE=media_info.enclosure or "",
                         DESC=media_info.description or "",
                         DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
                         SITE=media_info.site or "",
@@ -212,12 +209,22 @@ class DownloadRepository(BaseRepository):
         """
         cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
         with self.session() as db:
-            return (
-                db.query(DOWNLOADHISTORY)
+            sub = (
+                db.query(
+                    DOWNLOADHISTORY.DOWNLOADER,
+                    DOWNLOADHISTORY.DOWNLOAD_ID,
+                    func.max(DOWNLOADHISTORY.ID).label("max_id"),
+                )
                 .filter(
                     DOWNLOADHISTORY.STATE.in_(["downloading", "completed"]),
                     DOWNLOADHISTORY.DATE >= cutoff,
                 )
+                .group_by(DOWNLOADHISTORY.DOWNLOADER, DOWNLOADHISTORY.DOWNLOAD_ID)
+                .subquery()
+            )
+            return (
+                db.query(DOWNLOADHISTORY)
+                .join(sub, DOWNLOADHISTORY.ID == sub.c.max_id)
                 .order_by(DOWNLOADHISTORY.DATE.desc())
                 .limit(limit)
                 .all()

@@ -4,6 +4,8 @@ from typing import Any
 
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.domain.entities.brush import BrushTaskState
+from app.domain.enums import SwitchState
 from app.media import MediaService
 from app.message import Message
 from app.services.brush.helpers import BrushTaskHelper
@@ -86,7 +88,10 @@ class BrushTaskService:
         if self._brush_tasks:
             running_task = 0
             for task in self._brush_tasks.values():
-                if task.get("state") in ["Y", "S"] and task.get("interval"):
+                if task.get("state") in {
+                    BrushTaskState.RUNNING.value,
+                    BrushTaskState.STOPPED.value,
+                } and task.get("interval"):
                     cron = str(task.get("interval")).strip()
                     if cron.isdigit() or cron.count(" ") == 4:
                         running_task += self._start_task_jobs(task, cron)
@@ -104,7 +109,7 @@ class BrushTaskService:
     def _start_task_jobs(self, task: dict, cron: str) -> int:
         task_id = task.get("id")
         task_name = task.get("name")
-        is_running = task.get("state") == "Y"
+        is_running = task.get("state") == BrushTaskState.RUNNING.value
         running = 0
         trigger_type = "interval" if cron.isdigit() else "cron"
         trigger_args = {"seconds": int(cron) * 60} if trigger_type == "interval" else {"cron": cron}
@@ -167,7 +172,15 @@ class BrushTaskService:
         self._stop_task_jobs(task.ID)
         self._brush_tasks[str(task.ID)] = task_dict
         cron = str(task.INTEVAL).strip()
-        if task.STATE in ["Y", "S"] and cron and (cron.isdigit() or cron.count(" ") == 4):
+        if (
+            task.STATE
+            in {
+                BrushTaskState.RUNNING.value,
+                BrushTaskState.STOPPED.value,
+            }
+            and cron
+            and (cron.isdigit() or cron.count(" ") == 4)
+        ):
             self._start_task_jobs(task_dict, cron)
 
     def _load_rules_from_template(self, task) -> tuple[dict, dict, dict]:
@@ -207,8 +220,8 @@ class BrushTaskService:
             "state": task.STATE,
             "downloader": task.DOWNLOADER,
             "downloader_name": downloader_info.get("name") if downloader_info else None,
-            "transfer": task.TRANSFER == "Y",
-            "sendmessage": task.SENDMESSAGE == "Y",
+            "transfer": task.TRANSFER == SwitchState.ON.value,
+            "sendmessage": task.SENDMESSAGE == SwitchState.ON.value,
             "free": task.FREELEECH,
             "rss_rule": rss_rule,
             "remove_rule": remove_rule,
@@ -249,7 +262,15 @@ class BrushTaskService:
                     task_dict = self._build_task_dict(task)
                     self._brush_tasks[str(task.ID)] = task_dict
                     cron = str(task.INTEVAL).strip()
-                    if task.STATE in ["Y", "S"] and cron and (cron.isdigit() or cron.count(" ") == 4):
+                    if (
+                        task.STATE
+                        in {
+                            BrushTaskState.RUNNING.value,
+                            BrushTaskState.STOPPED.value,
+                        }
+                        and cron
+                        and (cron.isdigit() or cron.count(" ") == 4)
+                    ):
                         self._start_task_jobs(task_dict, cron)
                     break
         return ret
@@ -289,7 +310,10 @@ class BrushTaskService:
             self.stop_service()
             if self._brush_tasks:
                 for task in self._brush_tasks.values():
-                    if task.get("state") in ["Y", "S"] and task.get("interval"):
+                    if task.get("state") in {
+                        BrushTaskState.RUNNING.value,
+                        BrushTaskState.STOPPED.value,
+                    } and task.get("interval"):
                         cron = str(task.get("interval")).strip()
                         if cron.isdigit() or cron.count(" ") == 4:
                             self._start_task_jobs(task, cron)

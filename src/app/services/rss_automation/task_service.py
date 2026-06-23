@@ -6,6 +6,7 @@ import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
+from app.domain.enums import UserRssTaskUseType
 from app.events.bus import EventBus
 from app.media import MediaService
 from app.message import Message
@@ -42,7 +43,11 @@ class RssTaskService:
     _jobstore = "rsscheck"
     _rss_tasks: list[dict[str, Any]] = []
     _rss_parsers: list[dict[str, Any]] = []
-    _site_users = {"D": "下载", "R": "订阅", "S": "搜索"}
+    _site_users = {
+        UserRssTaskUseType.DOWNLOAD.value: "下载",
+        UserRssTaskUseType.SUBSCRIBE.value: "订阅",
+        UserRssTaskUseType.SEARCH.value: "搜索",
+    }
 
     def __init__(
         self,
@@ -138,7 +143,11 @@ class RssTaskService:
                     "proxy": proxy,
                     "parser": parsers,
                     "interval": task.INTERVAL,
-                    "uses": task.USES if str(task.USES or "") != "S" else "R",
+                    "uses": (
+                        task.USES
+                        if str(task.USES or "") != UserRssTaskUseType.SEARCH.value
+                        else UserRssTaskUseType.SUBSCRIBE.value
+                    ),
                     "uses_text": self._site_users.get(str(task.USES)),
                     "include": task.INCLUDE,
                     "exclude": task.EXCLUDE,
@@ -248,9 +257,9 @@ class RssTaskService:
         """检查报文是否已处理"""
         meta_name = f"{title} {year}" if year else title
         match task_type:
-            case "D":
+            case UserRssTaskUseType.DOWNLOAD.value:
                 return self.rsshelper.is_rssd_by_simple(meta_name, enclosure)
-            case "R":
+            case UserRssTaskUseType.SUBSCRIBE.value:
                 return self.rsshelper.is_rssd_by_simple(meta_name, meta_name)
             case _:
                 return False

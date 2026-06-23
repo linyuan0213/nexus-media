@@ -85,13 +85,9 @@ class Torrent:
                 config=HttpClientConfig(proxy_url=proxy_url),
                 rate_limiter=rate_limiter_engine,
             )
-            req = client.get(url=url, headers=headers, auth=CookieAuth(cookie), follow_redirects=False, **rl_kwargs)
-            while req.status_code in [301, 302]:
-                url = req.headers["Location"]
-                if url and url.startswith("magnet:"):
-                    return None, url, f"获取到磁力链接：{url}"
-                req = client.get(url=url, headers=headers, auth=CookieAuth(cookie), follow_redirects=False, **rl_kwargs)
+            req = client.get(url=url, headers=headers, auth=CookieAuth(cookie), **rl_kwargs)
         except HttpClientError as exc:
+            log.warn(f"[Torrent]下载请求失败, url={url[:200]}, status={exc.status_code}, err={str(exc)}")
             if exc.status_code == 429:
                 return None, None, "触发站点流控，请稍后重试"
             return None, None, f"下载种子出错，状态码：{exc.status_code}"

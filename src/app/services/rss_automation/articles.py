@@ -5,7 +5,7 @@ from typing import Any
 
 import log
 from app.core.exceptions import RepositoryError, ServiceError
-from app.domain.enums import SearchType
+from app.domain.enums import SearchType, UserRssTaskUseType
 from app.domain.mediatypes import MediaType
 from app.services.rss_automation.executor import _parse_userrss_result
 from app.utils import ExceptionUtils, StringUtils
@@ -69,7 +69,7 @@ def _test_rss_articles(service, taskid: int | None, title: str) -> tuple[Any, bo
     filter_args = {
         "include": taskinfo.get("include"),
         "exclude": taskinfo.get("exclude"),
-        "rule": taskinfo.get("filter") if taskinfo.get("uses") == "D" else None,
+        "rule": taskinfo.get("filter") if taskinfo.get("uses") == UserRssTaskUseType.DOWNLOAD.value else None,
     }
     match_flag, res_order, match_msg = service.filter.check_torrent_filter(
         meta_info=media_info, filter_args=filter_args
@@ -117,9 +117,9 @@ def _check_rss_articles(service, taskid: int | None, flag: str, articles: list[d
                 year = article.get("year")
                 meta_name = f"{title} {year}" if year else title
                 if not service.is_article_processed(task_type, title or "", enclosure, year):
-                    if task_type == "D":
+                    if task_type == UserRssTaskUseType.DOWNLOAD.value:
                         service.rsshelper.simple_insert_rss_torrents(meta_name, enclosure)
-                    elif task_type == "R":
+                    elif task_type == UserRssTaskUseType.SUBSCRIBE.value:
                         service.rsshelper.simple_insert_rss_torrents(meta_name, meta_name)
         elif flag == "set_unfinish":
             for article in articles:
@@ -127,9 +127,9 @@ def _check_rss_articles(service, taskid: int | None, flag: str, articles: list[d
                 enclosure = article.get("enclosure")
                 year = article.get("year")
                 meta_name = f"{title} {year}" if year else title
-                if task_type == "D":
+                if task_type == UserRssTaskUseType.DOWNLOAD.value:
                     service.rsshelper.simple_delete_rss_torrents(meta_name, enclosure)
-                elif task_type == "R":
+                elif task_type == UserRssTaskUseType.SUBSCRIBE.value:
                     service.rsshelper.simple_delete_rss_torrents(meta_name, meta_name)
         else:
             return False

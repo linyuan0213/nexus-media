@@ -109,3 +109,26 @@ class SubscribeType(Enum):
     Manual = "manual"
     # 自动
     Auto = "auto"
+
+
+class SiteUseType(Enum):
+    """站点用途标识（对应 CONFIG_SITE.INCLUDE 字段）."""
+
+    RSS = "D"
+    BRUSH = "S"
+    STATISTIC = "T"
+
+
+class UserRssTaskUseType(Enum):
+    """自定义 RSS 任务用途."""
+
+    DOWNLOAD = "D"
+    SUBSCRIBE = "R"
+    SEARCH = "S"
+
+
+class SwitchState(Enum):
+    """通用 Y/N 开关状态."""
+
+    ON = "Y"
+    OFF = "N"

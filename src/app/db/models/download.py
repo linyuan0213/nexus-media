@@ -23,7 +23,7 @@ class DOWNLOADER(Base):
     MATCH_PATH: Mapped[int] = mapped_column(Integer)
     RMT_MODE: Mapped[str] = mapped_column(String(255))
     CONFIG: Mapped[str] = mapped_column(Text)
-    DOWNLOAD_DIR: Mapped[str] = mapped_column(String(255))
+    DOWNLOAD_DIR: Mapped[str] = mapped_column(Text)
 
 
 class DOWNLOADHISTORY(Base):

@@ -1,5 +1,6 @@
 from typing import Any
 
+from app.domain.enums import UserRssTaskUseType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.schemas.userrss import (
     UserRssArticleListDTO,
@@ -134,9 +135,9 @@ class UserRssService:
             "download_setting": data.get("download_setting"),
             "note": {"proxy": data.get("proxy")},
         }
-        if uses == "D":
+        if uses == UserRssTaskUseType.DOWNLOAD.value:
             params.update({"recognization": data.get("recognization")})
-        elif uses == "R":
+        elif uses == UserRssTaskUseType.SUBSCRIBE.value:
             params.update(
                 {
                     "over_edition": data.get("over_edition"),

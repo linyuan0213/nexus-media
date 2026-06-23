@@ -28,6 +28,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.downloader.registry import get_all_clients
+from app.events.constants import DOWNLOAD_FAILED
 from app.infrastructure.thread import ThreadExecutor
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
@@ -349,7 +350,7 @@ def download_torrent(
     # 后台线程执行下载（避免网络 IO 阻塞 API 响应）
     def _do_download():
         try:
-            svc.download_from_torrent_files_or_urls(
+            result = svc.download_from_torrent_files_or_urls(
                 files=req.files or [],
                 urls=req.urls or [],
                 dl_dir=req.dl_dir or "",
@@ -363,6 +364,13 @@ def download_torrent(
                 site=req.site or "",
                 size=req.size,
             )
+            if not result.success:
+                log.warn(f"[Download]下载失败: {result.message}")
+                download_event_queue.put(
+                    {"event": DOWNLOAD_FAILED, "data": {"title": req.title, "reason": result.message}}
+                )
+            else:
+                log.info(f"[Download]下载成功: {req.title or req.urls}")
         except (ServiceError, DomainError) as e:
             ExceptionUtils.exception_traceback(e)
         except Exception as e:
@@ -683,10 +691,11 @@ def truncate_blacklist(
 
 
 def _event_stream_generator(q):
-    log.info("[SSE]客户端已连接下载事件流")
+    log.info(f"[SSE]客户端已连接下载事件流 (queue_id={hex(id(q))})")
     while True:
         try:
             item = q.get(timeout=1)
+            log.debug(f"[SSE]推送事件: {item.get('event')}")
             yield f"event: {item['event']}\ndata: {JsonUtils.dumps(item['data'])}\n\n"
         except queue.Empty:
             yield ": keepalive\n\n"
