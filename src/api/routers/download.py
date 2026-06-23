@@ -691,10 +691,11 @@ def truncate_blacklist(
 
 
 def _event_stream_generator(q):
-    log.info("[SSE]客户端已连接下载事件流")
+    log.info(f"[SSE]客户端已连接下载事件流 (queue_id={hex(id(q))})")
     while True:
         try:
             item = q.get(timeout=1)
+            log.debug(f"[SSE]推送事件: {item.get('event')}")
             yield f"event: {item['event']}\ndata: {JsonUtils.dumps(item['data'])}\n\n"
         except queue.Empty:
             yield ": keepalive\n\n"
