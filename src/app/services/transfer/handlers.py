@@ -18,21 +18,27 @@ from app.services.transfer_pipeline import TransferPipeline
 @on_event(MEDIA_TRANSFER_FINISHED)
 def handle_media_transfer_finished(event: Event) -> None:
     """媒体转移完成事件处理器"""
-    payload = MediaTransferFinishedPayload(**event.payload)
+    payload = event.payload
+    if not isinstance(payload, MediaTransferFinishedPayload):
+        payload = MediaTransferFinishedPayload(**payload)
     log.info(f"[Event]媒体转移完成: {payload.dest}")
 
 
 @on_event(SUBTITLE_DOWNLOAD)
 def handle_subtitle_download(event: Event) -> None:
     """字幕下载事件处理器"""
-    payload = SubtitleDownloadPayload(**event.payload)
+    payload = event.payload
+    if not isinstance(payload, SubtitleDownloadPayload):
+        payload = SubtitleDownloadPayload(**payload)
     log.info(f"[Event]字幕下载请求: {payload.file}")
 
 
 @on_event(TRANSFER_FAIL)
 def handle_transfer_fail(event: Event) -> None:
     """转移失败事件处理器"""
-    payload = TransferFailPayload(**event.payload)
+    payload = event.payload
+    if not isinstance(payload, TransferFailPayload):
+        payload = TransferFailPayload(**payload)
     log.warn(f"[Event]转移失败: {payload.path} 原因: {payload.reason}")
 
 
@@ -42,7 +48,9 @@ def handle_download_completed(
     transfer_pipeline: TransferPipeline | None = None,
 ) -> None:
     """下载完成事件处理器 — 触发文件转移."""
-    payload = DownloadCompletedPayload(**event.payload)
+    payload = event.payload
+    if not isinstance(payload, DownloadCompletedPayload):
+        payload = DownloadCompletedPayload(**payload)
     try:
         client_factory = download_client_factory or DownloadClientFactory()
         downloader_conf = client_factory.get_downloader_conf(payload.downloader_id)

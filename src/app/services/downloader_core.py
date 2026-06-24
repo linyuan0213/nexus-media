@@ -10,7 +10,7 @@ DownloaderCore - 下载器 Facade（兼容旧 Downloader 接口）
 """
 
 from threading import Lock
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import log
 from app.core.constants import PT_TAG
@@ -19,6 +19,9 @@ from app.downloader.client_factory import DownloadClientFactory
 from app.services.download_core import DownloadCore
 from app.services.transfer_coordinator import TransferCoordinator
 from app.services.transfer_pipeline import TransferPipeline
+
+if TYPE_CHECKING:
+    from app.services.download_monitor import DownloadMonitor
 
 _downloader_locks: dict[str, Lock] = {}
 
@@ -46,12 +49,14 @@ class DownloaderCore:
         transfer_pipeline: TransferPipeline,
         download_core: DownloadCore,
         download_history_repo=None,
+        download_monitor: "DownloadMonitor | None" = None,
     ):
         self._client_factory = client_factory
         self._pipeline = transfer_pipeline
         self._transfer_coordinator = transfer_coordinator
         self._download_core = download_core
         self._download_history_repo = download_history_repo
+        self._download_monitor = download_monitor
 
     # ---------- 生命周期（由外部 SystemLifecycleService 控制） ----------
 
@@ -313,6 +318,12 @@ class DownloaderCore:
 
     # ---------- 下载器 CRUD ----------
 
+    def _refresh_all_factories(self) -> None:
+        """刷新所有工厂实例缓存"""
+        self._client_factory._refresh()
+        if self._download_monitor:
+            self._download_monitor.refresh_factory()
+
     def update_downloader(
         self, did, name, enabled, dtype, transfer, only_nexus_media, match_path, rmt_mode, config, download_dir
     ):
@@ -328,24 +339,24 @@ class DownloaderCore:
             config=config,
             download_dir=download_dir,
         )
-        self._client_factory._refresh()
+        self._refresh_all_factories()
         return ret
 
     def delete_downloader(self, did):
         ret = self._download_core.delete_downloader(did=did)
-        self._client_factory._refresh()
+        self._refresh_all_factories()
         return ret
 
     def check_downloader(self, did=None, transfer=None, only_nexus_media=None, enabled=None, match_path=None):
         ret = self._download_core.check_downloader(
             did=did, transfer=transfer, only_nexus_media=only_nexus_media, enabled=enabled, match_path=match_path
         )
-        self._client_factory._refresh()
+        self._refresh_all_factories()
         return ret
 
     def delete_download_setting(self, sid):
         ret = self._download_core.delete_download_setting(sid=sid)
-        self._client_factory._refresh()
+        self._refresh_all_factories()
         return ret
 
     def update_download_setting(
@@ -373,5 +384,5 @@ class DownloaderCore:
             seeding_time_limit=seeding_time_limit,
             downloader=downloader,
         )
-        self._client_factory._refresh()
+        self._refresh_all_factories()
         return ret

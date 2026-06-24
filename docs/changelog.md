@@ -1,5 +1,26 @@
 # 版本历史
 
+## v4.1.8 (2026-06-24)
+
+### 修复
+- 转移事件处理器 TypeError：`DownloadCompletedPayload(**event.payload)` 对 dataclass 实例用 `**` 解包崩溃，事件总线静默吞异常导致下载完成→转移链路从未触发
+- 下载监控多工厂实例缓存不同步：`DownloadCore`/`DownloaderCore`/`DownloadMonitor` 各持有独立 `DownloadClientFactory` 实例，CRUD 后只刷新前两个，`DownloadMonitor` 工厂永不过期
+- 下载器 `download_dir` 不生效：`DOWNLOAD_DIR` DB 列为空时直接取空值，忽略 `config.download_dir` JSON 中的实际配置，导致 `get_download_dir_info` 匹配失败、`match_path` 全部跳过
+- `only_nexus_media` 标签隔离：pipeline 未将 `PT_TAG` 注入种子标签，监控按 `NEXUS_MEDIA` 过滤时找不到已完成种子
+- 磁力链接 `save_path` 始终为空：`_stage_post` 对 magnet 链接显式设 `save_dir=None`
+- 图片代理 `/img?url=` 斜杠重定向死循环：前端 nginx 301 加斜杠，Starlette 307 去斜杠互斥，双路由注册消除重定向
+- 订阅电影/电视剧 INSERT 失败：`KEYWORD`/`FILTER_ORDER`/`FILTER_RESTYPE` 等可选列为 `NOT NULL` 但传 `None`，仓库层统一空值默认化
+- 索引器切换后订阅站点列表不更新：`/download/indexers` 固定返回内置站点，改为 `get_user_indexers()` 随当前激活索引器变化
+- 过滤引擎拒绝纯音频文件匹配视频订阅（FLAC/MP3/OST 等）
+- 索引器统计插入时自动清理 7 天前旧数据
+
+### 前端
+- 探索页面无限滚动卡死：首屏数据加载期 IntersectionObserver 触发被 loading guard 拦截后不再重新触发
+- 订阅编辑模态框切换索引器后已保存站点未过滤，旧站点名残留
+
+### 数据库迁移
+- 无需迁移
+
 ## v4.1.7 (2026-06-23)
 
 ### 修复

@@ -155,8 +155,10 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     )
     register_download_completed_handler(event_bus=event_bus, transfer_pipeline=transfer_pipeline)
 
+    shared_client_factory = DownloadClientFactory()
+
     download_core = DownloadCore(
-        client_factory=DownloadClientFactory(),
+        client_factory=shared_client_factory,
         message=message,
         mediaserver=media_server,
         filetransfer=filetransfer_service,
@@ -172,10 +174,11 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     )
 
     downloader_core = DownloaderCore(
-        client_factory=DownloadClientFactory(),
+        client_factory=shared_client_factory,
         transfer_coordinator=TransferCoordinator(scheduler=scheduler_core),
         transfer_pipeline=transfer_pipeline,
         download_core=download_core,
+        download_monitor=facades.download_monitor,
     )
 
     filter_service = FilterService(

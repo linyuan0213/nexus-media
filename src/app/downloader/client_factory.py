@@ -95,6 +95,9 @@ class DownloadClientFactory:
 
             config = JsonUtils.loads(str(downloader_conf.CONFIG))
             dtype = downloader_conf.TYPE
+            download_dir_val = JsonUtils.loads(str(downloader_conf.DOWNLOAD_DIR))
+            if not download_dir_val:
+                download_dir_val = config.get("download_dir") or []
             self._downloader_confs[str(did)] = {
                 "id": did,
                 "name": name,
@@ -106,7 +109,7 @@ class DownloadClientFactory:
                 "rmt_mode": rmt_mode,
                 "rmt_mode_name": rmt_mode_name,
                 "config": config,
-                "download_dir": JsonUtils.loads(str(downloader_conf.DOWNLOAD_DIR)),
+                "download_dir": download_dir_val,
             }
 
         # 下载顺序

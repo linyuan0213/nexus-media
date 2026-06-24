@@ -15,6 +15,7 @@ import os
 from typing import Any
 
 import log
+from app.core.constants import PT_TAG
 from app.events import Event
 from app.events.constants import DOWNLOAD_FAILED, DOWNLOAD_STARTED
 from app.events.payloads import DownloadFailedPayload, DownloadStartedPayload
@@ -299,6 +300,12 @@ class DownloadPipeline:
         if site_info and _note.get("tag"):
             tags.append(site_info.get("name", ""))
         site_tag = site_info.get("name", "") if site_info and _note.get("tag") else None
+
+        if downloader_id:
+            downloader_conf = self._client_factory.get_downloader_conf(downloader_id)
+            if downloader_conf and downloader_conf.get("only_nexus_media") and PT_TAG not in tags:
+                tags.append(PT_TAG)
+
         if tags:
             tags.sort(key=lambda x: (0 if x == "NEXUS_MEDIA" else 1 if x == site_tag else 2, x))
 
@@ -381,7 +388,7 @@ class DownloadPipeline:
                 save_dir = os.path.join(visit_dir, dl_files[0])
                 subtitle_dir = visit_dir
             elif media_info.enclosure and media_info.enclosure.startswith("magnet:"):
-                save_dir = None
+                save_dir = visit_dir
                 subtitle_dir = visit_dir
             else:
                 save_dir = None

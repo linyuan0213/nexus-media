@@ -113,6 +113,7 @@ async def proxy_library_image(request: Request, img_url: str):
 
 
 @router.get("", summary="图片代理重定向")
+@router.get("/", summary="图片代理重定向（兼容斜杠）")
 def proxy_image_redirect(request: Request, url: str | None = None):
     """
     旧格式兼容：/img?url=...

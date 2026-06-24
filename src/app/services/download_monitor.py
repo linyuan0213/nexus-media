@@ -172,6 +172,10 @@ class DownloadMonitor:
         )
         log.info(f"[DownloadMonitor]检测到下载完成: {task_id} @ {task_path}")
 
+    def refresh_factory(self) -> None:
+        """刷新工厂缓存，在下载器/下载设置变更后调用."""
+        self._client_factory._refresh()
+
     def mark_processed(self, downloader_id: str, task_id: str) -> None:
         """手动标记任务已处理（用于兜底扫描后去重）."""
         self._processed_ids.add(self._make_id(downloader_id, task_id))

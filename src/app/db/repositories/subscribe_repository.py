@@ -195,7 +195,7 @@ class SubscribeRepository(BaseRepository):
         filter_restype: str | None = None,
         filter_pix: str | None = None,
         filter_team: str | None = None,
-        filter_rule: str | None = None,
+        filter_rule: int | str | None = None,
         filter_include: str | None = None,
         filter_exclude: str | None = None,
         save_path: str | None = None,
@@ -212,6 +212,19 @@ class SubscribeRepository(BaseRepository):
             search_sites = []
         if rss_sites is None:
             rss_sites = []
+        over_edition = over_edition or 0
+        fuzzy_match = fuzzy_match or 0
+        download_setting = download_setting or -1
+        filter_restype = filter_restype or ""
+        filter_pix = filter_pix or ""
+        filter_rule = int(filter_rule) if filter_rule else 0
+        filter_team = filter_team or ""
+        filter_include = filter_include or ""
+        filter_exclude = filter_exclude or ""
+        save_path = save_path or ""
+        desc = desc or ""
+        note = note or ""
+        keyword = keyword or (media_info.title if media_info else "")
         if not media_info:
             return -1
         if not media_info.title:
@@ -239,6 +252,7 @@ class SubscribeRepository(BaseRepository):
                         RSS_SITES=JsonUtils.dumps(rss_sites),
                         SEARCH_SITES=JsonUtils.dumps(search_sites),
                         OVER_EDITION=over_edition,
+                        FILTER_ORDER=0,
                         FILTER_RESTYPE=filter_restype,
                         FILTER_PIX=filter_pix,
                         FILTER_RULE=filter_rule,
@@ -433,7 +447,7 @@ class SubscribeRepository(BaseRepository):
         filter_restype: str | None = None,
         filter_pix: str | None = None,
         filter_team: str | None = None,
-        filter_rule: str | None = None,
+        filter_rule: int | str | None = None,
         filter_include: str | None = None,
         filter_exclude: str | None = None,
         save_path: str | None = None,
@@ -453,6 +467,21 @@ class SubscribeRepository(BaseRepository):
             search_sites = []
         if rss_sites is None:
             rss_sites = []
+        over_edition = over_edition or 0
+        fuzzy_match = fuzzy_match or 0
+        download_setting = download_setting or -1
+        filter_restype = filter_restype or ""
+        filter_pix = filter_pix or ""
+        filter_rule = int(filter_rule) if filter_rule else 0
+        filter_team = filter_team or ""
+        filter_include = filter_include or ""
+        filter_exclude = filter_exclude or ""
+        save_path = save_path or ""
+        desc = desc or ""
+        note = note or ""
+        keyword = keyword or (media_info.title if media_info else "")
+        total_ep = total_ep or ""
+        current_ep = current_ep or ""
         if not media_info:
             return -1
         if not media_info.title:
@@ -494,6 +523,7 @@ class SubscribeRepository(BaseRepository):
                         RSS_SITES=JsonUtils.dumps(rss_sites),
                         SEARCH_SITES=JsonUtils.dumps(search_sites),
                         OVER_EDITION=over_edition,
+                        FILTER_ORDER=0,
                         FILTER_RESTYPE=filter_restype,
                         FILTER_PIX=filter_pix,
                         FILTER_RULE=filter_rule,

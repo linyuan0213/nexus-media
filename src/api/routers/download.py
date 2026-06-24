@@ -492,7 +492,7 @@ def get_indexers(
     user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: IndexerService = Depends(get_indexer_service),
 ):
-    indexers = svc.get_builtin_user_indexers()
+    indexers = svc.get_user_indexers()
     return success(data=[{"id": i.id, "name": i.name} for i in indexers])
 
 
