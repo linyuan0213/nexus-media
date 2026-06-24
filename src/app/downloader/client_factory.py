@@ -363,7 +363,7 @@ class DownloadClientFactory:
                     continue
                 if attr.get("type") and attr.get("type") not in (media.type.value, media.type.display_name):
                     continue
-                if attr.get("category") and attr.get("category") != media.category:
+                if attr.get("category") and media.category and attr.get("category") != media.category:
                     continue
                 if not attr.get("save_path") and not attr.get("label"):
                     continue
@@ -375,5 +375,5 @@ class DownloadClientFactory:
                     < NumberUtils.get_size_gb(StringUtils.num_filesize(media.size))
                 ):
                     continue
-                return {"path": attr.get("save_path"), "category": attr.get("label")}
-        return {"path": None, "category": None}
+                return {"path": attr.get("save_path"), "category": attr.get("category"), "label": attr.get("label")}
+        return {"path": None, "category": None, "label": None}

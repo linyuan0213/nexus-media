@@ -132,6 +132,8 @@ class DownloadPipeline:
             download_dir = download_info.get("path")
         if not category:
             category = download_info.get("category")
+        if download_info.get("label"):
+            tags.append(download_info.get("label"))
 
         # ---------- 阶段3：添加任务 ----------
         download_id = self._stage_add(
