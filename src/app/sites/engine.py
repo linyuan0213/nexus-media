@@ -332,7 +332,7 @@ class SiteEngine:
             conf = site.html.conf
             detail_url = site.detail_page_url.format(tid=self._extract_tid(torrent_url, site) or "")
             if not detail_url.startswith("http"):
-                detail_url = f"{site.domain.rstrip('/')}/{detail_url.lstrip('/')}"
+                detail_url = f"{self._base_from_url(torrent_url).rstrip('/')}/{detail_url.lstrip('/')}"
             html_txt = self._fetch_page(detail_url, user_config)
             if not html_txt:
                 return ret

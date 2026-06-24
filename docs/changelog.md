@@ -19,6 +19,8 @@
 - 修复下载目录分类未推送到下载器：类型匹配支持中英文，`category` 推分类 `label` 推标签
 - 新增站点「拾刻」www.ptskit.org（NexusPHP）
 - M-Team 添加 description 字段（概述），详情页域名改为 kp.m-team.cc
+- HTML 站点解析支持用户配置的别名域名（domain_aliases）
+- 修复站点 tag 字段返回字符串导致前端开关状态不正确，pipeline 改用 name 作为下载器标签
 
 ### 数据库迁移
 - `d5e6f7a8b9c0`：`DOWNLOADER.DOWNLOAD_DIR` 列类型调整为 `TEXT`

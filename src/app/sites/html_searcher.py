@@ -59,6 +59,9 @@ class HtmlSiteSearcher:
             return cfg.get(key, default)
         return getattr(cfg, key, default) if hasattr(cfg, key) else default
 
+    def _domain(self) -> str:
+        return (self._user_config.get("domain") or self._site.domain or "").rstrip("/")
+
     def _build_url(self, keyword: str, page: int, mtype: MediaType | None) -> str | None:
         cfg = self._site.html
         if not (isinstance(cfg, dict) or hasattr(cfg, "search")):
@@ -76,7 +79,7 @@ class HtmlSiteSearcher:
             start = int(self._cfg_get(browse_cfg, "start", 1) or 1)
             browse_vars = {**template_vars, "page": str(int(page) + start)}
             browse_path = (browse_path or "").format(**browse_vars)
-            domain = (self._site.domain or "").rstrip("/")
+            domain = self._domain()
             path_with_slash = f"/{browse_path.lstrip('/')}" if browse_path else ""
             return f"{domain}{path_with_slash}"
 
@@ -93,7 +96,7 @@ class HtmlSiteSearcher:
 
         path = path.format(**template_vars)
 
-        domain = (self._site.domain or "").rstrip("/")
+        domain = self._domain()
         params = dict(self._cfg_get(search_cfg, "params", {}) or {})
         params_filled = {}
         for k, v in params.items():
@@ -196,7 +199,7 @@ class HtmlSiteSearcher:
         return results
 
     def _normalize_html_result(self, item):
-        domain = (self._site.domain or "").rstrip("/")
+        domain = self._domain()
         for old_key, new_key in [("download", "enclosure"), ("details", "page_url")]:
             if old_key in item and new_key not in item:
                 item[new_key] = item.pop(old_key)
@@ -211,7 +214,7 @@ class HtmlSiteSearcher:
 
     def _parse_nested(self, html_doc, cfg):
         torrents_cfg = self._cfg_get(cfg, "torrents", {})
-        domain = (self._site.domain or "").rstrip("/")
+        domain = self._domain()
 
         container_xpath = self._cfg_get(torrents_cfg, "container_xpath") or '//table[contains(@class, "gm_table")]'
         row_xpath = self._cfg_get(torrents_cfg, "row_xpath") or './/tr[@id="gm_tr_item"]'
