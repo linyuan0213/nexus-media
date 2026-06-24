@@ -214,6 +214,8 @@ class DownloadPipeline:
         if torrent_file:
             content, dl_files_folder, dl_files, retmsg = Torrent(self._site_engine).read_torrent_content(torrent_file)
             file_path = torrent_file
+            if media_info.page_url:
+                site_info = self._sites.get_sites(siteurl=media_info.page_url)
         else:
             url = media_info.enclosure
             if media_info.page_url and not media_info.enclosure:
