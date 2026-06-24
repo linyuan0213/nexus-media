@@ -329,8 +329,9 @@ class DownloadRepository(BaseRepository):
 
     def insert_indexer_statistics(self, indexer: str, itype: str, seconds: int, result: str) -> None:
         """
-        插入索引器统计
+        插入索引器统计，同时清理7天前的旧记录
         """
+        cutoff = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
         with self.session() as db:
             db.add(
                 INDEXERSTATISTICS(
@@ -341,6 +342,7 @@ class DownloadRepository(BaseRepository):
                     DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
                 )
             )
+            db.query(INDEXERSTATISTICS).filter(INDEXERSTATISTICS.DATE < cutoff).delete()
 
     def delete_all_indexer_statistics(self) -> None:
         """
