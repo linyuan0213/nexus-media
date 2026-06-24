@@ -127,11 +127,11 @@ class DownloadPipeline:
             return None, None, f"下载设置 {download_setting_name} 所选下载器失效"
         downloader_name = downloader_conf.get("name")
 
+        download_info = self._client_factory.get_download_dir_info(media_info, downloader_conf.get("download_dir"))
         if not download_dir:
-            download_info = self._client_factory.get_download_dir_info(media_info, downloader_conf.get("download_dir"))
             download_dir = download_info.get("path")
-            if not category:
-                category = download_info.get("category")
+        if not category:
+            category = download_info.get("category")
 
         # ---------- 阶段3：添加任务 ----------
         download_id = self._stage_add(
