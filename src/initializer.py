@@ -4,7 +4,6 @@ import log
 from app.core.root_path import get_script_path
 from app.core.settings import settings
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter
-from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.db.sql_adapter import adapt_sql_for_engine
 from app.events import auto_register, register_modules
@@ -107,7 +106,6 @@ def update_config(indexer_statistics_repo=None):
     升级配置文件
     """
     _config = settings.get()
-    _dbhelper = indexer_statistics_repo or IndexerStatisticsRepositoryAdapter()
     overwrite_config = False
 
     # security.api_key 已废弃：
@@ -173,9 +171,6 @@ def update_config(indexer_statistics_repo=None):
     # 重写配置文件
     if overwrite_config:
         settings.save(_config)
-
-    # 清空索引器统计
-    _dbhelper.delete_all()
 
 
 def check_redis():

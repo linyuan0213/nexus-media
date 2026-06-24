@@ -349,10 +349,11 @@ class DownloadRepository(BaseRepository):
         with self.session() as db:
             db.query(INDEXERSTATISTICS).delete()
 
-    def get_indexer_statistics(self, client_id: str) -> list[tuple]:
+    def get_indexer_statistics(self, client_id: str, hours: int = 24) -> list[tuple]:
         """
-        查询索引器统计
+        查询索引器统计（默认最近24小时）
         """
+        cutoff = (datetime.now() - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
         with self.session() as db:
             return (
                 db.query(
@@ -362,7 +363,7 @@ class DownloadRepository(BaseRepository):
                     func.sum(case((INDEXERSTATISTICS.RESULT == "Y", 1), else_=0)).label("SUCCESS"),
                     func.avg(INDEXERSTATISTICS.SECONDS).label("AVG"),
                 )
-                .filter(client_id == INDEXERSTATISTICS.TYPE)
+                .filter(client_id == INDEXERSTATISTICS.TYPE, INDEXERSTATISTICS.DATE >= cutoff)
                 .group_by(INDEXERSTATISTICS.INDEXER)
                 .all()
             )
