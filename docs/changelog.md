@@ -11,6 +11,9 @@
 - 刷流任务状态变更统一使用 `BrushTaskState` 枚举，修复 `Y/N/S` 魔法字符串不一致
 - 文件转移路径解析 `get_format_dict`/`get_movie_dest_path`/`get_tv_dest_path` 的 `media_service` 参数改为可选，修复无媒体服务时路径格式化报错
 - 进度跟踪器 `finish()` 方法补充设置 value=100 和完成文本
+- 新增 `GET /download/torrent-remove-tasks/seed-statuses` 端点，返回种子状态中英文列表
+- 删种任务种子状态输入框改为多选下拉列表，支持中文显示
+- 修复 TMDB 黑名单和搜索文件两处 API 路径重复 `/api/` 前缀的问题
 
 ### 数据库迁移
 - `d5e6f7a8b9c0`：`DOWNLOADER.DOWNLOAD_DIR` 列类型调整为 `TEXT`
@@ -40,7 +43,6 @@
 - 站点类型选择器改用 `NSwitch`，form.public 改为布尔值
 - 删除 `parseNoteBool` 兼容函数
 - 修复 `NNotificationProvider` 的 extraneous non-props attributes 警告
-
 ## v4.1.5 (2026-06-22)
 
 ### 修复

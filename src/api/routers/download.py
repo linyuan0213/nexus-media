@@ -28,6 +28,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.downloader.registry import get_all_clients
+from app.downloader.status import TORRENT_STATUS_LABELS
 from app.events.constants import DOWNLOAD_FAILED
 from app.infrastructure.thread import ThreadExecutor
 from app.schemas.auth import UserContext
@@ -519,6 +520,14 @@ def get_torrent_remove_task(
     svc: DownloadService = Depends(get_download_service),
 ):
     return success(data=svc.get_torrent_remove_tasks(taskid=req.tid))
+
+
+@router.get("/torrent-remove-tasks/seed-statuses", response_model=CommonResponse, summary="获取种子状态列表")
+def get_seed_statuses(
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
+):
+    statuses = [{"label": label, "value": status.name} for status, label in TORRENT_STATUS_LABELS.items()]
+    return success(data=statuses)
 
 
 @router.post("/tasks/info", response_model=CommonResponse, summary="获取下载任务信息")
