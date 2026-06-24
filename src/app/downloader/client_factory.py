@@ -361,7 +361,7 @@ class DownloadClientFactory:
             for attr in downloaddir or []:
                 if not attr:
                     continue
-                if attr.get("type") and attr.get("type") != media.type.value:
+                if attr.get("type") and attr.get("type") not in (media.type.value, media.type.display_name):
                     continue
                 if attr.get("category") and attr.get("category") != media.category:
                     continue
