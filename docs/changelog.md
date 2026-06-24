@@ -18,6 +18,7 @@
 - 修复识别历史统计字段大小写不匹配（`MovieNums` → `movie_nums`）导致 `reduce` 报错
 - 修复下载目录分类未推送到下载器：类型匹配支持中英文，`category` 推分类 `label` 推标签
 - 新增站点「拾刻」www.ptskit.org（NexusPHP）
+- M-Team 添加 description 字段（概述），详情页域名改为 kp.m-team.cc
 
 ### 数据库迁移
 - `d5e6f7a8b9c0`：`DOWNLOADER.DOWNLOAD_DIR` 列类型调整为 `TEXT`

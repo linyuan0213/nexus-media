@@ -1,7 +1,7 @@
 {
   "id": "mteam",
   "name": "M-Team",
-  "domain": "api.m-team.io",
+  "domain": "kp.m-team.cc",
   "domain_aliases": [
     "kp.m-team.cc",
     "xp.m-team.cc",
@@ -48,6 +48,9 @@
               "source": "name"
             },
             "details": {
+              "source": "smallDescr"
+            },
+            "description": {
               "source": "smallDescr"
             },
             "download": {
