@@ -38,6 +38,32 @@ class IndexerFilterEngine:
         if meta_info.subtitle:
             text = f"{text} {meta_info.subtitle}"
 
+        # 过滤纯音频文件（FLAC/MP3/OST/OP/ED等）
+        _audio_patterns = [
+            r"\[FLAC\]",
+            r"\[MP3\]",
+            r"\[AAC\]",
+            r"\[WAV\]",
+            r"\[OGG\]",
+            r"\[ALAC\]",
+            r"\[OST\]",
+            r"\[Soundtrack\]",
+            r"\[Music\]",
+            r"\[Audio\]",
+            r"OPテーマ",
+            r"EDテーマ",
+            r"主題歌",
+            r"キャラソン",
+            r"\.flac",
+            r"\.mp3",
+            r"\.m4a",
+            r"\.wav",
+            r"\.ogg",
+        ]
+        for pat in _audio_patterns:
+            if re.search(pat, text, re.IGNORECASE):
+                return False, 0, f"{meta_info.org_string} 为音频文件，不匹配视频订阅"
+
         # 过滤质量
         if filter_args.get("restype"):
             restype_re = ModuleConf.TORRENT_SEARCH_PARAMS["restype"].get(filter_args.get("restype") or "")
