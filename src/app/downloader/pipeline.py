@@ -294,8 +294,8 @@ class DownloadPipeline:
         if torrent_attr and torrent_attr.get("hr"):
             tags.append("HR")
         if site_info and site_info.get("tag"):
-            tags.append(site_info.get("tag"))
-        site_tag = site_info.get("tag") if site_info else None
+            tags.append(site_info.get("name", ""))
+        site_tag = site_info.get("name", "") if site_info and site_info.get("tag") else None
         if tags:
             tags.sort(key=lambda x: (0 if x == "NEXUS_MEDIA" else 1 if x == site_tag else 2, x))
 
