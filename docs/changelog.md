@@ -14,6 +14,8 @@
 - 新增 `GET /download/torrent-remove-tasks/seed-statuses` 端点，返回种子状态中英文列表
 - 删种任务种子状态输入框改为多选下拉列表，支持中文显示
 - 修复 TMDB 黑名单和搜索文件两处 API 路径重复 `/api/` 前缀的问题
+- 区分 `Paused`（已暂停）和 `Stopped`（已停止）的中文标签，避免下拉列表重复
+- 修复识别历史统计字段大小写不匹配（`MovieNums` → `movie_nums`）导致 `reduce` 报错
 
 ### 数据库迁移
 - `d5e6f7a8b9c0`：`DOWNLOADER.DOWNLOAD_DIR` 列类型调整为 `TEXT`
