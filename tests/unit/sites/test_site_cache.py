@@ -82,7 +82,8 @@ class TestSiteCache:
         assert site["chrome"] is True
         assert site["proxy"] is False
         assert site["subtitle"] is True
-        assert site["tag"] == "s1"
+        assert site["note"] is not None
+        assert site["note"]["tag"] is True
         assert site["public"] is False
 
     def test_build_site_info_tag_enabled_returns_site_name(self, mock_repo, mock_engine):
@@ -91,4 +92,5 @@ class TestSiteCache:
         cache = SiteCache(repo=mock_repo, site_engine=mock_engine, rate_limiter=limiter)
         site = cache.get_sites(siteid=1)
         assert isinstance(site, dict)
-        assert site["tag"] == "站点A"
+        assert site["note"]["tag"] is True
+        assert site["name"] == "站点A"
