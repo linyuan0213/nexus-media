@@ -147,8 +147,8 @@ class SiteCache:
             "limit_count": note.get("limit_count"),
             "limit_seconds": note.get("limit_seconds"),
             "strict_url": strict_url,
-            "tag": bool(note.get("tag")),
             "public": is_public,
+            "note": note,
         }
 
         # 注册到限流服务
