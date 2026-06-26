@@ -4,7 +4,7 @@ Brush Router — FastAPI 迁移
 """
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from api.deps import get_brush_service, require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError
@@ -31,7 +31,30 @@ class AddBrushTaskRequest(BaseModel):
     brushtask_site: str | None = None
     brushtask_free: str | None = None
     brushtask_rssurl: str | None = None
-    brushtask_interval: int | None = None
+    brushtask_interval: int | str | None = None
+
+    @field_validator("brushtask_interval", mode="before")
+    @classmethod
+    def validate_interval(cls, v):
+        if v is None or v == "":
+            return None
+        if isinstance(v, (int, float)):
+            v = int(v)
+            if v < 5:
+                raise ValueError("间隔时间不能小于5分钟")
+            return str(v)
+        if isinstance(v, str):
+            if v.isdigit():
+                n = int(v)
+                if n < 5:
+                    raise ValueError("间隔时间不能小于5分钟")
+                return str(n)
+            parts = v.strip().split()
+            if len(parts) == 5:
+                return v
+            raise ValueError("cron表达式格式不正确，应为5位：[分 时 日 月 星期]")
+        return v
+
     brushtask_downloader: str | None = None
     brushtask_totalsize: str | None = None
     brushtask_time_range: str | None = None

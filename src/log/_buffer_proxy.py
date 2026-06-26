@@ -13,7 +13,7 @@ _log_buffer: LogBuffer | None = None
 def get_log_buffer() -> LogBuffer:
     global _log_buffer
     if _log_buffer is None:
-        _log_buffer = LogBuffer(maxlen=200)
+        _log_buffer = LogBuffer(maxlen=2000)
     return _log_buffer
 
 
