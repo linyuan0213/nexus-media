@@ -53,7 +53,7 @@ class GeminiProvider(BaseProvider):
     def list_models(self) -> list[str]:
         try:
             models = self._client.models.list()
-            return [m.name for m in models]
+            return [name for m in models if (name := m.name) is not None]
         except Exception as e:
             log.warn(f"[GeminiProvider]查询模型列表失败: {e}")
             return []
