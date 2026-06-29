@@ -18,13 +18,19 @@ COPY src ./src
 COPY alembic ./alembic
 COPY alembic.ini run.py start-prod.sh start-dev.sh restart-server.sh stop-server.sh ./
 
+ARG UV_INDEX_URL=https://pypi.org/simple
+ENV UV_INDEX_URL=${UV_INDEX_URL}
+
 RUN uv venv .venv \
-    && uv sync --frozen --no-cache --no-editable --no-install-project
+    && uv sync --frozen --no-cache --no-editable
 
 # ==================== 运行时 ====================
 FROM python:3.14-slim-trixie
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+ARG UV_INDEX_URL=https://pypi.org/simple
+ENV UV_INDEX_URL=${UV_INDEX_URL}
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
