@@ -2,6 +2,7 @@ from typing import Any, cast
 
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
+from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.db.repositories.site_repository import SiteRepository
 from app.domain.entities.site import SiteEntity
 from app.domain.enums import SiteUseType
@@ -18,6 +19,7 @@ from app.schemas.site import (
 )
 from app.services.indexer_service import IndexerService
 from app.sites import SiteConf, SiteCookie
+from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.site_favicon_service import SiteFaviconService
 from app.sites.site_resolver import SiteResolver
@@ -40,6 +42,8 @@ class SiteService:
         site_cookie: SiteCookie,
         string_utils: Any,
         site_entity_repo: ISiteRepository,
+        indexer_site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
+        site_engine: SiteEngine | None = None,
     ):
         self._sites = sites
         self._site_user_info = site_user_info
@@ -51,6 +55,8 @@ class SiteService:
         self._site_entity_repo = site_entity_repo
         self._site_favicon_service = site_favicon_service
         self._site_resolver = site_resolver
+        self._indexer_site_config_repo = indexer_site_config_repo or IndexerSiteConfigRepositoryAdapter()
+        self._site_engine = site_engine or SiteEngine()
 
     @property
     def site_user_info(self) -> SiteUserInfo:
@@ -97,9 +103,87 @@ class SiteService:
         return SiteDetailDTO(site=site_info, site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
 
     def get_sites(self, rss: bool = False, brush: bool = False, statistic: bool = False, basic: bool = False) -> Any:
+        # RSS/刷流/统计场景只返回 builtin 站点
+        if rss or brush or statistic:
+            return self._sites.get_sites(rss=rss, brush=brush, statistic=statistic, public=True)
+
+        builtin = self._sites.get_sites(public=True)
+        engine_by_name = {s.name: s.public for s in self._site_engine.all_sites()}
+        config_rows = self._indexer_site_config_repo.list_all()
+        config_by_name = {row.site_name: row for row in config_rows}
+
         if basic:
-            return self._sites.get_site_dict(rss=rss, brush=brush, statistic=statistic)
-        return self._sites.get_sites(rss=rss, brush=brush, statistic=statistic, public=True)
+            merged = {}
+            for s in builtin:
+                cfg = config_by_name.get(s["name"])
+                merged[s["name"]] = {
+                    "id": s["id"],
+                    "name": s["name"],
+                    "source": "builtin",
+                    "enabled": cfg.enabled if cfg else True,
+                    "site_public": engine_by_name.get(s["name"], s.get("public", False)),
+                }
+            for row in config_rows:
+                if row.site_name not in merged and row.source != "builtin":
+                    merged[row.site_name] = {
+                        "id": str(row.id or 0),
+                        "name": row.site_name,
+                        "source": row.source,
+                        "enabled": bool(row.enabled),
+                        "third_party": True,
+                    }
+            return list(merged.values())
+
+        merged = {s["name"]: {**s, "source": "builtin", "third_party": False} for s in builtin}
+        for name, site in merged.items():
+            cfg = config_by_name.get(name)
+            site["enabled"] = cfg.enabled if cfg else True
+            site["download_setting"] = cfg.download_setting if cfg else None
+            site["default_settings"] = cfg.default_settings if cfg else None
+            site["site_public"] = engine_by_name.get(name, site.get("public", False))
+        for row in config_rows:
+            if row.source == "builtin":
+                continue
+            if row.site_name not in merged:
+                merged[row.site_name] = self._third_party_site_dict(row)
+        return list(merged.values())
+
+    @staticmethod
+    def _third_party_site_dict(row) -> dict:
+        return {
+            "id": row.id,
+            "name": row.site_name,
+            "pri": 0,
+            "source": row.source,
+            "third_party": True,
+            "download_setting": row.download_setting,
+            "enabled": bool(row.enabled),
+            "default_settings": row.default_settings,
+            "public": bool(row.public),
+            "rssurl": "",
+            "signurl": "",
+            "cookie": "",
+            "api_key": "",
+            "bearer_token": "",
+            "api_key_header": None,
+            "headers": None,
+            "rule": None,
+            "rss_enable": False,
+            "brush_enable": False,
+            "statistic_enable": False,
+            "uses": [],
+            "ua": "",
+            "parse": False,
+            "unread_msg_notify": False,
+            "chrome": False,
+            "proxy": False,
+            "subtitle": False,
+            "limit_interval": None,
+            "limit_count": None,
+            "limit_seconds": None,
+            "strict_url": "",
+            "note": {},
+        }
 
     def _is_site_duplicate(self, name: str | None, tid: str | None) -> bool:
         if not name:

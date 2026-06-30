@@ -35,7 +35,7 @@
             "imdbid": {"source": "imdbID"},
             "page_url": {
               "type": "template",
-              "value": "/torrent/{fid}",
+              "value": "https://{domain}/torrent/{fid}",
               "fields": {"fid": "fid"}
             }
           }

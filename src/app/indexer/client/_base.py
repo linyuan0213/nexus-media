@@ -14,6 +14,7 @@ from urllib.parse import quote
 import defusedxml.minidom  # type: ignore[import-untyped]
 
 import log
+from app.db.repositories.download_repository import DownloadRepository
 from app.domain.enums import ProgressKey, SearchType
 from app.indexer.schema import IndexerConfigSchema
 from app.infrastructure.http.client import HttpClient
@@ -43,8 +44,9 @@ class _IIndexClient(metaclass=ABCMeta):
     host = ""
     progress = None
 
-    def __init__(self, progress=None):
+    def __init__(self, progress=None, download_repo: DownloadRepository | None = None):
         self.progress = progress
+        self.download_repo = download_repo
 
     @classmethod
     @abstractmethod
@@ -67,6 +69,12 @@ class _IIndexClient(metaclass=ABCMeta):
     def get_indexers(self, check=True, indexer_id=None, public=True) -> Any:
         """获取索引站点列表"""
 
+    def list(self, index_id, page=0, keyword=None) -> list | None:
+        return None
+
+    def is_enabled(self) -> bool:
+        return True
+
     def search(self, order_seq, indexer, key_word, filter_args: dict, match_media, in_from: SearchType) -> Any:
         """
         默认搜索实现：基于 Torznab XML 协议
@@ -87,7 +95,7 @@ class _IIndexClient(metaclass=ABCMeta):
 
         search_word = str(StringUtils.handler_special_chars(text=key_word, replace_word=" ", allow_space=True) or "")
         api_url = f"{indexer.domain}?apikey={self.api_key}&t=search&q={quote(search_word)}"
-        result_array = self.__parse_torznabxml(api_url)
+        result_array = self._parse_torznabxml(api_url)
 
         _ = (datetime.datetime.now() - start_time).seconds
         if len(result_array) == 0:
@@ -103,15 +111,29 @@ class _IIndexClient(metaclass=ABCMeta):
                 )
 
         # 注入站点元信息
+        result_count = len(result_array)
         for item in result_array:
             item["_indexer_name"] = indexer.name
             item["_indexer_order"] = order_seq
             item["_indexer_public"] = getattr(indexer, "public", False)
+            item["_indexer_source"] = self.client_type or self.client_id
+
+        # 写入索引器统计（第三方客户端走默认实现）
+        if self.download_repo:
+            try:
+                self.download_repo.insert_indexer_statistics(
+                    indexer=indexer.name,
+                    itype=self.client_type or self.client_id,
+                    seconds=int(_),
+                    result="success" if result_count > 0 else "fail",
+                )
+            except Exception as e:
+                log.warn(f"[Indexer]写入统计失败: {e!s}")
 
         return result_array
 
     @staticmethod
-    def __parse_torznabxml(url):
+    def _parse_torznabxml(url):
         """解析 Torznab XML"""
         ret_array = []
         if not url:

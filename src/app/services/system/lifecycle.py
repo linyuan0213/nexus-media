@@ -26,6 +26,7 @@ from initializer import (
     init_default_categories,
     init_default_filters,
     init_event_handlers,
+    init_indexer_site_config,
     init_message_webhook_apikey,
     init_rbac_system,
     update_config,
@@ -148,6 +149,7 @@ class SystemLifecycleService:
         update_config()
         check_redis()
         update_rss_state()
+        init_indexer_site_config()
         init_default_categories()
         init_default_filters()
         init_rbac_system()

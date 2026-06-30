@@ -3,9 +3,13 @@ import os
 import log
 from app.core.root_path import get_script_path
 from app.core.settings import settings
+from app.core.system_config import SystemConfig
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter
+from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
+from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.db.sql_adapter import adapt_sql_for_engine
+from app.domain.enums import SystemConfigKey
 from app.events import auto_register, register_modules
 from app.events.bridge import PluginBridge
 from app.events.bus import EventBus
@@ -205,6 +209,34 @@ def init_message_webhook_apikey(apikey_service=None):
         log.info("[Initialize]消息 Webhook API Key 已就绪")
     except Exception as e:
         log.error(f"[Initialize]消息 Webhook API Key 初始化失败：{e!s}")
+        ExceptionUtils.exception_traceback(e)
+
+
+def init_indexer_site_config():
+    """
+    从旧的 UserIndexerSites（CONFIG_SITE.ID 列表）迁移到 INDEXER_SITE_CONFIG 表。
+    仅执行一次，通过 SystemConfig 标记避免重复迁移。
+    """
+    try:
+        system_config = SystemConfig()
+        migration_done = system_config.get("IndexerSiteConfigMigrated")
+        if migration_done:
+            return
+
+        user_indexer_sites = system_config.get(SystemConfigKey.UserIndexerSites) or []
+        if not isinstance(user_indexer_sites, list):
+            user_indexer_sites = []
+        site_repo = SiteRepositoryAdapter()
+        sites = site_repo.list_all()
+        site_name_by_id = {site.id: site.name for site in sites}
+
+        adapter = IndexerSiteConfigRepositoryAdapter()
+        adapter.migrate_from_user_indexer_sites(user_indexer_sites, site_name_by_id)
+
+        system_config.set("IndexerSiteConfigMigrated", "1")
+        log.info(f"[Initialize]索引器站点配置迁移完成，共 {len(site_name_by_id)} 个站点")
+    except Exception as e:
+        log.error(f"[Initialize]索引器站点配置迁移失败: {e!s}")
         ExceptionUtils.exception_traceback(e)
 
 

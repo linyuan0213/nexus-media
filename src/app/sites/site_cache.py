@@ -7,7 +7,9 @@
 """
 
 import log
+from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
+from app.domain.entities.site import SiteEntity
 from app.domain.enums import SiteUseType
 from app.domain.interfaces.site_repo import ISiteRepository
 from app.services.site_rate_limiter import SiteRateLimiterService
@@ -30,10 +32,12 @@ class SiteCache:
         repo: ISiteRepository | None = None,
         site_engine: SiteEngine | None = None,
         rate_limiter: SiteRateLimiterService | None = None,
+        indexer_site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
     ):
         self._repo = repo or SiteRepositoryAdapter()
         self._site_engine = site_engine or SiteEngine()
         self._rate_limiter = rate_limiter or SiteRateLimiterService()
+        self._indexer_site_config_repo = indexer_site_config_repo or IndexerSiteConfigRepositoryAdapter()
         self._site_by_ids: dict[int, dict] = {}
         self._site_by_urls: dict[str, dict] = {}
         self._rss_sites: list[dict] = []
@@ -44,6 +48,7 @@ class SiteCache:
 
     def _refresh(self) -> None:
         """重建所有内存索引."""
+        self._seed_public_sites()
         self._site_by_ids = {}
         self._site_by_urls = {}
         self._rss_sites = []
@@ -71,6 +76,46 @@ class SiteCache:
                 self._statistic_sites.append(site_info)
             if not site_info.get("public"):
                 self._signin_sites.append(site_info)
+
+        self._sync_indexer_site_config()
+
+    def _sync_indexer_site_config(self) -> None:
+        """将 builtin 站点名同步到 INDEXER_SITE_CONFIG；已存在行保留 enabled/download_setting。"""
+        try:
+            for site_info in self._site_by_ids.values():
+                self._indexer_site_config_repo.upsert_site(
+                    site_name=site_info["name"],
+                    source="builtin",
+                )
+        except Exception as e:
+            log.error(f"[SiteCache]同步索引器站点配置失败: {e!s}")
+
+    def _seed_public_sites(self) -> None:
+        """自动创建所有公开（BT）内置站点，BT 站点无需 Cookie 即可使用。"""
+        try:
+            existing = {s.name for s in self._repo.list_all()}
+            created = 0
+            for site_def in self._site_engine.all_sites():
+                if not site_def.public:
+                    continue
+                if site_def.name in existing:
+                    continue
+                signurl = site_def.domain
+                if not signurl.startswith(("http://", "https://")):
+                    signurl = f"https://{signurl}"
+                entity = SiteEntity(
+                    name=site_def.name,
+                    pri=100 + created,
+                    sign_url=signurl,
+                    note={"public": True},
+                )
+                self._repo.insert(entity)
+                created += 1
+                log.info(f"[SiteCache]自动创建公开站点: {site_def.name} ({signurl})")
+            if created:
+                log.info(f"[SiteCache]共自动创建 {created} 个公开（BT）站点")
+        except Exception as e:
+            log.error(f"[SiteCache]自动创建公开站点失败: {e!s}")
 
     def refresh(self) -> None:
         """外部触发缓存重建（SiteService 写操作后调用）."""
@@ -143,6 +188,7 @@ class SiteCache:
             "chrome": bool(note.get("chrome")),
             "proxy": bool(note.get("proxy")),
             "subtitle": bool(note.get("subtitle")),
+            "tag": bool(note.get("tag")),
             "limit_interval": note.get("limit_interval"),
             "limit_count": note.get("limit_count"),
             "limit_seconds": note.get("limit_seconds"),

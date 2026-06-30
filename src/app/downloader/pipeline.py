@@ -16,6 +16,7 @@ from typing import Any
 
 import log
 from app.core.constants import PT_TAG
+from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.events import Event
 from app.events.constants import DOWNLOAD_FAILED, DOWNLOAD_STARTED
 from app.events.payloads import DownloadFailedPayload, DownloadStartedPayload
@@ -48,6 +49,7 @@ class DownloadPipeline:
         event_bus,
         download_history_repo,
         site_engine,
+        site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
     ):
         self._client_factory = client_factory
         self._message = message
@@ -59,6 +61,7 @@ class DownloadPipeline:
         self._event_bus = event_bus
         self._download_history_repo = download_history_repo
         self._site_engine = site_engine
+        self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
 
     def execute(
         self,
@@ -269,6 +272,8 @@ class DownloadPipeline:
             return {"download_attr": {}, "downloader_id": downloader_id, "tags": [], "is_paused": is_paused}
         if not download_setting and media_info.site:
             download_setting = self._sites.get_site_download_setting(media_info.site)
+            if not download_setting:
+                download_setting = self._site_config_repo.get_download_setting(media_info.site)
         if download_setting == "-2":
             download_attr = {}
         elif download_setting:

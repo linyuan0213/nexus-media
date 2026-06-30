@@ -99,7 +99,7 @@
             },
             "page_url": {
               "type": "template",
-              "value": "{domain}/api/torrent/fetchTorrentDetail?id={tid}&firstView=false",
+              "value": "https://{domain}/api/torrent/fetchTorrentDetail?id={tid}&firstView=false",
               "fields": {
                 "tid": "id"
               }

@@ -116,7 +116,7 @@
             },
             "page_url": {
               "type": "template",
-              "value": "{domain}/detail/{tid}",
+              "value": "https://{domain}/detail/{tid}",
               "fields": {
                 "tid": "id"
               }

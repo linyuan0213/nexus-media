@@ -202,15 +202,17 @@ def search_medias_for_web(
                 if result:
                     media_list.extend(result)
 
-    # 去重
+    # 去重：与 DB 唯一键 (PAGEURL, SITE, SEARCH_SESSION_ID) 对齐
     _process.update(ptype=ProgressKey.Search, value=70, text="去重排序中...")
     unique_media_list = []
     media_seen = set()
     for d in media_list:
-        org_string = StringUtils.md5_hash(f"{d.org_string}{d.site}{d.description or ''}")
-        if org_string not in media_seen:
+        # page_url 缺失时，按入库逻辑回退到 enclosure 前 200 字符；两者都为空则只按 site 去重
+        page_key = d.page_url or ((d.enclosure or "")[:200] if d.enclosure else "")
+        dedup_key = StringUtils.md5_hash(f"{page_key}{d.site}")
+        if dedup_key not in media_seen:
             unique_media_list.append(d)
-            media_seen.add(org_string)
+            media_seen.add(dedup_key)
     media_list = unique_media_list
 
     if len(media_list) == 0:

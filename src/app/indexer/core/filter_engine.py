@@ -64,6 +64,20 @@ class IndexerFilterEngine:
             if re.search(pat, text, re.IGNORECASE):
                 return False, 0, f"{meta_info.org_string} 为音频文件，不匹配视频订阅"
 
+        # 过滤漫画/书籍类资源（第X巻、漫画、Manga 等）
+        target_type = filter_args.get("type")
+        if isinstance(target_type, str):
+            target_type = MediaType.from_string(target_type)
+        if target_type in (MediaType.TV, MediaType.MOVIE, MediaType.ANIME):
+            _book_patterns = [
+                r"(?:漫画|コミック|单行本|Manga|Comic|巻相当|Graphic Novel)",
+                r"(?:raw|RAW)\b.*第\s*\d+\s*巻",
+                r"第\s*\d+\s*巻.*(?:raw|RAW)\b",
+            ]
+            for pat in _book_patterns:
+                if re.search(pat, text, re.IGNORECASE):
+                    return False, 0, f"{meta_info.org_string} 为漫画/书籍类资源，不匹配视频订阅"
+
         # 过滤质量
         if filter_args.get("restype"):
             restype_re = ModuleConf.TORRENT_SEARCH_PARAMS["restype"].get(filter_args.get("restype") or "")

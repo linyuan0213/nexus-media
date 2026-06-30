@@ -87,7 +87,7 @@
             },
             "page_url": {
               "type": "template",
-              "value": "/torrent/info/{tid}",
+              "value": "https://{domain}/torrent/info/{tid}",
               "fields": {
                 "tid": "id"
               }

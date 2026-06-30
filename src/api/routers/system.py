@@ -391,6 +391,7 @@ def get_indexers(
     indexer_sites = cfg.get(SystemConfigKey.UserIndexerSites) or []
     search_indexer = cfg.get(SystemConfigKey.SearchIndexer) or "builtin"
     indexer_config = cfg.get(SystemConfigKey.IndexerConfig) or {}
+    builtin_enabled = str(cfg.get(SystemConfigKey.BuiltinIndexerEnabled) or "1") != "0"
     return success(
         data={
             "indexers": indexer_list,
@@ -402,8 +403,10 @@ def get_indexers(
                 if hasattr(cls, "client_id") and cls.client_id and hasattr(cls, "config_schema") and cls.config_schema
             },
             "indexer_sites": indexer_sites,
+            "builtin_enabled": builtin_enabled,
             "search_indexer": search_indexer,
             "indexer_config": indexer_config,
+            "third_party_sites": idx_svc.get_third_party_sites(),
         }
     )
 

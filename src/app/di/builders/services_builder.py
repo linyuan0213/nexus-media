@@ -113,6 +113,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     site_engine = infra.site_engine
     thread_executor = infra.thread_executor
     scheduler_core = infra.scheduler_core
+    indexer_site_config_repo = infra.indexer_site_config_repo
 
     siteconf = SiteConf(site_engine=site_engine)
     sitesubtitle = SiteSubtitle(siteconf=siteconf, sites=site_cache, site_engine=site_engine)
@@ -171,6 +172,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         systemconfig=SystemConfig(),
         downloader_repo=DownloaderRepositoryAdapter(),
         site_engine=site_engine,
+        site_config_repo=indexer_site_config_repo,
     )
 
     downloader_core = DownloaderCore(
@@ -194,6 +196,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         indexer_helper=IndexerHelper(),
         site_cache=site_cache,
         site_engine=site_engine,
+        site_config_repo=indexer_site_config_repo,
     )
 
     indexer_service = IndexerService(
@@ -203,6 +206,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         site_engine=site_engine,
         indexer_statistics_repo=IndexerStatisticsRepositoryAdapter(),
         string_utils=string_utils_module,
+        site_config_repo=indexer_site_config_repo,
     )
 
     subscribe_service = SubscribeService(
@@ -355,6 +359,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     indexer_config_service = IndexerConfigService(
         indexer_service=indexer_service,
         indexer=indexer_service.indexer,
+        site_config_repo=indexer_site_config_repo,
     )
     user_manage_service = UserManageService(rbac_svc=rbac_service)
     message_client_service = MessageClientService(message=message)
@@ -402,6 +407,8 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         site_cookie=SiteCookie(sites=site_cache, site_engine=site_engine),
         string_utils=string_utils_module,
         site_entity_repo=SiteRepositoryAdapter(),
+        indexer_site_config_repo=indexer_site_config_repo,
+        site_engine=site_engine,
     )
 
     # 需要在数据库初始化后构造的服务

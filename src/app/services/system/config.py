@@ -5,11 +5,13 @@ from typing import cast
 
 from sqlalchemy import text
 
+import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.enums import SystemConfigKey
 from app.indexer.indexer import Indexer
 from app.infrastructure.cache_system import TokenCache
@@ -32,10 +34,17 @@ class IndexerConfigService:
     负责保存索引器配置、兼容旧配置迁移、测试连接
     """
 
-    def __init__(self, indexer_service: IndexerService, indexer: Indexer, system_config: SystemConfig | None = None):
+    def __init__(
+        self,
+        indexer_service: IndexerService,
+        indexer: Indexer,
+        system_config: SystemConfig | None = None,
+        site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
+    ):
         self._system_config = system_config or SystemConfig()
         self._indexer_service = indexer_service
         self._indexer = indexer
+        self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
 
     def save_config(self, data: dict) -> IndexerConfigResultDTO:
         """保存索引器配置"""
@@ -52,21 +61,36 @@ class IndexerConfigService:
         for key, value in data.items():
             if key.startswith(name + "."):
                 config[key.split(".", 1)[1]] = value
-            elif key not in ("type", "test"):
+            elif key not in ("type", "test", "set_default_indexer"):
                 config[key] = value
         if config:
             existing[name] = config
         if existing:
             self._system_config.set(SystemConfigKey.IndexerConfig, existing)
-        # 保存当前使用的索引器
-        self._system_config.set(SystemConfigKey.SearchIndexer, name)
-        # 保存builtin站点的选中状态
+        # 保存builtin索引器总开关
         if name == "builtin":
+            enabled = data.get("enabled")
+            if enabled is not None:
+                self._system_config.set(SystemConfigKey.BuiltinIndexerEnabled, "1" if enabled else "0")
+            # 兼容旧站点选择：同步到 INDEXER_SITE_CONFIG
             sites = data.get("indexer_sites")
             if sites is not None:
                 self._system_config.set(SystemConfigKey.UserIndexerSites, sites)
+                # 同步一次到站点配置表，确保后续按表过滤
+                try:
+                    builtin_indexers = self._indexer_service.get_builtin_indexers(check=False)
+                    site_id_map = {getattr(i, "id", None): getattr(i, "name", "") for i in builtin_indexers}
+                    for sid in sites:
+                        site_name = site_id_map.get(sid)
+                        if site_name:
+                            self._site_config_repo.upsert_site(site_name=site_name, source="builtin", enabled=True)
+                except Exception as e:
+                    log.warn(f"[IndexerConfigService]同步内置站点启用状态失败: {e}")
         # 刷新 Indexer 单例配置
         self._indexer._refresh()
+        # 同步第三方索引器站点列表
+        if name != "builtin":
+            self._sync_third_party_sites(name, config)
         # 测试连接
         if test and name != "builtin":
             try:
@@ -87,6 +111,27 @@ class IndexerConfigService:
                 ExceptionUtils.exception_traceback(e)
                 return IndexerConfigResultDTO(success=False, code=-1, msg=str(e))
         return IndexerConfigResultDTO(success=True)
+
+    def _sync_third_party_sites(self, client_id: str, config: dict) -> None:
+        """同步第三方索引器的站点列表到 INDEXER_SITE_CONFIG。"""
+        try:
+            schemas = SubmoduleLoader.import_submodules(
+                "app.indexer.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
+            )
+            for schema in schemas:
+                if schema.match(client_id):
+                    client = schema(config)
+                    indexers = client.get_indexers(check=False)
+                    for indexer in indexers or []:
+                        self._site_config_repo.upsert_site(
+                            site_name=indexer.name,
+                            source=client_id,
+                            public=getattr(indexer, "public", False),
+                            enabled=False,
+                        )
+                    break
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
 
 
 class MediaServerConfigService:

@@ -23,6 +23,7 @@ from app.db.repositories.download_repo_adapter import (
     DownloadHistoryRepositoryAdapter,
     DownloadSettingRepositoryAdapter,
 )
+from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.mediatypes import MediaType
 from app.downloader.client_factory import DownloadClientFactory
 from app.downloader.pipeline import DownloadPipeline
@@ -62,6 +63,7 @@ class DownloadCore:
         systemconfig: SystemConfig,
         downloader_repo: DownloaderRepositoryAdapter,
         site_engine: SiteEngine,
+        site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
     ):
         self._client_factory = client_factory
         self._message = message
@@ -76,6 +78,7 @@ class DownloadCore:
         self._systemconfig = systemconfig
         self._downloader_repo = downloader_repo
         self._site_engine = site_engine
+        self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
         self._pipeline = DownloadPipeline(
             client_factory=self._client_factory,
             message=self._message,
@@ -87,6 +90,7 @@ class DownloadCore:
             event_bus=self._event_bus,
             download_history_repo=self._download_repo,
             site_engine=self._site_engine,
+            site_config_repo=self._site_config_repo,
         )
 
     # ---------- 媒体存在性检查 ----------

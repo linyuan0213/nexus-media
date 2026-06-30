@@ -48,6 +48,7 @@ from app.db.models.download import (
 
 # 索引器统计模型
 from app.db.models.indexer import (
+    INDEXERSITECONFIG,
     INDEXERSTATISTICS,
 )
 
@@ -181,6 +182,7 @@ __all__ = [
     "TRANSFERUNKNOWN",
     # 索引器
     "INDEXERSTATISTICS",
+    "INDEXERSITECONFIG",
     # 插件
     "PLUGINHISTORY",
     "TMDBBLACKLIST",

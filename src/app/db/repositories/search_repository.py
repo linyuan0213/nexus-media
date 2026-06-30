@@ -3,7 +3,9 @@ Search Repository
 Handles search result related database operations.
 """
 
-from sqlalchemy import and_, or_
+from sqlalchemy import insert, inspect
+from sqlalchemy.dialects.mysql import insert as mysql_insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.db.models import SEARCHRESULTINFO
 from app.db.repositories.base_repository import BaseRepository
@@ -32,20 +34,13 @@ class SearchRepository(BaseRepository):
             return
 
         with self.session() as db:
-            # 收集本次插入的 pageurl + site 用于删除同 session 冲突记录
-            pageurl_site_pairs = []
-            for media_item in media_items:
-                if media_item.page_url and media_item.site:
-                    pageurl_site_pairs.append((media_item.page_url, media_item.site))
-
-            if pageurl_site_pairs:
-                conditions = [
-                    and_(SEARCHRESULTINFO.PAGEURL == pu, SEARCHRESULTINFO.SITE == st) for pu, st in pageurl_site_pairs
-                ]
-                query = db.query(SEARCHRESULTINFO).filter(or_(*conditions))
-                if session_id:
-                    query = query.filter(SEARCHRESULTINFO.SEARCH_SESSION_ID == session_id)
-                query.delete(synchronize_session=False)
+            # 清空旧数据：按 session 隔离，避免并发覆盖
+            if session_id:
+                db.query(SEARCHRESULTINFO).filter(SEARCHRESULTINFO.SEARCH_SESSION_ID == session_id).delete(
+                    synchronize_session=False
+                )
+            else:
+                db.query(SEARCHRESULTINFO).delete(synchronize_session=False)
 
             mappings = []
             for media_item in media_items:
@@ -57,27 +52,27 @@ class SearchRepository(BaseRepository):
                     mtype = MediaType.ANIME.value
 
                 # 截断超长 ENCLOSURE：去掉磁力链接中多余的 tracker，只保留核心 btih
-                enclosure = media_item.enclosure
+                enclosure = media_item.enclosure or ""
                 if enclosure and enclosure.startswith("magnet:"):
                     enclosure = enclosure.split("&")[0]
                 elif enclosure and len(enclosure) > 4000:
                     enclosure = enclosure[:4000]
 
                 mapping = {
-                    "TORRENT_NAME": media_item.org_string,
+                    "TORRENT_NAME": media_item.org_string or "",
                     "ENCLOSURE": enclosure,
-                    "DESCRIPTION": media_item.description,
+                    "DESCRIPTION": media_item.description or "",
                     "TYPE": mtype if ident_flag else "",
-                    "TITLE": media_item.title if ident_flag else title,
-                    "YEAR": media_item.year if ident_flag else "",
-                    "SEASON": media_item.get_season_string() if ident_flag else "",
-                    "EPISODE": media_item.get_episode_string() if ident_flag else "",
-                    "ES_STRING": media_item.get_season_episode_string() if ident_flag else "",
+                    "TITLE": (media_item.title if ident_flag else title) or "",
+                    "YEAR": (media_item.year if ident_flag else "") or "",
+                    "SEASON": (media_item.get_season_string() if ident_flag else "") or "",
+                    "EPISODE": (media_item.get_episode_string() if ident_flag else "") or "",
+                    "ES_STRING": (media_item.get_season_episode_string() if ident_flag else "") or "",
                     "VOTE": media_item.vote_average or "0",
-                    "IMAGE": media_item.get_backdrop_image(default=False, original=True),
-                    "POSTER": media_item.get_poster_image(),
-                    "TMDBID": media_item.tmdb_id,
-                    "OVERVIEW": media_item.overview,
+                    "IMAGE": (media_item.get_backdrop_image(default=False, original=True) or ""),
+                    "POSTER": (media_item.get_poster_image() or ""),
+                    "TMDBID": media_item.tmdb_id or "",
+                    "OVERVIEW": media_item.overview or "",
                     "RES_TYPE": JsonUtils.dumps(
                         {
                             "respix": media_item.resource_pix,
@@ -86,7 +81,7 @@ class SearchRepository(BaseRepository):
                             "video_encode": media_item.video_encode,
                         }
                     ),
-                    "RES_ORDER": media_item.res_order,
+                    "RES_ORDER": media_item.res_order or "0",
                     "SIZE": int(media_item.size or 0),
                     "SEEDERS": int(media_item.seeders)
                     if media_item.seeders and str(media_item.seeders).strip().lstrip("-+").isdigit()
@@ -94,12 +89,12 @@ class SearchRepository(BaseRepository):
                     "PEERS": int(media_item.peers)
                     if media_item.peers and str(media_item.peers).strip().lstrip("-+").isdigit()
                     else 0,
-                    "SITE": media_item.site,
-                    "SITE_ORDER": media_item.site_order,
+                    "SITE": media_item.site or "",
+                    "SITE_ORDER": media_item.site_order or "0",
                     "PAGEURL": media_item.page_url or (enclosure[:200] if enclosure else ""),
-                    "OTHERINFO": media_item.resource_team,
-                    "UPLOAD_VOLUME_FACTOR": media_item.upload_volume_factor,
-                    "DOWNLOAD_VOLUME_FACTOR": media_item.download_volume_factor,
+                    "OTHERINFO": media_item.resource_team or "",
+                    "UPLOAD_VOLUME_FACTOR": media_item.upload_volume_factor or 1.0,
+                    "DOWNLOAD_VOLUME_FACTOR": media_item.download_volume_factor or 1.0,
                     "NOTE": "|".join(media_item.labels)
                     if isinstance(media_item.labels, list)
                     else (media_item.labels or ""),
@@ -109,13 +104,45 @@ class SearchRepository(BaseRepository):
                 mappings.append(mapping)
 
             # 按 DB 唯一约束 (PAGEURL, SITE, SEARCH_SESSION_ID) 去重
+            # MySQL 唯一键为 PAGEURL 前缀索引（191 字符），其余库使用完整列
+            dialect = inspect(db.bind).dialect.name
+            pageurl_prefix = 191 if dialect == "mysql" else None
             deduped = {}
             for m in mappings:
-                key = (m["PAGEURL"], m["SITE"], m.get("SEARCH_SESSION_ID"))
+                pageurl_key = m["PAGEURL"][:pageurl_prefix] if pageurl_prefix else m["PAGEURL"]
+                key = (pageurl_key, m["SITE"], m.get("SEARCH_SESSION_ID"))
                 deduped[key] = m
             mappings = list(deduped.values())
 
-            db.bulk_insert_mappings(SEARCHRESULTINFO, mappings)
+            if not mappings:
+                return
+
+            if dialect == "mysql":
+                stmt = mysql_insert(SEARCHRESULTINFO).values(mappings)
+                stmt = stmt.on_duplicate_key_update(
+                    TORRENT_NAME=stmt.inserted.TORRENT_NAME,
+                    ENCLOSURE=stmt.inserted.ENCLOSURE,
+                    DESCRIPTION=stmt.inserted.DESCRIPTION,
+                    SIZE=stmt.inserted.SIZE,
+                    SEEDERS=stmt.inserted.SEEDERS,
+                    PEERS=stmt.inserted.PEERS,
+                )
+                db.execute(stmt)
+            elif dialect == "postgresql":
+                stmt = pg_insert(SEARCHRESULTINFO).values(mappings)
+                stmt = stmt.on_conflict_do_update(
+                    constraint="uq_search_pageurl_site_session",
+                    set_={
+                        "TORRENT_NAME": stmt.excluded.TORRENT_NAME,
+                        "ENCLOSURE": stmt.excluded.ENCLOSURE,
+                        "SIZE": stmt.excluded.SIZE,
+                        "SEEDERS": stmt.excluded.SEEDERS,
+                        "PEERS": stmt.excluded.PEERS,
+                    },
+                )
+                db.execute(stmt)
+            else:
+                db.execute(insert(SEARCHRESULTINFO).values(mappings))
             db.commit()
 
     def get_search_result_by_id(self, dl_id):

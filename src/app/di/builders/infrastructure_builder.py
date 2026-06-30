@@ -2,6 +2,7 @@
 
 import log
 from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
+from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.db.repositories.plugin_framework_repo_adapter import PluginLogRepositoryAdapter
 from app.di.models import InfrastructureObjects
 from app.events import register_modules
@@ -42,7 +43,12 @@ def build_infrastructure() -> InfrastructureObjects:
     site_engine.register_user_info_factory(_html_config_factory)
 
     site_rate_limiter = SiteRateLimiterService()
-    site_cache = SiteCache(site_engine=site_engine, rate_limiter=site_rate_limiter)
+    indexer_site_config_repo = IndexerSiteConfigRepositoryAdapter()
+    site_cache = SiteCache(
+        site_engine=site_engine,
+        rate_limiter=site_rate_limiter,
+        indexer_site_config_repo=indexer_site_config_repo,
+    )
     site_engine.site_limiter = site_rate_limiter
     message_queue = MessageQueueFactory.create()
     hook_system = HookSystem(plugin_sandbox=None)
@@ -83,4 +89,5 @@ def build_infrastructure() -> InfrastructureObjects:
         plugin_sandbox=plugin_sandbox,
         plugin_registry=plugin_registry,
         apikey_service=apikey_service,
+        indexer_site_config_repo=indexer_site_config_repo,
     )

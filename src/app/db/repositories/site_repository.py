@@ -406,7 +406,7 @@ class SiteRepository(BaseRepository):
             for site_user_info in site_user_infos:
                 data = {
                     "SITE": site_user_info.site_name,
-                    "USER_LEVEL": site_user_info.user_level,
+                    "USER_LEVEL": site_user_info.user_level or "",
                     "DATE": date_now,
                     "UPLOAD": site_user_info.upload,
                     "DOWNLOAD": site_user_info.download,

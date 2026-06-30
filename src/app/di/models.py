@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
     from app.events.bus import EventBus
     from app.infrastructure.queue.base import MessageQueue
     from app.infrastructure.thread import ThreadExecutor
@@ -51,6 +52,7 @@ class InfrastructureObjects:
     plugin_sandbox: PluginSandbox
     plugin_registry: PluginRegistry
     apikey_service: APIKeyService
+    indexer_site_config_repo: IndexerSiteConfigRepositoryAdapter
 
 
 @dataclass(frozen=True)

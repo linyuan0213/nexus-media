@@ -6,10 +6,11 @@ Site Router — FastAPI 迁移
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from api.deps import get_site_service, require_any_permission, require_permission
+from api.deps import get_indexer_service, get_site_service, require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError  # noqa: F401
 from app.infrastructure.thread import ThreadExecutor
 from app.schemas.common import CommonResponse
+from app.services.indexer_service import IndexerService
 from app.services.site_service import SiteService
 from app.utils.response import fail, success
 
@@ -85,6 +86,21 @@ class SiteResourcesRequest(BaseModel):
     id: str | None = None
     page: int | None = None
     keyword: str | None = None
+
+
+class IndexerSiteConfigUpdateRequest(BaseModel):
+    site_name: str
+    enabled: bool | None = None
+    download_setting: int | None = None
+    default_settings: dict | None = None
+
+
+class IndexerSiteConfigSyncRequest(BaseModel):
+    client_id: str
+
+
+class IndexerSiteConfigBatchRequest(BaseModel):
+    sites: list[dict] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -269,7 +285,53 @@ def list_site_resources(
     user: str = Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
-    resources = svc.list_site_resources(index_id=req.id or "", page=req.page or 1, keyword=req.keyword or "")
+    resources = svc.list_site_resources(index_id=req.id or "", page=req.page or 0, keyword=req.keyword or "")
     if not resources.success:
         return fail(msg=resources.msg)
     return success(data=resources.data)
+
+
+@router.post("/sites/indexer-config/update", response_model=CommonResponse, summary="更新第三方站点配置")
+def update_indexer_site_config(
+    req: IndexerSiteConfigUpdateRequest,
+    user: str = Depends(require_permission("site:manage")),
+    idx_svc: IndexerService = Depends(get_indexer_service),
+):
+    if req.enabled is not None:
+        idx_svc.update_site_enabled(req.site_name, req.enabled)
+    if req.download_setting is not None:
+        idx_svc.update_site_download_setting(req.site_name, req.download_setting)
+    if req.default_settings is not None:
+        idx_svc.update_site_default_settings(req.site_name, req.default_settings)
+    return success()
+
+
+@router.post("/sites/indexer-config/sync", response_model=CommonResponse, summary="同步第三方索引器站点")
+def sync_indexer_sites(
+    req: IndexerSiteConfigSyncRequest,
+    user: str = Depends(require_permission("site:manage")),
+    idx_svc: IndexerService = Depends(get_indexer_service),
+):
+    ok = idx_svc.sync_third_party_sites(req.client_id)
+    if not ok:
+        return fail(msg="同步失败")
+    return success()
+
+
+@router.post("/sites/indexer-config/batch", response_model=CommonResponse, summary="批量更新第三方站点配置")
+def batch_update_indexer_site_config(
+    req: IndexerSiteConfigBatchRequest,
+    user: str = Depends(require_permission("site:manage")),
+    idx_svc: IndexerService = Depends(get_indexer_service),
+):
+    for item in req.sites or []:
+        site_name = item.get("site_name")
+        if not site_name:
+            continue
+        if "enabled" in item:
+            idx_svc.update_site_enabled(site_name, bool(item.get("enabled")))
+        if "download_setting" in item:
+            idx_svc.update_site_download_setting(site_name, item.get("download_setting"))
+        if "default_settings" in item:
+            idx_svc.update_site_default_settings(site_name, item.get("default_settings"))
+    return success()

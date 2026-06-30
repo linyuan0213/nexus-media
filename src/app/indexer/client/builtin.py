@@ -10,12 +10,12 @@ import datetime
 from threading import Lock
 
 import log
-from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repository import DownloadRepository
+from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 from app.indexer.client._base import _IIndexClient
-from app.indexer.configuration import IndexerConf, IndexerHelper
+from app.indexer.configuration import IndexerHelper
 from app.indexer.schema import IndexerConfigSchema
 from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.progress import ProgressTracker
@@ -59,6 +59,7 @@ class BuiltinIndexer(_IIndexClient):
         download_repo: DownloadRepository | None = None,
         system_config: SystemConfig | None = None,
         drissionpage_helper: ChromeClient | None = None,
+        site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
     ):
         self._client_config = config or {}
         self._indexer_helper = indexer_helper
@@ -68,7 +69,7 @@ class BuiltinIndexer(_IIndexClient):
         self._system_config = system_config or SystemConfig()
         self._drissionpage_helper = drissionpage_helper or ChromeClient()
         self._site_engine = site_engine
-        self._show_more_sites = settings.get("laboratory").get("show_more_sites")
+        self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
 
     @classmethod
     def match(cls, ctype):
@@ -80,13 +81,17 @@ class BuiltinIndexer(_IIndexClient):
     def get_client_id(self):
         return self.client_id
 
+    def is_enabled(self) -> bool:
+        val = self._system_config.get(SystemConfigKey.BuiltinIndexerEnabled)
+        return str(val) != "0"
+
     def get_status(self):
         return True
 
     def get_indexers(self, check=True, indexer_id=None, public=True):
         """获取当前索引器的索引站点"""
         ret_indexers = []
-        indexer_sites = self._system_config.get(SystemConfigKey.UserIndexerSites) or []
+        enabled_names = set(self._site_config_repo.list_enabled_names(source="builtin"))
         _indexer_domains = []
 
         chrome_ok = self._drissionpage_helper.get_status()
@@ -152,26 +157,14 @@ class BuiltinIndexer(_IIndexClient):
                 render=render,
             )
             if indexer:
-                if indexer_id and str(indexer.id) == str(indexer_id):
+                if indexer_id and (str(indexer.id) == str(indexer_id) or site.get("name") == indexer_id):
                     return indexer
-                if check and (not indexer_sites or indexer.id not in indexer_sites):
+                if check and indexer.name not in enabled_names:
                     continue
                 if indexer.domain not in _indexer_domains:
                     _indexer_domains.append(indexer.domain)
                     indexer.name = site.get("name")
                     ret_indexers.append(indexer)
-
-        if public and self._show_more_sites:
-            for indexer in self._indexer_helper.get_all_indexers():
-                if not indexer.get("public"):
-                    continue
-                if indexer_id and indexer.get("id") == indexer_id:
-                    return IndexerConf(datas=indexer)
-                if check and (not indexer_sites or indexer.get("id") not in indexer_sites):
-                    continue
-                if indexer.get("domain") not in _indexer_domains:
-                    _indexer_domains.append(indexer.get("domain"))
-                    ret_indexers.append(IndexerConf(datas=indexer))
 
         return None if indexer_id else ret_indexers
 
@@ -244,6 +237,7 @@ class BuiltinIndexer(_IIndexClient):
             item["_indexer_name"] = indexer.name
             item["_indexer_order"] = order_seq
             item["_indexer_public"] = getattr(indexer, "public", False)
+            item["_indexer_source"] = self.client_type or self.client_id
 
         return result_array
 
@@ -286,6 +280,17 @@ class BuiltinIndexer(_IIndexClient):
         for item in result_array:
             if "indexer" not in item:
                 item["indexer"] = indexer.id or indexer.siteid
+            if site_def.api and "page_url" not in item:
+                tid = ""
+                dl_url = item.get("enclosure", "")
+                if dl_url:
+                    tid = engine._extract_tid(dl_url, site_def) or ""
+                if site_def.detail_page_url and tid:
+                    detail = site_def.detail_page_url.format(tid=tid)
+                    if detail.startswith("/"):
+                        domain = site_def.domain
+                        detail = f"https://{domain}{detail}" if domain else detail
+                    item["page_url"] = detail
         return False, result_array
 
     @staticmethod

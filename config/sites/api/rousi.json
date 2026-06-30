@@ -80,7 +80,7 @@
             },
             "page_url": {
               "type": "template",
-              "value": "/torrent/{uuid}",
+              "value": "https://{domain}/torrent/{uuid}",
               "fields": {
                 "uuid": "uuid"
               }

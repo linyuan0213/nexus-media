@@ -8,12 +8,15 @@
 """
 
 import datetime
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repository import DownloadRepository
+from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
+from app.indexer.client._base import _IIndexClient
 from app.indexer.configuration import IndexerHelper
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
@@ -42,6 +45,7 @@ class Indexer:
         progress_helper: ProgressTracker | None = None,
         download_repo: DownloadRepository | None = None,
         system_config: SystemConfig | None = None,
+        site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
     ):
         self.progress = progress_helper or ProgressTracker()
         self.download_repo = download_repo or DownloadRepository()
@@ -50,18 +54,38 @@ class Indexer:
         self._indexer_helper = indexer_helper
         self._site_cache = site_cache
         self._site_engine = site_engine
+        self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
         self._client = None
         self._client_type = None
+        self._clients: dict[str, _IIndexClient] = {}
+        self._clients_lock = threading.Lock()
 
     def _ensure_client(self) -> None:
-        """延迟加载当前配置的索引器客户端"""
+        """延迟加载 builtin 索引器客户端（兼容旧调用）"""
         if self._client is not None:
             return
-        indexer = self._system_config.get(SystemConfigKey.SearchIndexer) or "builtin"
-        self._client = self.__get_client(indexer)
+        self._client = self.__get_client("builtin")
         self._client_type = self._client.get_type() if self._client else None
 
-    def __build_class(self, ctype, conf):
+    def _ensure_clients(self) -> None:
+        """延迟加载所有已配置的索引器客户端"""
+        with self._clients_lock:
+            if self._clients:
+                return
+            clients: dict[str, _IIndexClient] = {}
+            builtin = self.__get_client("builtin")
+            if builtin:
+                clients["builtin"] = builtin
+            idx_config = self._system_config.get(SystemConfigKey.IndexerConfig) or {}
+            for ctype in ("jackett", "prowlarr"):
+                cfg = idx_config.get(ctype, {})
+                if cfg.get("host") and cfg.get("api_key"):
+                    client = self.__get_client(ctype, cfg)
+                    if client:
+                        clients[ctype] = client
+            self._clients = clients
+
+    def __build_class(self, ctype, conf=None):
         ctype_str = ctype.value if hasattr(ctype, "value") else ctype
         for cls in get_all_clients():
             try:
@@ -72,8 +96,9 @@ class Indexer:
                             indexer_helper=self._indexer_helper,
                             site_cache=self._site_cache,
                             site_engine=self._site_engine,
+                            download_repo=self.download_repo,
                         )
-                    return cls(conf, system_config=self._system_config)
+                    return cls(conf, download_repo=self.download_repo)
             except Exception as e:
                 ExceptionUtils.exception_traceback(e)
         return None
@@ -85,6 +110,7 @@ class Indexer:
         """重置客户端缓存，下次访问时重新加载"""
         self._client = None
         self._client_type = None
+        self._clients = {}
 
     def get_client(self):
         self._ensure_client()
@@ -95,10 +121,32 @@ class Indexer:
         return self._client_type
 
     def get_indexers(self, check=False):
+        """获取默认搜索索引器的站点列表（兼容旧调用）"""
         self._ensure_client()
         if not self._client:
             return []
         return self._client.get_indexers(check=check)
+
+    def get_all_search_indexers(self, check=True):
+        """获取所有已启用索引器的站点列表"""
+        self._ensure_clients()
+        indexers = []
+        for client in self._clients.values():
+            indexers.extend(self._filter_indexers(client, check=check))
+        return indexers
+
+    def _filter_indexers(self, client, check=True, filter_args=None):
+        if not getattr(client, "is_enabled", lambda: True)():
+            return []
+        indexers = client.get_indexers(check=check)
+        # 第三方索引器需要再用 DB 中的 enabled 状态过滤一次
+        if client.get_client_id() != "builtin":
+            enabled_names = set(self._site_config_repo.list_enabled_names(source=client.get_client_id()))
+            indexers = [i for i in indexers if i.name in enabled_names]
+        if filter_args and filter_args.get("site"):
+            site_filter = filter_args.get("site")
+            indexers = [i for i in indexers if i.name in site_filter]
+        return indexers
 
     def get_user_indexer_dict(self):
         return [{"id": index.id, "name": index.name} for index in self.get_indexers(check=True)]
@@ -124,22 +172,48 @@ class Indexer:
                 indexer_helper=self._indexer_helper,
                 site_cache=self._site_cache,
                 site_engine=self._site_engine,
+                download_repo=self.download_repo,
             ).get_indexers(check=check, indexer_id=indexer_id)
         return []
 
     def list_resources(self, index_id, page=0, keyword=None):
-        cls = get_client_class("builtin")
-        if cls:
-            return cls(
+        if not index_id:
+            return []
+        builtin_cls = get_client_class("builtin")
+        if builtin_cls:
+            result = builtin_cls(
                 indexer_helper=self._indexer_helper,
                 site_cache=self._site_cache,
                 site_engine=self._site_engine,
+                download_repo=self.download_repo,
             ).list(index_id=index_id, page=page, keyword=keyword)
-        return []
+            if result is not None:
+                return result
+        site_config = self._site_config_repo.get_by_id(index_id)
+        if site_config:
+            if site_config.source == "builtin" and builtin_cls:
+                result = builtin_cls(
+                    indexer_helper=self._indexer_helper,
+                    site_cache=self._site_cache,
+                    site_engine=self._site_engine,
+                    download_repo=self.download_repo,
+                ).list(index_id=site_config.site_name, page=page, keyword=keyword)
+                if result is not None:
+                    return result
+            elif site_config.source and site_config.source != "builtin":
+                self._ensure_clients()
+                idx_config = self._system_config.get(SystemConfigKey.IndexerConfig) or {}
+                cfg = idx_config.get(site_config.source, {})
+                client = self._clients.get(site_config.source) or self.__get_client(site_config.source, cfg)
+                if client:
+                    result = client.list(index_id=site_config.site_name, page=page, keyword=keyword)
+                    if result is not None:
+                        return result
+        return None
 
     def search_by_keyword(self, key_word, filter_args: dict, match_media=None, in_from: SearchType | None = None):
         """
-        根据关键字调用索引器搜索
+        根据关键字调用所有已配置索引器并发搜索
 
         :param key_word: 搜索关键词
         :param filter_args: 过滤条件
@@ -151,64 +225,68 @@ class Indexer:
             return []
 
         progress_key = ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search
-        self._ensure_client()
-        if not self._client:
-            return []
-
-        _client = self._client
-        _client_type = self._client_type
-        indexers = self.get_indexers(check=True)
-        if not indexers:
+        self._ensure_clients()
+        if not self._clients:
             log.error("没有配置索引器，无法搜索！")
             return []
 
+        # 扁平化所有 (client, indexer) 工作项
+        work_items = []
+        for client in self._clients.values():
+            indexers = self._filter_indexers(client, check=True, filter_args=filter_args)
+            for indexer in indexers:
+                order_seq = 100 - int(getattr(indexer, "pri", 0))
+                work_items.append((client, indexer, order_seq))
+
+        if not work_items:
+            log.error("没有可用索引器站点，无法搜索！")
+            return []
+
         start_time = datetime.datetime.now()
-        max_workers = min(len(indexers), 15)
+        max_workers = min(len(work_items), 15)
 
         if filter_args and filter_args.get("site"):
-            log.info(
-                f"[{_client_type or ''}]开始搜索 %s，站点：%s，并发数：%s ..."
-                % (key_word, filter_args.get("site"), max_workers)
-            )
+            log.info("开始搜索 %s，站点：%s，并发数：%s ..." % (key_word, filter_args.get("site"), max_workers))
             self.progress.update(
                 ptype=progress_key, text="开始搜索 {}，站点：{} ...".format(key_word, filter_args.get("site"))
             )
         else:
-            log.info(
-                f"[{_client_type or ''}]开始并行搜索 %s，站点数：%s，并发数：%s ..."
-                % (key_word, len(indexers), max_workers)
-            )
-            self.progress.update(ptype=progress_key, text=f"开始并行搜索 {key_word}，站点数：{len(indexers)} ...")
+            log.info("开始并行搜索 %s，工作项：%s，并发数：%s ..." % (key_word, len(work_items), max_workers))
+            self.progress.update(ptype=progress_key, text=f"开始并行搜索 {key_word}，站点数：{len(work_items)} ...")
 
-        # ---------- 阶段1：并发搜索所有站点，收集原始结果 ----------
+        # ---------- 阶段1：单层并发搜索，收集原始结果 ----------
         all_raw_results = []
         executor = ThreadPoolExecutor(max_workers=max_workers)
         try:
-            all_task = []
-            for index in indexers:
-                order_seq = 100 - int(index.pri)
-                task = executor.submit(_client.search, order_seq, index, key_word, filter_args, match_media, in_from)
-                all_task.append(task)
-
+            futures = {
+                executor.submit(client.search, order_seq, indexer, key_word, filter_args, match_media, in_from): (
+                    client,
+                    indexer,
+                )
+                for client, indexer, order_seq in work_items
+            }
             completed = 0
-            for future in as_completed(all_task):
-                result = future.result()
+            for future in as_completed(futures, timeout=120):
+                client, indexer = futures[future]
                 completed += 1
-                # 站点搜索占 10-60%
-                pct = 10 + round(50 * (completed / len(all_task)))
+                pct = 10 + round(50 * (completed / len(futures)))
                 self.progress.update(
                     ptype=progress_key,
                     value=pct,
-                    text=f"站点搜索 {completed}/{len(all_task)} 完成 ({pct}%)",
+                    text=f"站点搜索 {completed}/{len(futures)} 完成 ({pct}%)",
                 )
-                if result:
-                    all_raw_results.extend(result)
+                try:
+                    result = future.result()
+                    if result:
+                        all_raw_results.extend(result)
+                except Exception:
+                    log.error(f"[Indexer]{client.client_id} 搜索 {indexer.name} 失败")
         finally:
             executor.shutdown(wait=False)
 
-        # ---------- 阶段2：统一批量识别和过滤 ----------
+        # ---------- 阶段2：去重 + 统一批量识别和过滤 ----------
         pipeline_result = self._pipeline.process(
-            all_results=all_raw_results,
+            all_results=self._dedup(all_raw_results),
             filter_args=filter_args,
             match_media=match_media,
             in_from=in_from,
@@ -217,7 +295,7 @@ class Indexer:
 
         end_time = datetime.datetime.now()
         log.info(
-            f"[{_client_type or ''}]搜索关键词 {key_word} 所有站点完成，"
+            f"搜索关键词 {key_word} 所有站点完成，"
             f"原始结果 {len(all_raw_results)} 条，有效资源数：{len(pipeline_result.results)}，"
             f"总耗时 {(end_time - start_time).seconds} 秒"
         )
@@ -232,9 +310,37 @@ class Indexer:
 
         return pipeline_result.results
 
+    @staticmethod
+    def _dedup(results: list[dict]) -> list[dict]:
+        """按 (title, size) 去重；builtin 来源优先"""
+        ordered = sorted(
+            results,
+            key=lambda r: (0 if r.get("_indexer_source") == "builtin" else 1, r.get("_indexer_order", 0)),
+        )
+        seen: set[tuple] = set()
+        deduped: list[dict] = []
+        for r in ordered:
+            key = (r.get("title", ""), r.get("size", ""))
+            if key not in seen:
+                seen.add(key)
+                deduped.append(r)
+        return deduped
+
     def get_indexer_statistics(self):
-        """获取索引器统计信息"""
-        self._ensure_client()
-        if not self._client:
-            return {}
-        return self.download_repo.get_indexer_statistics(self._client.get_client_id())
+        """获取所有索引器统计信息"""
+        self._ensure_clients()
+        log.warn(f"[Indexer]统计：已加载客户端 {list(self._clients.keys())}")
+        stats = []
+        for client in self._clients.values():
+            rows = self.download_repo.get_indexer_statistics(client.get_client_id())
+            for row in rows:
+                stats.append(
+                    {
+                        "indexer": row[0],
+                        "total": row[1],
+                        "fail": row[2],
+                        "success": row[3],
+                        "avg": row[4] or 0,
+                    }
+                )
+        return stats

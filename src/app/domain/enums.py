@@ -88,6 +88,8 @@ class SystemConfigKey(Enum):
     SearchIndexer = "SearchIndexer"
     # 索引器配置（jackett/prowlarr）
     IndexerConfig = "IndexerConfig"
+    # 是否启用内置索引器
+    BuiltinIndexerEnabled = "BuiltinIndexerEnabled"
 
 
 # 处理进度Key字典
