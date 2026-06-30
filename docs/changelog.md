@@ -1,5 +1,39 @@
 # 版本历史
 
+## v4.1.11 (2026-06-30)
+
+### 新增
+- 统一索引器站点管理：引入 `INDEXER_SITE_CONFIG` 表，内置索引器按站点级 `enabled` 过滤，支持 `BuiltinIndexerEnabled` 总开关
+- 启动时自动创建公开（BT）内置站点（0Magnet / 1377x / ACG.RIP / 动漫花园 / MiKan / Nyaa），优先级 100~105
+- `INDEXER_SITE_CONFIG` 新增 `DEFAULT_SETTINGS` 列（JSON），预留 BT 站点默认搜索设置
+- 新增 `IndexerSiteConfigRepository`、`IndexerSiteConfigRepositoryAdapter`、`IndexerSiteConfigEntity` 等基础设施
+- 站点维护页新增搜索启用开关（集成到编辑弹窗功能开关），BT 站点隐藏刷流/统计/解析开关
+- 卡片底部标签栏展示所有已启用功能（含搜索/字幕/标签）
+
+### 修复
+- 搜索入库 299→74 丢失：改为 dialect 无关批量 UPSERT + session 清理，对齐 `(PAGEURL, SITE, SEARCH_SESSION_ID)` 唯一索引
+- `USER_LEVEL` NULL 导致 `IntegrityError (1048)`：默认化为空字符串
+- 搜索事件 `**SearchStartPayload` 解包报错：添加 `isinstance` 检查
+- 自动创建 BT 站点 `signurl` 双重 `https://`：判断 domain 是否已含协议
+
+### 清理
+- 移除 `show_more_sites`（实验室→展示更多站点）后端和前端所有相关代码
+- 索引器页面移除内置站点多选框，改为单一总开关
+- 移除前端"默认搜索索引器"选择器
+- `builtin.py` 清理未使用的 `settings`/`IndexerConf` import，补上漏掉的 `DownloadRepository`
+
+### 前端
+- 站点卡片 BT/PT 标签按引擎定义 `site_public` 显示，不随 cookie 变化
+
+### 数据库迁移
+- `c4d5e6f7a8b9`: 新增 `INDEXER_SITE_CONFIG.DOWNLOAD_SETTING` 列
+- `ee2445e35880`: 新增 `INDEXER_SITE_CONFIG.DEFAULT_SETTINGS` 列，从 `UserIndexerSites` 迁移历史数据
+
+### 新增测试
+- `test_search_repository.py`: 搜索入库回归测试（299 条全量插入、去重、session 替换）
+- `test_indexer_site_config_repository.py`: 索引器站点配置仓储测试
+- `test_site_service_get_sites_merge.py`: 站点服务合并逻辑测试
+
 ## v4.1.10 (2026-06-29)
 
 ### 构建
