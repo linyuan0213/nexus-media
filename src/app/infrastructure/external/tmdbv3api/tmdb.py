@@ -6,24 +6,23 @@ from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.retry import HttpRetryConfig
 from app.infrastructure.tmdb import get_rate_limiter
-from app.utils.json_utils import JsonUtils
+from app.utils.config_tools import get_proxies
 
 from .as_obj import AsObj
 from .exceptions import TMDbError
 
 
-def _parse_proxies(proxies: str | dict | None) -> str | None:
-    """解析代理配置，返回 proxy_url 字符串."""
-    if not proxies:
-        return None
-    parsed = JsonUtils.loads(proxies) if isinstance(proxies, str) else proxies
-    return parsed.get("http") if isinstance(parsed, dict) else None
+def _proxy_url_from_settings() -> str | None:
+    """从全局配置读取代理地址."""
+    proxies = get_proxies() or {}
+    if isinstance(proxies, dict):
+        return proxies.get("http") or proxies.get("https")
+    return None
 
 
 class TMDb:
     TMDB_API_KEY = "TMDB_API_KEY"
     TMDB_LANGUAGE = "TMDB_LANGUAGE"
-    TMDB_PROXIES = "TMDB_PROXIES"
     TMDB_DOMAIN = "TMDB_DOMAIN"
 
     def __init__(self, session=None):
@@ -39,9 +38,8 @@ class TMDb:
         """获取或创建带限流 + 重试的 HttpClient 实例."""
         if self._session is not None:
             return self._session
-        proxy_url = _parse_proxies(self.proxies)
         return HttpClient(
-            config=HttpClientConfig(proxy_url=proxy_url, timeout=10),
+            config=HttpClientConfig(proxy_url=_proxy_url_from_settings(), timeout=10),
             retry_config=HttpRetryConfig(max_attempts=3, min_wait=1.0),
             rate_limiter=get_rate_limiter().engine,
         )
@@ -69,23 +67,6 @@ class TMDb:
     @domain.setter
     def domain(self, domain):
         os.environ[self.TMDB_DOMAIN] = str(domain or "")
-
-    @property
-    def proxies(self):
-        return os.environ.get(self.TMDB_PROXIES)
-
-    @proxies.setter
-    def proxies(self, proxies):
-        if proxies:
-            proxies_strs = []
-            for key, value in proxies.items():
-                if not value:
-                    continue
-                proxies_strs.append(f"'{key}': '{value}'")
-            if proxies_strs:
-                os.environ[self.TMDB_PROXIES] = "{{{}}}".format(",".join(proxies_strs))
-            else:
-                os.environ[self.TMDB_PROXIES] = "None"
 
     @api_key.setter
     def api_key(self, api_key):

@@ -15,7 +15,6 @@ from app.utils.config_tools import get_proxies
 
 
 class Fanart:
-    _proxies = get_proxies()
     _movie_image_types = ["movieposter", "hdmovielogo", "moviebackground", "moviedisc", "moviebanner", "moviethumb"]
     _tv_image_types = [
         "hdtvlogo",
@@ -87,7 +86,8 @@ class Fanart:
             image_url = FANART_MOVIE_API_URL % queryid
         else:
             image_url = FANART_TV_API_URL % queryid
-        proxy_url = cls._proxies.get("http") if cls._proxies else None
+        proxies = get_proxies()
+        proxy_url = proxies.get("http") if proxies else None
         try:
             return HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=5)).get(image_url)
         except HttpClientError as err:

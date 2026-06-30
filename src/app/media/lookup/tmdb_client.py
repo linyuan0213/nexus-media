@@ -18,7 +18,7 @@ from app.infrastructure.external.tmdbv3api import (
 )
 from app.utils import StringUtils
 from app.utils.chinese_utils import to_simplified
-from app.utils.config_tools import get_proxies, get_tmdbapi_url
+from app.utils.config_tools import get_tmdbapi_url
 
 
 class TmdbClient:
@@ -55,7 +55,6 @@ class TmdbClient:
             self.tmdb.domain = get_tmdbapi_url()
             self.tmdb.api_key = _api_key
             self.tmdb.language = self._default_language
-            self.tmdb.proxies = get_proxies()
             self.search = Search()
             self.movie = Movie()
             self.tv = TV()
