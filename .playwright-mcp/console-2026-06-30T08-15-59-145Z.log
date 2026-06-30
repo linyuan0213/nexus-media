@@ -1,3 +1,0 @@
-[      57ms] [WARNING] [StorageManager] empty prefix combined with LocalStorageDriver — clear()/keys() will affect every localStorage entry. @ http://192.168.50.154:8080/jse/index-index-Xsev-bUE.js:12
-[      94ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_CLOSED @ https://hm.baidu.com/hm.js?24bb3eb91dfe4ebfcbcee6952a107cb6:0
-[     546ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://192.168.50.154:8080/auth/login:0
