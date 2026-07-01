@@ -23,24 +23,80 @@
     },
     "category": {
       "movie": [
-        { "id": 410, "cat": "Movies", "desc": "同人AV" },
-        { "id": 413, "cat": "Movies", "desc": "男娘" },
-        { "id": 414, "cat": "Movies", "desc": "同人VR" },
-        { "id": 438, "cat": "Movies", "desc": "去码同人AV" },
-        { "id": 439, "cat": "Movies", "desc": "去码男娘" }
+        {
+          "id": 410,
+          "cat": "Movies",
+          "desc": "同人AV"
+        },
+        {
+          "id": 413,
+          "cat": "Movies",
+          "desc": "男娘"
+        },
+        {
+          "id": 414,
+          "cat": "Movies",
+          "desc": "同人VR"
+        },
+        {
+          "id": 438,
+          "cat": "Movies",
+          "desc": "去码同人AV"
+        },
+        {
+          "id": 439,
+          "cat": "Movies",
+          "desc": "去码男娘"
+        }
       ],
       "tv": [
-        { "id": 411, "cat": "TV/Anime", "desc": "2D动画" },
-        { "id": 423, "cat": "TV/Anime", "desc": "3D动画" },
-        { "id": 419, "cat": "TV/Anime", "desc": "里番" }
+        {
+          "id": 411,
+          "cat": "TV/Anime",
+          "desc": "2D动画"
+        },
+        {
+          "id": 423,
+          "cat": "TV/Anime",
+          "desc": "3D动画"
+        },
+        {
+          "id": 419,
+          "cat": "TV/Anime",
+          "desc": "里番"
+        }
       ],
       "anime": [
-        { "id": 420, "cat": "Anime", "desc": "外语音声" },
-        { "id": 421, "cat": "Anime", "desc": "中文音声" },
-        { "id": 422, "cat": "Anime", "desc": "视频音声" },
-        { "id": 424, "cat": "Anime", "desc": "单行本" },
-        { "id": 433, "cat": "Anime", "desc": "画师CG" },
-        { "id": 435, "cat": "Anime", "desc": "同人志" }
+        {
+          "id": 420,
+          "cat": "Anime",
+          "desc": "外语音声"
+        },
+        {
+          "id": 421,
+          "cat": "Anime",
+          "desc": "中文音声"
+        },
+        {
+          "id": 422,
+          "cat": "Anime",
+          "desc": "视频音声"
+        },
+        {
+          "id": 424,
+          "cat": "Anime",
+          "desc": "单行本"
+        },
+        {
+          "id": 433,
+          "cat": "Anime",
+          "desc": "画师CG"
+        },
+        {
+          "id": 435,
+          "cat": "Anime",
+          "desc": "同人志"
+        }
       ]
     },
     "torrents": {
@@ -52,7 +108,13 @@
           "selector": "a[href*=\"details.php?id=\"]",
           "attribute": "href",
           "filters": [
-            { "name": "re_search", "args": ["\\d+", 0] }
+            {
+              "name": "re_search",
+              "args": [
+                "\\d+",
+                0
+              ]
+            }
           ]
         },
         "title_default": {
@@ -70,8 +132,17 @@
           "selector": "a[href*=\"?cat=\"]",
           "attribute": "href",
           "filters": [
-            { "name": "replace", "args": ["?", ""] },
-            { "name": "querystring", "args": "cat" }
+            {
+              "name": "replace",
+              "args": [
+                "?",
+                ""
+              ]
+            },
+            {
+              "name": "querystring",
+              "args": "cat"
+            }
           ]
         },
         "details": {
@@ -94,7 +165,10 @@
         "date": {
           "text": "{% if fields['date_elapsed'] or fields['date_added'] %}{{ fields['date_elapsed'] if fields['date_elapsed'] else fields['date_added'] }}{% else %}now{% endif %}",
           "filters": [
-            { "name": "dateparse", "args": "%Y-%m-%d %H:%M:%S" }
+            {
+              "name": "dateparse",
+              "args": "%Y-%m-%d %H:%M:%S"
+            }
           ]
         },
         "size": {
@@ -133,8 +207,17 @@
           "selector": "img.pro_free,img.pro_free2up",
           "attribute": "onmouseover",
           "filters": [
-            { "name": "re_search", "args": ["\\d+-\\d+-\\d+ \\d+:\\d+:\\d+", 0] },
-            { "name": "dateparse", "args": "%Y-%m-%d %H:%M:%S" }
+            {
+              "name": "re_search",
+              "args": [
+                "\\d+-\\d+-\\d+ \\d+:\\d+:\\d+",
+                0
+              ]
+            },
+            {
+              "name": "dateparse",
+              "args": "%Y-%m-%d %H:%M:%S"
+            }
           ]
         },
         "labels": {
@@ -153,5 +236,6 @@
         "//div[@id='peercount']/b[1]"
       ]
     }
-  }
+  },
+  "detail_page_url": "/details.php?id={tid}"
 }

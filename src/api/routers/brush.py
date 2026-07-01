@@ -8,6 +8,7 @@ from pydantic import BaseModel, field_validator
 
 from api.deps import get_brush_service, require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError
+from app.infrastructure.thread import ThreadExecutor
 from app.schemas.common import CommonResponse
 from app.services.brush_service import BrushService
 from app.utils import ExceptionUtils
@@ -186,7 +187,7 @@ def run_brushtask(
     _: None = Depends(require_permission("brush:manage")),
     svc: BrushService = Depends(get_brush_service),
 ):
-    svc.run_task(req.id)
+    ThreadExecutor(name="brush_run").submit(svc.run_task, req.id)
     return success()
 
 

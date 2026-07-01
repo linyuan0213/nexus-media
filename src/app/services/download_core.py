@@ -425,6 +425,8 @@ class DownloadCore:
         file_path, _, _, files, retmsg = torrent.get_torrent_info(
             url=url,
             cookie=site_info.get("cookie"),
+            api_key=site_info.get("api_key"),
+            bearer_token=site_info.get("bearer_token"),
             ua=site_info.get("ua"),
             referer=page_url if site_info.get("referer") else None,
             proxy=site_info.get("proxy") or False,

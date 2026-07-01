@@ -162,6 +162,8 @@ class RssFeedStrategy:
                         "site_id": site_id,
                         "site_order": site_order,
                         "site_cookie": site_info.get("cookie"),
+                        "site_api_key": site_info.get("api_key"),
+                        "site_bearer_token": site_info.get("bearer_token"),
                         "site_ua": site_info.get("ua"),
                         "site_headers": site_info.get("headers"),
                         "site_parse": site_info.get("parse"),
@@ -249,6 +251,8 @@ class RssFeedStrategy:
                     site_id=site_id,
                     site_filter_rule=item["site_filter_rule"],
                     site_cookie=item["site_cookie"],
+                    site_api_key=item.get("site_api_key"),
+                    site_bearer_token=item.get("site_bearer_token"),
                     site_parse=item["site_parse"],
                     site_ua=item["site_ua"],
                     site_headers=JsonUtils.is_valid_json(item["site_headers"])

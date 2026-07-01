@@ -136,7 +136,13 @@ class BrushTaskHelper:
         torrent_url = f"{site_base_url}{engine.resolve_detail_url(enclosure, tid or '')}"
 
         torrent_attr = self._siteconf.check_torrent_attr(
-            torrent_url=torrent_url, cookie=site_cookie, ua=ua, headers=headers, proxy=bool(site_proxy)
+            torrent_url=torrent_url,
+            cookie=site_cookie,
+            api_key=site_info.get("api_key"),
+            bearer_token=site_info.get("bearer_token"),
+            ua=ua,
+            headers=headers,
+            proxy=bool(site_proxy),
         )
         return torrent_url, torrent_attr
 
@@ -185,7 +191,7 @@ class BrushTaskHelper:
         torrents = self._downloader.get_downloading_torrents(downloader_id=downloader_id) or []
         return len(torrents)
 
-    def download_torrent(self, taskinfo, rss_rule, site_info, title, enclosure, size, page_url):
+    def download_torrent(self, taskinfo, rss_rule, site_info, title, enclosure, size, page_url, torrent_attr=None):
         if not enclosure:
             return False
         if self._sites.check_ratelimit(site_info.get("id")):
@@ -202,7 +208,8 @@ class BrushTaskHelper:
 
         hr_tag = []
         if rss_rule.get("hr"):
-            _, torrent_attr = self.get_torrent_attr(site_info, enclosure)
+            if not torrent_attr:
+                _, torrent_attr = self.get_torrent_attr(site_info, enclosure)
             if torrent_attr.get("hr"):
                 hr_tag = ["HR"]
         tag = taskinfo.get("label").split(",") if taskinfo.get("label") else []

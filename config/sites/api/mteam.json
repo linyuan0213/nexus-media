@@ -158,12 +158,13 @@
   "torrent_attr": {
     "method": "POST",
     "path": "/api/torrent/detail",
-    "body": {
-      "id": "{tid}"
-    },
+    "body": {"id": "{tid}"},
+    "body_format": "form",
     "response": {
       "free_key": "data.status.discount",
       "free_value": "FREE",
+      "2xfree_key": "data.status.discount",
+      "2xfree_value": "FREE_2X",
       "peer_count_key": "data.status.seeders",
       "peer_count_type": "int"
     }

@@ -166,6 +166,8 @@
     "response": {
       "free_key": "data.promotion.down_multiplier",
       "free_value": "0.0",
+      "2xfree_key": "data.promotion.up_multiplier",
+      "2xfree_value": "2.0",
       "peer_count_key": "data.seeders"
     }
   },

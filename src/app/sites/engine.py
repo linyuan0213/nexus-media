@@ -283,39 +283,107 @@ class SiteEngine:
 
     # ---- 种子属性检查 ----
 
-    def resolve_torrent_attr(self, torrent_url, cookie=None, ua=None, headers=None, proxy=False):
+    def resolve_torrent_attr(
+        self,
+        torrent_url,
+        cookie=None,
+        api_key=None,
+        bearer_token=None,
+        ua=None,
+        headers=None,
+        proxy=False,
+    ):
         ret = {"free": False, "2xfree": False, "hr": False, "peer_count": 0}
         site = self.get_by_url(torrent_url)
         if not site:
+            log.debug(f"[engine]resolve_torrent_attr 未匹配站点, url={torrent_url[:100]}")
             return ret
-        user_config = {"cookie": cookie or "", "ua": ua or "", "proxy": proxy, "headers": headers or {}}
+        user_config = {
+            "cookie": cookie or "",
+            "api_key": api_key or "",
+            "bearer_token": bearer_token or "",
+            "ua": ua or "",
+            "proxy": proxy,
+            "headers": headers or {},
+        }
 
         if site.api and site.torrent_attr:
             tid = self._extract_tid(torrent_url, site)
             if not tid:
+                log.debug(f"[engine]resolve_torrent_attr TID提取失败, url={torrent_url[:100]}")
                 return ret
             cfg = site.torrent_attr
             base = site.api.base_url.rstrip("/")
             path = cfg.get("path", "").format(tid=tid)
             url = f"{base}{path}" if path.startswith("/") else path
             body = {k: v.format(tid=tid) for k, v in (cfg.get("body") or {}).items()}
-            headers = engine_tools._build_headers(self, site, user_config)
-            headers.pop("Content-Type", None)
+            headers, auth = engine_tools._build_auth(self, site, user_config)
+            method = (cfg.get("method") or "POST").upper()
+            body_format = cfg.get("body_format", "form")
+            if body_format == "json":
+                if method == "POST":
+                    headers["Content-Type"] = headers.get("Content-Type", "application/json")
+            else:
+                headers.pop("Content-Type", None)
             proxies = get_proxies() if proxy else None
             proxy_url = proxies.get("http") if proxies else None
             try:
                 rate_limiter = getattr(self, "site_limiter", None)
                 rate_limiter_engine = rate_limiter.engine if rate_limiter else None
                 rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
-                res = HttpClient(
+                client = HttpClient(
                     config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
                     rate_limiter=rate_limiter_engine,
-                ).post(url=url, data=body, headers=headers, **rl_kwargs)
+                )
+                if method == "POST":
+                    if body_format == "json":
+                        res = client.post(
+                            url=url,
+                            json=body if body else None,
+                            headers=headers,
+                            auth=auth,
+                            **rl_kwargs,
+                        )
+                    else:
+                        res = client.post(
+                            url=url,
+                            data=body if body else None,
+                            headers=headers,
+                            auth=auth,
+                            **rl_kwargs,
+                        )
+                else:
+                    res = client.get(url=url, headers=headers, auth=auth, **rl_kwargs)
                 text = res.text
                 free_path = cfg.get("response", {}).get("free_key", "")
                 free_val = cfg.get("response", {}).get("free_value", "")
-                if free_path and str(JsonUtils.get_json_object(text, free_path)) == free_val:
-                    ret["free"] = True
+                if free_path and free_val:
+                    extracted = JsonUtils.get_json_object(text, free_path)
+                    if isinstance(extracted, (int, float)):
+                        try:
+                            if extracted == float(free_val):
+                                ret["free"] = True
+                        except ValueError:
+                            if str(extracted) == free_val:
+                                ret["free"] = True
+                    elif str(extracted) == free_val:
+                        ret["free"] = True
+                free2x_path = cfg.get("response", {}).get("2xfree_key", "")
+                free2x_val = cfg.get("response", {}).get("2xfree_value", "")
+                if free2x_path and free2x_val:
+                    extracted2x = JsonUtils.get_json_object(text, free2x_path)
+                    if isinstance(extracted2x, (int, float)):
+                        try:
+                            if extracted2x == float(free2x_val):
+                                ret["free"] = True
+                                ret["2xfree"] = True
+                        except ValueError:
+                            if str(extracted2x) == free2x_val:
+                                ret["free"] = True
+                                ret["2xfree"] = True
+                    elif str(extracted2x) == free2x_val:
+                        ret["free"] = True
+                        ret["2xfree"] = True
                 peer_path = cfg.get("response", {}).get("peer_count_key", "")
                 if peer_path:
                     val = JsonUtils.get_json_object(text, peer_path)
@@ -330,9 +398,12 @@ class SiteEngine:
 
         if site.html and site.html.conf:
             conf = site.html.conf
-            detail_url = site.detail_page_url.format(tid=self._extract_tid(torrent_url, site) or "")
-            if not detail_url.startswith("http"):
-                detail_url = f"{self._base_from_url(torrent_url).rstrip('/')}/{detail_url.lstrip('/')}"
+            if site.detail_page_url:
+                detail_url = site.detail_page_url.format(tid=self._extract_tid(torrent_url, site) or "")
+                if not detail_url.startswith("http"):
+                    detail_url = f"{self._base_from_url(torrent_url).rstrip('/')}/{detail_url.lstrip('/')}"
+            else:
+                detail_url = torrent_url
             html_txt = self._fetch_page(detail_url, user_config)
             if not html_txt:
                 return ret
@@ -371,7 +442,6 @@ class SiteEngine:
         return ret
 
     def _fetch_page(self, url, user_config):
-        cookie = user_config.get("cookie", "")
         ua = user_config.get("ua", "")
         headers = {"User-Agent": ua} if ua else {}
         proxies = get_proxies() if user_config.get("proxy") else None
@@ -380,11 +450,17 @@ class SiteEngine:
         rate_limiter = getattr(self, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
+        if site and site.api:
+            auth_headers, auth = engine_tools._build_auth(self, site, user_config)
+            headers.update(auth_headers)
+        else:
+            cookie = user_config.get("cookie", "")
+            auth = CookieAuth(cookie) if cookie else None
         try:
             res = HttpClient(
                 config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
                 rate_limiter=rate_limiter_engine,
-            ).get(url=url, headers=headers, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs)
+            ).get(url=url, headers=headers, auth=auth, **rl_kwargs)
             return res.text
         except Exception:
             return None
@@ -571,7 +647,9 @@ def get_tid_by_url(url: str, site_engine: SiteEngine) -> str | None:
         return None
     site_def = site_engine.get_by_url(url)
     if site_def and site_def.download and site_def.download.type in ("api", "api_chained"):
-        tid = re.findall(r"\d+", url)
+        pattern = site_def.tid_pattern if site_def.tid_pattern else r"\d+"
+        tid = re.findall(pattern, url)
         return tid[-1] if tid else None
-    tid = re.findall(r"id=(\d+)", url)
+    pattern = site_def.tid_pattern if site_def and site_def.tid_pattern else r"id=(\d+)"
+    tid = re.findall(pattern, url)
     return tid[0] if tid else None

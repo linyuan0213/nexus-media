@@ -19,24 +19,50 @@
         "response": {
           "items_key": "torrentList",
           "item_mapping": {
-            "title": {"source": "name"},
+            "title": {
+              "source": "name"
+            },
             "enclosure": {
               "type": "template",
               "value": "{domain}/download/{fid}/{filename}",
-              "fields": {"domain": "domain", "fid": "fid", "filename": "filename"}
+              "fields": {
+                "domain": "domain",
+                "fid": "fid",
+                "filename": "filename"
+              }
             },
-            "pubdate": {"source": "addedTimestamp", "transform": "timestamp_to_date"},
-            "size": {"source": "size"},
-            "seeders": {"source": "seeders"},
-            "leechers": {"source": "leechers"},
-            "grabs": {"source": "completed"},
-            "downloadvolumefactor": {"source": "download_multiplier"},
-            "uploadvolumefactor": {"type": "constant", "value": 1.0},
-            "imdbid": {"source": "imdbID"},
+            "pubdate": {
+              "source": "addedTimestamp",
+              "transform": "timestamp_to_date"
+            },
+            "size": {
+              "source": "size"
+            },
+            "seeders": {
+              "source": "seeders"
+            },
+            "leechers": {
+              "source": "leechers"
+            },
+            "grabs": {
+              "source": "completed"
+            },
+            "downloadvolumefactor": {
+              "source": "download_multiplier"
+            },
+            "uploadvolumefactor": {
+              "type": "constant",
+              "value": 1.0
+            },
+            "imdbid": {
+              "source": "imdbID"
+            },
             "page_url": {
               "type": "template",
               "value": "https://{domain}/torrent/{fid}",
-              "fields": {"fid": "fid"}
+              "fields": {
+                "fid": "fid"
+              }
             }
           }
         }

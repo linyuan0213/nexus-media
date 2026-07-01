@@ -4,7 +4,9 @@
   "domain": "https://springsunday.net",
   "encoding": "UTF-8",
   "user_info": {
-    "bonus_labels": ["茉莉"],
+    "bonus_labels": [
+      "茉莉"
+    ],
     "seeding": {
       "total_regex": "<b>(\\d+)</b>\\s*条记录，共计<b>([\\d.]+\\s*[KMGT]B)</b>"
     }
@@ -203,5 +205,6 @@
         "//div[@id='peercount']/b[1]"
       ]
     }
-  }
+  },
+  "detail_page_url": "/details.php?id={tid}"
 }

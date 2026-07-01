@@ -35,6 +35,8 @@ class SubscribeMatcher:
         site_ua,
         site_headers,
         site_proxy,
+        site_api_key=None,
+        site_bearer_token=None,
     ):
         """判断种子是否命中订阅.
 
@@ -134,7 +136,13 @@ class SubscribeMatcher:
                 return False, match_msg, match_rss_info
 
             torrent_attr = self._site_conf.check_torrent_attr(
-                torrent_url=media_info.page_url, cookie=site_cookie, ua=site_ua, headers=site_headers, proxy=site_proxy
+                torrent_url=media_info.page_url,
+                cookie=site_cookie,
+                api_key=site_api_key,
+                bearer_token=site_bearer_token,
+                ua=site_ua,
+                headers=site_headers,
+                proxy=site_proxy,
             )
             if torrent_attr.get("2xfree"):
                 download_volume_factor = 0.0

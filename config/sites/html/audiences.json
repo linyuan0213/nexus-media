@@ -3,6 +3,7 @@
   "name": "观众",
   "domain": "https://audiences.me",
   "encoding": "UTF-8",
+  "detail_page_url": "/details.php?id={tid}",
   "public": false,
   "html": {
     "search": {

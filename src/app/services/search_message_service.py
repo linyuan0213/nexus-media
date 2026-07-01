@@ -176,7 +176,12 @@ class MessageSearchService:
         """从 URL 下载种子"""
         site_info: dict = self._site_cache.get_sites(siteurl=url)  # type: ignore[assignment]
         filepath, content, retmsg = Torrent(site_engine=self._site_engine).save_torrent_file(
-            url=url, cookie=site_info.get("cookie"), ua=site_info.get("ua"), proxy=site_info.get("proxy") or False
+            url=url,
+            cookie=site_info.get("cookie"),
+            api_key=site_info.get("api_key"),
+            bearer_token=site_info.get("bearer_token"),
+            ua=site_info.get("ua"),
+            proxy=site_info.get("proxy") or False,
         )
         if (not content or not filepath) and retmsg:
             self._message.send_channel_msg(channel=in_from, title=retmsg, user_id=user_id)

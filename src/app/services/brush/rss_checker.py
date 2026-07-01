@@ -53,6 +53,8 @@ class BrushRssChecker:
         rss_rule: dict,
         page_url: str | None,
         cookie: str | None,
+        api_key: str | None,
+        bearer_token: str | None,
         ua: str | None,
         headers: dict,
         site_proxy: bool,
@@ -61,9 +63,17 @@ class BrushRssChecker:
         if not self._rss_rule_needs_torrent_attr(rss_rule):
             return {}
         if not page_url:
+            log.debug("[Brush]page_url 为空，跳过 torrent_attr 检查")
             return {}
+        log.debug(f"[Brush]开始检查 torrent_attr, page_url={page_url[:80]}")
         return self._siteconf.check_torrent_attr(
-            torrent_url=page_url, cookie=cookie, ua=ua, headers=headers, proxy=site_proxy
+            torrent_url=page_url,
+            cookie=cookie,
+            api_key=api_key,
+            bearer_token=bearer_token,
+            ua=ua,
+            headers=headers,
+            proxy=site_proxy,
         )
 
     def check_task_rss(self, taskid: int | None, taskinfo: dict) -> None:
@@ -75,6 +85,8 @@ class BrushRssChecker:
         rss_url = taskinfo.get("rss_url")
         rss_rule = taskinfo.get("rss_rule") or {}
         cookie = taskinfo.get("cookie")
+        api_key = taskinfo.get("api_key")
+        bearer_token = taskinfo.get("bearer_token")
         rss_free = taskinfo.get("free")
         downloader_id = taskinfo.get("downloader")
         ua = taskinfo.get("ua")
@@ -102,8 +114,8 @@ class BrushRssChecker:
         if not rss_url:
             log.error(f"[Brush]站点 {site_name} 未配置RSS订阅地址，无法刷流！")
             return
-        if rss_free and (not cookie and not taskinfo.get("headers")):
-            log.warn(f"[Brush]站点 {site_name} 未配置Cookie或请求头，无法开启促销刷流")
+        if rss_free and not (cookie or api_key or bearer_token or taskinfo.get("headers")):
+            log.warn(f"[Brush]站点 {site_name} 未配置Cookie、API Key、Bearer Token或请求头，无法开启促销刷流")
             return
 
         if not self._helper._downloader.get_downloader_conf(downloader_id):
@@ -158,6 +170,7 @@ class BrushRssChecker:
                 page_url = res.get("link")
                 size = res.get("size")
                 pubdate = res.get("pubdate")
+                log.debug(f"[Brush]RSS: title={torrent_name[:30]}, link={page_url[:60]}, enc={enclosure[:60]}")
 
                 if not enclosure:
                     continue
@@ -179,6 +192,8 @@ class BrushRssChecker:
                     rss_rule=rss_rule,
                     page_url=page_url,
                     cookie=cookie,
+                    api_key=api_key,
+                    bearer_token=bearer_token,
                     ua=ua,
                     headers=headers,
                     site_proxy=bool(site_proxy),
@@ -204,7 +219,7 @@ class BrushRssChecker:
                     continue
 
                 if self._helper.download_torrent(
-                    taskinfo, rss_rule, site_info, torrent_name, enclosure, size, page_url
+                    taskinfo, rss_rule, site_info, torrent_name, enclosure, size, page_url, torrent_attr
                 ):
                     success_count += 1
                     if max_dlcount and success_count >= new_torrent_count:

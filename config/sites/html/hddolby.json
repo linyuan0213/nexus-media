@@ -220,5 +220,6 @@
         "//div[@id='peercount']/b[1]"
       ]
     }
-  }
+  },
+  "detail_page_url": "/details.php?id={tid}"
 }

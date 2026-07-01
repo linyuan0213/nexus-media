@@ -272,7 +272,15 @@ class _IDownloadClient(metaclass=ABCMeta):
         else:
             state = "Downloading"
             speed = self._format_speed(torrent)
-        return {"id": torrent.id, "name": torrent.name, "speed": speed, "state": state, "progress": progress}
+        return {
+            "id": torrent.id,
+            "name": torrent.name,
+            "speed": speed,
+            "state": state,
+            "progress": progress,
+            "labels": getattr(torrent, "labels", []) or [],
+            "category": ", ".join(c) if (c := getattr(torrent, "category", [])) else "",
+        }
 
     def _format_speed(self, torrent: Torrent) -> str:
         dl = StringUtils.str_filesize(torrent.download_speed)

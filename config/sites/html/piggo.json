@@ -206,5 +206,6 @@
     "browse": {
       "path": "torrents.php"
     }
-  }
+  },
+  "detail_page_url": "/details.php?id={tid}"
 }

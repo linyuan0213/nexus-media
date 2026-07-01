@@ -242,8 +242,10 @@ class DownloadPipeline:
             else:
                 site_info = self._sites.get_sites(siteurl=url)
                 cookie = site_info.get("cookie")
+                api_key = site_info.get("api_key")
+                bearer_token = site_info.get("bearer_token")
                 site_def = self._site_engine.get_by_url(url)
-                if site_def and site_def.api and site_def.api.auth.get("type") == "api_key":
+                if site_def and site_def.api and site_def.api.auth.get("type") in ("api_key", "bearer"):
                     cookie = None
                 headers = site_info.get("headers")
                 headers = JsonUtils.loads(headers) if headers else {}
@@ -251,6 +253,8 @@ class DownloadPipeline:
                     torrent_attr = self._siteconf.check_torrent_attr(
                         torrent_url=media_info.page_url,
                         cookie=cookie,
+                        api_key=api_key,
+                        bearer_token=bearer_token,
                         ua=site_info.get("ua"),
                         headers=headers,
                         proxy=proxy if proxy is not None else site_info.get("proxy") or False,
@@ -258,6 +262,8 @@ class DownloadPipeline:
                 file_path, content, dl_files_folder, dl_files, retmsg = Torrent(self._site_engine).get_torrent_info(
                     url=url,
                     cookie=cookie,
+                    api_key=api_key,
+                    bearer_token=bearer_token,
                     ua=site_info.get("ua"),
                     referer=media_info.page_url if not site_info.get("referer") else site_info.get("referer"),
                     proxy=proxy if proxy is not None else site_info.get("proxy") or False,

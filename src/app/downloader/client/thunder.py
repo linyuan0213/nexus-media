@@ -117,7 +117,15 @@ class Thunder(_IDownloadClient):
     def get_downloading_torrents(
         self, ids: list[str] | str | None = None, tag: str | list[str] | None = None
     ) -> list[Torrent] | None:
-        torrents, error = self.get_torrents(status="downloading")
+        statuses = [
+            TorrentStatus.Downloading,
+            TorrentStatus.Paused,
+            TorrentStatus.Queued,
+            TorrentStatus.Checking,
+            TorrentStatus.Pending,
+        ]
+        torrents, error = self.get_torrents(ids=ids, status=statuses, tag=tag)
+        torrents = [t for t in torrents if t.progress * 100 < 100]
         return None if error else torrents
 
     def get_completed_torrents(

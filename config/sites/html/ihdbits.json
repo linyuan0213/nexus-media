@@ -189,5 +189,6 @@
       "HR": [],
       "PEER_COUNT": []
     }
-  }
+  },
+  "detail_page_url": "/details.php?id={tid}"
 }

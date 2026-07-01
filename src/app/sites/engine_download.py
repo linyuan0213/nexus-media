@@ -14,7 +14,7 @@ def resolve_download_api(engine, url, site, user_config, tid):
                 body[k] = v.format(tid=tid)
             else:
                 body[k] = v
-    headers = engine._build_headers(site, user_config)
+    headers, auth = engine._build_auth(site, user_config)
     headers.pop("Content-Type", None)
     proxy = get_proxies() if user_config.get("proxy") else None
     proxy_url = proxy.get("http") if proxy else None
@@ -27,16 +27,16 @@ def resolve_download_api(engine, url, site, user_config, tid):
             rate_limiter=rate_limiter_engine,
         )
         if site.download.method == "POST":
-            res = client.post(url=url, data=body, headers=headers, **rl_kwargs)
+            res = client.post(url=url, data=body, headers=headers, auth=auth, **rl_kwargs)
         else:
-            res = client.get(url=url, headers=headers, **rl_kwargs)
+            res = client.get(url=url, headers=headers, auth=auth, **rl_kwargs)
         return res.json().get(site.download.response_key, "")
     except Exception:
         return None
 
 
 def resolve_download_chained(engine, url, site, user_config, tid):
-    headers = engine._build_headers(site, user_config)
+    headers, auth = engine._build_auth(site, user_config)
     headers.pop("Content-Type", None)
     proxy = get_proxies() if user_config.get("proxy") else None
     proxy_url = proxy.get("http") if proxy else None
@@ -47,7 +47,7 @@ def resolve_download_chained(engine, url, site, user_config, tid):
         res = HttpClient(
             config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
             rate_limiter=rate_limiter_engine,
-        ).get(url=url, headers=headers, **rl_kwargs)
+        ).get(url=url, headers=headers, auth=auth, **rl_kwargs)
         token = res.json().get(site.download.response_key, "")
         if token and site.download.download_url and site.api:
             return site.download.download_url.format(base=site.api.base_url.rstrip("/"), token=token, tid=tid)

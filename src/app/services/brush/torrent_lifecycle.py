@@ -6,6 +6,7 @@ from typing import Any
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
+from app.domain.entities.brush import BrushTaskState
 from app.domain.enums import SwitchState
 from app.message import Message
 from app.schemas.download import TorrentStatus
@@ -27,19 +28,18 @@ class BrushTorrentLifecycle:
         self._message = message
 
     def remove_task_torrents(self, taskid: int | None, taskinfo: dict) -> None:
+        if taskinfo.get("state") != BrushTaskState.RUNNING.value:
+            return
         try:
             total_uploaded = 0
             total_downloaded = 0
-            delete_ids = []
-            update_torrents = []
-            remove_torrent_ids = set()
+            delete_ids: list[str] = []
+            update_torrents: list[tuple[str, int, str]] = []
 
             site_id = taskinfo.get("site_id")
             task_name = taskinfo.get("name")
             downloader_id = taskinfo.get("downloader")
             remove_rule = taskinfo.get("remove_rule")
-            taskinfo.get("sendmessage")
-            taskinfo.get("savepath")
             downloader_cfg = self._downloader.get_downloader_conf(downloader_id)
             site_info = self._sites.get_sites(siteid=site_id)
 
@@ -53,13 +53,28 @@ class BrushTorrentLifecycle:
             if not torrent_ids:
                 return
 
-            completed_torrents = self._downloader.get_completed_torrents(downloader_id, torrent_ids)
-            if completed_torrents is None:
-                log.warn(f"[Brush]任务 {task_name} 获取下载完成种子失败")
+            # 一次查询全部状态的种子，不再分两次过滤
+            all_torrents = self._downloader.get_torrents(downloader_id, torrent_ids)
+            if all_torrents is None:
+                log.warn(f"[Brush]任务 {task_name} 获取种子列表失败")
                 return
-            remove_torrent_ids = set(torrent_ids) - {torrent.id for torrent in completed_torrents}
+
+            all_ids = {t.id for t in all_torrents}
+            absent_ids = set(torrent_ids) - all_ids
+
+            # 按状态分组：已完成的做种 vs 仍在下载中
+            downloading_statuses = {
+                TorrentStatus.Downloading,
+                TorrentStatus.Queued,
+                TorrentStatus.Checking,
+                TorrentStatus.Pending,
+            }
+            completed = [t for t in all_torrents if t.status not in downloading_statuses]
+            downloading = [t for t in all_torrents if t.status in downloading_statuses]
+
+            # 对做种/暂停/已完成的种子评估删种规则
             total_uploaded, total_downloaded, delete_ids, update_torrents = self._process_torrents(
-                completed_torrents,
+                completed,
                 taskinfo,
                 downloader_cfg,
                 site_info,
@@ -70,14 +85,9 @@ class BrushTorrentLifecycle:
                 update_torrents,
                 torrent_id_maps,
             )
-
-            downloading_torrents = self._downloader.get_downloading_torrents(downloader_id, torrent_ids)
-            if downloading_torrents is None:
-                log.warn(f"[Brush]任务 {task_name} 获取下载中种子失败")
-                return
-            remove_torrent_ids -= {torrent.id for torrent in downloading_torrents}
+            # 对正在下载的种子评估删种规则（含 dltime/pending_time）
             total_uploaded, total_downloaded, delete_ids, update_torrents = self._process_torrents(
-                downloading_torrents,
+                downloading,
                 taskinfo,
                 downloader_cfg,
                 site_info,
@@ -90,23 +100,11 @@ class BrushTorrentLifecycle:
                 is_downloading=True,
             )
 
-            if remove_torrent_ids:
-                confirmed_absent = []
-                for rid in list(remove_torrent_ids):
-                    try:
-                        existing = self._downloader.get_torrents(downloader_id, [rid])
-                        if existing:
-                            log.debug(f"[Brush]任务 {task_name} 种子 {rid} 处于边缘状态，保留记录")
-                        else:
-                            confirmed_absent.append(rid)
-                    except Exception:
-                        log.debug(f"[Brush]任务 {task_name} 查询种子 {rid} 失败，本轮跳过")
-                        remove_torrent_ids.discard(rid)
-                remove_torrent_ids = set(confirmed_absent)
-                if remove_torrent_ids:
-                    log.info(f"[Brush]任务 {task_name} 删除不存在的下载任务：{remove_torrent_ids}")
-                    for rid in remove_torrent_ids:
-                        self._repo.delete_brushtask_torrent(taskid or 0, rid)
+            # 下载器中已不存在的种子，清理 DB 记录
+            if absent_ids:
+                log.info(f"[Brush]任务 {task_name} 删除不存在的下载任务：{absent_ids}")
+                for rid in absent_ids:
+                    self._repo.delete_brushtask_torrent(taskid or 0, rid)
 
             if delete_ids:
                 self._downloader.delete_torrents(downloader_id, delete_ids, delete_file=True)
@@ -128,7 +126,7 @@ class BrushTorrentLifecycle:
                     log.info(f"[Brush]任务 {task_name} 本次检查未删除下载任务")
 
             self._repo.add_brushtask_upload_count(
-                taskid or 0, total_uploaded, total_downloaded, len(delete_ids) + len(remove_torrent_ids)
+                taskid or 0, total_uploaded, total_downloaded, len(delete_ids) + len(absent_ids)
             )
         except (ServiceError, RepositoryError, DomainError):
             raise
@@ -213,6 +211,8 @@ class BrushTorrentLifecycle:
         self._message.send_brushtask_remove_message(title=_msg_title, text=_msg_text)
 
     def stop_task_torrents(self, taskid: int | None, taskinfo: dict) -> None:
+        if taskinfo.get("state") != BrushTaskState.RUNNING.value:
+            return
         task_name = taskinfo.get("name")
         stop_rule = taskinfo.get("stop_rule")
         downloader_id = taskinfo.get("downloader")

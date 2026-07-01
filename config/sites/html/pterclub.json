@@ -182,5 +182,6 @@
         "//td[@class='rowfollow' and contains(., '发布于')]/span/@title"
       ]
     }
-  }
+  },
+  "detail_page_url": "/details.php?id={tid}"
 }

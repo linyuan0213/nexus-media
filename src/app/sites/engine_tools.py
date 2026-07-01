@@ -8,7 +8,7 @@ import httpx
 from lxml import etree
 
 import log
-from app.infrastructure.http.auth import BearerAuth, CookieAuth
+from app.infrastructure.http.auth import ApiKeyAuth, BearerAuth, CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.utils.config_tools import get_proxies
@@ -37,6 +37,7 @@ def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx.
             key = user_config.get("cookie", "")
         if key:
             headers[hdr] = key
+            auth = ApiKeyAuth(key=hdr, value=key)
     elif auth_type == "bearer":
         token = user_config.get("bearer_token", "")
         # 向后兼容：旧配置可能把 bearer token 放在 cookie/api_key 字段
@@ -57,6 +58,9 @@ def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx.
         token = engine._resolve_auth_token(site, user_config, "csrf")
         if token:
             headers[hdr] = token
+        cookie = user_config.get("cookie", "")
+        if cookie:
+            auth = CookieAuth(cookie)
 
     headers["Content-Type"] = headers.get("Content-Type", "application/json;charset=utf-8")
     headers["User-Agent"] = user_config.get("ua", "")

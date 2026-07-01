@@ -202,5 +202,6 @@
   },
   "domain_aliases": [
     "ptchdbits.co"
-  ]
+  ],
+  "detail_page_url": "/details.php?id={tid}"
 }

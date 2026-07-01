@@ -75,7 +75,22 @@ class SiteConf:
                 return conf
         return {}
 
-    def check_torrent_attr(self, torrent_url, cookie, ua=None, headers=None, proxy=False):
+    def check_torrent_attr(
+        self,
+        torrent_url,
+        cookie,
+        api_key=None,
+        bearer_token=None,
+        ua=None,
+        headers=None,
+        proxy=False,
+    ):
         return self._get_site_engine().resolve_torrent_attr(
-            torrent_url=torrent_url, cookie=cookie, ua=ua, headers=headers, proxy=proxy
+            torrent_url=torrent_url,
+            cookie=cookie,
+            api_key=api_key,
+            bearer_token=bearer_token,
+            ua=ua,
+            headers=headers,
+            proxy=proxy,
         )

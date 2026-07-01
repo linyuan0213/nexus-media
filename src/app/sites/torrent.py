@@ -32,11 +32,13 @@ class Torrent:
         """
         temp_manager.delete_file(file_path)
 
-    def get_torrent_info(self, url, cookie=None, ua=None, referer=None, proxy=False):
+    def get_torrent_info(self, url, cookie=None, api_key=None, bearer_token=None, ua=None, referer=None, proxy=False):
         """
         把种子下载到本地，返回种子内容
         :param url: 种子链接
         :param cookie: 站点Cookie
+        :param api_key: API Key
+        :param bearer_token: Bearer Token
         :param ua: 站点UserAgent
         :param referer: 关联地址，有的网站需要这个否则无法下载
         :param proxy: 是否使用内置代理
@@ -49,7 +51,13 @@ class Torrent:
         try:
             # 下载保存种子文件
             file_path, content, errmsg = self.save_torrent_file(
-                url=url, cookie=cookie, ua=ua, referer=referer, proxy=proxy
+                url=url,
+                cookie=cookie,
+                api_key=api_key,
+                bearer_token=bearer_token,
+                ua=ua,
+                referer=referer,
+                proxy=proxy,
             )
             if not file_path:
                 return None, content, "", [], errmsg
@@ -61,7 +69,7 @@ class Torrent:
         except Exception as err:
             return None, None, "", [], f"下载种子文件出现异常：{str(err)}"
 
-    def save_torrent_file(self, url, cookie=None, ua=None, referer=None, proxy=False):
+    def save_torrent_file(self, url, cookie=None, api_key=None, bearer_token=None, ua=None, referer=None, proxy=False):
         """
         把种子下载到本地
         :return: 种子保存路径，错误信息
@@ -80,12 +88,25 @@ class Torrent:
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, site_def)
 
+        if site_def and site_def.api:
+            user_config = {
+                "cookie": cookie or "",
+                "api_key": api_key or "",
+                "bearer_token": bearer_token or "",
+                "ua": ua or "",
+                "headers": {},
+            }
+            auth_headers, auth = engine_tools._build_auth(engine, site_def, user_config)
+            headers.update(auth_headers)
+        else:
+            auth = CookieAuth(cookie)
+
         try:
             client = HttpClient(
                 config=HttpClientConfig(proxy_url=proxy_url),
                 rate_limiter=rate_limiter_engine,
             )
-            req = client.get(url=url, headers=headers, auth=CookieAuth(cookie), **rl_kwargs)
+            req = client.get(url=url, headers=headers, auth=auth, **rl_kwargs)
         except HttpClientError as exc:
             log.warn(f"[Torrent]下载请求失败, url={url[:200]}, status={exc.status_code}, err={str(exc)}")
             if exc.status_code == 429:
@@ -117,7 +138,7 @@ class Torrent:
                         for item in inputs:
                             data[item[0]] = item[1]
                         # 改写req
-                        req = client.post(url=action, data=data, headers=headers, auth=CookieAuth(cookie), **rl_kwargs)
+                        req = client.post(url=action, data=data, headers=headers, auth=auth, **rl_kwargs)
                         # 检查是不是种子文件，如果不是抛出异常
                         bdecode(req.content)
                         # 跳过成功

@@ -158,6 +158,11 @@ class PtIdRequest(BaseModel):
     id: str | None = None
 
 
+class BatchIdsRequest(BaseModel):
+    ids: list[str] = []
+    delete_files: bool = False
+
+
 class TestDownloaderRequest(BaseModel):
     type: str | None = None
     config: str | None = None
@@ -576,6 +581,40 @@ def pt_stop(
     return success(data=tid)
 
 
+@router.post("/tasks/batch/start", response_model=CommonResponse, summary="批量开始下载任务")
+def pt_batch_start(
+    req: BatchIdsRequest,
+    _user: str = Depends(require_permission("download:manage")),
+    svc: Downloader = Depends(get_downloader_service),
+):
+    if req.ids:
+        svc.start_torrents(ids=req.ids)
+    return success(data=req.ids)
+
+
+@router.post("/tasks/batch/stop", response_model=CommonResponse, summary="批量停止下载任务")
+def pt_batch_stop(
+    req: BatchIdsRequest,
+    _user: str = Depends(require_permission("download:manage")),
+    svc: Downloader = Depends(get_downloader_service),
+):
+    if req.ids:
+        svc.stop_torrents(ids=req.ids)
+    return success(data=req.ids)
+
+
+@router.post("/tasks/batch/remove", response_model=CommonResponse, summary="批量删除下载任务")
+def pt_batch_remove(
+    req: BatchIdsRequest,
+    _user: str = Depends(require_any_permission("download:view", "download:manage")),
+    svc: Downloader = Depends(get_downloader_service),
+):
+    if req.ids:
+        for tid in req.ids:
+            svc.delete_torrents(ids=tid, delete_file=req.delete_files)
+    return success(data=req.ids)
+
+
 @router.post("/downloaders/test", response_model=CommonResponse, summary="测试下载器连接")
 def test_downloader(
     req: TestDownloaderRequest,
@@ -682,11 +721,19 @@ def update_torrent_remove_task(
 @router.post("/tasks", response_model=CommonResponse, summary="获取下载中任务列表")
 def get_downloading(
     req: EmptyRequest = EmptyRequest(),
+    page: int = 0,
+    page_size: int = 0,
     user: str = Depends(require_any_permission("download:view", "download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
-    torrents = svc.get_downloading_with_media_info()
-    return success(data=torrents)
+    # 未传分页参数时返回旧格式（兼容未重构的前端）
+    if page < 1:
+        torrents = svc.get_downloading_with_media_info(page=1, page_size=999)["items"]
+        return success(data=torrents)
+    page = max(1, page)
+    page_size = min(max(1, page_size), 200)
+    result = svc.get_downloading_with_media_info(page=page, page_size=page_size)
+    return success(data=result)
 
 
 @router.post("/tools/blacklist/clear", response_model=CommonResponse, summary="清空转移黑名单")

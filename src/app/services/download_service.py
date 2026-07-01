@@ -242,6 +242,8 @@ class DownloadService:
                     file_path, _, _, _, retmsg = torrent.get_torrent_info(
                         url=url,
                         cookie=site_info.get("cookie"),
+                        api_key=site_info.get("api_key"),
+                        bearer_token=site_info.get("bearer_token"),
                         ua=site_info.get("ua"),
                         proxy=site_info.get("proxy") or False,
                     )
@@ -253,7 +255,7 @@ class DownloadService:
                         media_info = MediaInfo()
                         media_info.title = identify_title
                     media_info.org_string = title or os.path.basename(file_path)
-                    media_info.site = "WEB"
+                    media_info.site = site_info.get("name") or "WEB"
                     media_info.enclosure = url
                 else:
                     # magnet 链接：用前端传入的 title/description 识别
@@ -304,14 +306,15 @@ class DownloadService:
 
     # ---------- 正在下载任务（含媒体信息拼装） ----------
 
-    def get_downloading_with_media_info(self) -> list[dict]:
+    def get_downloading_with_media_info(self, page: int = 1, page_size: int = 50) -> dict:
         """
         获取正在下载的任务列表，并拼装媒体信息（标题、海报）
         从数据库读取任务列表，按需从下载器获取实时进度
+        返回 {"items": [...], "total": N}
         """
         active_tasks = self._download_history_repo.get_active_downloads()
         if not active_tasks:
-            return []
+            return {"items": [], "total": 0}
 
         # 按下载器分组任务
         downloader_groups: dict[str, list[Any]] = {}
@@ -382,6 +385,8 @@ class DownloadService:
                             "downloader_name": downloader_name,
                             "client_id": downloader_conf.get("type") if downloader_conf else "",
                             "save_path": task.save_path,
+                            "labels": progress.get("labels", []),
+                            "category": progress.get("category", ""),
                         }
                     )
                 except (DomainError, ServiceError):
@@ -407,7 +412,10 @@ class DownloadService:
             except Exception as e:
                 log.debug(f"[DownloadService]批量标记任务完成失败：{e}")
 
-        return result
+        total = len(result)
+        start = (page - 1) * page_size
+        end = start + page_size
+        return {"items": result[start:end], "total": total}
 
     def _build_display_info(self, task) -> tuple[str, str]:
         """根据下载历史任务构建显示标题和海报"""

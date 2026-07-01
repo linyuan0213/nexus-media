@@ -184,5 +184,6 @@
   "domain_aliases": [
     "cspt.cc",
     "cspt.date"
-  ]
+  ],
+  "detail_page_url": "/details.php?id={tid}"
 }

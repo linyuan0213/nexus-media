@@ -1,5 +1,29 @@
 # 版本历史
 
+## v4.1.12 (2026-07-01)
+
+### 修复
+- 修复刷流一直不进种：`resolve_torrent_attr` 硬编码 POST 导致 rousi/tnode 的 GET 端点失败
+- 修复 `get_tid_by_url` 忽略 `site.tid_pattern`，导致 rousi UUID TID 提取失败
+- 修复刷流、订阅匹配、下载三条链路中 `api_key`/`bearer_token` 丢失，导致 API 站点认证失败
+- 修复 `Torrent.save_torrent_file` 硬编码 `CookieAuth`，忽略站点实际认证类型
+- 修复 `_build_auth` 缺少 `ApiKeyAuth` 对象，CSRF 认证缺少 `CookieAuth`
+- 修复 `resolve_torrent_attr` 数值型 free 值与配置字符串比较失败，改为 `float()` 数值比较
+- 修复 mteam 刷流 302 参数错误：`data=body`(dict) 被 httpx form-encode，mteam API 接受 form-encoded 而非 JSON
+- 修复 `POST /api/brush/tasks/run` 同步阻塞超时，改为 `ThreadExecutor` 后台执行
+
+### 新增
+- `torrent_attr` 配置新增 `body_format` 字段，区分 POST 请求体格式：
+  - `"form"`（默认）：发送 form-encoded（`id=1203027`），httpx 自动设置 `Content-Type: application/x-www-form-urlencoded`
+  - `"json"`：发送 JSON（`{"id":"1203027"}`），Content-Type 保留 `application/json`
+- mteam 站点配置显式设置 `"body_format": "form"`（`/api/torrent/detail` 端点要求 form-encoded）
+- rousi/mteam 站点配置新增 `2xfree_key`/`2xfree_value`，支持 FREE_2X 检测
+
+### 变更
+- `_build_task_dict` 新增 `api_key`/`bearer_token` 字段透传
+- `_build_auth` 统一三种认证类型的 auth 对象创建（`ApiKeyAuth` / `BearerAuth` / `CookieAuth`）
+- `resolve_torrent_attr` / `engine_download` 统一 `Content-Type` 处理：始终 pop 让 httpx 根据 body 类型自动设置
+
 ## v4.1.11 (2026-06-30)
 
 ### 新增

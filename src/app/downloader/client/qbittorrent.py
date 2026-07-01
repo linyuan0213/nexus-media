@@ -334,7 +334,14 @@ class Qbittorrent(_IDownloadClient):
     ) -> list[Torrent] | None:
         if not self.qbc:
             return None
-        torrents, error = self.get_torrents(ids=ids, status="downloading", tag=tag)
+        statuses = [
+            TorrentStatus.Downloading,
+            TorrentStatus.Paused,
+            TorrentStatus.Queued,
+            TorrentStatus.Checking,
+            TorrentStatus.Pending,
+        ]
+        torrents, error = self.get_torrents(ids=ids, status=statuses, tag=tag)
         return None if error else torrents or []
 
     def remove_torrents_tag(self, ids: list[str] | str, tag: str) -> bool:
