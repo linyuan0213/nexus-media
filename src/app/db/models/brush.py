@@ -16,6 +16,7 @@ class SITEBRUSHRULE(Base):
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     NAME: Mapped[str] = mapped_column(String(255), index=True)
+    TYPE: Mapped[str] = mapped_column(String(10), nullable=False, default="all")
     RSS_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
     REMOVE_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
     STOP_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
@@ -33,7 +34,9 @@ class SITEBRUSHTASK(Base):
     RSS_RULE: Mapped[str] = mapped_column(String(255))
     REMOVE_RULE: Mapped[str] = mapped_column(String(255))
     STOP_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    RULE_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("SITE_BRUSH_RULE.ID"), nullable=True)
+    RSS_RULE_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("SITE_BRUSH_RULE.ID"), nullable=True)
+    REMOVE_RULE_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("SITE_BRUSH_RULE.ID"), nullable=True)
+    STOP_RULE_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("SITE_BRUSH_RULE.ID"), nullable=True)
     SEED_SIZE: Mapped[int] = mapped_column(BigInteger)
     TIME_RANGE: Mapped[str] = mapped_column(Text, nullable=False, default="")
     INTEVAL: Mapped[str] = mapped_column(String(255))

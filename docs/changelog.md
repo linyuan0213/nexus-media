@@ -11,18 +11,40 @@
 - 修复 `resolve_torrent_attr` 数值型 free 值与配置字符串比较失败，改为 `float()` 数值比较
 - 修复 mteam 刷流 302 参数错误：`data=body`(dict) 被 httpx form-encode，mteam API 接受 form-encoded 而非 JSON
 - 修复 `POST /api/brush/tasks/run` 同步阻塞超时，改为 `ThreadExecutor` 后台执行
+- 修复 `get_downloading_torrents` 只查询 `status="downloading"` 导致暂停种子被排除，改为多状态列表
+- 修复 `detail_page_url` 未配置时 HTML 种子的详情页解析失败，新增引擎兜底（用 torrent_url）
+- 修复 `rss_free` 字符串 `"N"` truthy 误判，改为布尔比较
+- 修复受众页面结构变化导致 free XPath 不匹配（实际是 `detail_page_url` 缺失）
+- 修复暂停任务仍执行删种/停种，新增状态检查
+- 修复删种集合差逻辑导致暂停种子被误删，改为一次 `get_torrents` 全量查询
+- 修复 `RULE_ID` Integer 列存 JSON 字符串报错，改为三个独立 FK 列替代
+- 修复手动删种后保种体积不更新阻止进种，RSS 检查前先清理
 
 ### 新增
-- `torrent_attr` 配置新增 `body_format` 字段，区分 POST 请求体格式：
-  - `"form"`（默认）：发送 form-encoded（`id=1203027`），httpx 自动设置 `Content-Type: application/x-www-form-urlencoded`
-  - `"json"`：发送 JSON（`{"id":"1203027"}`），Content-Type 保留 `application/json`
-- mteam 站点配置显式设置 `"body_format": "form"`（`/api/torrent/detail` 端点要求 form-encoded）
+- `torrent_attr` 配置新增 `body_format` 字段，区分 POST 请求体格式
 - rousi/mteam 站点配置新增 `2xfree_key`/`2xfree_value`，支持 FREE_2X 检测
+- 75 个 NexusPHP 站点补上 `detail_page_url`
+- SITE_BRUSH_RULE 新增 `TYPE` 列（rss/remove/stop），规则按类型独立创建和管理
+- SITE_BRUSH_TASK 新增 `RSS_RULE_ID`/`REMOVE_RULE_ID`/`STOP_RULE_ID` 三列，刷流任务可分别选择三种规则
+- `/download/tasks` 新增分页参数 `page`/`page_size`，返回 `{items, total}`
+- 下载器批量操作端点：`/tasks/batch/start`、`/tasks/batch/stop`、`/tasks/batch/remove`
+- 下载任务响应新增 `labels`/`category` 字段
+- `_fetch_page` 支持 API 站点的 `_build_auth` 认证
 
 ### 变更
-- `_build_task_dict` 新增 `api_key`/`bearer_token` 字段透传
 - `_build_auth` 统一三种认证类型的 auth 对象创建（`ApiKeyAuth` / `BearerAuth` / `CookieAuth`）
-- `resolve_torrent_attr` / `engine_download` 统一 `Content-Type` 处理：始终 pop 让 httpx 根据 body 类型自动设置
+- `resolve_torrent_attr` / `engine_download` 统一 Content-Type 处理
+- `get_downloading_torrents` 改用 `TorrentStatus` 列表过滤（qBittorrent/Aria2/Thunder 统一）
+- `category` 从 list 转为 string 传递给前端
+- 删除 `RULE_ID` 列，迁移为三个独立 FK 列 + Alembic 迁移
+- `_load_rules_from_template` 支持三个独立规则 ID 加载
+
+### 前端
+- 通知统一使用 `useAppNotification`（duration:3000），修复永不消失问题
+- 正在下载页新增分页、批量选择/暂停/开始/删除、标签/分类彩色 badge、状态 badge
+- 海报 TMDB URL 直转 `/img/tmdb/` 路径，绕过 301 重定向
+- 刷流规则页重构：Type Tab 三栏分离、面板式卡片、类型彩色标签
+- 刷流任务表单：三列独立规则选择器，移除旧合并选择器
 
 ## v4.1.11 (2026-06-30)
 

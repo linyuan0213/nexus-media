@@ -34,7 +34,9 @@ class BrushRepository(BaseRepository):
                         RSS_RULE=JsonUtils.dumps(item.get("rss_rule"), ensure_ascii=False),
                         REMOVE_RULE=JsonUtils.dumps(item.get("remove_rule"), ensure_ascii=False),
                         STOP_RULE=JsonUtils.dumps(item.get("stop_rule"), ensure_ascii=False),
-                        RULE_ID=item.get("rule_id"),
+                        RSS_RULE_ID=item.get("rss_rule_id"),
+                        REMOVE_RULE_ID=item.get("remove_rule_id"),
+                        STOP_RULE_ID=item.get("stop_rule_id"),
                         SEED_SIZE=item.get("seed_size"),
                         TIME_RANGE=item.get("time_range"),
                         RSSURL=item.get("rssurl"),
@@ -61,7 +63,9 @@ class BrushRepository(BaseRepository):
                         "RSS_RULE": JsonUtils.dumps(item.get("rss_rule"), ensure_ascii=False),
                         "REMOVE_RULE": JsonUtils.dumps(item.get("remove_rule"), ensure_ascii=False),
                         "STOP_RULE": JsonUtils.dumps(item.get("stop_rule"), ensure_ascii=False),
-                        "RULE_ID": item.get("rule_id"),
+                        "RSS_RULE_ID": item.get("rss_rule_id"),
+                        "REMOVE_RULE_ID": item.get("remove_rule_id"),
+                        "STOP_RULE_ID": item.get("stop_rule_id"),
                         "SEED_SIZE": item.get("seed_size"),
                         "TIME_RANGE": item.get("time_range"),
                         "RSSURL": item.get("rssurl"),
@@ -306,14 +310,15 @@ class BrushRepository(BaseRepository):
 
     # ---------- 刷流规则模板 ----------
 
-    def insert_brushrule(self, name: str, rss_rule: str, remove_rule: str, stop_rule: str) -> int:
+    def insert_brushrule(self, name: str, rule_type: str, json_rule: str) -> int:
         """新增刷流规则模板，返回自增 ID。"""
         with self.session() as db:
             entity = SITEBRUSHRULE(
                 NAME=name,
-                RSS_RULE=rss_rule,
-                REMOVE_RULE=remove_rule,
-                STOP_RULE=stop_rule,
+                TYPE=rule_type,
+                RSS_RULE=json_rule if rule_type == "rss" else "",
+                REMOVE_RULE=json_rule if rule_type == "remove" else "",
+                STOP_RULE=json_rule if rule_type == "stop" else "",
                 LST_MOD_DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
             )
             db.add(entity)
@@ -321,32 +326,42 @@ class BrushRepository(BaseRepository):
             return entity.ID
 
     def update_brushrule(
-        self, rule_id: int, name: str | None, rss_rule: str | None, remove_rule: str | None, stop_rule: str | None
+        self,
+        rule_id: int,
+        name: str | None,
+        rule_type: str | None,
+        json_rule: str | None,
     ) -> None:
         """更新刷流规则模板。"""
         updates: dict[str, Any] = {}
         if name is not None:
             updates["NAME"] = name
-        if rss_rule is not None:
-            updates["RSS_RULE"] = rss_rule
-        if remove_rule is not None:
-            updates["REMOVE_RULE"] = remove_rule
-        if stop_rule is not None:
-            updates["STOP_RULE"] = stop_rule
+        if rule_type is not None:
+            updates["TYPE"] = rule_type
+            if rule_type == "rss":
+                updates["RSS_RULE"] = json_rule or ""
+            elif rule_type == "remove":
+                updates["REMOVE_RULE"] = json_rule or ""
+            elif rule_type == "stop":
+                updates["STOP_RULE"] = json_rule or ""
         if updates:
             updates["LST_MOD_DATE"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
             with self.session() as db:
                 db.query(SITEBRUSHRULE).filter(int(rule_id) == SITEBRUSHRULE.ID).update(updates)
 
-    def get_brushrules(self, rule_id: int | None = None) -> SITEBRUSHRULE | None | list[SITEBRUSHRULE]:
+    def get_brushrules(self, rule_id: int | None = None, rule_type: str | None = None):
         """查询刷流规则模板。"""
         with self.session() as db:
             if rule_id:
                 return db.query(SITEBRUSHRULE).filter(int(rule_id) == SITEBRUSHRULE.ID).first()
-            return db.query(SITEBRUSHRULE).order_by(SITEBRUSHRULE.ID.desc()).all()
+            query = db.query(SITEBRUSHRULE).order_by(SITEBRUSHRULE.ID.desc())
+            if rule_type:
+                query = query.filter(SITEBRUSHRULE.TYPE == rule_type)
+            return query.all()
 
     def delete_brushrule(self, rule_id: int) -> None:
-        """删除刷流规则模板，并将关联任务的 RULE_ID 置空。"""
+        """删除刷流规则模板，并将关联任务的引用置空。"""
         with self.session() as db:
-            db.query(SITEBRUSHTASK).filter(int(rule_id) == SITEBRUSHTASK.RULE_ID).update({"RULE_ID": None})
+            for col in ["RSS_RULE_ID", "REMOVE_RULE_ID", "STOP_RULE_ID"]:
+                db.query(SITEBRUSHTASK).filter(int(rule_id) == getattr(SITEBRUSHTASK, col)).update({col: None})
             db.query(SITEBRUSHRULE).filter(int(rule_id) == SITEBRUSHRULE.ID).delete()

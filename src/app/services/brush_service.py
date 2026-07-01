@@ -58,9 +58,14 @@ class BrushService:
 
     def build_task_item(self, data: dict) -> dict:
         """将前端参数转换为刷流任务 item 字典"""
-        rule_id = data.get("brushtask_rule_id") or None
+        rss_rule_id = data.get("brushtask_rss_rule_id") or None
+        remove_rule_id = data.get("brushtask_remove_rule_id") or None
+        stop_rule_id = data.get("brushtask_stop_rule_id") or None
 
-        if rule_id:
+        if rss_rule_id or remove_rule_id or stop_rule_id:
+            rss_rule = {}
+            remove_rule = {}
+            stop_rule = {}
             rss_rule = {}
             remove_rule = {}
             stop_rule = {}
@@ -94,7 +99,9 @@ class BrushService:
             "rss_rule": rss_rule,
             "remove_rule": remove_rule,
             "stop_rule": stop_rule,
-            "rule_id": rule_id,
+            "rss_rule_id": rss_rule_id,
+            "remove_rule_id": remove_rule_id,
+            "stop_rule_id": stop_rule_id,
             "sendmessage": SwitchState.ON.value if data.get("brushtask_sendmessage") else SwitchState.OFF.value,
         }
 
@@ -156,20 +163,16 @@ class BrushService:
     def add_rule(self, data: dict) -> int:
         return self._rule_repo.insert(
             name=data.get("name", ""),
-            rss_rule=JsonUtils.dumps(data.get("rss_rule", {}), ensure_ascii=False),
-            remove_rule=JsonUtils.dumps(data.get("remove_rule", {}), ensure_ascii=False),
-            stop_rule=JsonUtils.dumps(data.get("stop_rule", {}), ensure_ascii=False),
+            rule_type=data.get("type", "all"),
+            json_rule=JsonUtils.dumps(data.get("json_rule", {}), ensure_ascii=False),
         )
 
     def update_rule(self, rule_id: int, data: dict) -> None:
         self._rule_repo.update(
             rule_id=rule_id,
             name=data.get("name"),
-            rss_rule=JsonUtils.dumps(data.get("rss_rule", {}), ensure_ascii=False) if "rss_rule" in data else None,
-            remove_rule=JsonUtils.dumps(data.get("remove_rule", {}), ensure_ascii=False)
-            if "remove_rule" in data
-            else None,
-            stop_rule=JsonUtils.dumps(data.get("stop_rule", {}), ensure_ascii=False) if "stop_rule" in data else None,
+            rule_type=data.get("type"),
+            json_rule=JsonUtils.dumps(data.get("json_rule", {}), ensure_ascii=False) if "json_rule" in data else None,
         )
 
     def delete_rule(self, rule_id: int) -> None:

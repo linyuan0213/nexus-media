@@ -28,6 +28,7 @@ class BrushRssChecker:
         rsshelper: RssHelper,
         siteconf: SiteConf,
         torrents_cache: set | None = None,
+        torrent_lifecycle=None,
     ):
         self._helper = helper
         self._media_service = media_service
@@ -36,6 +37,7 @@ class BrushRssChecker:
         self._siteconf = siteconf
         self._torrents_cache = torrents_cache or set()
         self._cache_lock = threading.Lock()
+        self._torrent_lifecycle = torrent_lifecycle
 
     @staticmethod
     def _rss_rule_needs_torrent_attr(rss_rule: dict) -> bool:
@@ -123,6 +125,9 @@ class BrushRssChecker:
             return
 
         log.info(f"[Brush]开始站点 {site_name} 的刷流任务：{task_name}...")
+        # 先清理已删除的种子记录，避免保种体积虚高阻止进种
+        if self._torrent_lifecycle:
+            self._torrent_lifecycle.remove_task_torrents(taskid=None, taskinfo=taskinfo)
         if not self._helper.is_allow_new_torrent(taskinfo=taskinfo, dlcount=rss_rule.get("dlcount")):
             return
 

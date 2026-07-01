@@ -38,6 +38,7 @@ class BrushRuleEntity:
 
     id: int
     name: str
+    type: str
     rss_rule: str
     remove_rule: str
     stop_rule: str
@@ -50,6 +51,7 @@ class BrushRuleEntity:
         return cls(
             id=orm_model.ID,
             name=orm_model.NAME or "",
+            type=orm_model.TYPE or "all",
             rss_rule=orm_model.RSS_RULE or "",
             remove_rule=orm_model.REMOVE_RULE or "",
             stop_rule=orm_model.STOP_RULE or "",
@@ -68,6 +70,7 @@ class BrushRuleEntity:
         return {
             "id": self.id,
             "name": self.name,
+            "type": self.type,
             "rss_rule": _parse(self.rss_rule),
             "remove_rule": _parse(self.remove_rule),
             "stop_rule": _parse(self.stop_rule),
@@ -87,7 +90,9 @@ class BrushTaskEntity:
     rss_rule: str
     remove_rule: str
     stop_rule: str
-    rule_id: int | None
+    rss_rule_id: int | None
+    remove_rule_id: int | None
+    stop_rule_id: int | None
     seed_size: int
     time_range: str
     interval: str
@@ -164,7 +169,9 @@ class BrushTaskEntity:
             rss_rule=orm_model.RSS_RULE or "",
             remove_rule=orm_model.REMOVE_RULE or "",
             stop_rule=orm_model.STOP_RULE or "",
-            rule_id=orm_model.RULE_ID or None,
+            rss_rule_id=orm_model.RSS_RULE_ID or None,
+            remove_rule_id=orm_model.REMOVE_RULE_ID or None,
+            stop_rule_id=orm_model.STOP_RULE_ID or None,
             seed_size=orm_model.SEED_SIZE or 0,
             time_range=orm_model.TIME_RANGE or "",
             interval=orm_model.INTEVAL or "",
@@ -191,7 +198,9 @@ class BrushTaskEntity:
             "rss_rule": self.rss_rule,
             "remove_rule": self.remove_rule,
             "stop_rule": self.stop_rule,
-            "rule_id": self.rule_id,
+            "rss_rule_id": self.rss_rule_id,
+            "remove_rule_id": self.remove_rule_id,
+            "stop_rule_id": self.stop_rule_id,
             "seed_size": self.seed_size,
             "time_range": self.time_range,
             "interval": self.interval,

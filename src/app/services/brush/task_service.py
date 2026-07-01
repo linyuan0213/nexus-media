@@ -62,6 +62,13 @@ class BrushTaskService:
             message=self._message,
             site_engine=self._site_engine,
         )
+        self._torrent_lifecycle = BrushTorrentLifecycle(
+            helper=self._helper,
+            repo=self._repo,
+            downloader=self._downloader,
+            sites=self._sites,
+            message=self._message,
+        )
         self._rss_checker = BrushRssChecker(
             helper=self._helper,
             media_service=self._media_service,
@@ -69,13 +76,7 @@ class BrushTaskService:
             rsshelper=self._rsshelper,
             siteconf=self._siteconf,
             torrents_cache=self._torrents_cache,
-        )
-        self._torrent_lifecycle = BrushTorrentLifecycle(
-            helper=self._helper,
-            repo=self._repo,
-            downloader=self._downloader,
-            sites=self._sites,
-            message=self._message,
+            torrent_lifecycle=self._torrent_lifecycle,
         )
 
     # ---------- 生命周期 ----------
@@ -188,19 +189,29 @@ class BrushTaskService:
         rss_rule = self._helper.parse_json_rule(task.RSS_RULE, {})
         remove_rule = self._helper.parse_json_rule(task.REMOVE_RULE, {})
         stop_rule = self._helper.parse_json_rule(task.STOP_RULE, {"stopfree": "Y"})
-        rule_id = getattr(task, "RULE_ID", None)
-        if rule_id:
-            try:
-                entity = self._brush_rule_repo.get_by_id(int(rule_id))
-                if entity:
-                    rss_rule = self._helper.parse_json_rule(entity.rss_rule, rss_rule)
-                    remove_rule = self._helper.parse_json_rule(entity.remove_rule, remove_rule)
-                    stop_rule = self._helper.parse_json_rule(entity.stop_rule, stop_rule)
-            except (ServiceError, RepositoryError, DomainError):
-                raise
-            except Exception as e:  # noqa: BLE001
-                log.debug(f"[task_service]忽略异常: {e}")
+        rss_rule_id = getattr(task, "RSS_RULE_ID", None)
+        remove_rule_id = getattr(task, "REMOVE_RULE_ID", None)
+        stop_rule_id = getattr(task, "STOP_RULE_ID", None)
+
+        rss_rule = self._load_template_rule(rss_rule_id, "rss_rule", rss_rule)
+        remove_rule = self._load_template_rule(remove_rule_id, "remove_rule", remove_rule)
+        stop_rule = self._load_template_rule(stop_rule_id, "stop_rule", stop_rule)
         return rss_rule, remove_rule, stop_rule
+
+    def _load_template_rule(self, rule_id, field_name, default):
+        """加载单个规则模板的指定字段"""
+        if not rule_id:
+            return default
+        try:
+            entity = self._brush_rule_repo.get_by_id(int(rule_id))
+            if entity:
+                value = getattr(entity, field_name, None)
+                return self._helper.parse_json_rule(value) if value else default
+        except (ServiceError, RepositoryError, DomainError):
+            raise
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[task_service]加载规则模板 {rule_id}/{field_name} 失败: {e}")
+        return default
 
     def _build_task_dict(self, task) -> dict:
         site_info: Any = self._sites.get_sites(siteid=task.SITE)
@@ -226,7 +237,9 @@ class BrushTaskService:
             "rss_rule": rss_rule,
             "remove_rule": remove_rule,
             "stop_rule": stop_rule,
-            "rule_id": getattr(task, "RULE_ID", None),
+            "rss_rule_id": getattr(task, "RSS_RULE_ID", None),
+            "remove_rule_id": getattr(task, "REMOVE_RULE_ID", None),
+            "stop_rule_id": getattr(task, "STOP_RULE_ID", None),
             "seed_size": seed_size_gb,
             "time_range": task.TIME_RANGE,
             "total_size": total_size,

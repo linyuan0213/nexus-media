@@ -65,6 +65,9 @@ class AddBrushTaskRequest(BaseModel):
     brushtask_state: str | None = None
     brushtask_sendmessage: int | None = None
     brushtask_rule_id: int | None = None
+    brushtask_rss_rule_id: int | None = None
+    brushtask_remove_rule_id: int | None = None
+    brushtask_stop_rule_id: int | None = None
     brushtask_hr: str | None = None
     brushtask_torrent_size: str | None = None
     brushtask_include: str | None = None
@@ -105,6 +108,8 @@ class BrushRuleIdRequest(BaseModel):
 class SaveBrushRuleRequest(BaseModel):
     id: int | None = None
     name: str | None = None
+    type: str | None = None
+    json_rule: dict | None = None
     rss_rule: dict | None = None
     remove_rule: dict | None = None
     stop_rule: dict | None = None

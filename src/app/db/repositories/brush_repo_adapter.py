@@ -15,18 +15,17 @@ class BrushRuleRepositoryAdapter:
     def __init__(self, repo: BrushRepository | None = None):
         self._repo = repo or BrushRepository()
 
-    def insert(self, name: str, rss_rule: str, remove_rule: str, stop_rule: str) -> int:
-        return self._repo.insert_brushrule(name, rss_rule, remove_rule, stop_rule)
+    def insert(self, name: str, rule_type: str, json_rule: str) -> int:
+        return self._repo.insert_brushrule(name, rule_type, json_rule)
 
     def update(
         self,
         rule_id: int,
         name: str | None = None,
-        rss_rule: str | None = None,
-        remove_rule: str | None = None,
-        stop_rule: str | None = None,
+        rule_type: str | None = None,
+        json_rule: str | None = None,
     ) -> None:
-        self._repo.update_brushrule(rule_id, name, rss_rule, remove_rule, stop_rule)
+        self._repo.update_brushrule(rule_id, name, rule_type, json_rule)
 
     def get_all(self) -> list[BrushRuleEntity]:
         rows = self._repo.get_brushrules()
