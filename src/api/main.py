@@ -53,44 +53,61 @@ from app.services.system.lifecycle import SystemLifecycleService
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
-    # 1. 创建所有对象（按拓扑顺序）
-    app_context = build_app_context()
-    app.state.context = app_context
+    try:
+        app_context = build_app_context()
+        app.state.context = app_context
+    except Exception as e:
+        log.error(f"[FastAPI]构建应用上下文失败: {e}")
+        raise
 
-    # 2. 初始化数据库表结构
-    log.info("[FastAPI]初始化数据库表结构...")
-    init_db()
+    try:
+        log.info("[FastAPI]初始化数据库表结构...")
+        init_db()
+    except Exception as e:
+        log.error(f"[FastAPI]数据库初始化失败: {e}")
+        raise
 
-    log.info("[FastAPI]启动后台服务...")
-    system_lifecycle: SystemLifecycleService = app_context.system_lifecycle
-    system_lifecycle.start_service()
+    try:
+        log.info("[FastAPI]启动后台服务...")
+        system_lifecycle: SystemLifecycleService = app_context.system_lifecycle
+        system_lifecycle.start_service()
+    except Exception as e:
+        log.error(f"[FastAPI]后台服务启动失败: {e}")
+        raise
 
-    # 3. 注册内置客户端与插件
     log.info("[FastAPI]后台服务启动完成")
-    init_indexers()
-    log.info("[FastAPI]索引器注册完成")
-    init_downloaders()
-    log.info("[FastAPI]下载器注册完成")
-    init_mediaservers()
-    log.info("[FastAPI]媒体服务器注册完成")
-    init_message_clients()
-    log.info("[FastAPI]消息客户端注册完成")
 
-    message: Message = app_context.message
-    plugin_sandbox = app_context.plugin_sandbox
+    for name, init_fn in [
+        ("索引器", init_indexers),
+        ("下载器", init_downloaders),
+        ("媒体服务器", init_mediaservers),
+        ("消息客户端", init_message_clients),
+    ]:
+        try:
+            init_fn()
+            log.info(f"[FastAPI]{name}注册完成")
+        except Exception as e:
+            log.error(f"[FastAPI]{name}注册失败: {e}")
 
-    plugin_sandbox.load_all()
-    log.info("[FastAPI]插件加载完成")
-    _ = message.active_clients
-    log.info("[FastAPI]消息客户端初始化完成")
-    message.refresh_menus()
-    log.info("[FastAPI]消息菜单刷新完成")
+    try:
+        message: Message = app_context.message
+        plugin_sandbox = app_context.plugin_sandbox
+        plugin_sandbox.load_all()
+        log.info("[FastAPI]插件加载完成")
+        _ = message.active_clients
+        log.info("[FastAPI]消息客户端初始化完成")
+        message.refresh_menus()
+        log.info("[FastAPI]消息菜单刷新完成")
+    except Exception as e:
+        log.error(f"[FastAPI]插件或消息初始化失败: {e}")
 
     yield
 
-    # 4. 反向关闭
     log.info("[FastAPI]关闭后台服务...")
-    system_lifecycle.stop_service()
+    try:
+        system_lifecycle.stop_service()
+    except Exception as e:
+        log.error(f"[FastAPI]服务关闭异常: {e}")
     log.info("[FastAPI]后台服务已关闭")
 
     ThreadExecutor.shutdown_all()
@@ -122,7 +139,7 @@ if _debug:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -130,13 +147,6 @@ app.add_middleware(
 
 # 速率限制中间件：Redis 可用时分布式限流，否则降级为内存限流
 app.add_middleware(RateLimitMiddleware, rate="60/m")
-
-
-# Session 清理中间件：每个请求结束后作为兜底清理（Repository 已显式管理 session）
-@app.middleware("http")
-async def db_session_cleanup(request: Request, call_next):
-    """请求结束后作为兜底清理数据库连接"""
-    return await call_next(request)
 
 
 # 注册 Router（按领域逐步增加）
@@ -164,6 +174,18 @@ app.include_router(message_webhook.router, tags=["message-webhook"])
 _static_dir = str(Path(settings.data_path) / "static")
 os.makedirs(_static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+
+
+@app.get("/", include_in_schema=False, summary="根路径")
+def root():
+    """根路径欢迎页面"""
+    return JSONResponse(
+        content={
+            "app": "Nexus Media",
+            "version": version.APP_VERSION,
+            "message": "服务运行中，请通过前端页面访问或查看 /docs 获取 API 文档",
+        }
+    )
 
 
 @app.get("/health", response_model=HealthCheckResponse, summary="健康检查")

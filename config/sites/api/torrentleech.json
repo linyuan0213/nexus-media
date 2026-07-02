@@ -61,6 +61,7 @@
               "type": "template",
               "value": "https://{domain}/torrent/{fid}",
               "fields": {
+                "domain": "domain",
                 "fid": "fid"
               }
             }

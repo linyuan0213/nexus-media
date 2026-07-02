@@ -25,6 +25,21 @@
 - 修复插件依赖注入缺失：PluginSandbox 未注入 searcher/downloader/subscribe 等服务
 - 修复 `_do_run_plugin` 重复手动加载模块导致缺少依赖注入
 - 修复插件历史页面每次需禁用启用后才显示：refreshSidebarMenus 清除动态路由后未重载插件
+- 修复下载失败静默：fire-and-forget 线程异常不再吞掉，push DOWNLOAD_FAILED 到 SSE 队列
+- 修复 DownloadedCore._get_downloader_lock 竞态：改为双层检查+模块级锁
+- 修复 DownloadedCore.transfer 锁范围过窄，扩展至完整转移循环
+- 修复 pipeline.insert_download_history DB 写入失败导致流水线崩溃
+- 修复字幕下载 ThreadExecutor Future 丢弃，添加带标题的异常日志
+- 修复 download_event_queue 无限内存增长：Queue() → Queue(maxsize=1000)
+- 修复 find_hardlinks 返回 raw [] 而非 CommonResponse
+- 修复 torrentleech.json page_url 缺少 domain 字段映射
+- 修复 CORS allow_origins=["*"]+allow_credentials=True 违反规范
+- 修复 db_session_cleanup 死亡中间件（body 为空）
+- 修复 search_repository SQLite 非原子 INSERT：改用 sqlite_insert+on_conflict_do_update
+- 修复 SubscribeAddPayload 歧义联合类型：__post_init__ 归一化 str→int/list/bool
+- 修复 lifespan 无异常处理导致静默启动失败，每步 try/except+log.error
+- 修复后端根路径 / 直接报错：添加友好提示 JSON 返回 app/version/message
+- 修复前端版本号未显示：package.json 同步至 4.1.13，关于页面展示前端版本
 
 ### 安全
 - 令牌自动续期漏洞修复：过期 token 返回空 payload，不再自动续期

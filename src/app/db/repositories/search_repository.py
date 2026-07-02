@@ -3,9 +3,10 @@ Search Repository
 Handles search result related database operations.
 """
 
-from sqlalchemy import insert, inspect
+from sqlalchemy import inspect
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.db.models import SEARCHRESULTINFO
 from app.db.repositories.base_repository import BaseRepository
@@ -142,7 +143,18 @@ class SearchRepository(BaseRepository):
                 )
                 db.execute(stmt)
             else:
-                db.execute(insert(SEARCHRESULTINFO).values(mappings))
+                stmt = sqlite_insert(SEARCHRESULTINFO).values(mappings)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["PAGEURL", "SITE", "SEARCH_SESSION_ID"],
+                    set_={
+                        "TORRENT_NAME": stmt.excluded.TORRENT_NAME,
+                        "ENCLOSURE": stmt.excluded.ENCLOSURE,
+                        "SIZE": stmt.excluded.SIZE,
+                        "SEEDERS": stmt.excluded.SEEDERS,
+                        "PEERS": stmt.excluded.PEERS,
+                    },
+                )
+                db.execute(stmt)
             db.commit()
 
     def get_search_result_by_id(self, dl_id):

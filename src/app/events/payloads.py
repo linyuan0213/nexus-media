@@ -104,10 +104,10 @@ class SubscribeAddPayload:
     """订阅添加事件负载"""
 
     media: dict[str, Any]
-    rssid: int | str | None
-    rss_sites: list[str] | str | None = None
-    search_sites: list[str] | str | None = None
-    over_edition: bool | int = False
+    rssid: int | None = None
+    rss_sites: list[str] | None = None
+    search_sites: list[str] | None = None
+    over_edition: bool = False
     filter_restype: str | None = None
     filter_pix: str | None = None
     filter_team: str | None = None
@@ -116,7 +116,20 @@ class SubscribeAddPayload:
     download_setting: int | None = None
     total_ep: int | None = None
     current_ep: int | None = None
-    fuzzy_match: bool | int = False
+    fuzzy_match: bool = False
+
+    def __post_init__(self):
+        if isinstance(self.rssid, str):
+            object.__setattr__(self, "rssid", int(self.rssid) if self.rssid.isdigit() else None)
+        if isinstance(self.rss_sites, str):
+            object.__setattr__(self, "rss_sites", [s.strip() for s in self.rss_sites.split(",") if s.strip()])
+        if isinstance(self.search_sites, str):
+            object.__setattr__(self, "search_sites", [s.strip() for s in self.search_sites.split(",") if s.strip()])
+        if isinstance(self.over_edition, int):
+            object.__setattr__(self, "over_edition", bool(self.over_edition))
+        if isinstance(self.fuzzy_match, int):
+            object.__setattr__(self, "fuzzy_match", bool(self.fuzzy_match))
+
     keyword: str | None = None
 
 

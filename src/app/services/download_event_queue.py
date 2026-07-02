@@ -2,4 +2,4 @@
 
 import queue
 
-download_event_queue: queue.Queue = queue.Queue()
+download_event_queue: queue.Queue = queue.Queue(maxsize=1000)

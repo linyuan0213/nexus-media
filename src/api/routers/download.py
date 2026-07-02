@@ -291,10 +291,11 @@ def download(
                 dl_setting=req.setting or "",
                 user_name=user.nickname or user.username,
             )
-        except (ServiceError, DomainError) as e:
-            ExceptionUtils.exception_traceback(e)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
+            download_event_queue.put(
+                {"event": DOWNLOAD_FAILED, "data": {"title": f"下载ID:{req.id}", "reason": str(e)}}
+            )
 
     ThreadExecutor(name="download").submit(_do_download)
     return success(msg="下载任务已提交")
@@ -322,10 +323,9 @@ def download_link(
                 dl_setting=req.dl_setting or "",
                 user_name=user.nickname or user.username,
             )
-        except (ServiceError, DomainError) as e:
-            ExceptionUtils.exception_traceback(e)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
+            download_event_queue.put({"event": DOWNLOAD_FAILED, "data": {"title": req.title or "", "reason": str(e)}})
 
     ThreadExecutor(name="download").submit(_do_download)
     return success(msg="下载任务已提交")
@@ -394,13 +394,13 @@ def find_hardlinks(
     files = req.files
     file_dir = req.dir
     if not files:
-        return []
+        return success(data=[])
     if not file_dir and os.name != "nt":
         file_dir = os.path.commonpath(files).replace("\\", "/")
         if file_dir != "/":
             file_dir = "/" + str(file_dir).split("/")[1]
         else:
-            return []
+            return success(data=[])
     hardlinks = {}
     if files:
         try:

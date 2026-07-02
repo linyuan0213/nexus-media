@@ -24,14 +24,15 @@ if TYPE_CHECKING:
     from app.services.download_monitor import DownloadMonitor
 
 _downloader_locks: dict[str, Lock] = {}
+_lock_guard = Lock()
 
 
 def _get_downloader_lock(downloader_id: str) -> Lock:
-    lock = _downloader_locks.get(downloader_id)
-    if lock is None:
-        lock = Lock()
-        _downloader_locks[downloader_id] = lock
-    return lock
+    if downloader_id not in _downloader_locks:
+        with _lock_guard:
+            if downloader_id not in _downloader_locks:
+                _downloader_locks[downloader_id] = Lock()
+    return _downloader_locks[downloader_id]
 
 
 class DownloaderCore:
@@ -136,9 +137,7 @@ class DownloaderCore:
     # ---------- 转移 ----------
 
     def transfer(self, downloader_id: str | None = None):
-        """
-        转移下载完成的文件，通过 TransferPipeline 统一处理。
-        """
+        """转移下载完成的文件，通过 TransferPipeline 统一处理。"""
         downloader_ids = [downloader_id] if downloader_id else self._client_factory.monitor_downloader_ids
         for did in downloader_ids:
             with _get_downloader_lock(did):
@@ -150,48 +149,47 @@ class DownloaderCore:
                 match_path = downloader_conf.get("match_path")
                 operation = str(downloader_conf.get("rmt_mode") or "")
                 _client = self._client_factory.get_client(did)
-            if not _client:
-                continue
-            trans_tasks = _client.get_transfer_task(tag=PT_TAG if only_nexus_media else None, match_path=match_path)
-            if trans_tasks:
-                log.info(f"[Downloader]下载器 {name} 开始转移下载文件...")
-            else:
-                continue
-            for task in trans_tasks:
-                task_id = task.get("id")
-                task_path = task.get("path") or ""
-                if not task_id or not task_path:
+                if not _client:
                     continue
+                trans_tasks = _client.get_transfer_task(tag=PT_TAG if only_nexus_media else None, match_path=match_path)
+                if trans_tasks:
+                    log.info(f"[Downloader]下载器 {name} 开始转移下载文件...")
+                else:
+                    continue
+                for task in trans_tasks:
+                    task_id = task.get("id")
+                    task_path = task.get("path") or ""
+                    if not task_id or not task_path:
+                        continue
 
-                # 构建后处理回调：删种 / 标记状态
-                def _post_process(
-                    t: TransferTask,
-                    success: bool,
-                    msg: str,
-                    client=_client,
-                    tid=str(task_id),
-                    op=operation,
-                    tags=task.get("tags"),
-                ):
-                    if not success:
-                        log.warn(f"[Downloader]任务 {tid} 转移失败：{msg}")
-                        client.set_torrents_status(ids=tid, tags=tags)
-                        return
-                    if op == "move":
-                        log.warn(f"[Downloader]移动模式下删除种子文件：{tid}")
-                        client.delete_torrents(delete_file=True, ids=tid)
-                    else:
-                        client.set_torrents_status(ids=tid, tags=tags)
+                    def _post_process(
+                        t: TransferTask,
+                        success: bool,
+                        msg: str,
+                        client=_client,
+                        tid=str(task_id),
+                        op=operation,
+                        tags=task.get("tags"),
+                    ):
+                        if not success:
+                            log.warn(f"[Downloader]任务 {tid} 转移失败：{msg}")
+                            client.set_torrents_status(ids=tid, tags=tags)
+                            return
+                        if op == "move":
+                            log.warn(f"[Downloader]移动模式下删除种子文件：{tid}")
+                            client.delete_torrents(delete_file=True, ids=tid)
+                        else:
+                            client.set_torrents_status(ids=tid, tags=tags)
 
-                pipeline_task = TransferTask(
-                    source_type=SourceType.DOWNLOADER,
-                    source_id=name or "",
-                    file_paths=[task_path],
-                    operation=operation,
-                    post_process=_post_process,
-                )
-                self._pipeline.process(pipeline_task)
-            log.info(f"[Downloader]下载器 {name} 下载文件转移结束")
+                    pipeline_task = TransferTask(
+                        source_type=SourceType.DOWNLOADER,
+                        source_id=name or "",
+                        file_paths=[task_path],
+                        operation=operation,
+                        post_process=_post_process,
+                    )
+                    self._pipeline.process(pipeline_task)
+                log.info(f"[Downloader]下载器 {name} 下载文件转移结束")
 
     # ---------- 种子查询/操作 ----------
 

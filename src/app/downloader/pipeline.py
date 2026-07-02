@@ -410,19 +410,28 @@ class DownloadPipeline:
                 self._fail(media_info, in_from, "请检查下载任务保存目录是否正确")
                 return
 
-        self._download_history_repo.insert_download_history(
-            media_info=media_info, downloader=downloader_id, download_id=download_id, save_dir=save_dir or ""
-        )
+        try:
+            self._download_history_repo.insert_download_history(
+                media_info=media_info, downloader=downloader_id, download_id=download_id, save_dir=save_dir or ""
+            )
+        except Exception as e:
+            log.warn(f"[Pipeline]写入下载历史失败（任务已提交至下载器）: {e}")
 
         if page_url and subtitle_dir and site_info and site_info.get("subtitle"):
-            ThreadExecutor(name="subtitle").submit(
-                self._sitesubtitle.download,
-                media_info,
-                site_info.get("id"),
-                site_info.get("cookie"),
-                site_info.get("ua"),
-                subtitle_dir,
-            )
+
+            def _download_subtitle():
+                try:
+                    self._sitesubtitle.download(
+                        media_info,
+                        site_info.get("id"),
+                        site_info.get("cookie"),
+                        site_info.get("ua"),
+                        subtitle_dir,
+                    )
+                except Exception:
+                    log.warn(f"[Pipeline]字幕下载失败: {media_info.title or media_info.org_string}")
+
+            ThreadExecutor(name="subtitle").submit(_download_subtitle)
 
         if in_from:
             media_info.user_name = user_name
