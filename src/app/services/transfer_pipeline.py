@@ -115,15 +115,15 @@ class TransferPipeline:
         # ---------- 写入黑名单（所有来源统一） ----------
         self._blacklist.insert(file_path)
 
-        # ---------- 刮削（如果目标路径是媒体库） ----------
-        self._scrape_after_transfer(file_path, task, dst_backend)
+        # ---------- 刮削（仅目录同步来源，下载器来源已在 FileTransferService 内部完成） ----------
+        if task.source_type == SourceType.DIRECTORY and task.target_dir:
+            self._scrape_after_transfer(task.target_dir, task, dst_backend)
 
         return True, msg
 
-    def _scrape_after_transfer(self, file_path: str, task: TransferTask, dst_backend: StorageBackend | None) -> None:
-        """转移成功后触发刮削。"""
-        # 确定刮削目标路径
-        scrape_path = task.target_dir or file_path
+    def _scrape_after_transfer(self, target_path: str, task: TransferTask, dst_backend: StorageBackend | None) -> None:
+        """转移成功后触发刮削（仅在目录同步场景使用，下载器来源刮削由 FileTransferService 内部完成）。"""
+        scrape_path = target_path
         if os.path.isfile(scrape_path):
             scrape_path = os.path.dirname(scrape_path)
 

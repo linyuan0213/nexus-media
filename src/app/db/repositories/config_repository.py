@@ -786,16 +786,8 @@ class ConfigRepository(BaseRepository):
 
     # ==================== SQL Operations ====================
 
-    def execute(self, sql: str) -> object:
-        """
-        执行SQL语句
-
-        Args:
-            sql: SQL语句
-
-        Returns:
-            执行结果
-        """
+    def _execute_raw(self, sql: str) -> object:
+        """执行原始SQL语句（仅供初始化场景使用，禁止传入外部输入）。"""
         with self.session() as db:
             return db.execute(text(sql))
 

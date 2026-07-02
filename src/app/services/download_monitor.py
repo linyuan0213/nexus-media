@@ -71,17 +71,22 @@ class DownloadMonitor:
             time.sleep(self._interval)
 
     def _warmup(self) -> None:
-        """预热：记录当前所有已完成任务 ID，避免启动时大量触发."""
+        """预热：记录当前所有可转移任务 ID，避免启动时大量触发."""
         try:
             for did in self._client_factory.monitor_downloader_ids:
                 client = self._client_factory.get_client(did)
                 if not client:
                     continue
-                torrents, _ = client.get_torrents(status="completed")
-                if torrents:
-                    for torrent in torrents:
-                        if torrent.id:
-                            self._processed_ids.add(self._make_id(did, torrent.id))
+                downloader_conf = self._client_factory.get_downloader_conf(did)
+                if not downloader_conf:
+                    continue
+                only_nexus_media = downloader_conf.get("only_nexus_media")
+                match_path = downloader_conf.get("match_path")
+                tag = PT_TAG if only_nexus_media else None
+                trans_tasks = client.get_transfer_task(tag=tag, match_path=match_path)
+                for task in trans_tasks:
+                    if task.get("id"):
+                        self._processed_ids.add(self._make_id(did, str(task.get("id"))))
         except Exception as e:
             log.warn(f"[DownloadMonitor]预热失败: {e!s}")
 

@@ -46,10 +46,14 @@ class TestDownloadMonitor:
         m, factory, _ = monitor
 
         mock_client = MagicMock()
-        mock_torrent = MagicMock()
-        mock_torrent.id = "task1"
-        mock_client.get_torrents.return_value = ([mock_torrent], False)
+        mock_client.get_transfer_task.return_value = [
+            {"id": "task1", "path": "/dl/movie.mkv", "tags": [], "name": "movie"}
+        ]
         factory.get_client.return_value = mock_client
+        factory.get_downloader_conf.return_value = {
+            "only_nexus_media": False,
+            "match_path": False,
+        }
 
         m._warmup()
         assert "qb1:task1" in m._processed_ids
@@ -58,6 +62,10 @@ class TestDownloadMonitor:
     def test_warmup_no_client(self, monitor):
         m, factory, _ = monitor
         factory.get_client.return_value = None
+        factory.get_downloader_conf.return_value = {
+            "only_nexus_media": False,
+            "match_path": False,
+        }
         m._warmup()
         assert len(m._processed_ids) == 0
 

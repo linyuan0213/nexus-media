@@ -91,7 +91,7 @@ def decode_auth_token(token: str, algorithms: str = "HS256") -> tuple[bool, dict
     try:
         payload = jwt.decode(token, key=key, algorithms=algorithms)
     except jwt.ExpiredSignatureError:
-        return False, jwt.decode(token, key=key, algorithms=algorithms, options={"verify_exp": False})
+        return False, {}
     except (jwt.DecodeError, jwt.InvalidTokenError, jwt.ImmatureSignatureError):
         return False, {}
     else:

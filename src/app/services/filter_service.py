@@ -443,7 +443,7 @@ class FilterService:
             for init_rulegroup in init_rulegroups:
                 if str(init_rulegroup.get("id")) == groupid:
                     for sql in init_rulegroup.get("sql", []):
-                        self._filter_group_repo._repo.execute(sql)
+                        self._filter_group_repo._repo._execute_raw(sql)
 
     def get_filterrules(self, script_path: str):
         """获取所有过滤规则及初始规则"""

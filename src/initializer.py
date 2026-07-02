@@ -37,7 +37,7 @@ def init_default_filters():
             for stmt in f.read().split(";\n"):
                 stmt = stmt.strip()
                 if stmt and "INSERT" in stmt.upper():
-                    repo._repo.execute(adapt_sql_for_engine(stmt))
+                    repo._repo._execute_raw(adapt_sql_for_engine(stmt))
         log.info("[Initialize]默认过滤规则初始化完成")
     except Exception as e:
         log.error(f"[Initialize]默认过滤规则初始化失败: {e!s}")

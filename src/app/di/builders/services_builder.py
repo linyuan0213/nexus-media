@@ -133,10 +133,12 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         event_bus=event_bus,
     )
 
+    shared_scraper = Scraper(media_service=media_service)
+
     filetransfer_service = FileTransferService(
         media_service=media_service,
         message=message,
-        scraper=Scraper(media_service=media_service),
+        scraper=shared_scraper,
         thread_executor=thread_executor,
         history_manager=history_manager,
         progress=ProgressTracker(),
@@ -150,7 +152,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
 
     transfer_pipeline = TransferPipeline(
         filetransfer=filetransfer_service,
-        scraper=Scraper(media_service=media_service),
+        scraper=shared_scraper,
         blacklist_repo=TransferBlacklistRepositoryAdapter(),
         backend_repo=StorageBackendRepositoryAdapter(),
     )

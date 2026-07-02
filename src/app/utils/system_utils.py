@@ -1,6 +1,7 @@
 import datetime
 import os
 import platform
+import shlex
 import shutil
 import subprocess
 
@@ -64,11 +65,10 @@ class SystemUtils:
 
     @staticmethod
     def execute(cmd):
-        """
-        执行命令，获得返回结果
-        """
+        """执行命令，获得返回结果。使用 shlex.split + shell=False 防止命令注入。"""
         try:
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)  # nosec B602
+            args = shlex.split(cmd)
+            result = subprocess.run(args, shell=False, capture_output=True, text=True)
             return result.stdout.strip()
         except Exception as err:
             log.warn(f"[SystemUtils]执行命令失败: {err}")

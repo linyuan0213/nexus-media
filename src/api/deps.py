@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import log
 from app.di.context import AppContext
 from app.infrastructure.cache_system import TokenCache
-from app.infrastructure.security import generate_access_token, identify
+from app.infrastructure.security import identify
 from app.schemas.auth import UserContext
 from app.services.apikey_service import APIKeyService
 from app.services.auth_service import AuthService
@@ -478,8 +478,7 @@ def _extract_user_from_token(auth_header: str | None) -> str | None:
     if not username:
         return None
     if not flag:
-        # Token 过期但合法，自动续期
-        TokenCache.set(auth_header, generate_access_token(username))
+        return None
     return username
 
 
