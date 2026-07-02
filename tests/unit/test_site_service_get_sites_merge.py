@@ -46,7 +46,9 @@ def site_service_with_third_party():
         string_utils=MagicMock(),
         site_entity_repo=MagicMock(),
         indexer_site_config_repo=repo,
+        idx_config_repo=MagicMock(),
     )
+    svc._is_indexer_enabled = MagicMock(return_value=True)
     return svc
 
 
