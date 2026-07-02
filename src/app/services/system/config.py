@@ -11,6 +11,7 @@ from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
+from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.enums import SystemConfigKey
 from app.indexer.indexer import Indexer
@@ -31,7 +32,8 @@ from app.utils.submodule_loader import SubmoduleLoader
 class IndexerConfigService:
     """
     索引器配置业务服务
-    负责保存索引器配置、兼容旧配置迁移、测试连接
+    使用 INDEXER_CONFIG 表持久化各索引器客户端的配置和启用状态。
+    首次读取时自动从旧 SystemConfig 迁移已有配置。
     """
 
     def __init__(
@@ -40,57 +42,111 @@ class IndexerConfigService:
         indexer: Indexer,
         system_config: SystemConfig | None = None,
         site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
+        idx_config_repo: IndexerConfigRepositoryAdapter | None = None,
     ):
         self._system_config = system_config or SystemConfig()
         self._indexer_service = indexer_service
         self._indexer = indexer
         self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
+        self._idx_config_repo = idx_config_repo or IndexerConfigRepositoryAdapter()
+
+    def _migrate_from_legacy(self, client_id: str) -> dict | None:
+        """从旧 SystemConfig 读取配置并迁移到新表"""
+        old_all = self._system_config.get(SystemConfigKey.IndexerConfig) or {}
+        old_cfg = old_all.get(client_id) or {}
+
+        old_enabled_str = None
+        if client_id == "builtin":
+            old_enabled_str = self._system_config.get(SystemConfigKey.BuiltinIndexerEnabled)
+        elif client_id == "jackett":
+            old_enabled_str = self._system_config.get(SystemConfigKey.JackettIndexerEnabled)
+        elif client_id == "prowlarr":
+            old_enabled_str = self._system_config.get(SystemConfigKey.ProwlarrIndexerEnabled)
+
+        old_enabled = True if old_enabled_str is None else str(old_enabled_str) != "0"
+
+        if not old_cfg and client_id != "builtin":
+            yml_cfg = settings.get(client_id)
+            if yml_cfg:
+                old_cfg = dict(yml_cfg)
+
+        if not old_cfg and old_enabled_str is None and client_id != "builtin":
+            return None
+
+        self._idx_config_repo.upsert(client_id=client_id, enabled=old_enabled, config=old_cfg)
+        return old_cfg
+
+    def get_all_configs(self) -> list:
+        # 自动从旧 SystemConfig 迁移历史数据
+        for cid in ("builtin", "jackett", "prowlarr"):
+            if self._idx_config_repo.get_by_client_id(cid) is None:
+                self._migrate_from_legacy(cid)
+
+        entities = self._idx_config_repo.get_all()
+        result = []
+        for e in entities:
+            if e.config:
+                self._fill_config_keys(e.client_id, e.config)
+            result.append({"client_id": e.client_id, "enabled": e.enabled, "config": e.config})
+        return result
+
+    def get_config(self, client_id: str) -> dict | None:
+        entity = self._idx_config_repo.get_by_client_id(client_id)
+        if entity is not None:
+            return {"client_id": entity.client_id, "enabled": entity.enabled, "config": entity.config}
+        return self._migrate_from_legacy(client_id)
+
+    def is_enabled(self, client_id: str) -> bool:
+        entity = self._idx_config_repo.get_by_client_id(client_id)
+        if entity is not None:
+            return entity.enabled
+        row = self._migrate_from_legacy(client_id)
+        if row is not None:
+            return row.get("enabled", True)
+        return client_id == "builtin"
+
+    def _fill_config_keys(self, client_id: str, config: dict) -> None:
+        """填充配置字典的 key 为 config schema 中定义的字段 id"""
+        from app.indexer.registry import get_all_clients
+
+        for cls in get_all_clients():
+            if hasattr(cls, "client_id") and cls.client_id == client_id:
+                if hasattr(cls, "config_schema") and cls.config_schema:
+                    for field in cls.config_schema.fields:
+                        if field.id not in config:
+                            config[field.id] = ""
 
     def save_config(self, data: dict) -> IndexerConfigResultDTO:
         """保存索引器配置"""
         name = data.get("type") or ""
         test = data.get("test") in [True, "true", "on", "1", 1]
-        # 兼容旧配置：首次保存时从配置文件迁移
-        existing = self._system_config.get(SystemConfigKey.IndexerConfig) or {}
-        if name != "builtin" and (not existing or name not in existing):
-            old_cfg = settings.get(name)
-            if old_cfg:
-                existing[name] = dict(old_cfg)
-        # 提取并保存索引器详细配置
-        config = {}
+        enabled = data.get("enabled")
+
+        # 先确保旧配置已迁移
+        existing = self.get_config(name) or {}
+        old_config = existing.get("config", {})
+
+        # 提取新配置
+        config = dict(old_config)
         for key, value in data.items():
             if key.startswith(name + "."):
                 config[key.split(".", 1)[1]] = value
-            elif key not in ("type", "test", "set_default_indexer"):
+            elif key not in ("type", "test", "set_default_indexer", "enabled"):
                 config[key] = value
-        if config:
-            existing[name] = config
-        if existing:
-            self._system_config.set(SystemConfigKey.IndexerConfig, existing)
-        # 保存builtin索引器总开关
-        if name == "builtin":
-            enabled = data.get("enabled")
-            if enabled is not None:
-                self._system_config.set(SystemConfigKey.BuiltinIndexerEnabled, "1" if enabled else "0")
-            # 兼容旧站点选择：同步到 INDEXER_SITE_CONFIG
-            sites = data.get("indexer_sites")
-            if sites is not None:
-                self._system_config.set(SystemConfigKey.UserIndexerSites, sites)
-                # 同步一次到站点配置表，确保后续按表过滤
-                try:
-                    builtin_indexers = self._indexer_service.get_builtin_indexers(check=False)
-                    site_id_map = {getattr(i, "id", None): getattr(i, "name", "") for i in builtin_indexers}
-                    for sid in sites:
-                        site_name = site_id_map.get(sid)
-                        if site_name:
-                            self._site_config_repo.upsert_site(site_name=site_name, source="builtin", enabled=True)
-                except Exception as e:
-                    log.warn(f"[IndexerConfigService]同步内置站点启用状态失败: {e}")
+
+        self._idx_config_repo.upsert(
+            client_id=name,
+            enabled=enabled,
+            config=config,
+        )
+
         # 刷新 Indexer 单例配置
         self._indexer._refresh()
+
         # 同步第三方索引器站点列表
         if name != "builtin":
             self._sync_third_party_sites(name, config)
+
         # 测试连接
         if test and name != "builtin":
             try:
@@ -98,40 +154,40 @@ class IndexerConfigService:
                     "app.indexer.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
                 )
                 for schema in schemas:
-                    if schema.match(name):
-                        client = schema(config)
-                        status = client.get_status()
+                    if schema.client_id == name and hasattr(schema, "match") and schema.match(name):
+                        indexer = schema(config=config)
+                        ok = indexer.get_status()
                         return IndexerConfigResultDTO(
-                            success=True, code=0 if status else 1, msg="测试成功" if status else "测试失败"
+                            success=True, msg="连接成功" if ok else "连接失败", code=0 if ok else 1
                         )
-                return IndexerConfigResultDTO(success=False, code=-1, msg="未找到对应客户端")
-            except (ServiceError, RepositoryError, DomainError):
-                raise
+                return IndexerConfigResultDTO(success=False, msg="未找到对应的索引器客户端", code=1)
             except Exception as e:
-                ExceptionUtils.exception_traceback(e)
-                return IndexerConfigResultDTO(success=False, code=-1, msg=str(e))
-        return IndexerConfigResultDTO(success=True)
+                return IndexerConfigResultDTO(success=False, msg=str(e), code=1)
 
-    def _sync_third_party_sites(self, client_id: str, config: dict) -> None:
-        """同步第三方索引器的站点列表到 INDEXER_SITE_CONFIG。"""
+        return IndexerConfigResultDTO(success=True, msg="保存成功", code=0)
+
+    def _sync_third_party_sites(self, client_type: str, config: dict) -> None:
+        """同步第三方索引器的站点列表到 INDEXER_SITE_CONFIG 表"""
+        if not config.get("host") or not config.get("api_key"):
+            return
         try:
             schemas = SubmoduleLoader.import_submodules(
                 "app.indexer.client", filter_func=lambda _, obj: hasattr(obj, "client_id")
             )
             for schema in schemas:
-                if schema.match(client_id):
-                    client = schema(config)
+                if schema.client_id == client_type and hasattr(schema, "match") and schema.match(client_type):
+                    client = schema(config=config)
                     indexers = client.get_indexers(check=False)
-                    for indexer in indexers or []:
-                        self._site_config_repo.upsert_site(
-                            site_name=indexer.name,
-                            source=client_id,
-                            public=getattr(indexer, "public", False),
-                            enabled=False,
-                        )
+                    if indexers:
+                        for idx in indexers:
+                            self._site_config_repo.upsert_site(
+                                site_name=idx.name,
+                                source=client_type,
+                                public=bool(getattr(idx, "public", False)),
+                            )
                     break
         except Exception as e:
-            ExceptionUtils.exception_traceback(e)
+            log.warn(f"[IndexerConfigService]同步{client_type}站点列表失败: {e}")
 
 
 class MediaServerConfigService:
@@ -190,13 +246,10 @@ class MediaServerConfigService:
             config=JsonUtils.dumps(config),
             is_default=is_default,
         )
-        # 如果有设置默认，需要清理其他默认并同步 ENABLED
         if is_default:
             self._config_repo.set_default_media_server(name)
-        # 刷新 MediaServer 单例配置
         self._media_server._refresh()
         TokenCache.delete("index")
-        # 测试连接
         if test:
             try:
                 schemas = SubmoduleLoader.import_submodules(

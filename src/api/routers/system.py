@@ -57,6 +57,7 @@ from app.services.config_reloader import ConfigReloader
 from app.services.indexer_service import IndexerService
 from app.services.log_streaming_service import LogStreamingService
 from app.services.site_config_updater import SiteConfigUpdater
+from app.services.system.config import IndexerConfigService
 from app.services.system.lifecycle import SystemLifecycleService
 from app.services.system_service import (
     MessageClientService,
@@ -382,6 +383,7 @@ def get_indexers(
     current_user: UserContext = Depends(require_permission("setting:update")),
     idx_svc: IndexerService = Depends(get_indexer_service),
     cfg: SystemConfig = Depends(get_system_config_service),
+    idx_config_svc: IndexerConfigService = Depends(get_indexer_config_service),
 ):
     """获取索引器配置信息（外部索引器配置、内置站点列表、当前配置）"""
     indexers = idx_svc.get_builtin_indexers(check=False)
@@ -390,8 +392,30 @@ def get_indexers(
     public_count = len([item for item in indexer_list if item.get("public")])
     indexer_sites = cfg.get(SystemConfigKey.UserIndexerSites) or []
     search_indexer = cfg.get(SystemConfigKey.SearchIndexer) or "builtin"
-    indexer_config = cfg.get(SystemConfigKey.IndexerConfig) or {}
-    builtin_enabled = str(cfg.get(SystemConfigKey.BuiltinIndexerEnabled) or "1") != "0"
+
+    all_configs = idx_config_svc.get_all_configs()
+
+    # 索引器状态：{ client_id: { enabled, configured } }
+    indexer_status: dict[str, dict] = {}
+    for c in all_configs:
+        item_cfg = c.get("config") or {}
+        configured = c["client_id"] == "builtin" or bool(item_cfg.get("host"))
+        indexer_status[c["client_id"]] = {
+            "enabled": c["enabled"],
+            "configured": configured,
+        }
+    # 未配置的注册索引器也加入列表中
+    for cls in get_all_indexers():
+        cid = getattr(cls, "client_id", "")
+        if cid and cid not in indexer_status:
+            indexer_status[cid] = {"enabled": False, "configured": cid == "builtin"}
+
+    # 构建 indexer_config 兼容格式
+    indexer_config = {}
+    for c in all_configs:
+        if c["config"]:
+            indexer_config[c["client_id"]] = c["config"]
+
     return success(
         data={
             "indexers": indexer_list,
@@ -403,7 +427,7 @@ def get_indexers(
                 if hasattr(cls, "client_id") and cls.client_id and hasattr(cls, "config_schema") and cls.config_schema
             },
             "indexer_sites": indexer_sites,
-            "builtin_enabled": builtin_enabled,
+            "indexer_status": indexer_status,
             "search_indexer": search_indexer,
             "indexer_config": indexer_config,
             "third_party_sites": idx_svc.get_third_party_sites(),

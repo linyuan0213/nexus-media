@@ -104,3 +104,14 @@ class TestReleaseGroups:
         m = ReleaseGroupsMatcher()
         result = m.match("[VCB-Studio] Anime [BDRip]")
         assert "VCB-Studio" in result
+
+
+class TestCRCNotEpisode:
+    def test_crc_e859_not_episode(self):
+        """CRC 标签中的数字不应被误判为集号"""
+        result = parse_video_title(
+            "[Yameii] Witch Hat Atelier - S01E13 [English Dub]"
+            " [CR WEB-DL 1080p H264 AAC] [EE32E859] (Tongari Boushi no Atelier)"
+        )
+        assert result.begin_episode == 13
+        assert result.end_episode is None

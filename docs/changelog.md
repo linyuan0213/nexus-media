@@ -1,5 +1,24 @@
 # 版本历史
 
+## v4.1.13 (2026-07-02)
+
+### 重构
+- 插件前端 UMD → DI 模式：插件改为 `export default function(host)` 接收宿主注入的 Vue/IconifyIcon/API，不再依赖 import map / CDN / window 全局变量
+- 索引器配置从 `SYSTEM_DICT` 迁移到 `INDEXER_CONFIG` 专用表，与 Downloader/MediaServer 保持一致
+
+### 修复
+- 修复视频标题解析 CRC 标签 `[EE32E859]` 被误判为集号 E859
+- 修复内置索引器站点名大小写不匹配导致站点不显示（Jackett "Mikan" vs 引擎 "MiKan"）
+- 修复禁用第三方索引器后其站点仍在 `/api/site/sites`、`/api/download/indexers` 等接口中出现
+- 修复禁用第三方索引器后其站点仍参与搜索
+
+### 新增
+- Jackett/Prowlarr 索引器支持启用/禁用开关
+- 站点统计卡片颜色优化，8 张卡片使用独立色值
+
+### 变更
+- 插件前端文件名 `index.umd.js` → `index.mjs`
+
 ## v4.1.12 (2026-07-01)
 
 ### 修复

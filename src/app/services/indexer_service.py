@@ -12,6 +12,7 @@ from typing import Any
 
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
+from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.enums import SystemConfigKey
 from app.indexer import Indexer
@@ -45,6 +46,7 @@ class IndexerService:
         indexer_statistics_repo: IndexerStatisticsRepositoryAdapter,
         string_utils: Any,
         site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
+        idx_config_repo: IndexerConfigRepositoryAdapter | None = None,
     ):
         self._indexer = indexer
         self._indexer_helper = indexer_helper
@@ -53,6 +55,7 @@ class IndexerService:
         self._string_utils = string_utils
         self._indexer_statistics_repo = indexer_statistics_repo
         self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
+        self._idx_config_repo = idx_config_repo or IndexerConfigRepositoryAdapter()
 
     @property
     def indexer(self) -> Indexer:
@@ -70,37 +73,48 @@ class IndexerService:
 
     def get_all_user_indexers(self) -> list[UserIndexerDTO]:
         """
-        获取所有索引器的已启用站点（builtin + 第三方）
+        获取所有索引器的已启用站点（builtin + 第三方，过滤禁用索引器的站点）
         """
         seen = set()
         result: list[UserIndexerDTO] = []
         for indexer in self._indexer.get_indexers(check=True):
-            if indexer.name not in seen:
-                seen.add(indexer.name)
+            key = indexer.name.lower()
+            if key not in seen:
+                seen.add(key)
                 result.append(UserIndexerDTO(id=str(indexer.id), name=indexer.name))
         rows = self._site_config_repo.list_all(enabled=True, source_ne="builtin")
         for row in rows:
-            if row.site_name not in seen:
-                seen.add(row.site_name)
-                result.append(UserIndexerDTO(id=str(row.id or 0), name=row.site_name))
+            key = row.site_name.lower()
+            if key in seen:
+                continue
+            entity = self._idx_config_repo.get_by_client_id(row.source)
+            if entity and not entity.enabled:
+                continue
+            seen.add(key)
+            result.append(UserIndexerDTO(id=str(row.id or 0), name=row.site_name))
         return result
 
     def get_third_party_sites(self) -> list[dict]:
         """
-        获取所有第三方索引器站点配置
+        获取所有第三方索引器站点配置（过滤禁用索引器的站点）
         """
         rows = self._site_config_repo.list_all(source_ne="builtin")
-        return [
-            {
-                "id": row.id,
-                "site_name": row.site_name,
-                "source": row.source,
-                "download_setting": row.download_setting,
-                "enabled": row.enabled,
-                "public": row.public,
-            }
-            for row in rows
-        ]
+        result = []
+        for row in rows:
+            entity = self._idx_config_repo.get_by_client_id(row.source)
+            if entity and not entity.enabled:
+                continue
+            result.append(
+                {
+                    "id": row.id,
+                    "site_name": row.site_name,
+                    "source": row.source,
+                    "download_setting": row.download_setting,
+                    "enabled": row.enabled,
+                    "public": row.public,
+                }
+            )
+        return result
 
     def update_site_enabled(self, site_name: str, enabled: bool) -> None:
         """更新第三方站点启用状态"""

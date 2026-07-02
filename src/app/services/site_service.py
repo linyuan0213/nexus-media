@@ -2,6 +2,7 @@ from typing import Any, cast
 
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
+from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.db.repositories.site_repository import SiteRepository
 from app.domain.entities.site import SiteEntity
@@ -44,6 +45,7 @@ class SiteService:
         site_entity_repo: ISiteRepository,
         indexer_site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
         site_engine: SiteEngine | None = None,
+        idx_config_repo: IndexerConfigRepositoryAdapter | None = None,
     ):
         self._sites = sites
         self._site_user_info = site_user_info
@@ -57,6 +59,15 @@ class SiteService:
         self._site_resolver = site_resolver
         self._indexer_site_config_repo = indexer_site_config_repo or IndexerSiteConfigRepositoryAdapter()
         self._site_engine = site_engine or SiteEngine()
+        self._idx_config_repo = idx_config_repo or IndexerConfigRepositoryAdapter()
+
+    def _is_indexer_enabled(self, source: str) -> bool:
+        """检查索引器是否启用。builtin 默认启用，第三方读 INDEXER_CONFIG 表。"""
+        if source == "builtin":
+            entity = self._idx_config_repo.get_by_client_id("builtin")
+            return entity.enabled if entity else True
+        entity = self._idx_config_repo.get_by_client_id(source)
+        return entity.enabled if entity else False
 
     @property
     def site_user_info(self) -> SiteUserInfo:
@@ -125,6 +136,8 @@ class SiteService:
                 }
             for row in config_rows:
                 if row.site_name not in merged and row.source != "builtin":
+                    if not self._is_indexer_enabled(row.source):
+                        continue
                     merged[row.site_name] = {
                         "id": str(row.id or 0),
                         "name": row.site_name,
@@ -143,6 +156,8 @@ class SiteService:
             site["site_public"] = engine_by_name.get(name, site.get("public", False))
         for row in config_rows:
             if row.source == "builtin":
+                continue
+            if not self._is_indexer_enabled(row.source):
                 continue
             if row.site_name not in merged:
                 merged[row.site_name] = self._third_party_site_dict(row)

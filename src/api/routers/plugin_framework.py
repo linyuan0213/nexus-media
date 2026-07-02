@@ -332,7 +332,7 @@ def get_plugin_asset(
     file_path: str,
     svc: PluginFrameworkService = Depends(get_plugin_framework_service),
 ):
-    """获取插件前端资源文件（UMD 组件等）.
+    """获取插件前端资源文件（ESM 组件等）.
 
     URL 中的 /assets/ 前缀映射到插件根目录；
     若插件未提供前端资源，返回空 JS 占位，避免前端 loader 报 404.
@@ -354,13 +354,10 @@ def get_plugin_asset(
         return fail(msg="非法路径")
 
     if not os.path.exists(target) or not os.path.isfile(target):
-        if relative_path.endswith("index.umd.js"):
-            # 返回空 UMD 占位，注册空全局变量，避免 loader 报未注册
-            empty_umd = f"""(function(global){{
-  global["__PLUGIN_{plugin_id}__"] = {{}};
-}})(typeof globalThis !== "undefined" ? globalThis : window);
-"""
-            return Response(content=empty_umd, media_type="application/javascript")
+        if relative_path.endswith("index.mjs"):
+            # 返回空 ESM 占位，避免前端 loader 报 404
+            empty_esm = "export default {};\n"
+            return Response(content=empty_esm, media_type="application/javascript")
         return fail(msg="文件不存在")
 
     return FileResponse(target)

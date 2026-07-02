@@ -2,13 +2,13 @@
 
 ## 概述
 
-Plugin Framework v2 是 Nexus Media 的插件架构，支持前后端一体化开发。每个插件是一个独立的目录包，包含 `manifest.json` 元数据、后端 Python 代码和前端 UMD 组件。
+Plugin Framework v2 是 Nexus Media 的插件架构，支持前后端一体化开发。每个插件是一个独立的目录包，包含 `manifest.json` 元数据、后端 Python 代码和前端 ESM 组件。
 
 **核心特性：**
 - 声明式 manifest 定义，无需修改系统代码
 - 沙箱隔离运行，热重载支持
 - 内置定时任务、配置持久化、日志管理
-- 前端通过 UMD 格式注入，支持独立页面、设置表单和页面插槽
+- 前端通过 DI 模式注入，宿主向插件注入 Vue / IconifyIcon / API 客户端，插件返回组件映射
 - 全局 HookSystem 事件总线，插件间可通信
 
 ---
@@ -22,7 +22,7 @@ my_plugin/
 │   ├── __init__.py
 │   └── plugin.py              # 后端主类（必须）
 └── frontend/
-    └── index.umd.js           # 前端 UMD 包（可选）
+    └── index.mjs               # 前端 ESM 包（可选）
 ```
 
 ---
@@ -307,35 +307,29 @@ transfer.fail / library.file_deleted / autoseed.start
 
 ## 前端开发
 
-### UMD 格式要求
+### DI 模式（依赖注入）
 
-前端组件打包为 UMD 格式，暴露到 `window.__PLUGIN_{id}__`。
+前端组件通过宿主能力注入获取依赖，默认导出函数接收 `host` 参数，返回组件映射。
 
 ```javascript
-(function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined'
-    ? factory(exports, require('vue'))
-    : typeof define === 'function' && define.amd
-      ? define(['exports', 'vue'], factory)
-      : (global = typeof globalThis !== 'undefined' ? globalThis : global || self,
-         factory(global.__PLUGIN_my_plugin__ = {}, global.Vue));
-})(this, function (exports, Vue) {
-  'use strict';
-  const { h, ref, onMounted, computed } = Vue;
+export default function(host) {
+  const { h, ref, onMounted, computed } = host.Vue;
+  const IconifyIcon = host.IconifyIcon;
+  const rc = host.api;
 
   // 组件定义...
 
-  exports.MyPage = MyPage;
-});
+  return { MyPage };
+}
 ```
 
-### 全局可用依赖
+### host 可用能力
 
-| 全局变量 | 说明 |
-|----------|------|
-| `window.Vue` | Vue 3 完整 API（h, ref, computed, watch, onMounted 等） |
-| `window.IconifyIcon` | `@vben/icons` 的 IconifyIcon 组件 |
-| `window.requestClient` | 前端 HTTP 客户端（axios 封装） |
+| 属性 | 说明 |
+|------|------|
+| `host.Vue.h / ref / computed / watch / onMounted …` | Vue 3 完整 API |
+| `host.IconifyIcon` | `@vben/icons` 的 IconifyIcon 组件 |
+| `host.api` | 前端 HTTP 客户端（axios 封装） |
 
 ### 主题 CSS 变量
 
@@ -539,7 +533,7 @@ self.ctx.debug("调试信息")
 ### 前端调试
 
 1. 打开浏览器 DevTools → Console
-2. 检查 `window.__PLUGIN_{id}__` 是否正确注册
+2. 检查插件是否成功注入：搜索 `[PluginLoader]` 日志
 3. 检查 Vue Router 路由是否正确注册：`router.getRoutes()`
 
 ### 常见问题
@@ -547,7 +541,7 @@ self.ctx.debug("调试信息")
 | 问题 | 原因 | 解决 |
 |------|------|------|
 | 插件加载失败 | 入口类名不匹配 | 检查 `backend.entry` 和类名 |
-| 前端页面空白 | UMD 未正确暴露组件 | 检查 `exports.XXX = XXX` |
+| 前端页面空白 | default 导出不是函数或未返回组件 | 检查 `export default function(host) { return { ... }; }` |
 | 配置不保存 | 字段 key 不匹配 | 检查 manifest 和代码中的 key |
 | 定时任务不执行 | cron 格式错误 | 使用标准 5 位 cron 表达式 |
 
@@ -622,25 +616,18 @@ class DemoPlugin:
         self.ctx.notify("Demo 插件", f"任务完成于 {now}")
 ```
 
-### 前端：frontend/index.umd.js
+### 前端：frontend/index.mjs
 
 ```javascript
-(function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined'
-    ? factory(exports, require('vue'))
-    : typeof define === 'function' && define.amd
-      ? define(['exports', 'vue'], factory)
-      : (global = typeof globalThis !== 'undefined' ? globalThis : global || self,
-         factory(global.__PLUGIN_demo__ = {}, global.Vue));
-})(this, function (exports, Vue) {
-  'use strict';
-  const { h, ref, onMounted } = Vue;
+export default function(host) {
+  const { h, ref, onMounted } = host.Vue;
+  const rc = host.api;
 
   const HistoryPage = {
     setup() {
       const data = ref(null);
       onMounted(async () => {
-        const res = await window.requestClient.get(
+        const res = await rc.get(
           '/api/plugin-framework/plugins/demo/data/history.json'
         );
         data.value = res;
@@ -656,8 +643,8 @@ class DemoPlugin:
     }
   };
 
-  exports.HistoryPage = HistoryPage;
-});
+  return { HistoryPage };
+}
 ```
 
 ### manifest.json

@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repository import DownloadRepository
+from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 from app.indexer.client._base import _IIndexClient
@@ -46,6 +47,7 @@ class Indexer:
         download_repo: DownloadRepository | None = None,
         system_config: SystemConfig | None = None,
         site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
+        idx_config_repo: IndexerConfigRepositoryAdapter | None = None,
     ):
         self.progress = progress_helper or ProgressTracker()
         self.download_repo = download_repo or DownloadRepository()
@@ -55,6 +57,7 @@ class Indexer:
         self._site_cache = site_cache
         self._site_engine = site_engine
         self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
+        self._idx_config_repo = idx_config_repo or IndexerConfigRepositoryAdapter()
         self._client = None
         self._client_type = None
         self._clients: dict[str, _IIndexClient] = {}
@@ -73,16 +76,23 @@ class Indexer:
             if self._clients:
                 return
             clients: dict[str, _IIndexClient] = {}
-            builtin = self.__get_client("builtin")
-            if builtin:
-                clients["builtin"] = builtin
-            idx_config = self._system_config.get(SystemConfigKey.IndexerConfig) or {}
+            builtin_cfg = self._idx_config_repo.get_by_client_id("builtin")
+            if builtin_cfg is None or builtin_cfg.enabled:
+                builtin = self.__get_client("builtin")
+                if builtin:
+                    clients["builtin"] = builtin
             for ctype in ("jackett", "prowlarr"):
-                cfg = idx_config.get(ctype, {})
-                if cfg.get("host") and cfg.get("api_key"):
-                    client = self.__get_client(ctype, cfg)
-                    if client:
-                        clients[ctype] = client
+                entity = self._idx_config_repo.get_by_client_id(ctype)
+                if entity is None or not entity.config:
+                    continue
+                cfg = entity.config
+                if not cfg.get("host") or not cfg.get("api_key"):
+                    continue
+                if not entity.enabled:
+                    continue
+                client = self.__get_client(ctype, cfg)
+                if client:
+                    clients[ctype] = client
             self._clients = clients
 
     def __build_class(self, ctype, conf=None):
@@ -97,6 +107,7 @@ class Indexer:
                             site_cache=self._site_cache,
                             site_engine=self._site_engine,
                             download_repo=self.download_repo,
+                            idx_config_repo=self._idx_config_repo,
                         )
                     return cls(conf, download_repo=self.download_repo)
             except Exception as e:

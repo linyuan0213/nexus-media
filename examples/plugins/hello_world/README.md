@@ -11,7 +11,7 @@ hello_world/
 │   ├── __init__.py
 │   └── plugin.py          # 后端主类
 └── frontend/
-    └── index.umd.js       # 前端 UMD 组件包
+    └── index.mjs          # 前端 DI 组件包
 ```
 
 ## manifest.json 说明
@@ -56,20 +56,13 @@ class HelloWorldPlugin:
 
 ## 前端开发
 
-前端组件打包为 UMD 格式，暴露到 `window.__PLUGIN_{id}__`。
+前端组件通过 DI（依赖注入）模式获取宿主能力。默认导出函数接收 `host` 参数，返回组件映射。
 
-### UMD 格式要求
+### DI 模式示例
 
 ```javascript
-(function(global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined'
-    ? factory(exports, require('vue'))
-    : typeof define === 'function' && define.amd
-      ? define(['exports', 'vue'], factory)
-      : (global = typeof globalThis !== 'undefined' ? globalThis : global || self,
-         factory(global.__PLUGIN_hello_world__ = {}, global.Vue));
-})(this, function(exports, Vue) {
-  const { h, ref, onMounted } = Vue;
+export default function(host) {
+  const { h, ref, onMounted } = host.Vue;
 
   const DashboardWidget = {
     setup() {
@@ -77,13 +70,17 @@ class HelloWorldPlugin:
     }
   };
 
-  exports.DashboardWidget = DashboardWidget;
-});
+  return { DashboardWidget };
+}
 ```
 
-### 可用的全局依赖
+### host 可用能力
 
-- `window.Vue`: Vue 3 完整 API（h, ref, computed, watch, onMounted 等）
+| 属性 | 说明 |
+|------|------|
+| `host.Vue` | Vue 3 完整 API（h, ref, computed, watch, onMounted 等） |
+| `host.IconifyIcon` | `@vben/icons` 的 IconifyIcon 组件 |
+| `host.api` | HTTP 客户端（axios 封装） |
 
 ### 插槽组件
 

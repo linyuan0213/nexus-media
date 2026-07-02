@@ -90,6 +90,10 @@ class SystemConfigKey(Enum):
     IndexerConfig = "IndexerConfig"
     # 是否启用内置索引器
     BuiltinIndexerEnabled = "BuiltinIndexerEnabled"
+    # 是否启用Jackett索引器
+    JackettIndexerEnabled = "JackettIndexerEnabled"
+    # 是否启用Prowlarr索引器
+    ProwlarrIndexerEnabled = "ProwlarrIndexerEnabled"
 
 
 # 处理进度Key字典

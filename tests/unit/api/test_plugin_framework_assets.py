@@ -9,18 +9,17 @@ from api.routers import plugin_framework as plugin_router
 
 
 class TestPluginAsset:
-    def test_get_plugin_asset_missing_frontend_returns_empty_umd(self):
+    def test_get_plugin_asset_missing_frontend_returns_empty_esm(self):
         svc = MagicMock()
         svc.get_plugin_path.return_value = "/tmp/plugins/doubansync"
         with patch("api.routers.plugin_framework.os.path.exists", return_value=False):
             resp = plugin_router.get_plugin_asset(
-                plugin_id="doubansync", file_path="assets/frontend/index.umd.js", svc=svc
+                plugin_id="doubansync", file_path="assets/frontend/index.mjs", svc=svc
             )
         assert isinstance(resp, Response)
         assert resp.status_code == 200
         assert resp.media_type == "application/javascript"
-        assert b"__PLUGIN_doubansync__" in resp.body
-        assert b"{}" in resp.body
+        assert b"export default {}" in resp.body
 
     def test_get_plugin_asset_missing_other_returns_fail(self):
         svc = MagicMock()
@@ -34,13 +33,13 @@ class TestPluginAsset:
         svc.get_plugin_path.return_value = "/tmp/plugins/autosignin"
         with patch(
             "api.routers.plugin_framework.os.path.exists",
-            side_effect=lambda path: path.endswith("frontend/index.umd.js"),
+            side_effect=lambda path: path.endswith("frontend/index.mjs"),
         ):
             with patch(
                 "api.routers.plugin_framework.os.path.isfile",
-                side_effect=lambda path: path.endswith("frontend/index.umd.js"),
+                side_effect=lambda path: path.endswith("frontend/index.mjs"),
             ):
                 resp = plugin_router.get_plugin_asset(
-                    plugin_id="autosignin", file_path="assets/frontend/index.umd.js", svc=svc
+                    plugin_id="autosignin", file_path="assets/frontend/index.mjs", svc=svc
                 )
         assert isinstance(resp, FileResponse)

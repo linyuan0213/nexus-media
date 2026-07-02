@@ -1,6 +1,6 @@
 """
 索引器相关模型
-包含: 索引器统计、索引器站点配置
+包含: 索引器统计、索引器站点配置、索引器配置
 """
 
 from datetime import datetime
@@ -10,6 +10,21 @@ from sqlalchemy import DateTime, Integer, Sequence, String, Text, UniqueConstrai
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
+
+
+class INDEXERCONFIG(Base):
+    __tablename__ = "INDEXER_CONFIG"
+    __table_args__ = (UniqueConstraint("CLIENT_ID", name="UQ_INDEXER_CONFIG_CLIENT_ID"),)
+
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    CLIENT_ID: Mapped[str] = mapped_column(String(50), nullable=False)
+    ENABLED: Mapped[int] = mapped_column(Integer, default=1)
+    CONFIG: Mapped[str | None] = mapped_column(Text, nullable=True)
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class INDEXERSTATISTICS(Base):

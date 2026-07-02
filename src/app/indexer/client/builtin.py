@@ -12,6 +12,7 @@ from threading import Lock
 import log
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repository import DownloadRepository
+from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 from app.indexer.client._base import _IIndexClient
@@ -60,6 +61,7 @@ class BuiltinIndexer(_IIndexClient):
         system_config: SystemConfig | None = None,
         drissionpage_helper: ChromeClient | None = None,
         site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
+        idx_config_repo: IndexerConfigRepositoryAdapter | None = None,
     ):
         self._client_config = config or {}
         self._indexer_helper = indexer_helper
@@ -70,6 +72,7 @@ class BuiltinIndexer(_IIndexClient):
         self._drissionpage_helper = drissionpage_helper or ChromeClient()
         self._site_engine = site_engine
         self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
+        self._idx_config_repo = idx_config_repo or IndexerConfigRepositoryAdapter()
 
     @classmethod
     def match(cls, ctype):
@@ -82,8 +85,11 @@ class BuiltinIndexer(_IIndexClient):
         return self.client_id
 
     def is_enabled(self) -> bool:
+        entity = self._idx_config_repo.get_by_client_id("builtin")
+        if entity is not None:
+            return entity.enabled
         val = self._system_config.get(SystemConfigKey.BuiltinIndexerEnabled)
-        return str(val) != "0"
+        return str(val or "1") != "0"
 
     def get_status(self):
         return True
@@ -91,7 +97,7 @@ class BuiltinIndexer(_IIndexClient):
     def get_indexers(self, check=True, indexer_id=None, public=True):
         """获取当前索引器的索引站点"""
         ret_indexers = []
-        enabled_names = set(self._site_config_repo.list_enabled_names(source="builtin"))
+        enabled_names = set(n.lower() for n in self._site_config_repo.list_enabled_names())
         _indexer_domains = []
 
         chrome_ok = self._drissionpage_helper.get_status()
@@ -159,7 +165,7 @@ class BuiltinIndexer(_IIndexClient):
             if indexer:
                 if indexer_id and (str(indexer.id) == str(indexer_id) or site.get("name") == indexer_id):
                     return indexer
-                if check and indexer.name not in enabled_names:
+                if check and indexer.name.lower() not in enabled_names:
                     continue
                 if indexer.domain not in _indexer_domains:
                     _indexer_domains.append(indexer.domain)
