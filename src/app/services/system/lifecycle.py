@@ -188,7 +188,7 @@ class SystemLifecycleService:
                     continue
                 name, func = item
                 _start_service_or_log(name, func)
-        # 4. 启动下载完成实时监控（事件驱动转移）
+        # 3. 启动下载完成实时监控（事件驱动转移）
         self._download_monitor.start()
 
     def stop_service(self) -> None:

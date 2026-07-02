@@ -91,7 +91,7 @@ class MediaLibraryService:
             return LibrarySpaceDTO()
 
         used_space = total_space - free_space
-        used_percent = "%0.1f" % ((used_space / total_space) * 100)
+        used_percent = round((used_space / total_space) * 100, 1)
 
         def fmt_space(val):
             if val > 1024:

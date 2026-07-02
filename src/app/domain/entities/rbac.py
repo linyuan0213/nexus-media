@@ -8,6 +8,8 @@ from dataclasses import dataclass, fields
 from datetime import datetime
 from typing import Any, Optional
 
+import log
+
 
 @dataclass
 class RBACUserEntity:
@@ -33,8 +35,10 @@ class RBACUserEntity:
             return None
 
         roles = []
-        with contextlib.suppress(Exception):
+        try:
             roles = [r.to_dict() for r in orm_model.roles]
+        except Exception as e:
+            log.warn(f"[RBAC]获取用户角色失败: {e}")
 
         return cls(
             id=orm_model.ID,

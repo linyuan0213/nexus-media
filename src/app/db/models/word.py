@@ -3,7 +3,7 @@
 包含: 自定义识别词、自定义识别词分组
 """
 
-from sqlalchemy import Integer, Sequence, String, Text
+from sqlalchemy import ForeignKey, Integer, Sequence, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -19,7 +19,7 @@ class CUSTOMWORDS(Base):
     BACK: Mapped[str] = mapped_column(String(255))
     OFFSET: Mapped[str] = mapped_column(String(255))
     TYPE: Mapped[int] = mapped_column(Integer)
-    GROUP_ID: Mapped[int] = mapped_column(Integer)
+    GROUP_ID: Mapped[int] = mapped_column(Integer, ForeignKey("CUSTOM_WORD_GROUPS.ID"), index=True)
     SEASON: Mapped[int] = mapped_column(Integer)
     ENABLED: Mapped[int] = mapped_column(Integer)
     REGEX: Mapped[int] = mapped_column(Integer)

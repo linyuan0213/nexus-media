@@ -36,7 +36,7 @@ class SITEUSERINFOSTATS(Base):
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     SITE: Mapped[str] = mapped_column(String(255), index=True)
-    USERNAME: Mapped[str] = mapped_column(String(255), server_default=text("''"))
+    USERNAME: Mapped[str] = mapped_column(String(255), server_default=text("''"), index=True)
     USER_LEVEL: Mapped[str] = mapped_column(String(255), server_default=text("''"))
     JOIN_AT: Mapped[str] = mapped_column(String(255), server_default=text("''"))
     UPDATE_AT: Mapped[str] = mapped_column(String(255), server_default=text("''"))

@@ -25,14 +25,18 @@ from app.services.subscribe.management.service import SubscribeService
 @on_event(SUBSCRIBE_FINISHED)
 def handle_subscribe_finished(event: Event) -> None:
     """订阅完成事件处理器"""
-    payload = SubscribeFinishedPayload(**event.payload)
+    payload = event.payload
+    if not isinstance(payload, SubscribeFinishedPayload):
+        payload = SubscribeFinishedPayload(**payload)
     log.info(f"[Event]订阅完成: rssid={payload.rssid}")
 
 
 @on_event(SUBSCRIBE_ADD)
 def handle_subscribe_add(event: Event) -> None:
     """订阅添加事件处理器"""
-    payload = SubscribeAddPayload(**event.payload)
+    payload = event.payload
+    if not isinstance(payload, SubscribeAddPayload):
+        payload = SubscribeAddPayload(**payload)
     log.info(f"[Event]订阅添加: rssid={payload.rssid}")
 
 
@@ -42,7 +46,9 @@ def build_rss_auto_subscribe_handler(subscribe_service: SubscribeService):
     @on_event(RSS_AUTO_SUBSCRIBE_REQUESTED)
     def handle_rss_auto_subscribe(event: Event) -> None:
         """RSS自动化订阅请求处理器"""
-        payload = RssAutoSubscribeRequestedPayload(**event.payload)
+        payload = event.payload
+        if not isinstance(payload, RssAutoSubscribeRequestedPayload):
+            payload = RssAutoSubscribeRequestedPayload(**payload)
         try:
             code, msg, _ = subscribe_service.add_rss_subscribe(
                 mtype=payload.mtype,
@@ -72,7 +78,9 @@ def build_rss_auto_subscribe_handler(subscribe_service: SubscribeService):
 @on_event(MEDIA_EPISODE_TRANSFERRED)
 def handle_media_episode_transferred(event: Event) -> None:
     """单集转移完成事件处理器 — 更新订阅进度"""
-    payload = MediaEpisodeTransferredPayload(**event.payload)
+    payload = event.payload
+    if not isinstance(payload, MediaEpisodeTransferredPayload):
+        payload = MediaEpisodeTransferredPayload(**payload)
     try:
         tv_repo = SubscribeTvRepositoryAdapter()
         raw_id = tv_repo.get_id(

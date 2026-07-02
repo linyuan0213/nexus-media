@@ -230,6 +230,7 @@ def get_users(
                 "email": d["email"],
                 "avatar": d.get("avatar"),
                 "status": d["status"],
+                "is_superadmin": bool(d.get("is_superadmin", 0)),
                 "roles": roles,
                 "last_login_at": last_login,
                 "pris": [role.get("role_name") for role in roles] if roles else ["普通用户"],

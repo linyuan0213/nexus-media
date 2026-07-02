@@ -57,7 +57,7 @@ class Scraper:
         self._credits = ChineseCredits(self.media)
 
     def _init_config(self):
-        self._scraper_flag = settings.get("media").get("nfo_poster")
+        self._scraper_flag = (settings.get("media") or {}).get("nfo_poster")
         scraper_conf = self._system_config.get(SystemConfigKey.UserScraperConf)
         if isinstance(scraper_conf, str):
             try:

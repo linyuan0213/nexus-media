@@ -100,11 +100,12 @@ def register_download_completed_handler(
     download_client_factory: DownloadClientFactory | None = None,
 ) -> None:
     """注册下载完成事件处理器，外部显式注入依赖。"""
-    event_bus.subscribe(
-        DOWNLOAD_COMPLETED,
-        lambda event: handle_download_completed(
+
+    def _handler(event: Event) -> None:
+        handle_download_completed(
             event,
             download_client_factory=download_client_factory,
             transfer_pipeline=transfer_pipeline,
-        ),
-    )
+        )
+
+    event_bus.subscribe(DOWNLOAD_COMPLETED, _handler)

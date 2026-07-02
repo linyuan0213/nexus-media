@@ -21,11 +21,13 @@ class RBACUserRepository(BaseRepository):
     """
 
     def _get_user_with_roles(self, db: Session, user_id: int) -> RBACUser | None:
-        """在同一 session 内加载用户及其角色。"""
+        """在同一 session 内加载用户及完整角色数据。"""
         return (
             db.query(RBACUser)
             .options(
-                selectinload(RBACUser.roles),
+                selectinload(RBACUser.roles).selectinload(RBACRole.permissions),
+                selectinload(RBACUser.roles).selectinload(RBACRole.menus),
+                selectinload(RBACUser.roles).selectinload(RBACRole.users),
             )
             .filter(RBACUser.ID == user_id)
             .first()
@@ -55,7 +57,16 @@ class RBACUserRepository(BaseRepository):
             用户对象或None
         """
         with self.session() as db:
-            return db.query(RBACUser).filter(RBACUser.USERNAME == username).first()
+            return (
+                db.query(RBACUser)
+                .options(
+                    selectinload(RBACUser.roles).selectinload(RBACRole.permissions),
+                    selectinload(RBACUser.roles).selectinload(RBACRole.menus),
+                    selectinload(RBACUser.roles).selectinload(RBACRole.users),
+                )
+                .filter(RBACUser.USERNAME == username)
+                .first()
+            )
 
     def get_user_by_email(self, email: str) -> RBACUser | None:
         """
@@ -84,7 +95,9 @@ class RBACUserRepository(BaseRepository):
         """
         with self.session() as db:
             query = db.query(RBACUser).options(
-                selectinload(RBACUser.roles),
+                selectinload(RBACUser.roles).selectinload(RBACRole.permissions),
+                selectinload(RBACUser.roles).selectinload(RBACRole.menus),
+                selectinload(RBACUser.roles).selectinload(RBACRole.users),
             )
 
             if status is not None:
@@ -92,21 +105,19 @@ class RBACUserRepository(BaseRepository):
 
             total = query.count()
             users = query.offset((page - 1) * page_size).limit(page_size).all()
-
+            for u in users:
+                db.expunge(u)
             return users, total
 
     def get_all_users(self) -> list[RBACUser]:
-        """
-        获取所有用户（预加载角色）
-
-        Returns:
-            用户列表
-        """
+        """获取所有用户（预加载完整角色数据）"""
         with self.session() as db:
             return (
                 db.query(RBACUser)
                 .options(
-                    selectinload(RBACUser.roles),
+                    selectinload(RBACUser.roles).selectinload(RBACRole.permissions),
+                    selectinload(RBACUser.roles).selectinload(RBACRole.menus),
+                    selectinload(RBACUser.roles).selectinload(RBACRole.users),
                 )
                 .filter(RBACUser.STATUS == 1)
                 .all()

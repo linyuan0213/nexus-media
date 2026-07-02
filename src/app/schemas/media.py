@@ -62,7 +62,7 @@ class UnknownListPageDTO:
 class LibrarySpaceDTO:
     """媒体库存储空间"""
 
-    used_percent: Any = 0
+    used_percent: float = 0.0
     free_space: str = ""
     used_space: str = ""
     total_space: str = ""

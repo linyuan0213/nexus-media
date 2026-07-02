@@ -438,6 +438,24 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         sync_service=sync_service,
     )
 
+    # 回填 PluginSandbox 的服务依赖（供动态加载插件使用）
+    if infra.plugin_sandbox._searcher is None:
+        infra.plugin_sandbox._searcher = searcher
+    if infra.plugin_sandbox._downloader_core is None:
+        infra.plugin_sandbox._downloader_core = downloader_core
+    if infra.plugin_sandbox._subscribe_service is None:
+        infra.plugin_sandbox._subscribe_service = subscribe_service
+    if infra.plugin_sandbox._media_server is None:
+        infra.plugin_sandbox._media_server = media_server
+    if infra.plugin_sandbox._sync_engine is None:
+        infra.plugin_sandbox._sync_engine = sync_engine
+    if infra.plugin_sandbox._site_cache is None:
+        infra.plugin_sandbox._site_cache = site_cache
+    if infra.plugin_sandbox._filetransfer_service is None:
+        infra.plugin_sandbox._filetransfer_service = filetransfer_service
+    if infra.plugin_sandbox._site_resolver is None:
+        infra.plugin_sandbox._site_resolver = site_resolver
+
     return ServiceObjects(
         downloader_core=downloader_core,
         filetransfer_service=filetransfer_service,

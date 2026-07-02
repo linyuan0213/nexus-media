@@ -11,13 +11,40 @@
 - 修复内置索引器站点名大小写不匹配导致站点不显示（Jackett "Mikan" vs 引擎 "MiKan"）
 - 修复禁用第三方索引器后其站点仍在 `/api/site/sites`、`/api/download/indexers` 等接口中出现
 - 修复禁用第三方索引器后其站点仍参与搜索
+- 修复令牌自动续期漏洞：过期 JWT 不再自动签发新令牌
+- 修复 `SystemUtils.execute` 使用 `shell=True` 导致命令注入风险
+- 修复 `ConfigRepository.execute` 暴露原始 SQL 执行接口
+- 修复 TransferPipeline 刮削使用下载源路径而非目标路径
+- 修复 DownloadMonitor 预热与正常检查使用不同过滤器
+- 修复下载器标签排序硬编码 "NEXUS_MEDIA" 而未使用 PT_TAG 常量
+- 修复 Scraper/FileTransferService `settings.get()` 链式调用无 None 保护导致 AttributeError
+- 修复 cleanup_service 解析 SEASON_EPISODE 时 `int("01E05")` 崩溃
+- 修复 StorageUsage 组件 usedPercent 类型为字符串触发 Vue prop 警告
+- 修复用户列表 API 缺失 is_superadmin 字段，角色加载失败静默吞异常
+- 修复 transfer_repository 跨 session 查-插竞态条件
+- 修复插件依赖注入缺失：PluginSandbox 未注入 searcher/downloader/subscribe 等服务
+- 修复 `_do_run_plugin` 重复手动加载模块导致缺少依赖注入
+- 修复插件历史页面每次需禁用启用后才显示：refreshSidebarMenus 清除动态路由后未重载插件
+
+### 安全
+- 令牌自动续期漏洞修复：过期 token 返回空 payload，不再自动续期
+- 命令注入修复：`SystemUtils.execute` 改用 `shlex.split` + `shell=False`
+- 原始 SQL 暴露修复：`execute` 重命名为 `_execute_raw` 标记为仅初始化使用
+- 登录端点限速：`/api/auth/login` 5次/分钟/IP
 
 ### 新增
 - Jackett/Prowlarr 索引器支持启用/禁用开关
 - 站点统计卡片颜色优化，8 张卡片使用独立色值
+- 数据库外键约束：CONFIGFILTERRULES/CONFIGCATEGORYRULE/CUSTOMWORDS/APIKEYLOG
+- 数据库索引：DOWNLOADER(ENABLED,TYPE)/CONFIGSYNCPATHS(ENABLED)/SITEBRUSHTORRENTS(DOWNLOAD_ID)/SEARCHRESULTINFO(SEEDERS)/SITEUSERINFOSTATS(USERNAME)
+- 事件系统：异步事件类型注入 (DOWNLOAD_STARTED/DOWNLOAD_FAILED/SUBSCRIBE_FINISHED)
 
 ### 变更
 - 插件前端文件名 `index.umd.js` → `index.mjs`
+- 用户管理卡片操作按钮改为下拉菜单模式
+- 插件路由从绝对路径改为相对路径，支持 generateAccess 重载后自动恢复
+- RBAC 用户查询全部改为 selectinload 链式预加载角色/权限/菜单
+- subscribe/system handler 添加 payload isinstance 防御检查
 
 ## v4.1.12 (2026-07-01)
 

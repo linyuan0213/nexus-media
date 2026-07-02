@@ -3,10 +3,8 @@ Plugin Framework Service
 插件框架 v2 业务服务层
 """
 
-import importlib.util
 import os
 import shutil
-import sys
 import threading
 import zipfile
 
@@ -16,7 +14,6 @@ from app.db.repositories.plugin_framework_repository import PluginFrameworkRepos
 from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter, RBACRoleRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity, PluginManifestEntity
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
-from app.plugin_framework.context import PluginContext
 from app.plugin_framework.registry import PluginRegistry
 from app.plugin_framework.sandbox import PluginSandbox
 from app.schemas.plugin import PluginManifest
@@ -549,46 +546,16 @@ class PluginFrameworkService:
             lock.release()
 
     def _do_run_plugin(self, plugin_id: str) -> None:
-        """实际运行插件逻辑"""
-        orm_model = self._repo.get_manifest_by_id(plugin_id)
-        if not orm_model:
-            raise ValueError(f"插件未安装: {plugin_id}")
+        """实际运行插件逻辑（委托 sandbox 进行依赖注入）。"""
+        request_client = self.__dict__.get("_request_client") or self.__class__.__dict__.get("_request_client")
+        if request_client:
+            request_client.close()
+        if not self._plugin_sandbox.load(plugin_id):
+            raise ValueError(f"插件 {plugin_id} 加载失败")
 
-        manifest = PluginManifest.from_dict(JsonUtils.loads(str(orm_model.MANIFEST_JSON or "{}")))
-        entry = manifest.backend.entry
-        if not entry:
-            raise ValueError(f"插件未声明后端入口: {plugin_id}")
-
-        plugin_path = str(orm_model.PATH or "")
-        if not plugin_path or not os.path.exists(plugin_path):
-            raise ValueError(f"插件路径不存在: {plugin_id}")
-
-        module_path, class_name = entry.split(":")
-        file_path = os.path.join(plugin_path, module_path.replace(".", "/") + ".py")
-
-        if not os.path.exists(file_path):
-            raise ValueError(f"插件入口文件不存在: {file_path}")
-
-        # 强制清理模块缓存，确保加载最新代码
-        to_remove = [k for k in list(sys.modules.keys()) if k == module_path or k.startswith(module_path + ".")]
-        for k in to_remove:
-            del sys.modules[k]
-        importlib.invalidate_caches()
-
-        # 临时将插件根目录加入 sys.path，使 backend/_autobackup 等子模块可解析
-        if plugin_path not in sys.path:
-            sys.path.insert(0, plugin_path)
-
-        spec = importlib.util.spec_from_file_location(module_path, file_path)
-        if not spec or not spec.loader:
-            raise ValueError(f"无法加载插件模块: {module_path}")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_path] = module
-        spec.loader.exec_module(module)
-
-        plugin_class = getattr(module, class_name)
-        ctx = PluginContext(plugin_id, plugin_name=manifest.name)
-        instance = plugin_class(ctx)
+        instance = self._plugin_sandbox._instances.get(plugin_id)
+        if not instance:
+            raise ValueError(f"插件 {plugin_id} 实例不存在")
 
         if not hasattr(instance, "run"):
             raise ValueError(f"插件 {plugin_id} 未实现 run() 方法")

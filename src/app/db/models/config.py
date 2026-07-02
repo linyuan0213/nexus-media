@@ -3,7 +3,7 @@
 包含: 过滤器分组、过滤规则、RSS解析器、站点配置、同步路径、用户配置、用户RSS配置
 """
 
-from sqlalchemy import BigInteger, Integer, Sequence, String, Text
+from sqlalchemy import BigInteger, ForeignKey, Integer, Sequence, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -22,7 +22,7 @@ class CONFIGFILTERRULES(Base):
     __tablename__ = "CONFIG_FILTER_RULES"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    GROUP_ID: Mapped[int] = mapped_column(Integer, index=True)
+    GROUP_ID: Mapped[int] = mapped_column(Integer, ForeignKey("CONFIG_FILTER_GROUP.ID"), index=True)
     ROLE_NAME: Mapped[str] = mapped_column(String(255))
     PRIORITY: Mapped[str] = mapped_column(String(255))
     INCLUDE: Mapped[str] = mapped_column(Text)
@@ -74,7 +74,7 @@ class CONFIGSYNCPATHS(Base):
     DST_BACKEND: Mapped[str | None] = mapped_column(String(64), nullable=True)
     COMPATIBILITY: Mapped[int] = mapped_column(Integer)
     RENAME: Mapped[int] = mapped_column(Integer)
-    ENABLED: Mapped[int] = mapped_column(Integer)
+    ENABLED: Mapped[int] = mapped_column(Integer, index=True)
     NOTE: Mapped[str] = mapped_column(Text, default="")
 
 
@@ -158,6 +158,6 @@ class CONFIGCATEGORYRULE(Base):
     __tablename__ = "CONFIG_CATEGORY_RULE"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    CATEGORY_ID: Mapped[int] = mapped_column(Integer, index=True)
+    CATEGORY_ID: Mapped[int] = mapped_column(Integer, ForeignKey("CONFIG_CATEGORY.ID"), index=True)
     FIELD: Mapped[str] = mapped_column(String(100))
     VALUE: Mapped[str] = mapped_column(Text)

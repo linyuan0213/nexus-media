@@ -10,13 +10,7 @@ from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.db.sql_adapter import adapt_sql_for_engine
 from app.domain.enums import SystemConfigKey
-from app.events import auto_register, register_modules
-from app.events.bridge import PluginBridge
-from app.events.bus import EventBus
-from app.events.config import EVENT_HANDLER_MODULES
-from app.events.registry import EventHandlerRegistry
 from app.infrastructure.cache_system.events import init_event_bridge
-from app.plugin_framework.hook_system import HookSystem
 from app.services.category_init import CategoryInitializer
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
@@ -254,23 +248,13 @@ def update_rss_state():
 
 
 def init_event_handlers(event_bus=None, hook_system=None):
-    """
-    初始化事件处理器：显式导入 handler 模块触发 @on_event 注册
-    """
+    """初始化事件桥接（handler 已在 build_infrastructure 中注册）。"""
     try:
-        if event_bus is None:
-            register_modules(EVENT_HANDLER_MODULES)
-            bus = EventBus(
-                registry=EventHandlerRegistry(),
-                bridge=PluginBridge(hook_system=hook_system or HookSystem()),
-            )
-            auto_register(bus)
-            init_event_bridge(bus)
-        else:
+        if event_bus is not None:
             init_event_bridge(event_bus)
-        log.info("[Initialize]事件处理器已注册")
+        log.info("[Initialize]事件桥接已初始化")
     except Exception as e:
-        log.error(f"[Initialize]事件处理器注册失败：{e!s}")
+        log.error(f"[Initialize]事件桥接初始化失败：{e!s}")
         ExceptionUtils.exception_traceback(e)
 
 

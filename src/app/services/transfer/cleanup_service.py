@@ -1,6 +1,7 @@
 """TransferCleanupService - 转移后清理与删除逻辑."""
 
 import os
+import re
 
 import log
 from app.core.constants import RMT_MEDIAEXT
@@ -196,8 +197,11 @@ class TransferCleanupService:
                     mi.title = str(transinfo.TITLE or "")
                     mi.category = str(transinfo.CATEGORY or "")
                     mi.year = str(transinfo.YEAR or "")
-                    if str(transinfo.SEASON_EPISODE or ""):
-                        mi.begin_season = int(str(transinfo.SEASON_EPISODE).replace("S", ""))
+                    season_str = str(transinfo.SEASON_EPISODE or "")
+                    if season_str:
+                        season_match = re.search(r"S(\d+)", season_str)
+                        if season_match:
+                            mi.begin_season = int(season_match.group(1))
                     if MediaType.from_string(transinfo.TYPE) == MediaType.MOVIE:
                         mi.type = MediaType.MOVIE
                     else:

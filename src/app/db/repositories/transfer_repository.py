@@ -68,9 +68,7 @@ class TransferRepository(BaseRepository):
         media_info: TransferMediaDTO,
         dst_backend: str | None = None,
     ) -> None:
-        """
-        插入识别转移记录
-        """
+        """插入识别转移记录（单 session 原子操作，避免查-插竞态）。"""
         if not media_info:
             return
 
@@ -94,13 +92,28 @@ class TransferRepository(BaseRepository):
         title = media_info.title
         timestr = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
 
-        if self.is_transfer_history_exists(source_path, source_filename, dest_path, dest_filename):
-            self.update_transfer_history_date(source_path, source_filename, dest_path, dest_filename, timestr)
-            return
-
-        dest = dest or ""
-        mode_value = rmt_mode or ""
         with self.session() as db:
+            exists = (
+                db.query(TRANSFERHISTORY)
+                .filter(
+                    TRANSFERHISTORY.SOURCE_PATH == source_path,
+                    TRANSFERHISTORY.SOURCE_FILENAME == source_filename,
+                    TRANSFERHISTORY.DEST_PATH == dest_path,
+                    TRANSFERHISTORY.DEST_FILENAME == dest_filename,
+                )
+                .count()
+            )
+            if exists:
+                db.query(TRANSFERHISTORY).filter(
+                    TRANSFERHISTORY.SOURCE_PATH == source_path,
+                    TRANSFERHISTORY.SOURCE_FILENAME == source_filename,
+                    TRANSFERHISTORY.DEST_PATH == dest_path,
+                    TRANSFERHISTORY.DEST_FILENAME == dest_filename,
+                ).update({"DATE": timestr})
+                return
+
+            dest = dest or ""
+            mode_value = rmt_mode or ""
             db.add(
                 TRANSFERHISTORY(
                     MODE=mode_value,

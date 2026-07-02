@@ -6,7 +6,7 @@ API Key 管理模型
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, Index, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -74,7 +74,7 @@ class APIKEYLOG(Base):
     __tablename__ = "API_KEY_LOGS"
 
     ID: Mapped[int] = mapped_column(Integer, primary_key=True)
-    API_KEY_ID: Mapped[int] = mapped_column(Integer, nullable=False)
+    API_KEY_ID: Mapped[int] = mapped_column(Integer, ForeignKey("API_KEYS.ID"), nullable=False)
     REQUEST_ID: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     REQUEST_NAME: Mapped[str] = mapped_column(String(255), nullable=True)
     SOURCE_IP: Mapped[str] = mapped_column(String(64), nullable=True)

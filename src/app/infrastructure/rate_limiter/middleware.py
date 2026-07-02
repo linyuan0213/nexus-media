@@ -25,6 +25,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # 特定路径自定义限流规则：{path: rate}
     _PATH_LIMITS: dict[str, str] = {
         "/api/system/refresh": "10/m",
+        "/api/auth/login": "5/m",
     }
 
     def __init__(self, app, rate: str = "60/m"):

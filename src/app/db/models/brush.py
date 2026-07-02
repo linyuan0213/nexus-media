@@ -66,7 +66,7 @@ class SITEBRUSHTORRENTS(Base):
     TORRENT_SIZE: Mapped[str] = mapped_column(Text)
     ENCLOSURE: Mapped[str] = mapped_column(String(8192))
     DOWNLOADER: Mapped[str] = mapped_column(String(255))
-    DOWNLOAD_ID: Mapped[str] = mapped_column(String(255))
+    DOWNLOAD_ID: Mapped[str] = mapped_column(String(255), index=True)
     LST_MOD_DATE: Mapped[str] = mapped_column(String(255))
 
     def as_dict(self) -> dict[str, Any]:

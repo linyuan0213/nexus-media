@@ -41,7 +41,7 @@ class SEARCHRESULTINFO(Base):
     RES_TYPE: Mapped[str] = mapped_column(String(255))
     RES_ORDER: Mapped[str] = mapped_column(String(255))
     SIZE: Mapped[int] = mapped_column(BigInteger)
-    SEEDERS: Mapped[int] = mapped_column(Integer)
+    SEEDERS: Mapped[int] = mapped_column(Integer, index=True)
     PEERS: Mapped[int] = mapped_column(Integer)
     SITE: Mapped[str] = mapped_column(String(255))
     SITE_ORDER: Mapped[str] = mapped_column(String(255))

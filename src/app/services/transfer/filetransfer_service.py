@@ -99,7 +99,7 @@ class FileTransferService:
                 self._ignored_files = re.compile(r"{}".format(re.sub(r";", r"|", ignored_files)))
             self._filesize_cover = media.get("filesize_cover")
 
-        self._default_operation = settings.get("pt").get("rmt_mode", "copy") or "copy"
+        self._default_operation = (settings.get("pt") or {}).get("rmt_mode", "copy") or "copy"
 
     # ---------- 路径相关委托方法（公共 API 兼容） ----------
 
