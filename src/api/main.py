@@ -53,6 +53,8 @@ from app.services.system.lifecycle import SystemLifecycleService
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理：启动后台服务"""
+    app.state.ready = False
+
     try:
         app_context = build_app_context()
         app.state.context = app_context
@@ -101,6 +103,8 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         log.error(f"[FastAPI]插件或消息初始化失败: {e}")
 
+    app.state.ready = True
+    log.info("[FastAPI]所有服务就绪")
     yield
 
     log.info("[FastAPI]关闭后台服务...")
@@ -147,6 +151,19 @@ app.add_middleware(
 
 # 速率限制中间件：Redis 可用时分布式限流，否则降级为内存限流
 app.add_middleware(RateLimitMiddleware, rate="60/m")
+
+
+@app.middleware("http")
+async def startup_guard(request: Request, call_next):
+    """初始化期间返回 503，防止前端请求报内部错误。"""
+    if request.url.path == "/health" or request.url.path == "/":
+        return await call_next(request)
+    if not getattr(request.app.state, "ready", False):
+        return JSONResponse(
+            status_code=503,
+            content={"code": -1, "message": "服务正在启动中，请稍后刷新..."},
+        )
+    return await call_next(request)
 
 
 # 注册 Router（按领域逐步增加）

@@ -40,6 +40,22 @@
 - 修复 lifespan 无异常处理导致静默启动失败，每步 try/except+log.error
 - 修复后端根路径 / 直接报错：添加友好提示 JSON 返回 app/version/message
 - 修复前端版本号未显示：package.json 同步至 4.1.13，关于页面展示前端版本
+- 修复 TransferLineChart 渐变色语法非法：改用 hsla 格式
+- 修复 StorageUsage usedPercent 类型为字符串触发 Vue prop 警告
+- 修复 GaugeChart 未注册：echarts.ts 导入 GaugeChart
+- 修复首页图表面板 ECharts CSS 变量无法渲染：改用硬编码+useChartTheme 主题切换
+
+### 变更
+- 首页图表全面升级：堆叠面积图/环形图/仪表盘/玫瑰图/水平柱状图/渐变柱状图
+- 首页+媒体库图表配色统一：入库趋势/媒体库分布采用暖橙-蓝-粉配色
+- 新增 16 色调色板共享常量 `chartColors.ts`
+- 新增暗色模式支持：`useChartTheme` composable 监听主题切换
+- 新增存储空间 ECharts 仪表盘（阈值绿→橙→红）
+- 站点做种分布恢复玫瑰图
+- 媒体库最近动态改为时间线样式
+- 媒体库存储卡片重设计：大号百分比 + 进度条 + mt-auto 撑满高度
+- 用户管理操作按钮改为下拉菜单
+- 站点统计 近7天流量增量/上传量分布 位置调换
 
 ### 安全
 - 令牌自动续期漏洞修复：过期 token 返回空 payload，不再自动续期
