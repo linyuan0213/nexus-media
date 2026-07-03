@@ -85,10 +85,15 @@ class FnOSClient(metaclass=Singleton):
         return path, query_params
 
     def _get_token(self):
-        """获取有效token，如果过期则自动刷新"""
         if self._is_token_expired():
             self._login()
         return self._token
+
+    def get_auth_cookie(self) -> dict | None:
+        token = self._get_token()
+        if token:
+            return {"Trim-MC-token": token}
+        return None
 
     def _is_token_expired(self):
         """检查token是否过期"""

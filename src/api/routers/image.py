@@ -27,7 +27,13 @@ from app.infrastructure.image_proxy import (
 router = APIRouter()
 
 
-async def _serve_image(cache_path: str, image_url: str, size: str | None = None, referer: str | None = None):
+async def _serve_image(
+    cache_path: str,
+    image_url: str,
+    size: str | None = None,
+    referer: str | None = None,
+    downloader=None,
+):
     """FastAPI 版本的缓存检查/下载/返回图片"""
     # 检查缓存（30 天过期），空缓存直接删除重下
     if os.path.exists(cache_path):
@@ -43,7 +49,10 @@ async def _serve_image(cache_path: str, image_url: str, size: str | None = None,
             log.error(f"[ImageProxy]读取缓存失败: {str(e)}")
 
     # 下载图片
-    image_data = await download_image(image_url, referer=referer)
+    if downloader:
+        image_data = downloader(image_url)
+    else:
+        image_data = await download_image(image_url, referer=referer)
     if not image_data or len(image_data) < 100:
         log.error(f"[ImageProxy]下载内容为空或过小: {image_url}")
         raise HTTPException(status_code=404, detail="获取图片失败")
@@ -109,6 +118,9 @@ async def proxy_library_image(request: Request, img_url: str):
         query_string = str(request.query_params)
         decoded_url += separator + query_string
     cache_path = get_cache_path("library", decoded_url)
+    if "/v/api/v1/sys/img/" in decoded_url:
+        ms = request.app.state.context.media_server
+        return await _serve_image(cache_path, decoded_url, downloader=lambda u: ms.download_image(u))
     return await _serve_image(cache_path, decoded_url)
 
 

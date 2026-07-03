@@ -560,3 +560,17 @@ class FnOS(_IMediaClient):
             if count > num:
                 break
         return ret_resume
+
+    def download_image(self, url: str) -> bytes | None:
+        if "/v/api/v1/sys/img/" not in url or not self._fnos:
+            return None
+        cookie = self._fnos.get_auth_cookie()
+        if not cookie:
+            return None
+        try:
+            resp = self._fnos._http_client.get(url, cookies=cookie)
+            if resp.status_code == 200:
+                return resp.content
+        except Exception as e:
+            log.error(f"[FnOS]图片下载失败 {url}: {e!s}")
+        return None

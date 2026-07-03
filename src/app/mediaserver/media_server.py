@@ -458,9 +458,11 @@ class MediaServer:
         return self.server.get_resume(num=num)
 
     def get_latest(self, num=20):
-        """
-        获取最近添加
-        """
         if not self.server:
             return []
         return self.server.get_latest(num=num)
+
+    def download_image(self, url: str) -> bytes | None:
+        if not self.server:
+            return None
+        return self.server.download_image(url)

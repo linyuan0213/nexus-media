@@ -229,3 +229,6 @@ class _IMediaClient(metaclass=ABCMeta):
                 return ""
         else:
             return f"img?url={quote(url)}"
+
+    def download_image(self, url: str) -> bytes | None:
+        return None
