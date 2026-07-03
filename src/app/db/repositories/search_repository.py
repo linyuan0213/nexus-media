@@ -165,16 +165,12 @@ class SearchRepository(BaseRepository):
             return db.query(SEARCHRESULTINFO).filter(dl_id == SEARCHRESULTINFO.ID).all()
 
     def get_search_results(self, session_id: str | None = None):
-        """
-        查询搜索结果
-
-        Args:
-            session_id: 搜索会话 ID，传入时只返回该会话结果
-        """
         with self.session() as db:
             query = db.query(SEARCHRESULTINFO)
             if session_id:
                 query = query.filter(SEARCHRESULTINFO.SEARCH_SESSION_ID == session_id)
+            else:
+                return []
             return query.all()
 
     def delete_all_search_torrents(self):
