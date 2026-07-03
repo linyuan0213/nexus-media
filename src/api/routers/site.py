@@ -127,8 +127,10 @@ def del_site(
     tid = req.id
     if tid:
         ret = svc.delete_site(tid)
-        return fail(code=ret or 0)
-    return success()
+        if ret:
+            return success()
+        return fail(msg="删除失败")
+    return fail(msg="站点ID不能为空")
 
 
 @router.post("/sites/detail", response_model=CommonResponse, summary="获取站点详情")

@@ -93,6 +93,12 @@ class SiteService:
         if not tid:
             return 0
         try:
+            site = self._site_entity_repo.get_by_id(int(tid))
+            if site:
+                is_builtin = any(s.name == site.name for s in self._site_engine.all_sites())
+                if is_builtin:
+                    self._indexer_site_config_repo.upsert_site(site_name=site.name, source="builtin", enabled=False)
+                    return 1
             self._site_entity_repo.delete(int(tid))
             return 1
         except Exception:
@@ -127,11 +133,14 @@ class SiteService:
             merged = {}
             for s in builtin:
                 cfg = config_by_name.get(s["name"])
+                enabled = cfg.enabled if cfg else True
+                if not enabled:
+                    continue
                 merged[s["name"]] = {
                     "id": s["id"],
                     "name": s["name"],
                     "source": "builtin",
-                    "enabled": cfg.enabled if cfg else True,
+                    "enabled": True,
                     "site_public": engine_by_name.get(s["name"], s.get("public", False)),
                 }
             for row in config_rows:
@@ -148,9 +157,12 @@ class SiteService:
             return list(merged.values())
 
         merged = {s["name"]: {**s, "source": "builtin", "third_party": False} for s in builtin}
-        for name, site in merged.items():
+        for name, site in list(merged.items()):
             cfg = config_by_name.get(name)
             site["enabled"] = cfg.enabled if cfg else True
+            if not site["enabled"]:
+                del merged[name]
+                continue
             site["download_setting"] = cfg.download_setting if cfg else None
             site["default_settings"] = cfg.default_settings if cfg else None
             site["site_public"] = engine_by_name.get(name, site.get("public", False))

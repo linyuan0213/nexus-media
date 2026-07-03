@@ -123,25 +123,41 @@ class TestFileTransferServiceConcurrent:
             return future
 
         service._thread_executor.submit.side_effect = fake_submit
-        with patch.object(service, "_transfer_files_loop", return_value={
-            "total_count": 1, "failed_count": 0, "alert_count": 0,
-            "alert_messages": [], "message_medias": {}, "success_flag": True,
-            "error_message": "", "exist_filenum": 0,
-        }) as mock_loop:
-            service._transfer_files(
-                medias, "WEB", "/src", "copy", None, None, None, (None, False), False, None
-            )
+        with patch.object(
+            service,
+            "_transfer_files_loop",
+            return_value={
+                "total_count": 1,
+                "failed_count": 0,
+                "alert_count": 0,
+                "alert_messages": [],
+                "message_medias": {},
+                "success_flag": True,
+                "error_message": "",
+                "exist_filenum": 0,
+            },
+        ) as mock_loop:
+            service._transfer_files(medias, "WEB", "/src", "copy", None, None, None, (None, False), False, None)
             assert mock_loop.call_count == 2
 
     def test_transfer_files_bluray_falls_back_to_serial(self, service):
         media1 = MagicMock()
         medias = {"/src/a.mkv": media1}
         service._thread_executor = None
-        with patch.object(service, "_transfer_files_loop", return_value={
-            "total_count": 1, "failed_count": 0, "alert_count": 0,
-            "alert_messages": [], "message_medias": {}, "success_flag": True,
-            "error_message": "", "exist_filenum": 0,
-        }) as mock_loop:
+        with patch.object(
+            service,
+            "_transfer_files_loop",
+            return_value={
+                "total_count": 1,
+                "failed_count": 0,
+                "alert_count": 0,
+                "alert_messages": [],
+                "message_medias": {},
+                "success_flag": True,
+                "error_message": "",
+                "exist_filenum": 0,
+            },
+        ) as mock_loop:
             service._transfer_files(
                 medias, "WEB", "/src", "copy", None, None, "/src/bluray", (None, False), False, None
             )
