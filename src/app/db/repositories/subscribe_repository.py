@@ -480,8 +480,8 @@ class SubscribeRepository(BaseRepository):
         desc = desc or ""
         note = note or ""
         keyword = keyword or (media_info.title if media_info else "")
-        total_ep = total_ep or ""
-        current_ep = current_ep or ""
+        total_ep = None if total_ep == "" else total_ep
+        current_ep = None if current_ep == "" else current_ep
         if not media_info:
             return -1
         if not media_info.title:
