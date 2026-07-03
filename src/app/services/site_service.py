@@ -94,12 +94,10 @@ class SiteService:
             return 0
         try:
             site = self._site_entity_repo.get_by_id(int(tid))
-            if site:
-                is_builtin = any(s.name == site.name for s in self._site_engine.all_sites())
-                if is_builtin:
-                    self._indexer_site_config_repo.upsert_site(site_name=site.name, source="builtin", enabled=False)
-                    return 1
+            if not site:
+                return 0
             self._site_entity_repo.delete(int(tid))
+            self._indexer_site_config_repo.upsert_site(site_name=site.name, source="builtin", enabled=False)
             return 1
         except Exception:
             return 0
@@ -127,12 +125,12 @@ class SiteService:
         builtin = self._sites.get_sites(public=True)
         engine_by_name = {s.name: s.public for s in self._site_engine.all_sites()}
         config_rows = self._indexer_site_config_repo.list_all()
-        config_by_name = {row.site_name: row for row in config_rows}
+        config_by_name = {row.site_name.lower(): row for row in config_rows}
 
         if basic:
             merged = {}
             for s in builtin:
-                cfg = config_by_name.get(s["name"])
+                cfg = config_by_name.get(s["name"].lower())
                 enabled = cfg.enabled if cfg else True
                 if not enabled:
                     continue
@@ -158,7 +156,7 @@ class SiteService:
 
         merged = {s["name"]: {**s, "source": "builtin", "third_party": False} for s in builtin}
         for name, site in list(merged.items()):
-            cfg = config_by_name.get(name)
+            cfg = config_by_name.get(name.lower())
             site["enabled"] = cfg.enabled if cfg else True
             if not site["enabled"]:
                 del merged[name]
