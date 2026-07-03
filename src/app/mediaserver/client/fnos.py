@@ -512,14 +512,17 @@ class FnOS(_IMediaClient):
                         item.get("episode_number") + 1,
                     )
             link = self.get_play_url(item.get("guid"), libtype=("TV" if item.get("type") != "Movie" else "Movie"))
-            image_link = f"{self._host}v/api/v1/sys/img{item.get('poster')}"
+            posters = str(item.get("poster") or "").split(",")
+            image_link = f"{self._host}v/api/v1/sys/img{posters[0]}" if posters else ""
             image = self.get_nt_image_url(image_link)
+            image_list = [self.get_nt_image_url(f"{self._host}v/api/v1/sys/img{p}") for p in posters if p]
             ret_resume.append(
                 {
                     "id": item.get("guid"),
                     "name": name,
                     "type": item_type,
                     "image": image,
+                    "imageList": image_list,
                     "link": link,
                     "percent": item.get("ts") / item.get("duration") * 100
                     if item.get("ts") and item.get("duration")
@@ -553,9 +556,20 @@ class FnOS(_IMediaClient):
                         item.get("local_number_of_episodes"),
                     )
             link = self.get_play_url(item.get("guid"), libtype=("TV" if item.get("type") != "Movie" else "Movie"))
-            image_link = f"{self._host}v/api/v1/sys/img{item.get('poster')}"
+            posters = str(item.get("poster") or "").split(",")
+            image_link = f"{self._host}v/api/v1/sys/img{posters[0]}" if posters[0] else ""
             image = self.get_nt_image_url(image_link)
-            ret_resume.append({"id": item.get("guid"), "name": name, "type": item_type, "image": image, "link": link})
+            image_list = [self.get_nt_image_url(f"{self._host}v/api/v1/sys/img{p}") for p in posters if p]
+            ret_resume.append(
+                {
+                    "id": item.get("guid"),
+                    "name": name,
+                    "type": item_type,
+                    "image": image,
+                    "imageList": image_list,
+                    "link": link,
+                }
+            )
             count += 1
             if count > num:
                 break
