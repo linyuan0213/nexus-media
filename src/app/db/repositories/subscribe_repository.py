@@ -222,9 +222,9 @@ class SubscribeRepository(BaseRepository):
         filter_include = filter_include or ""
         filter_exclude = filter_exclude or ""
         save_path = save_path or ""
-        desc = desc or ""
         note = note or ""
         keyword = keyword or (media_info.title if media_info else "")
+        desc = (desc or "")[:200]
         if not media_info:
             return -1
         if not media_info.title:
@@ -477,11 +477,11 @@ class SubscribeRepository(BaseRepository):
         filter_include = filter_include or ""
         filter_exclude = filter_exclude or ""
         save_path = save_path or ""
-        desc = desc or ""
         note = note or ""
         keyword = keyword or (media_info.title if media_info else "")
         total_ep = int(total_ep) if total_ep else 0
         current_ep = int(current_ep) if current_ep else 0
+        desc = (desc or "")[:200]
         if not media_info:
             return -1
         if not media_info.title:
