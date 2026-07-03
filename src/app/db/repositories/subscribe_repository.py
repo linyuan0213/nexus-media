@@ -452,8 +452,8 @@ class SubscribeRepository(BaseRepository):
         filter_exclude: str | None = None,
         save_path: str | None = None,
         download_setting: int = -1,
-        total_ep: str | None = None,
-        current_ep: str | None = None,
+        total_ep: int | str | None = None,
+        current_ep: int | str | None = None,
         fuzzy_match: int = 0,
         desc: str | None = None,
         note: str | None = None,
@@ -480,8 +480,8 @@ class SubscribeRepository(BaseRepository):
         desc = desc or ""
         note = note or ""
         keyword = keyword or (media_info.title if media_info else "")
-        total_ep = None if total_ep == "" else total_ep
-        current_ep = None if current_ep == "" else current_ep
+        total_ep = int(total_ep) if total_ep else 0
+        current_ep = int(current_ep) if current_ep else 0
         if not media_info:
             return -1
         if not media_info.title:
