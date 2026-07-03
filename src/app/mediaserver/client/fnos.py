@@ -354,10 +354,10 @@ class FnOS(_IMediaClient):
             match library.get("category"):
                 case "Movie":
                     library_type = MediaType.MOVIE.value
-                    image_list_str = self.get_libraries_image(library.get("guid"), library.get("category"))
+                    image_list = self.get_libraries_image(library.get("guid"), library.get("category"))
                 case "TV":
                     library_type = MediaType.TV.value
-                    image_list_str = self.get_libraries_image(library.get("guid"), library.get("category"))
+                    image_list = self.get_libraries_image(library.get("guid"), library.get("category"))
                 case _:
                     continue
             libraries.append(
@@ -366,7 +366,7 @@ class FnOS(_IMediaClient):
                     "name": library.get("title"),
                     "paths": "",
                     "type": library_type,
-                    "image_list": image_list_str,
+                    "image_list": image_list,
                     "link": f"{self._play_host or self._host}v/library/{library.get('guid')}",
                 }
             )
@@ -383,14 +383,14 @@ class FnOS(_IMediaClient):
             return ""
         # 返回结果
         poster_urls = []
-        image_list_str = ""
+        image_list = []
         library_list = self._fnos.get_library_list()
         for library in library_list:
             if type == library.get("category") and library_key == library.get("guid"):
                 posters = library.get("posters")
                 poster_urls = [f"{self._host}v/api/v1/sys/img{poster}" for poster in posters]
-                image_list_str = ", ".join([self.get_nt_image_url(url) for url in poster_urls])
-        return image_list_str
+                image_list = [self.get_nt_image_url(url) for url in poster_urls]
+        return image_list
 
     def get_iteminfo(self, itemid):
         """
