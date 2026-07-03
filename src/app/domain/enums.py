@@ -49,6 +49,9 @@ class BrushDeleteType(Enum):
     FREEEND = "Free 到期"
     FREESTATUS = "Free 状态"
     HR = "H&R 状态"
+    ALIVETIME = "存活天数"
+    UPSPEED = "当前上传速度"
+    TRACKERERROR = "Tracker 错误"
 
 
 class BrushStopType(Enum):

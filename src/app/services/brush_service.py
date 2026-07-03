@@ -20,6 +20,10 @@ _RSS_RULE_FIELDS = {
     "size": "brushtask_torrent_size",
     "include": "brushtask_include",
     "exclude": "brushtask_exclude",
+    "category_include": "brushtask_category_include",
+    "category_exclude": "brushtask_category_exclude",
+    "label_include": "brushtask_label_include",
+    "label_exclude": "brushtask_label_exclude",
     "dlcount": "brushtask_dlcount",
     "peercount": "brushtask_peercount",
     "pubdate": "brushtask_pubdate",
@@ -35,13 +39,21 @@ _REMOVE_RULE_FIELDS = {
     "uploadsize": "brushtask_seedsize",
     "dltime": "brushtask_dltime",
     "avg_upspeed": "brushtask_avg_upspeed",
+    "upspeed": "brushtask_upspeed",
     "iatime": "brushtask_iatime",
     "pending_time": "brushtask_pending_time",
     "freespace": "brushtask_freespace",
     "freestatus": "brushtask_freestatus",
+    "alive_time": "brushtask_alive_time",
+    "tracker_error": "brushtask_tracker_error",
 }
 _STOP_RULE_FIELDS = {
     "stopfree": "brushtask_stopfree",
+    "mode": "brushtask_mode",
+    "ratio": "brushtask_seedratio",
+    "uploadsize": "brushtask_seedsize",
+    "seedtime": "brushtask_seedtime",
+    "avg_upspeed": "brushtask_avg_upspeed",
 }
 
 
@@ -92,6 +104,13 @@ class BrushService:
             "downloader": data.get("brushtask_downloader"),
             "seed_size": seed_size_bytes,
             "time_range": data.get("brushtask_time_range"),
+            "active_weekdays": data.get("brushtask_active_weekdays"),
+            "download_switch": data.get("brushtask_download_switch", "Y"),
+            "remove_switch": data.get("brushtask_remove_switch", "Y"),
+            "stop_switch": data.get("brushtask_stop_switch", "Y"),
+            "daily_delete_limit": data.get("brushtask_daily_delete_limit", ""),
+            "max_seeding": data.get("brushtask_max_seeding", ""),
+            "hr_limit": data.get("brushtask_hr_limit", ""),
             "label": data.get("brushtask_label"),
             "savepath": data.get("brushtask_savepath"),
             "transfer": SwitchState.ON.value if data.get("brushtask_transfer") else SwitchState.OFF.value,
@@ -195,9 +214,9 @@ class BrushService:
         return BrushRuleEngine.check_remove_rule(remove_rule=remove_rule, params=params)
 
     @staticmethod
-    def check_stop_rule(stop_rule: dict | None, torrent_attr: dict):
+    def check_stop_rule(stop_rule: dict | None, params: dict):
         """委托给领域规则引擎：检查是否符合停种规则"""
-        return BrushRuleEngine.check_stop_rule(stop_rule=stop_rule, params=torrent_attr)
+        return BrushRuleEngine.check_stop_rule(stop_rule=stop_rule, params=params)
 
     @staticmethod
     def format_rule_html(rules: dict | None) -> str:
@@ -208,3 +227,6 @@ class BrushService:
     def check_range_rule(value, rule_value: str, multiplier: float = 1.0) -> bool:
         """委托给领域规则引擎：通用范围规则检查"""
         return BrushRuleEngine.check_range_rule(value=value, rule_value=rule_value, multiplier=multiplier)
+
+    def get_events(self, task_id: int | None = None, action: str | None = None, page: int = 1, page_size: int = 50):
+        return self._rule_repo.get_brush_events(task_id, action, page, page_size)

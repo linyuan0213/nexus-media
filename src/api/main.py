@@ -156,14 +156,23 @@ app.add_middleware(RateLimitMiddleware, rate="60/m")
 @app.middleware("http")
 async def startup_guard(request: Request, call_next):
     """初始化期间返回 503，防止前端请求报内部错误。"""
-    if request.url.path == "/health" or request.url.path == "/":
+    if request.url.path in ("/health", "/", "/ws"):
         return await call_next(request)
     if not getattr(request.app.state, "ready", False):
-        return JSONResponse(
-            status_code=503,
-            content={"code": -1, "message": "服务正在启动中，请稍后刷新..."},
-        )
+        return _startup_503_response()
     return await call_next(request)
+
+
+def _startup_503_response() -> JSONResponse:
+    return JSONResponse(
+        status_code=503,
+        content={"code": -1, "message": "服务正在启动中，请稍后刷新..."},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
 
 
 # 注册 Router（按领域逐步增加）

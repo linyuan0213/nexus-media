@@ -110,41 +110,34 @@ class BrushTaskService:
     def _start_task_jobs(self, task: dict, cron: str) -> int:
         task_id = task.get("id")
         task_name = task.get("name")
-        is_running = task.get("state") == BrushTaskState.RUNNING.value
-        running = 0
         trigger_type = "interval" if cron.isdigit() else "cron"
         trigger_args = {"seconds": int(cron) * 60} if trigger_type == "interval" else {"cron": cron}
+        running = 0
 
-        if is_running:
-            try:
-                self._scheduler.start_job(
-                    func=self.check_task_rss,
-                    name=f"刷流任务 {task_name} ",
-                    args=(task_id,),
-                    job_id=f"BrushTask.check_task_rss_{task_id}",
-                    trigger_type=trigger_type,
-                    trigger_args=trigger_args,
-                )
-                running = 1
-            except (ServiceError, RepositoryError, DomainError):
-                raise
-            except Exception as err:
-                log.error(f"任务 {task_name} 运行周期格式不正确：{err!s}")
+        phase_configs = [
+            (self.check_task_rss, "刷流任务", "download_switch"),
+            (self.stop_task_torrents, "停种任务", "stop_switch"),
+            (self.remove_task_torrents, "删种任务", "remove_switch"),
+        ]
 
-        for func, name in [(self.stop_task_torrents, "停种任务"), (self.remove_task_torrents, "删种任务")]:
+        for func, label, switch_key in phase_configs:
+            if task.get(switch_key, "Y") != "Y":
+                continue
             try:
                 self._scheduler.start_job(
                     func=func,
-                    name=f"{name} {task_name} ",
+                    name=f"{label} {task_name} ",
                     args=(task_id,),
                     job_id=f"BrushTask.{func.__name__}_{task_id}",
                     trigger_type=trigger_type,
                     trigger_args=trigger_args,
                 )
+                if switch_key == "download_switch":
+                    running = 1
             except (ServiceError, RepositoryError, DomainError):
                 raise
             except Exception as err:
-                log.error(f"任务 {task_name} {name} 运行周期格式不正确：{err!s}")
+                log.error(f"任务 {task_name} {label} 运行周期格式不正确：{err!s}")
 
         return running
 
@@ -242,6 +235,13 @@ class BrushTaskService:
             "stop_rule_id": getattr(task, "STOP_RULE_ID", None),
             "seed_size": seed_size_gb,
             "time_range": task.TIME_RANGE,
+            "active_weekdays": task.ACTIVE_WEEKDAYS,
+            "download_switch": getattr(task, "DOWNLOAD_SWITCH", "Y") or "Y",
+            "remove_switch": getattr(task, "REMOVE_SWITCH", "Y") or "Y",
+            "stop_switch": getattr(task, "STOP_SWITCH", "Y") or "Y",
+            "daily_delete_limit": getattr(task, "DAILY_DELETE_LIMIT", "") or "",
+            "max_seeding": getattr(task, "MAX_SEEDING", "") or "",
+            "hr_limit": getattr(task, "HR_LIMIT", "") or "",
             "total_size": total_size,
             "rss_url": task.RSSURL if task.RSSURL else (site_info.get("rssurl") if site_info else None),
             "rss_url_show": task.RSSURL,

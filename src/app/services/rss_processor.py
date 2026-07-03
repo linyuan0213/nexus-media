@@ -139,6 +139,7 @@ class RssHelper:
                             # 转换为时间
                             pubdate = StringUtils.get_time_stamp(pubdate)
                         # 返回对象
+                        category = DomUtils.tag_value(item, "category", default="")
                         tmp_dict = {
                             "title": title,
                             "enclosure": enclosure,
@@ -146,6 +147,7 @@ class RssHelper:
                             "description": description,
                             "link": link,
                             "pubdate": pubdate,
+                            "category": category,
                         }
                         ret_array.append(tmp_dict)
                     except Exception as e1:

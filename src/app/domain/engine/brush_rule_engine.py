@@ -24,6 +24,16 @@ from app.domain.mediatypes import MediaType
 from app.utils import ExceptionUtils, StringUtils
 
 
+def _calc_alive_hours(add_time: str | None) -> float | None:
+    if not add_time:
+        return None
+    try:
+        dt = dateutil.parser.parse(str(add_time))
+        return (datetime.now(pytz.utc) - dt).total_seconds() / 3600
+    except Exception:
+        return None
+
+
 class BrushRuleEngine:
     """刷流规则引擎 — 纯领域逻辑，不持有任何外部依赖"""
 
@@ -73,6 +83,8 @@ class BrushRuleEngine:
         torrent_size: float,
         pubdate: datetime | None,
         torrent_attr: dict,
+        category: str = "",
+        labels: str = "",
         media_info: Any = None,
         rss_movies: dict | None = None,
         rss_tvs: dict | None = None,
@@ -97,6 +109,10 @@ class BrushRuleEngine:
                 "size": lambda rv: cls.check_range_rule(torrent_size, rv, 1024**3),
                 "include": lambda rv: bool(re.search(rv, title, re.IGNORECASE)),
                 "exclude": lambda rv: not bool(re.search(rv, title, re.IGNORECASE)),
+                "category_include": lambda rv: bool(re.search(rv, category or "", re.IGNORECASE)),
+                "category_exclude": lambda rv: not bool(re.search(rv, category or "", re.IGNORECASE)),
+                "label_include": lambda rv: bool(re.search(rv, labels or "", re.IGNORECASE)),
+                "label_exclude": lambda rv: not bool(re.search(rv, labels or "", re.IGNORECASE)),
                 "free": lambda rv: cls._check_free_status(torrent_attr, rv),
                 "hr": lambda _rv: not torrent_attr.get("hr"),
                 "peercount": lambda rv: cls.check_range_rule(torrent_attr.get("peer_count"), rv),
@@ -218,9 +234,6 @@ class BrushRuleEngine:
         if not remove_rule:
             return False, BrushDeleteType.NOTDELETE
 
-        hr = params.get("torrent_attr", {}).get("hr", False)
-        log.debug(f"HR 状态 {hr}")
-
         values = {
             "time": params.get("seeding_time"),
             "hr_time": params.get("seeding_time"),
@@ -228,10 +241,13 @@ class BrushRuleEngine:
             "uploadsize": params.get("uploaded"),
             "dltime": params.get("dltime"),
             "avg_upspeed": params.get("avg_upspeed"),
+            "upspeed": params.get("upspeed"),
             "iatime": params.get("iatime"),
             "pending_time": params.get("pending_time"),
             "freespace": params.get("freespace"),
+            "alive_time": _calc_alive_hours(params.get("add_time")),
             "freestatus": params.get("torrent_attr", {}).get("free", False),
+            "tracker_error": params.get("tracker_error"),
         }
 
         rule_checks = {
@@ -249,10 +265,21 @@ class BrushRuleEngine:
                 lambda value, rv: not value if rv == "FREE" else value if rv == "NORMAL" else True,
             ),
             "hr": (BrushDeleteType.HR, lambda value, rv: value if rv == "HR" else not value if rv == "NOHR" else True),
+            "alive_time": (BrushDeleteType.ALIVETIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
+            "upspeed": (BrushDeleteType.UPSPEED, lambda value, rv: cls.check_range_rule(value, rv, 1024)),
+            "tracker_error": (
+                BrushDeleteType.TRACKERERROR,
+                lambda value, rv: bool(value) if rv in (SwitchState.ON.value, "Y") else True,
+            ),
         }
 
         triggered_types = []
         mode = remove_rule.get("mode", "and")
+        log.info(
+            f"[删种规则] 当前值 ratio={values['ratio']}, 做种={values['time']}s, "
+            f"上传={values['uploadsize']}B, 活了{values['alive_time']}h, "
+            f"free={values['freestatus']}, tracker_err={bool(values['tracker_error'])}"
+        )
 
         for rule, (delete_type, check_func) in rule_checks.items():
             rule_value = remove_rule.get(rule)
@@ -261,20 +288,25 @@ class BrushRuleEngine:
 
             value = values.get(rule)
             if value is None:
+                log.info(
+                    f"[删种规则] {rule}={rule_value}, 但种子无此数据 (None)，"
+                    f"模式={mode}，" + ("阻止删种" if mode == "and" else "跳过该规则")
+                )
                 if mode == "and":
-                    continue
-                else:
-                    continue
-
-            try:
-                if check_func(float(value), rule_value):
-                    triggered_types.append(delete_type)
-                    log.debug(f"触发删种规则: {rule}={rule_value}, value={value}, type={delete_type}")
-                    if mode == "or":
-                        return True, triggered_types
-            except Exception as err:
-                ExceptionUtils.exception_traceback(err)
+                    return False, BrushDeleteType.NOTDELETE
                 continue
+
+            matched = check_func(value)
+            if matched:
+                triggered_types.append(delete_type)
+                log.info(f"[删种规则] {rule} 触发: 当前={value}, 规则={rule_value}")
+                if mode == "or":
+                    _t = triggered_types
+                    return True, _t[0] if len(_t) == 1 else _t  # type: ignore[return-value]
+            else:
+                log.info(f"[删种规则] {rule} 未触发: 当前={value}, 规则={rule_value}")
+                if mode == "and":
+                    return False, BrushDeleteType.NOTDELETE
 
         if mode == "and" and triggered_types:
             return True, triggered_types
@@ -284,10 +316,7 @@ class BrushRuleEngine:
     # 停种规则
     # --------------------------------------------------
     @classmethod
-    def check_stop_rule(cls, stop_rule: dict | None, params: dict) -> tuple[bool, BrushStopType | list[BrushStopType]]:
-        """
-        检查是否符合停种规则
-        """
+    def check_stop_rule(cls, stop_rule: dict | None, params: dict):
         if not stop_rule:
             return False, BrushStopType.NOTSTOP
 
@@ -296,39 +325,43 @@ class BrushRuleEngine:
             "uploadsize": params.get("uploaded"),
             "seedtime": params.get("seeding_time"),
             "avg_upspeed": params.get("avg_upspeed"),
+            "stopfree": params.get("free"),
         }
 
         rule_checks = {
-            "ratio": (BrushStopType.RATIO, lambda value, rv: cls.check_range_rule(value, rv)),
-            "uploadsize": (BrushStopType.UPLOADSIZE, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
-            "seedtime": (BrushStopType.SEEDTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
-            "avg_upspeed": (BrushStopType.AVGUPSPEED, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
+            "ratio": (BrushStopType.RATIO, lambda rv: cls.check_range_rule(values["ratio"], rv)),
+            "uploadsize": (
+                BrushStopType.UPLOADSIZE,
+                lambda rv: cls.check_range_rule(values["uploadsize"], rv, 1024**3),
+            ),
+            "seedtime": (
+                BrushStopType.SEEDTIME,
+                lambda rv: cls.check_range_rule(values["seedtime"], rv, 3600),
+            ),
+            "avg_upspeed": (
+                BrushStopType.AVGUPSPEED,
+                lambda rv: cls.check_range_rule(values["avg_upspeed"], rv, 1024**3),
+            ),
+            "stopfree": (
+                BrushStopType.FREEEND,
+                lambda rv: not values["stopfree"] if rv == SwitchState.ON.value else True,
+            ),
         }
 
-        triggered_types = []
-        mode = stop_rule.get("mode", "and")
+        log.info(
+            f"[停种规则] ratio={values['ratio']}, 做种={values['seedtime']}s, "
+            f"上传={values['uploadsize']}B, avg={values['avg_upspeed']}, "
+            f"free={values['stopfree']}"
+        )
 
         for rule, (stop_type, check_func) in rule_checks.items():
             rule_value = stop_rule.get(rule)
             if rule_value in ("#", SwitchState.OFF.value, None, ""):
                 continue
-
-            value = values.get(rule)
-            if value is None:
-                continue
-
-            try:
-                if check_func(float(value), rule_value):
-                    triggered_types.append(stop_type)
-                    log.debug(f"触发停种规则: {rule}={rule_value}, value={value}, type={stop_type}")
-                    if mode == "or":
-                        return True, triggered_types
-            except Exception as err:
-                ExceptionUtils.exception_traceback(err)
-                continue
-
-        if mode == "and" and triggered_types:
-            return True, triggered_types
+            if check_func(rule_value):
+                log.info(f"[停种规则] {rule} 触发: 规则={rule_value}")
+                return True, stop_type
+            log.info(f"[停种规则] {rule} 未触发: 规则={rule_value}")
         return False, BrushStopType.NOTSTOP
 
     # --------------------------------------------------

@@ -2,6 +2,7 @@
 
 import ast
 import json
+import re
 import time
 from datetime import datetime
 from datetime import time as dtime
@@ -39,6 +40,13 @@ class BrushTaskHelper:
         self._siteconf = siteconf
         self._message: Message = message
         self._site_engine = site_engine
+        self._hr_counts: dict[int, int] = {}
+
+    def add_hr_count(self, task_id: int) -> None:
+        self._hr_counts[task_id] = self._hr_counts.get(task_id, 0) + 1
+
+    def _get_downloader_hr_count(self, downloader_id: str, taskinfo: dict) -> int:
+        return self._hr_counts.get(taskinfo.get("id") or 0, 0)
 
     @staticmethod
     def parse_json_rule(val, default=None):
@@ -77,6 +85,19 @@ class BrushTaskHelper:
         except (json.JSONDecodeError, ValueError, TypeError):
             log.debug(f"[Brush]json.loads 解析失败: {val}")
         return default
+
+    @staticmethod
+    def is_in_active_weekdays(active_weekdays: str = "") -> bool:
+        if not active_weekdays or not active_weekdays.strip():
+            return True
+        try:
+            parts = re.split(r"[,\s]+", active_weekdays.strip())
+            active_days = {int(p) for p in parts if p}
+            today = datetime.now().isoweekday()
+            return today in active_days
+        except ValueError:
+            log.warn("[Brush]活跃星期格式错误，应为逗号分隔的数字 1-7（1=周一）")
+            return False
 
     @staticmethod
     def is_in_time_range(time_range: str = ""):
@@ -151,6 +172,7 @@ class BrushTaskHelper:
             return False
         seed_size = taskinfo.get("seed_size") or None
         time_range = taskinfo.get("time_range") or ""
+        active_weekdays = taskinfo.get("active_weekdays") or ""
         task_name = taskinfo.get("name")
         downloader_id = taskinfo.get("downloader")
         downloader_name = taskinfo.get("downloader_name")
@@ -182,14 +204,39 @@ class BrushTaskHelper:
                 )
                 return False
 
+        max_seeding = taskinfo.get("max_seeding") or ""
+        if max_seeding and max_seeding.isdigit() and int(max_seeding) > 0:
+            all_count = self.get_downloader_total_count(downloader_id)
+            if all_count is not None and all_count >= int(max_seeding):
+                log.warn(
+                    f"[Brush]下载器 {downloader_name} 当前做种数：{all_count}，超过设定上限 {max_seeding}，暂不添加下载"
+                )
+                return False
+
+        hr_limit = taskinfo.get("hr_limit") or ""
+        if hr_limit and hr_limit.isdigit() and int(hr_limit) > 0:
+            hr_count = self._get_downloader_hr_count(downloader_id, taskinfo)
+            if hr_count >= int(hr_limit):
+                log.warn(
+                    f"[Brush]下载器 {downloader_name} H&R 做种数：{hr_count}，超过设定上限 {hr_limit}，暂不添加下载"
+                )
+                return False
+
         if not self.is_in_time_range(time_range=time_range):
             log.warn(f"[Brush]任务 {task_name} 不在所选时间段 {time_range} 内，暂不添加下载")
+            return False
+        if not self.is_in_active_weekdays(active_weekdays=active_weekdays):
+            log.warn(f"[Brush]任务 {task_name} 不在所选活跃星期内，暂不添加下载")
             return False
         return True
 
     def get_downloading_count(self, downloader_id):
         torrents = self._downloader.get_downloading_torrents(downloader_id=downloader_id) or []
         return len(torrents)
+
+    def get_downloader_total_count(self, downloader_id):
+        torrents = self._downloader.get_torrents(downloader_id=downloader_id)
+        return len(torrents) if torrents else 0
 
     def download_torrent(self, taskinfo, rss_rule, site_info, title, enclosure, size, page_url, torrent_attr=None):
         if not enclosure:
@@ -212,6 +259,7 @@ class BrushTaskHelper:
                 _, torrent_attr = self.get_torrent_attr(site_info, enclosure)
             if torrent_attr.get("hr"):
                 hr_tag = ["HR"]
+                self.add_hr_count(taskid)
         tag = taskinfo.get("label").split(",") if taskinfo.get("label") else []
         if not transfer:
             tag = tag + ["已整理"] + hr_tag if tag else ["已整理"] + hr_tag
@@ -236,9 +284,19 @@ class BrushTaskHelper:
             return False
         else:
             log.info(f"[Brush]成功添加下载：{title}")
+            downloader_cfg = self._downloader.get_downloader_conf(downloader_id)
+            downlaod_name = downloader_cfg.get("name") if downloader_cfg else ""
+            self._repo.insert_brush_event(
+                task_id=taskid or 0,
+                task_name=taskname or "",
+                torrent_name=title,
+                download_id=download_id,
+                action="download",
+                reason="RSS 进种",
+                downloader_name=downlaod_name,
+                site_name=site_info.get("name", ""),
+            )
             if sendmessage:
-                downloader_cfg = self._downloader.get_downloader_conf(downloader_id)
-                downlaod_name = downloader_cfg.get("name") if downloader_cfg else ""
                 msg_title = f"[刷流任务 {taskname} 新增下载]"
                 msg_text = (
                     f"下载器名：{downlaod_name}\n"

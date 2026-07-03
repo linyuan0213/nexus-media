@@ -95,6 +95,13 @@ class BrushTaskEntity:
     stop_rule_id: int | None
     seed_size: int
     time_range: str
+    active_weekdays: str
+    download_switch: str
+    remove_switch: str
+    stop_switch: str
+    daily_delete_limit: str
+    max_seeding: str
+    hr_limit: str
     interval: str
     label: str
     save_path: str
@@ -174,6 +181,13 @@ class BrushTaskEntity:
             stop_rule_id=orm_model.STOP_RULE_ID or None,
             seed_size=orm_model.SEED_SIZE or 0,
             time_range=orm_model.TIME_RANGE or "",
+            active_weekdays=orm_model.ACTIVE_WEEKDAYS or "",
+            download_switch=orm_model.DOWNLOAD_SWITCH or "Y",
+            remove_switch=orm_model.REMOVE_SWITCH or "Y",
+            stop_switch=orm_model.STOP_SWITCH or "Y",
+            daily_delete_limit=orm_model.DAILY_DELETE_LIMIT or "",
+            max_seeding=orm_model.MAX_SEEDING or "",
+            hr_limit=orm_model.HR_LIMIT or "",
             interval=orm_model.INTEVAL or "",
             label=orm_model.LABEL or "",
             save_path=orm_model.SAVEPATH or "",
@@ -203,6 +217,13 @@ class BrushTaskEntity:
             "stop_rule_id": self.stop_rule_id,
             "seed_size": self.seed_size,
             "time_range": self.time_range,
+            "active_weekdays": self.active_weekdays,
+            "download_switch": self.download_switch,
+            "remove_switch": self.remove_switch,
+            "stop_switch": self.stop_switch,
+            "daily_delete_limit": self.daily_delete_limit,
+            "max_seeding": self.max_seeding,
+            "hr_limit": self.hr_limit,
             "interval": self.interval,
             "label": self.label,
             "save_path": self.save_path,

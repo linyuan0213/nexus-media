@@ -683,6 +683,18 @@ class Transmission(_IDownloadClient):
         torrent_obj.labels = torrent.labels if hasattr(torrent, "labels") else []
         # tracker
         torrent_obj.trackers = [tracker.announce for tracker in torrent.trackers]
+        # tracker 错误：有一个正常工作即不为错误
+        tracker_errors = []
+        has_working = False
+        tracker_stats = getattr(torrent, "tracker_stats", [])
+        for ts in tracker_stats:
+            succeeded = getattr(ts, "last_announce_succeeded", False)
+            if succeeded:
+                has_working = True
+            result = getattr(ts, "last_announce_result", "")
+            if result and result != "Success":
+                tracker_errors.append(result)
+        torrent_obj.tracker_error = "" if has_working else "|".join(tracker_errors)
         # 下载速度
         torrent_obj.download_speed = torrent.rate_download
         # 上传速度

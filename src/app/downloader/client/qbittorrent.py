@@ -816,6 +816,23 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return
 
+    def _extract_tracker_errors(self, torrent_hash):
+        tracker_list = self._get_torrent_trackers(torrent_hash) or []
+        has_working = False
+        errors = []
+        for tracker in tracker_list:
+            status = tracker.get("status")
+            msg = str(tracker.get("msg") or "")
+            if status == 2:
+                has_working = True
+            elif status == 4:
+                errors.append(msg or "Error")
+            elif status in (0, 1) and ("error" in msg.lower() or "fail" in msg.lower() or "timeout" in msg.lower()):
+                errors.append(msg)
+        if has_working:
+            return ""
+        return "|".join(errors)
+
     def _get_torrent_generic_properties(self, torrent_hash):
         if not self.qbc:
             return
@@ -858,6 +875,7 @@ class Qbittorrent(_IDownloadClient):
             for tracker in self._get_torrent_trackers(torrent_hash=torrent.get("hash")) or []
             if not any(keyword in str(tracker.get("url") or "") for keyword in ["DHT", "PeX", "LSD"])
         ]
+        torrent_obj.tracker_error = self._extract_tracker_errors(torrent.get("hash"))
         torrent_obj.download_speed = int(torrent.get("dlspeed") or 0)
         torrent_obj.upload_speed = int(torrent.get("upspeed") or 0)
         torrent_obj.eta = int(torrent.get("eta") or 0)

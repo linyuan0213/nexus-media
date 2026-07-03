@@ -27,6 +27,7 @@ class Torrent:
     save_path: str | None = None  # 保存路径
     content_path: str | None = None  # 文件完整路径
     trackers: list[str] = field(default_factory=list)  # 种子tracker
+    tracker_error: str = ""  # Tracker 错误信息（非空表示有错误）
     category: list[str] = field(default_factory=list)  # 种子分类
     progress: float = 0  # 种子进度
     download_speed: int = 0  # 下载速度

@@ -159,6 +159,33 @@ class SiteDefinition:
 # ---- 站点引擎 ----
 
 
+def _extract_detail_labels(doc, site) -> str:
+    labels: list[str] = []
+    if site.html and site.html.torrents:
+        fields = site.html.torrents.fields
+        if hasattr(fields, "labels") and fields.labels and fields.labels.selector:
+            for el in doc.cssselect(fields.labels.selector):
+                txt = "".join(str(t) for t in el.itertext()).strip()
+                if txt:
+                    labels.append(txt)
+    if not labels:
+        tag_patterns = [
+            "span[class*='tag']",
+            "a[class*='tag']",
+            "div[class*='tag']",
+            "span[class*='label']",
+            "a[class*='label']",
+        ]
+        for pattern in tag_patterns:
+            for el in doc.cssselect(pattern):
+                txt = "".join(str(t) for t in el.itertext()).strip()
+                if txt and txt not in labels:
+                    labels.append(txt)
+            if labels:
+                break
+    return "|".join(labels)
+
+
 class SiteEngine:
     """站点引擎单例"""
 
@@ -293,7 +320,7 @@ class SiteEngine:
         headers=None,
         proxy=False,
     ):
-        ret = {"free": False, "2xfree": False, "hr": False, "peer_count": 0}
+        ret = {"free": False, "2xfree": False, "hr": False, "peer_count": 0, "labels": ""}
         site = self.get_by_url(torrent_url)
         if not site:
             log.debug(f"[engine]resolve_torrent_attr 未匹配站点, url={torrent_url[:100]}")
@@ -439,6 +466,7 @@ class SiteEngine:
                         if els:
                             txt = "".join(str(t) for t in els[0].itertext())  # type: ignore[union-attr]
                             ret["peer_count"] = int("".join(c for c in txt if c.isdigit()) or 0)
+                    ret["labels"] = _extract_detail_labels(doc, site)
         return ret
 
     def _fetch_page(self, url, user_config):

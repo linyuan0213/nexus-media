@@ -14,6 +14,7 @@ from app.db.models.base import Base, BaseMedia
 
 # 刷流相关模型
 from app.db.models.brush import (
+    BRUSHEVENTLOG,
     SITEBRUSHRULE,
     SITEBRUSHTASK,
     SITEBRUSHTORRENTS,
@@ -169,6 +170,7 @@ __all__ = [
     "SubscribeTvs",
     "SubscribeTvEpisodes",
     # 刷流
+    "BRUSHEVENTLOG",
     "SITEBRUSHRULE",
     "SITEBRUSHTASK",
     "SITEBRUSHTORRENTS",

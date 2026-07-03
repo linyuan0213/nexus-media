@@ -1,6 +1,7 @@
 """Brush torrent lifecycle - 删种与停种逻辑."""
 
 import time
+from datetime import date
 from typing import Any
 
 import log
@@ -26,6 +27,7 @@ class BrushTorrentLifecycle:
         self._downloader: Any = downloader
         self._sites = sites
         self._message = message
+        self._daily_deletes: dict[int, dict] = {}  # task_id → {"date": date, "count": int}
 
     def remove_task_torrents(self, taskid: int | None, taskinfo: dict) -> None:
         if taskinfo.get("state") != BrushTaskState.RUNNING.value:
@@ -107,6 +109,10 @@ class BrushTorrentLifecycle:
                     self._repo.delete_brushtask_torrent(taskid or 0, rid)
 
             if delete_ids:
+                daily_limit = self._apply_daily_delete_limit(taskid or 0, taskinfo, delete_ids)
+                if daily_limit and not delete_ids:
+                    log.info(f"[Brush]任务 {task_name} 已达到今日删种上限，停止删种")
+                    return
                 self._downloader.delete_torrents(downloader_id, delete_ids, delete_file=True)
                 time.sleep(5)
                 torrents = self._downloader.get_torrents(downloader_id, delete_ids)
@@ -170,6 +176,9 @@ class BrushTorrentLifecycle:
                 "uploaded": torrent.uploaded,
                 "iatime": torrent.iatime,
                 "avg_upspeed": torrent.avg_upload_speed,
+                "upspeed": torrent.upload_speed,
+                "add_time": torrent.add_time,
+                "tracker_error": getattr(torrent, "tracker_error", ""),
                 "freespace": self._downloader.get_free_space(downloader_id, download_dir),
                 "torrent_attr": torrent_attr,
             }
@@ -191,6 +200,16 @@ class BrushTorrentLifecycle:
                     self._send_remove_message(task_name, delete_type_str, torrent, downloader_cfg, torrent_params)
                 if torrent_id not in delete_ids:
                     delete_ids.append(torrent_id)
+                    self._repo.insert_brush_event(
+                        task_id=taskinfo.get("id") or 0,
+                        task_name=task_name,
+                        torrent_name=torrent.name or "",
+                        download_id=torrent_id,
+                        action="delete",
+                        reason=delete_type_str,
+                        downloader_name=downloader_cfg.get("name", ""),
+                        site_name=site_info.get("name", "") if isinstance(site_info, dict) else "",
+                    )
                     update_torrents.append((f"{torrent.uploaded},{torrent.downloaded}", taskinfo.get("id"), torrent_id))
 
         return total_uploaded, total_downloaded, delete_ids, update_torrents
@@ -257,7 +276,16 @@ class BrushTorrentLifecycle:
                 )
                 log.debug(f"[Brush]{torrent_url} 解析详情 {torrent_attr}")
 
-            need_stop, stop_type = BrushRuleEngine.check_stop_rule(stop_rule, params=torrent_attr)
+            need_stop, stop_type = BrushRuleEngine.check_stop_rule(
+                stop_rule,
+                params={
+                    "ratio": round(torrent.ratio or 0, 2),
+                    "uploaded": torrent.uploaded,
+                    "seeding_time": torrent.seeding_time,
+                    "avg_upspeed": torrent.avg_upload_speed,
+                    **torrent_attr,
+                },
+            )
             if need_stop:
                 if isinstance(stop_type, list):
                     stop_type_str = ", ".join(t.value for t in stop_type)
@@ -265,8 +293,78 @@ class BrushTorrentLifecycle:
                     stop_type_str = stop_type.value
                 log.info(f"[Brush]{torrent_name} 触发停种条件：{stop_type_str}，暂停任务...")
                 self._downloader.stop_torrents(downloader_id, [torrent_id])
+                self._repo.insert_brush_event(
+                    task_id=taskid or 0,
+                    task_name=task_name,
+                    torrent_name=torrent_name or "",
+                    download_id=torrent_id or "",
+                    action="stop",
+                    reason=stop_type_str,
+                    downloader_name=downlaod_name,
+                    site_name=site_info.get("name", "") if isinstance(site_info, dict) else "",
+                )
                 if sendmessage:
                     self._send_stop_message(task_name, torrent_name, downlaod_name, add_time)
+
+        if stopfree_enabled:
+            self._resume_free_torrents(
+                taskid,
+                taskinfo,
+                task_name,
+                downloader_id,
+                torrent_id_maps,
+                downlaod_name,
+                sendmessage,
+                site_info,
+            )
+
+    def _resume_free_torrents(
+        self,
+        taskid,
+        taskinfo,
+        task_name,
+        downloader_id,
+        torrent_id_maps,
+        downlaod_name,
+        sendmessage,
+        site_info,
+    ):
+        all_torrents = self._downloader.get_torrents(downloader_id, list(torrent_id_maps.keys()))
+        if not all_torrents:
+            return
+        for torrent in all_torrents:
+            if torrent.status not in (TorrentStatus.Paused, TorrentStatus.Stopped):
+                continue
+            enclosure = torrent_id_maps.get(torrent.id)
+            if not enclosure:
+                continue
+            torrent_url, torrent_attr = self._helper.get_torrent_attr(
+                site_info if isinstance(site_info, dict) else {}, enclosure
+            )
+            if torrent_attr.get("free"):
+                self._downloader.start_torrents(downloader_id, [torrent.id])
+                log.info(f"[Brush]{torrent.name} 已恢复免费，自动启动")
+
+    def _apply_daily_delete_limit(self, taskid: int, taskinfo: dict, delete_ids: list) -> bool:
+        limit_str = taskinfo.get("daily_delete_limit", "")
+        if not limit_str or not limit_str.isdigit():
+            return False
+        limit = int(limit_str)
+        if limit <= 0:
+            return False
+        today = date.today()
+        state = self._daily_deletes.get(taskid)
+        if not state or state.get("date") != today:
+            state = {"date": today, "count": 0}
+            self._daily_deletes[taskid] = state
+        remaining = limit - state["count"]
+        if remaining <= 0:
+            delete_ids.clear()
+            return True
+        if len(delete_ids) > remaining:
+            del delete_ids[remaining:]
+        state["count"] += len(delete_ids)
+        return False
 
     def _send_stop_message(self, task_name, torrent_name, download_name, add_time):
         _msg_title = f"[刷流任务 {task_name} 暂停做种]"

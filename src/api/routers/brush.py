@@ -59,6 +59,13 @@ class AddBrushTaskRequest(BaseModel):
     brushtask_downloader: str | None = None
     brushtask_totalsize: str | None = None
     brushtask_time_range: str | None = None
+    brushtask_active_weekdays: str | None = None
+    brushtask_download_switch: str | None = None
+    brushtask_remove_switch: str | None = None
+    brushtask_stop_switch: str | None = None
+    brushtask_daily_delete_limit: str | None = None
+    brushtask_max_seeding: str | None = None
+    brushtask_hr_limit: str | None = None
     brushtask_label: str | None = None
     brushtask_savepath: str | None = None
     brushtask_transfer: int | None = None
@@ -72,6 +79,10 @@ class AddBrushTaskRequest(BaseModel):
     brushtask_torrent_size: str | None = None
     brushtask_include: str | None = None
     brushtask_exclude: str | None = None
+    brushtask_category_include: str | None = None
+    brushtask_category_exclude: str | None = None
+    brushtask_label_include: str | None = None
+    brushtask_label_exclude: str | None = None
     brushtask_dlcount: str | None = None
     brushtask_peercount: str | None = None
     brushtask_pubdate: str | None = None
@@ -85,10 +96,13 @@ class AddBrushTaskRequest(BaseModel):
     brushtask_seedsize: str | None = None
     brushtask_dltime: str | None = None
     brushtask_avg_upspeed: str | None = None
+    brushtask_upspeed: str | None = None
     brushtask_iatime: str | None = None
     brushtask_pending_time: str | None = None
     brushtask_freespace: str | None = None
     brushtask_freestatus: str | bool | None = None
+    brushtask_alive_time: str | None = None
+    brushtask_tracker_error: str | None = None
     brushtask_stopfree: int | None = None
 
 
@@ -263,3 +277,20 @@ def delete_brush_rule(
         svc.delete_rule(req.id)
         return success()
     return fail(msg="规则ID不能为空")
+
+
+class BrushEventRequest(BaseModel):
+    task_id: int | None = None
+    action: str | None = None
+    page: int = 1
+    page_size: int = 50
+
+
+@router.post("/events", response_model=CommonResponse, summary="获取刷流事件日志")
+def get_brush_events(
+    req: BrushEventRequest,
+    _: None = Depends(require_any_permission("brush:view", "brush:manage")),
+    svc: BrushService = Depends(get_brush_service),
+):
+    total, rows = svc.get_events(req.task_id, req.action, req.page, req.page_size)
+    return success(data={"total": total, "rows": [r.as_dict() for r in rows]})

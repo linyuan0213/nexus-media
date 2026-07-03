@@ -44,7 +44,7 @@ class BrushRssChecker:
         """判断 RSS 选种规则是否需要解析种子详情页属性。"""
         if not rss_rule:
             return False
-        for key in ("free", "hr", "peercount"):
+        for key in ("free", "hr", "peercount", "label_include", "label_exclude"):
             val = rss_rule.get(key)
             if val and val not in ("#", "N", None, ""):
                 return True
@@ -175,6 +175,7 @@ class BrushRssChecker:
                 page_url = res.get("link")
                 size = res.get("size")
                 pubdate = res.get("pubdate")
+                category = res.get("category", "")
                 log.debug(f"[Brush]RSS: title={torrent_name[:30]}, link={page_url[:60]}, enc={enclosure[:60]}")
 
                 if not enclosure:
@@ -215,6 +216,8 @@ class BrushRssChecker:
                     torrent_size=size,
                     pubdate=pubdate,
                     torrent_attr=torrent_attr,
+                    category=category,
+                    labels=torrent_attr.get("labels", ""),
                     media_info=media_info,
                     rss_movies=rss_movies,
                     rss_tvs=rss_tvs,

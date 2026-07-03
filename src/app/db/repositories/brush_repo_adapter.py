@@ -44,6 +44,9 @@ class BrushRuleRepositoryAdapter:
     def delete(self, rule_id: int) -> None:
         self._repo.delete_brushrule(rule_id)
 
+    def get_brush_events(self, task_id: int | None, action: str | None, page: int, page_size: int):
+        return self._repo.get_brush_events(task_id, action, page, page_size)
+
 
 class BrushTaskRepositoryAdapter:
     def __init__(self, repo: BrushRepository | None = None):
@@ -145,3 +148,23 @@ class BrushTorrentRepositoryAdapter:
 
     def add_brushtask_upload_count(self, taskid: int, uploaded: int, downloaded: int, count: int) -> None:
         return self._repo.add_brushtask_upload_count(taskid, uploaded, downloaded, count)
+
+    # ---------- 事件日志 ----------
+
+    def insert_brush_event(
+        self,
+        task_id: int,
+        task_name: str,
+        torrent_name: str,
+        download_id: str,
+        action: str,
+        reason: str,
+        downloader_name: str = "",
+        site_name: str = "",
+    ) -> None:
+        self._repo.insert_brush_event(
+            task_id, task_name, torrent_name, download_id, action, reason, downloader_name, site_name
+        )
+
+    def get_brush_events(self, task_id: int | None, action: str | None, page: int, page_size: int):
+        return self._repo.get_brush_events(task_id, action, page, page_size)

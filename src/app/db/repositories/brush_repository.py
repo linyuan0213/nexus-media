@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy import Integer, and_, case, cast, func, or_
 
-from app.db.models import CONFIGSITE, SITEBRUSHRULE, SITEBRUSHTASK, SITEBRUSHTORRENTS
+from app.db.models import BRUSHEVENTLOG, CONFIGSITE, SITEBRUSHRULE, SITEBRUSHTASK, SITEBRUSHTORRENTS
 from app.db.repositories.base_repository import BaseRepository
 from app.domain.entities.brush import BrushTaskState
 from app.utils.json_utils import JsonUtils
@@ -39,6 +39,13 @@ class BrushRepository(BaseRepository):
                         STOP_RULE_ID=item.get("stop_rule_id"),
                         SEED_SIZE=item.get("seed_size"),
                         TIME_RANGE=item.get("time_range"),
+                        ACTIVE_WEEKDAYS=item.get("active_weekdays"),
+                        DOWNLOAD_SWITCH=item.get("download_switch", "Y"),
+                        REMOVE_SWITCH=item.get("remove_switch", "Y"),
+                        STOP_SWITCH=item.get("stop_switch", "Y"),
+                        DAILY_DELETE_LIMIT=item.get("daily_delete_limit", ""),
+                        MAX_SEEDING=item.get("max_seeding", ""),
+                        HR_LIMIT=item.get("hr_limit", ""),
                         RSSURL=item.get("rssurl"),
                         INTEVAL=item.get("interval"),
                         DOWNLOADER=item.get("downloader"),
@@ -68,6 +75,13 @@ class BrushRepository(BaseRepository):
                         "STOP_RULE_ID": item.get("stop_rule_id"),
                         "SEED_SIZE": item.get("seed_size"),
                         "TIME_RANGE": item.get("time_range"),
+                        "ACTIVE_WEEKDAYS": item.get("active_weekdays"),
+                        "DOWNLOAD_SWITCH": item.get("download_switch", "Y"),
+                        "REMOVE_SWITCH": item.get("remove_switch", "Y"),
+                        "STOP_SWITCH": item.get("stop_switch", "Y"),
+                        "DAILY_DELETE_LIMIT": item.get("daily_delete_limit", ""),
+                        "MAX_SEEDING": item.get("max_seeding", ""),
+                        "HR_LIMIT": item.get("hr_limit", ""),
                         "RSSURL": item.get("rssurl"),
                         "INTEVAL": item.get("interval"),
                         "DOWNLOADER": item.get("downloader"),
@@ -365,3 +379,47 @@ class BrushRepository(BaseRepository):
             for col in ["RSS_RULE_ID", "REMOVE_RULE_ID", "STOP_RULE_ID"]:
                 db.query(SITEBRUSHTASK).filter(int(rule_id) == getattr(SITEBRUSHTASK, col)).update({col: None})
             db.query(SITEBRUSHRULE).filter(int(rule_id) == SITEBRUSHRULE.ID).delete()
+
+    # ---------- 事件日志 ----------
+
+    def insert_brush_event(
+        self,
+        task_id: int,
+        task_name: str,
+        torrent_name: str,
+        download_id: str,
+        action: str,
+        reason: str,
+        downloader_name: str = "",
+        site_name: str = "",
+    ) -> None:
+        with self.session() as db:
+            entity = BRUSHEVENTLOG(
+                TASK_ID=task_id,
+                TASK_NAME=task_name,
+                TORRENT_NAME=torrent_name,
+                DOWNLOAD_ID=download_id,
+                ACTION=action,
+                REASON=reason,
+                DOWNLOADER_NAME=downloader_name,
+                SITE_NAME=site_name,
+                CREATED_AT=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+            )
+            db.add(entity)
+
+    def get_brush_events(
+        self,
+        task_id: int | None = None,
+        action: str | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ):
+        with self.session() as db:
+            query = db.query(BRUSHEVENTLOG)
+            if task_id:
+                query = query.filter(BRUSHEVENTLOG.TASK_ID == task_id)
+            if action:
+                query = query.filter(BRUSHEVENTLOG.ACTION == action)
+            total = query.count()
+            rows = query.order_by(BRUSHEVENTLOG.ID.desc()).offset((page - 1) * page_size).limit(page_size).all()
+            return total, rows
