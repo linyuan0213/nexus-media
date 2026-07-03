@@ -463,6 +463,10 @@ class MediaServer:
         return self.server.get_latest(num=num)
 
     def download_image(self, url: str) -> bytes | None:
-        if not self.server:
-            return None
-        return self.server.download_image(url)
+        for cls in get_all_clients():
+            server = self.__build_class(cls.client_id, None)
+            if server:
+                content = server.download_image(url)
+                if content:
+                    return content
+        return None
