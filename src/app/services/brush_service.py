@@ -39,7 +39,7 @@ _REMOVE_RULE_FIELDS = {
     "uploadsize": "brushtask_seedsize",
     "dltime": "brushtask_dltime",
     "avg_upspeed": "brushtask_avg_upspeed",
-    "upspeed": "brushtask_upspeed",
+    "cur_upspeed": "brushtask_upspeed",
     "iatime": "brushtask_iatime",
     "pending_time": "brushtask_pending_time",
     "freespace": "brushtask_freespace",
