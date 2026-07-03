@@ -143,7 +143,7 @@ def init_episode(info, token):
             info._continue_flag = False
             info._stop_name_flag = True
             info.type = MediaType.TV
-    elif re.match(r"^(\d{1,3})[a-zA-Z\u4e00-\u9fff]", token):
+    elif re.match(r"^(\d{1,3})(\(|（|[a-zA-Z\u4e00-\u9fff])", token):
         # token 以数字开头后跟字母或中文（如 24TV全集, 05v2）
         m = re.match(r"^(\d{1,3})", token)
         if m:
