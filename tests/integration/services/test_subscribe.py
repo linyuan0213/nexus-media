@@ -410,6 +410,7 @@ class TestSubscriptionMonitorTrigger:
             rss_strategy=MagicMock(),
             indexer_strategy=MagicMock(),
             coordinator=MagicMock(),
+            system_config=MagicMock(),
         )
         monitor.run = MagicMock()
         monitor.trigger()
@@ -425,6 +426,7 @@ class TestSubscriptionMonitorTrigger:
             rss_strategy=MagicMock(),
             indexer_strategy=MagicMock(),
             coordinator=MagicMock(),
+            system_config=MagicMock(),
         )
         with patch("app.services.subscribe.monitor.SubscribeSearchEngine") as mock_engine:
             mock_engine.return_value.subscribe_search_movie = MagicMock()
@@ -441,6 +443,7 @@ class TestSubscriptionMonitorTrigger:
             rss_strategy=MagicMock(),
             indexer_strategy=MagicMock(),
             coordinator=MagicMock(),
+            system_config=MagicMock(),
         )
         with patch("app.services.subscribe.monitor.SubscribeSearchEngine") as mock_engine:
             mock_engine.return_value.subscribe_search_tv = MagicMock()
