@@ -23,6 +23,10 @@ class IDownloadHistoryRepository(Protocol):
         """根据TMDB ID和季集信息查询下载历史是否存在"""
         ...
 
+    def is_completed_by_tmdb(self, tmdb_id: str, season_episode: str) -> bool:
+        """根据TMDB ID和季集信息查询是否已有已完成的下载历史"""
+        ...
+
     def insert(self, media_info, downloader: str, download_id: str, save_dir: str) -> None:
         """新增下载历史"""
         ...
@@ -53,6 +57,10 @@ class IDownloadHistoryRepository(Protocol):
         """批量更新下载任务状态
         :param items: [(downloader, download_id, state), ...]
         """
+        ...
+
+    def delete_by_tmdb(self, tmdb_id: str, season_prefix: str | None = None) -> int:
+        """根据TMDB ID和可选的季前缀删除下载历史"""
         ...
 
 

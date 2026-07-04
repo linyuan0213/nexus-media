@@ -287,13 +287,28 @@ class Torrent:
         if not media_list:
             return []
 
-        # 排序函数，标题、站点、资源类型、做种数量
+        # 排序函数，合集优先、标题、站点、资源类型、做种数量
         def get_sort_str(x):
+            from app.domain.mediatypes import MediaType
+
+            episode_list = x.get_episode_list() if hasattr(x, "get_episode_list") else []
+            episode_count = max(len(episode_list), getattr(x, "total_episodes", 0))
+            if episode_count > 1:
+                collection_priority = 2
+            elif (
+                getattr(x, "type", None) in (MediaType.TV, MediaType.ANIME)
+                and getattr(x, "begin_season", None) is not None
+                and getattr(x, "begin_episode", None) is None
+            ):
+                collection_priority = 1
+            else:
+                collection_priority = 0
             season_len = str(len(x.get_season_list())).rjust(2, "0")
-            episode_len = str(len(x.get_episode_list())).rjust(4, "0")
-            # 排序：标题、资源类型、站点、做种、季集
+            episode_len = str(len(episode_list)).rjust(4, "0")
+            # 排序：合集、标题、资源类型、站点、做种、季集
             if download_order == "seeder":
-                return "{}{}{}{}{}".format(
+                return "{}{}{}{}{}{}".format(
+                    str(collection_priority).rjust(1, "0"),
                     str(x.title).ljust(100, " "),
                     str(x.res_order).rjust(3, "0"),
                     str(x.seeders).rjust(10, "0"),
@@ -301,7 +316,8 @@ class Torrent:
                     f"{season_len}{episode_len}",
                 )
             else:
-                return "{}{}{}{}{}".format(
+                return "{}{}{}{}{}{}".format(
+                    str(collection_priority).rjust(1, "0"),
                     str(x.title).ljust(100, " "),
                     str(x.res_order).rjust(3, "0"),
                     str(x.site_order).rjust(3, "0"),

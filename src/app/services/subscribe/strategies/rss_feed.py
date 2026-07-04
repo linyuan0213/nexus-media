@@ -14,13 +14,13 @@ from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositor
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media.service import MediaService
 from app.message import Message
 from app.services.downloader_core import DownloaderCore
 from app.services.rss_processor import RssHelper
 from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.matcher import SubscribeMatcher
+from app.services.subscribe.strategy_lock import strategy_lock
 from app.sites.site_cache import SiteCache
 from app.sites.siteconf import SiteConf
 from app.sites.torrent import Torrent
@@ -61,16 +61,12 @@ class RssFeedStrategy:
         self._coordinator = coordinator
 
     def run(self) -> None:
-        """RSS Feed 轮询入口，由 SubscriptionMonitor 调用."""
-        dist_lock = get_lock_manager().create_lock("rss:download", ttl_seconds=1800)
-        acquired = dist_lock.acquire()
-        if not acquired:
-            log.info("[RssFeedStrategy] RSS 轮询正在其他实例执行，跳过")
-            return
-        try:
+        """RSS Feed 轮询入口，由 SubscriptionMonitor 调用，持锁期间自动续期."""
+        with strategy_lock("rss:download", ttl_seconds=300) as acquired:
+            if not acquired:
+                log.info("[RssFeedStrategy] RSS 轮询正在其他实例执行，跳过")
+                return
             self._do_rss_poll()
-        finally:
-            dist_lock.release()
 
     def _do_rss_poll(self) -> None:
         if self.sites is None:
@@ -265,6 +261,10 @@ class RssFeedStrategy:
                     log.info(f"[RssFeedStrategy] {msg}")
 
                 if not match_flag:
+                    if match_info and any("站点属性解析失败" in m for m in match_msg):
+                        rtype = "tv" if media_info.type == MediaType.TV else "movie"
+                        self.subscribe.update_rss_state(rtype, match_info.get("id"), SubscribeState.ERROR.value)
+                        log.warn(f"[RssFeedStrategy] {match_info.get('name')} 站点属性解析失败，标记为错误状态")
                     continue
 
                 if not match_info.get("fuzzy_match"):
@@ -448,18 +448,25 @@ class RssFeedStrategy:
                     log.info(f"[RssFeedStrategy] {item.title} 已被其他策略锁定，跳过")
             rss_download_torrents = filtered
 
-        download_items, _ = self.downloader.batch_download(SearchType.SUBSCRIBE, rss_download_torrents, rss_no_exists)
+        try:
+            download_items, _ = self.downloader.batch_download(
+                SearchType.SUBSCRIBE, rss_download_torrents, rss_no_exists
+            )
 
-        if download_items:
-            for item in download_items:
-                if not item.rssid:
-                    continue
-                if item.over_edition:
-                    __update_over_edition(item)
-                elif not rss_no_exists or not rss_no_exists.get(item.tmdb_id):
-                    __finish_rss(item)
-                else:
-                    __update_tv_rss(item, rss_no_exists.get(item.tmdb_id))
-            log.info(f"[RssFeedStrategy] 实际下载了 {len(download_items)} 个资源")
-        else:
-            log.info("[RssFeedStrategy] 未下载到任何资源")
+            if download_items:
+                for item in download_items:
+                    if not item.rssid:
+                        continue
+                    if item.over_edition:
+                        __update_over_edition(item)
+                    elif not rss_no_exists or not rss_no_exists.get(item.tmdb_id):
+                        __finish_rss(item)
+                    else:
+                        __update_tv_rss(item, rss_no_exists.get(item.tmdb_id))
+                log.info(f"[RssFeedStrategy] 实际下载了 {len(download_items)} 个资源")
+            else:
+                log.info("[RssFeedStrategy] 未下载到任何资源")
+        finally:
+            if self._coordinator:
+                for item in rss_download_torrents:
+                    self._coordinator.release(item)

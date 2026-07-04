@@ -2,8 +2,8 @@
 
 import log
 from app.domain.entities.rss import SubscribeState
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.services.subscribe.strategies.base_search import BaseSearchStrategy
+from app.services.subscribe.strategy_lock import strategy_lock
 
 
 class IndexerSearchStrategy(BaseSearchStrategy):
@@ -14,14 +14,10 @@ class IndexerSearchStrategy(BaseSearchStrategy):
     """
 
     def run(self) -> None:
-        """执行主动搜索，获取分布式锁防止并发."""
-        dist_lock = get_lock_manager().create_lock("subscribe:search:R", ttl_seconds=1800)
-        acquired = dist_lock.acquire()
-        if not acquired:
-            log.info("[IndexerSearchStrategy] 主动搜索正在执行，跳过")
-            return
-        try:
+        """执行主动搜索，获取分布式锁防止并发，持锁期间自动续期."""
+        with strategy_lock("subscribe:search:R", ttl_seconds=300) as acquired:
+            if not acquired:
+                log.info("[IndexerSearchStrategy] 主动搜索正在执行，跳过")
+                return
             self._search_movies(state=SubscribeState.RUNNING.value)
             self._search_tvs(state=SubscribeState.RUNNING.value)
-        finally:
-            dist_lock.release()

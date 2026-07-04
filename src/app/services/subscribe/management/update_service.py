@@ -75,10 +75,10 @@ class SubscribeUpdateService:
         if isinstance(search_sites, str):
             search_sites = search_sites.split(",")
         over_edition = 1 if over_edition else 0
-        filter_rule = int(str(filter_rule)) if str(filter_rule).isdigit() else None
+        filter_rule = int(str(filter_rule)) if str(filter_rule).isdigit() else 0
         total_ep = int(str(total_ep)) if str(total_ep).isdigit() else None
         current_ep = int(str(current_ep)) if str(current_ep).isdigit() else None
-        download_setting = int(str(download_setting)) if str(download_setting).replace("-", "").isdigit() else None
+        download_setting = int(str(download_setting)) if str(download_setting).replace("-", "").isdigit() else -1
         fuzzy_match = bool(fuzzy_match)
 
         media_info = None
@@ -237,9 +237,9 @@ class SubscribeUpdateService:
                         SubscribeAddPayload(
                             media=media_info.to_dict() if media_info else {},
                             rssid=rssid,
-                            rss_sites=rss_sites,
-                            search_sites=search_sites,
-                            over_edition=over_edition,
+                            rss_sites=cast(list[str], rss_sites),
+                            search_sites=cast(list[str], search_sites),
+                            over_edition=bool(over_edition),
                             filter_restype=filter_restype,
                             filter_pix=filter_pix,
                             filter_team=filter_team,

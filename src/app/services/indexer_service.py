@@ -170,7 +170,33 @@ class IndexerService:
         return result
 
     def get_user_indexer_names(self) -> list[str]:
-        return [indexer.name for indexer in self._indexer.get_all_search_indexers(check=True)]
+        """获取当前用户可用的索引器站点名称（不触发第三方 HTTP 连通性检查）."""
+        names: list[str] = []
+        seen: set[str] = set()
+
+        builtin_cfg = self._idx_config_repo.get_by_client_id("builtin")
+        if builtin_cfg is None or builtin_cfg.enabled:
+            for name in self._site_config_repo.list_enabled_names(source="builtin"):
+                key = name.lower()
+                if key not in seen:
+                    seen.add(key)
+                    names.append(name)
+
+        third_party_rows = self._site_config_repo.list_all(enabled=True, source_ne="builtin")
+        disabled_sources: set[str] = set()
+        for row in third_party_rows:
+            if row.source not in disabled_sources:
+                entity = self._idx_config_repo.get_by_client_id(row.source)
+                if entity and not entity.enabled:
+                    disabled_sources.add(row.source)
+            if row.source in disabled_sources:
+                continue
+            key = row.site_name.lower()
+            if key not in seen:
+                seen.add(key)
+                names.append(row.site_name)
+
+        return names
 
     # ------------------------------------------------------------------
     # 内置索引器（兼容旧调用）

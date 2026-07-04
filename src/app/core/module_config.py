@@ -6,10 +6,13 @@ class ModuleConf:
             "REMUX": r"REMUX",
             "DOLBY": r"DOLBY|DOVI|\s+DV$|\s+DV\s+",
             "WEB": r"WEB-?DL|WEBRIP",
+            "WEB-DL": r"WEB-?DL|WEBRIP",
             "HDTV": r"U?HDTV",
             "UHD": r"UHD",
             "HDR": r"HDR",
             "3D": r"3D",
+            "H265": r"H\.?265|HEVC|X265",
+            "H264": r"H\.?264|AVC|X264",
         },
         "pix": {"8k": r"8K", "4k": r"4K|2160P|X2160", "1080p": r"1080[PIX]|X1080", "720p": r"720P"},
     }

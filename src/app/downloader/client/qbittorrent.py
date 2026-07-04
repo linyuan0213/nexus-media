@@ -209,7 +209,12 @@ class Qbittorrent(_IDownloadClient):
             torrents = self.qbc.torrents_info(torrent_hashes=ids, status_filter=status_filter)
             torrent_list: list[Torrent] = []
             for torrent in torrents:
-                torrent_list.append(self.torrent_properties(torrent=torrent))
+                try:
+                    torrent_list.append(self.torrent_properties(torrent=torrent))
+                except (InfrastructureError, NetworkError):
+                    raise
+                except Exception:
+                    log.warn(f"[Qbittorrent]获取种子 {torrent.get('hash', '')} 属性失败，跳过")
             if status and isinstance(status, list):
                 filtered_list: list[Torrent] = []
                 for torrent in torrent_list:
@@ -253,7 +258,7 @@ class Qbittorrent(_IDownloadClient):
 
             torrents_data: dict[str, Any] = sync_data.get("torrents") or {}
             for t_hash, t_data in torrents_data.items():
-                self._sync_torrents[t_hash] = t_data
+                self._sync_torrents[t_hash] = {**(self._sync_torrents.get(t_hash) or {}), **t_data}
             for removed in sync_data.get("torrents_removed") or []:
                 self._sync_torrents.pop(str(removed), None)
 

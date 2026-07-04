@@ -381,6 +381,7 @@ class DownloadService:
                             "progress": prog_val,
                             "state": progress.get("state", ""),
                             "speed": progress.get("speed", ""),
+                            "size": progress.get("size", ""),
                             "downloader_id": did,
                             "downloader_name": downloader_name,
                             "client_id": downloader_conf.get("type") if downloader_conf else "",

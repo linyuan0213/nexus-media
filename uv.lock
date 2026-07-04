@@ -1898,7 +1898,7 @@ wheels = [
 
 [[package]]
 name = "nexus-media"
-version = "4.1.13"
+version = "4.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },

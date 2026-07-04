@@ -213,7 +213,7 @@ class EpisodeStrategy:
                             if item not in return_items:
                                 return_items.append(item)
                             need_episodes = EpisodeStrategy._update_episodes(
-                                need_tvs, need_tmdbid, need_episodes, item_episodes, index
+                                need_tvs, need_tmdbid, need_episodes, item_episodes, need_season
                             )
                 index += 1
         return return_items, need_tvs
@@ -282,7 +282,7 @@ class EpisodeStrategy:
                         continue
                     # 更新仍需集数
                     need_episodes = EpisodeStrategy._update_episodes(
-                        need_tvs, need_tmdbid, need_episodes, list(selected_episodes), index
+                        need_tvs, need_tmdbid, need_episodes, list(selected_episodes), need_season
                     )
                     # 设置任务只下载想要的文件
                     log.info(f"[Downloader]从 {item.org_string} 中选取集：{selected_episodes}")
@@ -299,16 +299,27 @@ class EpisodeStrategy:
         return return_items, need_tvs
 
     @staticmethod
-    def _update_episodes(need_tvs, tmdbid, need, current, seq=0):
-        """更新 need_tvs 中指定 seq 条目的集数"""
+    def _update_episodes(need_tvs, tmdbid, need, current, season=1):
+        """更新 need_tvs 中指定季的集数"""
         need = list(set(need).difference(set(current)))
         tv_list = need_tvs.get(tmdbid, [])
-        if not tv_list or seq >= len(tv_list):
+        if not tv_list:
             return need
+
+        # 按季定位目标条目，避免下标因整季包删除等操作发生错位
+        target_index = None
+        for i, tv in enumerate(tv_list):
+            if tv.get("season") == season:
+                target_index = i
+                break
+
+        if target_index is None:
+            return need
+
         if need:
-            tv_list[seq]["episodes"] = need
+            tv_list[target_index]["episodes"] = need
         else:
-            tv_list.pop(seq)
+            tv_list.pop(target_index)
             if not tv_list:
                 need_tvs.pop(tmdbid, None)
         return need

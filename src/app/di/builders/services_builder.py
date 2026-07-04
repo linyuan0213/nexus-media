@@ -225,6 +225,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         filter_service=filter_service,
         event_bus=event_bus,
         system_config=SystemConfig(),
+        download_repo=DownloadHistoryRepositoryAdapter(),
     )
 
     searcher = Searcher(

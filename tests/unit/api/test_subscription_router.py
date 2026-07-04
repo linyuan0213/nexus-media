@@ -15,6 +15,7 @@ from api.deps import (
     get_system_config_service,
 )
 from api.routers import subscription as subscription_router
+from app.domain.mediatypes import MediaType
 from app.schemas.auth import UserContext
 
 
@@ -115,13 +116,13 @@ class TestSubscriptionRouter:
         resp = client.post("/api/v1/subscription/update", json={"rssid": "1", "name": "Test", "type": "movie"})
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
-        assert resp.json()["data"]["rssid"] == "1"
+        assert resp.json()["data"]["rssid"] == 1
         mock_subscribe_service.update_rss_subscribe.assert_called_once()
 
     def test_delete_rss_history(self, client, mock_history_service):
         resp = client.post("/api/v1/subscription/history/delete", json={"rssid": "1"})
         assert resp.status_code == 200
-        mock_history_service.delete.assert_called_once_with(rssid="1")
+        mock_history_service.delete.assert_called_once_with(rssid=1)
 
     def test_re_rss_history(self, client, mock_history_service):
         resp = client.post("/api/v1/subscription/history/redo", json={"rssid": "1", "type": "movie"})
@@ -131,7 +132,7 @@ class TestSubscriptionRouter:
     def test_refresh_rss(self, client, mock_monitor):
         resp = client.post("/api/v1/subscription/refresh", json={"type": "movie", "rssid": "1"})
         assert resp.status_code == 200
-        mock_monitor.refresh_subscription.assert_called_once_with(mtype="movie", rssid="1")
+        mock_monitor.refresh_subscription.assert_called_once_with(mtype="movie", rssid=1)
 
     def test_remove_rss_media_movie(self, client, mock_subscribe_service):
         resp = client.post(
@@ -149,6 +150,14 @@ class TestSubscriptionRouter:
         assert resp.status_code == 200
         args = mock_subscribe_service.delete_subscribe.call_args
         assert args.kwargs["mtype"].value == "tv"
+
+    def test_remove_rss_media_rssid_only(self, client, mock_subscribe_service):
+        resp = client.post("/api/v1/subscription/remove", json={"rssid": "1"})
+        assert resp.status_code == 200
+        assert mock_subscribe_service.delete_subscribe.call_count == 2
+        mtypes = {c.kwargs["mtype"] for c in mock_subscribe_service.delete_subscribe.call_args_list}
+        assert MediaType.MOVIE in mtypes
+        assert MediaType.TV in mtypes
 
     def test_rss_detail_movie(self, client, mock_subscribe_service):
         resp = client.post("/api/v1/subscription/detail", json={"rssid": "1", "rsstype": "movie"})

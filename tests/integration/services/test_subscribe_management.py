@@ -64,7 +64,7 @@ class TestSubscribeFinishService:
         media.overview = "overview"
         media.to_dict.return_value = {}
         svc.finish_rss_subscribe(1, media, delete_fn)
-        history_repo.insert.assert_called_once()
+        history_repo.upsert.assert_called_once()
         delete_fn.assert_called_once_with(mtype=MediaType.MOVIE, rssid=1)
         event_bus.publish.assert_called_once()
         message.send_rss_finished_message.assert_called_once()
@@ -90,7 +90,7 @@ class TestSubscribeFinishService:
         media.overview = "overview"
         media.to_dict.return_value = {}
         svc.finish_rss_subscribe(1, media, delete_fn)
-        history_repo.insert.assert_called_once()
+        history_repo.upsert.assert_called_once()
         delete_fn.assert_called_once_with(mtype=MediaType.TV, rssid=1)
 
     def test_finish_no_rss_found(self):
@@ -137,6 +137,9 @@ class TestSubscribeUpdateService:
         assert code == 0
         assert "成功" in msg
         movie_repo.update.assert_called_once()
+        args = movie_repo.update.call_args
+        assert args.kwargs["filter_rule"] == 0
+        assert args.kwargs["download_setting"] == -1
 
     def test_update_tv_no_total_episode(self):
         tv_repo = MagicMock()
@@ -183,7 +186,7 @@ class TestSubscribeAddService:
 
     def test_add_movie_success(self):
         movie_repo = MagicMock()
-        movie_repo.insert.return_value = 0
+        movie_repo.insert.return_value = 1
         media_service = MagicMock()
         media_info = MagicMock()
         media_info.tmdb_info = {"id": 1}
@@ -194,18 +197,25 @@ class TestSubscribeAddService:
         media_info.to_dict.return_value = {}
         media_service.get_media_info.return_value = media_info
         event_bus = MagicMock()
+        system_config = MagicMock()
+        system_config.get.return_value = None
         svc = SubscribeAddService(
-            movie_repo, MagicMock(), media_service, MagicMock(), event_bus, MagicMock(), MagicMock()
+            movie_repo, MagicMock(), media_service, MagicMock(), event_bus, system_config, MagicMock()
         )
         with patch("app.services.subscribe.management.add_service.gen_rss_note", return_value="{}"):
             code, msg, result = svc.add_rss_subscribe(mtype=MediaType.MOVIE, name="Test", year="2024")
         assert code == 0
         assert "成功" in msg
         movie_repo.insert.assert_called_once()
+        args = movie_repo.insert.call_args
+        assert args.kwargs["filter_rule"] == 0
+        assert args.kwargs["download_setting"] == -1
+        event_payload = event_bus.publish.call_args[0][0].payload
+        assert event_payload["rssid"] == 1
 
     def test_add_tv_success(self):
         tv_repo = MagicMock()
-        tv_repo.insert.return_value = 0
+        tv_repo.insert.return_value = 2
         media_service = MagicMock()
         media_info = MagicMock()
         media_info.tmdb_info = {"id": 1}
@@ -218,14 +228,15 @@ class TestSubscribeAddService:
         media_info.to_dict.return_value = {}
         media_service.get_media_info.return_value = media_info
         media_service.get_tmdb_season_episodes_num.return_value = 10
-        svc = SubscribeAddService(
-            MagicMock(), tv_repo, media_service, MagicMock(), MagicMock(), MagicMock(), MagicMock()
-        )
+        event_bus = MagicMock()
+        svc = SubscribeAddService(MagicMock(), tv_repo, media_service, MagicMock(), event_bus, MagicMock(), MagicMock())
         with patch("app.services.subscribe.management.add_service.gen_rss_note", return_value="{}"):
             code, msg, result = svc.add_rss_subscribe(mtype=MediaType.TV, rssid=1, name="Test", year="2024", season=1)
         assert code == 0
         assert "成功" in msg
         tv_repo.insert.assert_called_once()
+        event_payload = event_bus.publish.call_args[0][0].payload
+        assert event_payload["rssid"] == 2
 
     def test_add_fuzzy_match_movie(self):
         movie_repo = MagicMock()

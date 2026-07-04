@@ -289,14 +289,14 @@ class TestSubscribeHistoryService:
     def test_delete(self):
         repo = MagicMock()
         svc = SubscribeHistoryService(history_repo=repo, subscribe=MagicMock(), rss_helper=MagicMock())
-        svc.delete("1")
-        repo.delete.assert_called_once_with("1")
+        svc.delete(1)
+        repo.delete.assert_called_once_with(1)
 
     def test_redo_no_history(self):
         repo = MagicMock()
         repo.get_all.return_value = []
         svc = SubscribeHistoryService(history_repo=repo, subscribe=MagicMock(), rss_helper=MagicMock())
-        code, msg = svc.redo("1", "MOV")
+        code, msg = svc.redo(1, "MOV")
         assert code == -1
         assert "不存在" in msg
 
@@ -313,7 +313,7 @@ class TestSubscribeHistoryService:
         subscribe = MagicMock()
         subscribe.add_rss_subscribe.return_value = (0, "ok", None)
         svc = SubscribeHistoryService(history_repo=repo, subscribe=subscribe, rss_helper=MagicMock())
-        code, msg = svc.redo("1", "MOV")
+        code, msg = svc.redo(1, "MOV")
         assert code == 0
         subscribe.add_rss_subscribe.assert_called_once()
 
@@ -428,7 +428,7 @@ class TestSubscriptionMonitorTrigger:
         )
         with patch("app.services.subscribe.monitor.SubscribeSearchEngine") as mock_engine:
             mock_engine.return_value.subscribe_search_movie = MagicMock()
-            monitor.refresh_subscription("MOV", "1")
+            monitor.refresh_subscription("MOV", 1)
             mock_thread.submit.assert_called_once()
 
     def test_refresh_subscription_tv(self):
@@ -444,5 +444,5 @@ class TestSubscriptionMonitorTrigger:
         )
         with patch("app.services.subscribe.monitor.SubscribeSearchEngine") as mock_engine:
             mock_engine.return_value.subscribe_search_tv = MagicMock()
-            monitor.refresh_subscription("TV", "1")
+            monitor.refresh_subscription("TV", 1)
             mock_thread.submit.assert_called_once()

@@ -23,13 +23,17 @@ class SubscribeHistoryService:
         """获取订阅历史记录."""
         return [rec.to_dict() for rec in self._history_repo.get_all(rtype=mtype)]
 
-    def delete(self, rssid: str) -> None:
+    def delete(self, rssid: int | None) -> None:
         """删除订阅历史记录."""
+        if rssid is None:
+            return
         self._history_repo.delete(rssid)
 
-    def redo(self, rssid: str, rtype: str) -> tuple[int, str]:
+    def redo(self, rssid: int | None, rtype: str) -> tuple[int, str]:
         """从历史记录重新订阅."""
-        history = self._history_repo.get_all(rtype=rtype, rid=int(rssid) if rssid else None)
+        if rssid is None:
+            return -1, "缺少订阅ID"
+        history = self._history_repo.get_all(rtype=rtype, rid=rssid)
         if not history:
             return -1, "订阅历史记录不存在"
         mtype = MediaType.MOVIE if rtype == MediaType.MOVIE.value else MediaType.TV

@@ -26,7 +26,7 @@ class TestDownloadCoordinator:
         coord = DownloadCoordinator(lock_manager=lock_manager)
         media = self._make_media()
         assert coord.try_acquire(media) is True
-        lock_manager.create_lock.assert_called_once_with("subscribe:download:123:S01", ttl_seconds=1800)
+        lock_manager.create_lock.assert_called_once_with("subscribe:download:123:S01", ttl_seconds=300)
 
     def test_try_acquire_already_held(self):
         lock_manager = MagicMock()
@@ -38,7 +38,7 @@ class TestDownloadCoordinator:
         coord.try_acquire(media)
         result = coord.try_acquire(media)
         assert result is True
-        assert lock_manager.create_lock.call_count == 1
+        assert lock_manager.create_lock.call_count == 2
 
     def test_try_acquire_failure(self):
         lock_manager = MagicMock()
@@ -149,7 +149,7 @@ class TestIndexerSearchStrategy:
     """Test suite for IndexerSearchStrategy."""
 
     def test_run_acquires_lock(self):
-        with patch("app.services.subscribe.strategies.indexer_search.get_lock_manager") as mock_lm:
+        with patch("app.services.subscribe.strategy_lock.get_lock_manager") as mock_lm:
             lock = MagicMock()
             lock.acquire.return_value = True
             mock_lm.return_value.create_lock.return_value = lock
@@ -172,7 +172,7 @@ class TestIndexerSearchStrategy:
             lock.release.assert_called_once()
 
     def test_run_skips_when_locked(self):
-        with patch("app.services.subscribe.strategies.indexer_search.get_lock_manager") as mock_lm:
+        with patch("app.services.subscribe.strategy_lock.get_lock_manager") as mock_lm:
             lock = MagicMock()
             lock.acquire.return_value = False
             mock_lm.return_value.create_lock.return_value = lock
@@ -196,7 +196,7 @@ class TestQueueSearchStrategy:
     """Test suite for QueueSearchStrategy."""
 
     def test_run_acquires_lock(self):
-        with patch("app.services.subscribe.strategies.queue_search.get_lock_manager") as mock_lm:
+        with patch("app.services.subscribe.strategy_lock.get_lock_manager") as mock_lm:
             lock = MagicMock()
             lock.acquire.return_value = True
             mock_lm.return_value.create_lock.return_value = lock
@@ -218,7 +218,7 @@ class TestQueueSearchStrategy:
             lock.release.assert_called_once()
 
     def test_run_skips_when_locked(self):
-        with patch("app.services.subscribe.strategies.queue_search.get_lock_manager") as mock_lm:
+        with patch("app.services.subscribe.strategy_lock.get_lock_manager") as mock_lm:
             lock = MagicMock()
             lock.acquire.return_value = False
             mock_lm.return_value.create_lock.return_value = lock
@@ -258,7 +258,7 @@ class TestRssFeedStrategy:
 
     def test_run_lock_not_acquired(self):
         strategy = self._make_strategy()
-        with patch("app.services.subscribe.strategies.rss_feed.get_lock_manager") as mock_lm:
+        with patch("app.services.subscribe.strategy_lock.get_lock_manager") as mock_lm:
             lock = MagicMock()
             lock.acquire.return_value = False
             mock_lm.return_value.create_lock.return_value = lock

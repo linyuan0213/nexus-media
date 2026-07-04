@@ -75,20 +75,9 @@ class SubscribeAddService:
         if not name:
             return -1, "标题或类型有误", None
         year = int(year) if str(year).isdigit() else ""
-        rss_sites = rss_sites or []
-        if isinstance(rss_sites, str):
-            rss_sites = rss_sites.split(",")
-        search_sites = search_sites or []
-        if isinstance(search_sites, str):
-            search_sites = search_sites.split(",")
-        over_edition = 1 if over_edition else 0
-        filter_rule = int(str(filter_rule)) if str(filter_rule).isdigit() else None
-        total_ep = int(str(total_ep)) if str(total_ep).isdigit() else None
-        current_ep = int(str(current_ep)) if str(current_ep).isdigit() else None
-        download_setting = int(str(download_setting)) if str(download_setting).replace("-", "").isdigit() else None
-        fuzzy_match = bool(fuzzy_match)
 
-        if channel == "auto" and not rssid:
+        # 新增订阅且未显式传值时，应用默认订阅设置
+        if not rssid:
             default_rss_setting = (
                 self.default_subscribe_setting_tv
                 if mtype in [MediaType.TV, MediaType.ANIME]
@@ -105,30 +94,43 @@ class SubscribeAddService:
                 default_over_edition = default_rss_setting.get("over_edition")
                 default_rss_sites = default_rss_setting.get("rss_sites")
                 default_search_sites = default_rss_setting.get("search_sites")
-                if not filter_restype and default_restype:
+                if filter_restype is None and default_restype:
                     filter_restype = default_restype
-                if not filter_pix and default_pix:
+                if filter_pix is None and default_pix:
                     filter_pix = default_pix
-                if not filter_team and default_team:
+                if filter_team is None and default_team:
                     filter_team = default_team
-                if not filter_rule and default_rule:
+                if filter_rule is None and default_rule:
                     filter_rule = int(default_rule) if str(default_rule).isdigit() else None
-                if not filter_include and default_include:
+                if filter_include is None and default_include:
                     filter_include = default_include
-                if not filter_exclude and default_exclude:
+                if filter_exclude is None and default_exclude:
                     filter_exclude = default_exclude
-                if not over_edition and default_over_edition:
+                if over_edition is None and default_over_edition:
                     over_edition = 1 if default_over_edition == "1" else 0
-                if not download_setting and default_download_setting:
+                if download_setting is None and default_download_setting:
                     download_setting = (
                         int(default_download_setting)
                         if str(default_download_setting).replace("-", "").isdigit()
                         else None
                     )
-                if not rss_sites and default_rss_sites:
+                if rss_sites is None and default_rss_sites:
                     rss_sites = default_rss_sites
-                if not search_sites and default_search_sites:
+                if search_sites is None and default_search_sites:
                     search_sites = default_search_sites
+
+        rss_sites = rss_sites or []
+        if isinstance(rss_sites, str):
+            rss_sites = rss_sites.split(",")
+        search_sites = search_sites or []
+        if isinstance(search_sites, str):
+            search_sites = search_sites.split(",")
+        over_edition = 1 if over_edition else 0
+        filter_rule = int(str(filter_rule)) if str(filter_rule).isdigit() else 0
+        total_ep = int(str(total_ep)) if str(total_ep).isdigit() else None
+        current_ep = int(str(current_ep)) if str(current_ep).isdigit() else None
+        download_setting = int(str(download_setting)) if str(download_setting).replace("-", "").isdigit() else -1
+        fuzzy_match = bool(fuzzy_match)
 
         if not fuzzy_match:
             if mediaid:
@@ -168,7 +170,7 @@ class SubscribeAddService:
                 else:
                     total = media_info.total_episodes
                 lack = max(0, total - (current_ep or 0))
-                code = self._tv_repo.insert(
+                rssid = self._tv_repo.insert(
                     media_info=media_info,
                     total=total,
                     lack=lack,
@@ -191,8 +193,9 @@ class SubscribeAddService:
                     note=gen_rss_note(media_info),
                     keyword=keyword,
                 )
+                code = 0 if rssid not in (-1, 9) else rssid
             else:
-                code = self._movie_repo.insert(
+                rssid = self._movie_repo.insert(
                     media_info=media_info,
                     state=state,
                     rss_sites=rss_sites,
@@ -211,6 +214,7 @@ class SubscribeAddService:
                     note=gen_rss_note(media_info),
                     keyword=keyword,
                 )
+                code = 0 if rssid not in (-1, 9) else rssid
         else:
             media_info = meta_info(title=name, mtype=mtype)
             media_info.title = name
@@ -218,7 +222,7 @@ class SubscribeAddService:
             if season:
                 media_info.begin_season = int(season)
             if mtype == MediaType.MOVIE:
-                code = self._movie_repo.insert(
+                rssid = self._movie_repo.insert(
                     media_info=media_info,
                     state=SubscribeState.RUNNING.value,
                     rss_sites=rss_sites,
@@ -235,8 +239,9 @@ class SubscribeAddService:
                     fuzzy_match=1,
                     keyword=keyword,
                 )
+                code = 0 if rssid not in (-1, 9) else rssid
             else:
-                code = self._tv_repo.insert(
+                rssid = self._tv_repo.insert(
                     media_info=media_info,
                     total=0,
                     lack=0,
@@ -255,6 +260,7 @@ class SubscribeAddService:
                     fuzzy_match=1,
                     keyword=keyword,
                 )
+                code = 0 if rssid not in (-1, 9) else rssid
 
         if code == 0:
             self._event_bus.publish(
@@ -264,9 +270,9 @@ class SubscribeAddService:
                         SubscribeAddPayload(
                             media=media_info.to_dict(),
                             rssid=rssid,
-                            rss_sites=rss_sites,
-                            search_sites=search_sites,
-                            over_edition=over_edition,
+                            rss_sites=cast(list[str], rss_sites),
+                            search_sites=cast(list[str], search_sites),
+                            over_edition=bool(over_edition),
                             filter_restype=filter_restype,
                             filter_pix=filter_pix,
                             filter_team=filter_team,

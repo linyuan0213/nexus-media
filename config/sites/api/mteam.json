@@ -13,7 +13,7 @@
   "detail_page_url": "/detail/{tid}",
   "encoding": "UTF-8",
   "public": false,
-  "language": "en",
+  "language": "zh",
   "api": {
     "base_url": "https://api.m-team.io",
     "auth": {

@@ -1,5 +1,40 @@
 # 版本历史
 
+## v4.2.0 (2026-07-04)
+
+### 新增
+- 订阅质量/分辨率支持多选：编辑订阅和默认设置弹窗改为 NSelect multiple，后端过滤支持逗号分隔值
+- 订阅添加/更新后自动触发即时队列搜索（SUBSCRIBE_ADD 事件处理器）
+- 下载页面显示种子大小（card + list 两视图）
+- ERROR 状态订阅自动重试：每 5 次队列搜索周期恢复一次
+- 订阅卡片/详情弹窗新增质量（紫色）和分辨率（青色）标签，9 类标签全部使用独立 HSL 色值
+
+### 优化
+- 搜索并行化：`_search_movies` / `_search_tvs` 改用 ThreadPoolExecutor（5 workers）并发处理
+- 协调器锁 TTL 从 14400s 降至 300s，新增后台守护线程自动续期（每 60s 延长 300s）
+- 策略全局锁 TTL 从 1800s 降至 300s，新增 `strategy_lock` 上下文管理器自动续期
+- 监控器运行时间持久化：`SystemConfig` 存储 `_last_queue_run / _last_rss_run / _last_search_run`，避免重启全量搜索洪峰
+- `monitor.run()` 移除 `wait(tasks)` 阻塞，改为非阻塞提交 + `_running_tasks` 去重
+- 质量/分辨率 tag 改为独立色值：规则(rose) / 洗版(amber) / 质量(purple) / 分辨率(cyan) / 制作组(mint) / 包含(green) / 排除(rose) / 订阅站(blue) / 搜索站(slate)
+- 发现页"编辑"入口预加载订阅默认设置
+
+### 修复
+- 修复订阅默认设置未应用到订阅：电影页 `res?.data` 误判，后端仅在字段为 None 时回填默认
+- 修复协调器锁存在性检查的竞态：`try_acquire` 移到 `check_exists_medias` 前面
+- 修复协调器锁 key 对空 TMDB ID 共享风险：降级链 `tmdb_id → rssid → title:year`
+- 修复 M-Team 中文搜索失效：`language` 改为 `zh`
+- 修复订阅重新下载被旧历史阻塞：`filter_downloaded` 改用 `is_completed_by_tmdb`
+- 修复 qBittorrent 批量获取种子属性时单个异常导致整体列表丢失：逐条 try/except
+- 修复下载页面 `v-html` XSS 警告：tooltip 改用文本插值
+- 修复 `rssid` 类型不一致：前后端统一改为 `int`
+- 修复前端质量/分辨率格式化：`formatRestype` / `formatPix` 大小写不敏感映射
+
+### 变更
+- 默认订阅设置弹窗重构：复用 `SubscribeEditModal` 同款分段布局 + 站点卡片样式
+- 订阅历史页改为横向卡片 + 电影/剧集筛选 tab
+- 创建共享图片工具 `utils/image.ts`（`getImgUrl` / `handleImageError` / `fallbackImage`）
+- 创建共享过滤选项 `utils/subscribe.ts`（`restypeOptions` / `pixOptions` / `splitMultiSelect` / `joinMultiSelect`）
+
 ## v4.1.13 (2026-07-02)
 
 ### 重构

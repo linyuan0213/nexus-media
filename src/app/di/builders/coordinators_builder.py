@@ -1,13 +1,17 @@
 """协调器 Builder — 创建 Layer 5 对象。"""
 
 from app.agent.tool_executor import ToolExecutor
+from app.core.system_config import SystemConfig
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.di.models import BusinessFacades, CoordinatorObjects, InfrastructureObjects, ServiceObjects
 from app.media import MediaCache
 from app.services.rss_processor import RssHelper
 from app.services.subscribe.coordinator import DownloadCoordinator
-from app.services.subscribe.handlers import build_rss_auto_subscribe_handler
+from app.services.subscribe.handlers import (
+    build_rss_auto_subscribe_handler,
+    build_subscribe_add_search_handler,
+)
 from app.services.subscribe.matcher import SubscribeMatcher
 from app.services.subscribe.monitor import SubscriptionMonitor
 from app.services.subscribe.strategies.indexer_search import IndexerSearchStrategy
@@ -86,6 +90,7 @@ def build_coordinators(
         rss_strategy=rss_strategy,
         indexer_strategy=indexer_strategy,
         coordinator=DownloadCoordinator(),
+        system_config=SystemConfig(),
     )
 
     system_lifecycle = SystemLifecycleService(
@@ -136,6 +141,8 @@ def build_coordinators(
 
     # 注册 RSS 自动订阅事件处理器
     build_rss_auto_subscribe_handler(subscribe_service)
+    # 注册订阅添加/更新后自动触发队列搜索的事件处理器
+    build_subscribe_add_search_handler(queue_strategy, thread_executor)
 
     return CoordinatorObjects(
         subscription_monitor=subscription_monitor,

@@ -13,12 +13,13 @@ from app.events.payloads import SubscribeFinishedPayload
 class SubscribeFinishService:
     """完成订阅服务"""
 
-    def __init__(self, movie_repo, tv_repo, history_repo, message, event_bus):
+    def __init__(self, movie_repo, tv_repo, history_repo, message, event_bus, download_repo=None):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
         self._history_repo = history_repo
         self._message = message
         self._event_bus = event_bus
+        self._download_repo = download_repo
 
     def finish_rss_subscribe(self, rssid: int | None, media: Any, delete_subscribe_fn) -> None:
         """完成订阅"""
@@ -29,8 +30,8 @@ class SubscribeFinishService:
             rss = self._movie_repo.get_all(rssid=rssid)
             if not rss:
                 return
-            self._history_repo.insert(
-                rssid=str(rssid or ""),
+            self._history_repo.upsert(
+                rssid=rssid,
                 rtype=rtype,
                 name=rss[0].NAME,
                 year=rss[0].YEAR,
@@ -44,8 +45,8 @@ class SubscribeFinishService:
             if not rss:
                 return
             total = rss[0].TOTAL_EP
-            self._history_repo.insert(
-                rssid=str(rssid or ""),
+            self._history_repo.upsert(
+                rssid=rssid,
                 rtype=rtype,
                 name=rss[0].NAME,
                 year=rss[0].YEAR,
@@ -57,6 +58,10 @@ class SubscribeFinishService:
                 start=rss[0].CURRENT_EP,
             )
             delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
+
+        if self._download_repo and media.tmdb_id:
+            season_prefix = media.get_season_string() if media.type != MediaType.MOVIE else None
+            self._download_repo.delete_by_tmdb(media.tmdb_id, season_prefix)
 
         self._event_bus.publish(
             Event(

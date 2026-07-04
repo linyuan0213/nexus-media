@@ -48,7 +48,7 @@ class AddRssMediaRequest(BaseModel):
     season: str | None = None
     type: str | None = None
     page: str | None = None
-    rssid: str | None = None
+    rssid: int | None = None
     in_form: str | None = None
     keyword: str | None = None
     fuzzy_match: bool | None = None
@@ -71,17 +71,17 @@ class AddRssMediaRequest(BaseModel):
 
 
 class SubscribeIdRequest(BaseModel):
-    rssid: str | None = None
+    rssid: int | None = None
 
 
 class RedoHistoryRequest(BaseModel):
-    rssid: str | None = None
+    rssid: int | None = None
     type: str | None = None
 
 
 class RefreshRssRequest(BaseModel):
     type: str | None = None
-    rssid: str | None = None
+    rssid: int | None = None
     page: str | None = None
 
 
@@ -90,13 +90,13 @@ class RemoveRssMediaRequest(BaseModel):
     type: str | None = None
     year: str | None = None
     season: str | None = None
-    rssid: str | None = None
-    tmdbid: str | None = None
+    rssid: int | None = None
+    tmdbid: str | int | None = None
     page: str | None = None
 
 
 class SubscribeDetailRequest(BaseModel):
-    rssid: str | None = None
+    rssid: int | None = None
     rsstype: str | None = None
 
 
@@ -259,7 +259,7 @@ def delete_rss_history(
     user: str = Depends(require_permission("subscription:manage")),
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
-    svc.delete(rssid=req.rssid or "")
+    svc.delete(rssid=req.rssid)
     return success()
 
 
@@ -271,7 +271,7 @@ def re_rss_history(
 ):
     parsed = MediaType.from_string(req.type or "")
     rtype = MediaType.MOVIE.value if parsed == MediaType.MOVIE else MediaType.TV.value
-    code, msg = svc.redo(rssid=req.rssid or "", rtype=rtype)
+    code, msg = svc.redo(rssid=req.rssid, rtype=rtype)
     return fail(code=code, msg=msg)
 
 
@@ -281,7 +281,7 @@ def refresh_rss(
     user: str = Depends(require_permission("subscription:manage")),
     monitor: SubscriptionMonitor = Depends(get_subscription_monitor),
 ):
-    monitor.refresh_subscription(mtype=req.type or "", rssid=req.rssid or "")
+    monitor.refresh_subscription(mtype=req.type or "", rssid=req.rssid)
     return success(data=req.page)
 
 
@@ -297,22 +297,33 @@ def remove_rss_media(
     name = req.name
     if name:
         name = meta_info(title=name).get_name()
-    mtype = req.type
-    if MediaType.from_string(mtype or "") == MediaType.MOVIE:
+    rssid = req.rssid
+    mtype = MediaType.from_string(req.type or "")
+    if mtype == MediaType.MOVIE:
         svc.delete_subscribe(
             mtype=MediaType.MOVIE,
             title=name or "",
             year=req.year,
-            rssid=int(req.rssid) if req.rssid else None,
+            rssid=rssid,
             tmdbid=tmdbid,
         )
-    else:
+    elif mtype == MediaType.TV:
         svc.delete_subscribe(
             mtype=MediaType.TV,
             title=name or "",
             season=str(req.season) if req.season is not None else None,
-            rssid=int(req.rssid) if req.rssid else None,
+            rssid=rssid,
             tmdbid=tmdbid,
+        )
+    elif rssid:
+        # 前端简化接口只传了 rssid 时，尝试两边都删除
+        svc.delete_subscribe(
+            mtype=MediaType.MOVIE,
+            rssid=rssid,
+        )
+        svc.delete_subscribe(
+            mtype=MediaType.TV,
+            rssid=rssid,
         )
     return success(data=req.page)
 
@@ -325,10 +336,10 @@ def rss_detail(
 ):
     parsed = MediaType.from_string(req.rsstype or "")
     if parsed == MediaType.MOVIE:
-        rssdetail = svc.get_subscribe_movies(rid=int(req.rssid) if req.rssid else None)
+        rssdetail = svc.get_subscribe_movies(rid=req.rssid)
         mtype_value = MediaType.MOVIE.value
     else:
-        rssdetail = svc.get_subscribe_tvs(rid=int(req.rssid) if req.rssid else None)
+        rssdetail = svc.get_subscribe_tvs(rid=req.rssid)
         mtype_value = MediaType.ANIME.value if parsed == MediaType.ANIME else MediaType.TV.value
     if not rssdetail:
         return fail()

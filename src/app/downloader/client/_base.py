@@ -97,18 +97,19 @@ class _IDownloadClient(metaclass=ABCMeta):
         trans_tasks = []
         for torrent in torrents:
             labels = torrent.labels or []
+            display_name = torrent.name or torrent.id or "未知种子"
             if "已整理" in labels:
                 continue
             if tag and tag not in labels:
-                log.debug(f"[{self.client_name}]{self.name} 开启标签隔离，{torrent.name} 未包含指定标签：{tag}")
+                log.debug(f"[{self.client_name}]{self.name} 开启标签隔离，{display_name} 未包含指定标签：{tag}")
                 continue
             path = torrent.save_path
             if not path:
-                log.debug(f"[{self.client_name}]{self.name} 未获取到 {torrent.name} 下载保存路径")
+                log.debug(f"[{self.client_name}]{self.name} 未获取到 {display_name} 下载保存路径")
                 continue
             true_path, replace_flag = self.get_replace_path(path, self.download_dir)
             if match_path and not replace_flag:
-                log.debug(f"[{self.client_name}]{self.name} 开启目录隔离，{torrent.name} 未匹配下载目录范围")
+                log.debug(f"[{self.client_name}]{self.name} 开启目录隔离，{display_name} 未匹配下载目录范围")
                 continue
             subpath = self._get_content_subpath(torrent) or torrent.name or ""
             trans_tasks.append({"path": os.path.join(true_path, subpath).replace("\\", "/"), "id": torrent.id})
@@ -278,6 +279,7 @@ class _IDownloadClient(metaclass=ABCMeta):
             "speed": speed,
             "state": state,
             "progress": progress,
+            "size": StringUtils.str_filesize(torrent.size) if torrent.size else "",
             "labels": getattr(torrent, "labels", []) or [],
             "category": ", ".join(c) if (c := getattr(torrent, "category", [])) else "",
         }

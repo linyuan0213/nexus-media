@@ -2,6 +2,7 @@
 
 import re
 
+import log
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.domain.mediatypes import MediaType
 from app.indexer.core.filter_engine import IndexerFilterEngine
@@ -135,15 +136,20 @@ class SubscribeMatcher:
                 match_msg.append("触发站点流控")
                 return False, match_msg, match_rss_info
 
-            torrent_attr = self._site_conf.check_torrent_attr(
-                torrent_url=media_info.page_url,
-                cookie=site_cookie,
-                api_key=site_api_key,
-                bearer_token=site_bearer_token,
-                ua=site_ua,
-                headers=site_headers,
-                proxy=site_proxy,
-            )
+            try:
+                torrent_attr = self._site_conf.check_torrent_attr(
+                    torrent_url=media_info.page_url,
+                    cookie=site_cookie,
+                    api_key=site_api_key,
+                    bearer_token=site_bearer_token,
+                    ua=site_ua,
+                    headers=site_headers,
+                    proxy=site_proxy,
+                )
+            except Exception as err:
+                log.error(f"[SubscribeMatcher] 解析站点属性失败: {err!s}")
+                match_msg.append(f"站点属性解析失败: {err!s}")
+                return False, match_msg, match_rss_info
             if torrent_attr.get("2xfree"):
                 download_volume_factor = 0.0
                 upload_volume_factor = 2.0

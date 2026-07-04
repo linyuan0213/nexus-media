@@ -95,6 +95,25 @@ class TestQbittorrentSync:
         assert torrents[0].id == "hash2"
         assert "hash1" not in qb._sync_torrents
 
+    def test_get_torrents_sync_incremental_update_preserves_name(self, client):
+        """增量更新未携带 name 时，保留本地快照中的 name."""
+        qb, mock_qbc = client
+        qb._sync_torrents = {"hash1": {"name": "movie.mkv", "state": "uploading", "tags": "NEXUS_MEDIA"}}
+        qb._sync_rid = 1
+        mock_qbc.sync_maindata.return_value = {
+            "rid": 2,
+            "full_update": False,
+            "torrents": {"hash1": {"state": "uploading", "tags": "NEXUS_MEDIA,已整理"}},
+        }
+
+        torrents, error = qb.get_torrents(status="completed")
+
+        assert not error
+        assert len(torrents) == 1
+        assert torrents[0].id == "hash1"
+        assert torrents[0].name == "movie.mkv"
+        assert torrents[0].labels == ["NEXUS_MEDIA", "已整理"]
+
     def test_get_torrents_sync_excludes_incomplete_states(self, client):
         """sync 结果排除非已完成状态."""
         qb, mock_qbc = client

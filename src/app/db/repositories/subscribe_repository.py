@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Integer, cast
+from sqlalchemy import Integer, cast, or_
 from sqlalchemy.exc import IntegrityError
 
 from app.db.models import SubscribeHistory, SubscribeMovies, SubscribeTorrents, SubscribeTvEpisodes, SubscribeTvs
@@ -243,35 +243,34 @@ class SubscribeRepository(BaseRepository):
                 return 9
 
             try:
-                db.add(
-                    SubscribeMovies(
-                        NAME=media_info.title,
-                        YEAR=media_info.year,
-                        TMDBID=media_info.tmdb_id,
-                        IMAGE=media_info.get_message_image(),
-                        RSS_SITES=JsonUtils.dumps(rss_sites),
-                        SEARCH_SITES=JsonUtils.dumps(search_sites),
-                        OVER_EDITION=over_edition,
-                        FILTER_ORDER=0,
-                        FILTER_RESTYPE=filter_restype,
-                        FILTER_PIX=filter_pix,
-                        FILTER_RULE=filter_rule,
-                        FILTER_TEAM=filter_team,
-                        FILTER_INCLUDE=filter_include,
-                        FILTER_EXCLUDE=filter_exclude,
-                        SAVE_PATH=save_path,
-                        DOWNLOAD_SETTING=download_setting,
-                        FUZZY_MATCH=fuzzy_match,
-                        STATE=state,
-                        DESC=desc,
-                        NOTE=note,
-                        KEYWORD=keyword,
-                    )
+                movie = SubscribeMovies(
+                    NAME=media_info.title,
+                    YEAR=media_info.year,
+                    TMDBID=media_info.tmdb_id,
+                    IMAGE=media_info.get_message_image(),
+                    RSS_SITES=JsonUtils.dumps(rss_sites),
+                    SEARCH_SITES=JsonUtils.dumps(search_sites),
+                    OVER_EDITION=over_edition,
+                    FILTER_ORDER=0,
+                    FILTER_RESTYPE=filter_restype,
+                    FILTER_PIX=filter_pix,
+                    FILTER_RULE=filter_rule,
+                    FILTER_TEAM=filter_team,
+                    FILTER_INCLUDE=filter_include,
+                    FILTER_EXCLUDE=filter_exclude,
+                    SAVE_PATH=save_path,
+                    DOWNLOAD_SETTING=download_setting,
+                    FUZZY_MATCH=fuzzy_match,
+                    STATE=state,
+                    DESC=desc,
+                    NOTE=note,
+                    KEYWORD=keyword,
                 )
+                db.add(movie)
                 db.flush()
+                return movie.ID
             except IntegrityError:
                 return 9
-        return 0
 
     def update_rss_movie(self, rssid: int, **kwargs: str | int | list | None) -> int:
         """
@@ -302,13 +301,36 @@ class SubscribeRepository(BaseRepository):
             "note": "NOTE",
             "keyword": "KEYWORD",
         }
+        defaults = {
+            "year": "",
+            "keyword": "",
+            "tmdbid": "",
+            "image": "",
+            "rss_sites": "",
+            "search_sites": "",
+            "filter_restype": "",
+            "filter_pix": "",
+            "filter_rule": 0,
+            "filter_team": "",
+            "filter_include": "",
+            "filter_exclude": "",
+            "save_path": "",
+            "desc": "",
+            "note": "",
+            "over_edition": 0,
+            "download_setting": -1,
+            "fuzzy_match": 0,
+        }
         for k, v in kwargs.items():
             col = field_map.get(k)
-            if col is not None:
-                if k in ("rss_sites", "search_sites") and isinstance(v, list):
-                    update_fields[col] = JsonUtils.dumps(v)
-                else:
-                    update_fields[col] = v
+            if col is None:
+                continue
+            if v is None and k in defaults:
+                v = defaults[k]
+            if k in ("rss_sites", "search_sites") and isinstance(v, list):
+                update_fields[col] = JsonUtils.dumps(v)
+            else:
+                update_fields[col] = v
         if not update_fields:
             return 0
         with self.session() as db:
@@ -513,40 +535,39 @@ class SubscribeRepository(BaseRepository):
                     return 9
 
             try:
-                db.add(
-                    SubscribeTvs(
-                        NAME=media_info.title,
-                        YEAR=media_info.year,
-                        SEASON=season_str,
-                        TMDBID=media_info.tmdb_id,
-                        IMAGE=media_info.get_message_image(),
-                        RSS_SITES=JsonUtils.dumps(rss_sites),
-                        SEARCH_SITES=JsonUtils.dumps(search_sites),
-                        OVER_EDITION=over_edition,
-                        FILTER_ORDER=0,
-                        FILTER_RESTYPE=filter_restype,
-                        FILTER_PIX=filter_pix,
-                        FILTER_RULE=filter_rule,
-                        FILTER_TEAM=filter_team,
-                        FILTER_INCLUDE=filter_include,
-                        FILTER_EXCLUDE=filter_exclude,
-                        SAVE_PATH=save_path,
-                        DOWNLOAD_SETTING=download_setting,
-                        FUZZY_MATCH=fuzzy_match,
-                        TOTAL_EP=total_ep,
-                        CURRENT_EP=current_ep,
-                        TOTAL=total,
-                        LACK=lack,
-                        STATE=state,
-                        DESC=desc,
-                        NOTE=note,
-                        KEYWORD=keyword,
-                    )
+                tv = SubscribeTvs(
+                    NAME=media_info.title,
+                    YEAR=media_info.year,
+                    SEASON=season_str,
+                    TMDBID=media_info.tmdb_id,
+                    IMAGE=media_info.get_message_image(),
+                    RSS_SITES=JsonUtils.dumps(rss_sites),
+                    SEARCH_SITES=JsonUtils.dumps(search_sites),
+                    OVER_EDITION=over_edition,
+                    FILTER_ORDER=0,
+                    FILTER_RESTYPE=filter_restype,
+                    FILTER_PIX=filter_pix,
+                    FILTER_RULE=filter_rule,
+                    FILTER_TEAM=filter_team,
+                    FILTER_INCLUDE=filter_include,
+                    FILTER_EXCLUDE=filter_exclude,
+                    SAVE_PATH=save_path,
+                    DOWNLOAD_SETTING=download_setting,
+                    FUZZY_MATCH=fuzzy_match,
+                    TOTAL_EP=total_ep,
+                    CURRENT_EP=current_ep,
+                    TOTAL=total,
+                    LACK=lack,
+                    STATE=state,
+                    DESC=desc,
+                    NOTE=note,
+                    KEYWORD=keyword,
                 )
+                db.add(tv)
                 db.flush()
+                return tv.ID
             except IntegrityError:
                 return 9
-        return 0
 
     def update_rss_tv(self, rssid: int, **kwargs: str | int | list | None) -> int:
         """
@@ -582,13 +603,41 @@ class SubscribeRepository(BaseRepository):
             "note": "NOTE",
             "keyword": "KEYWORD",
         }
+        defaults = {
+            "year": "",
+            "season": "",
+            "keyword": "",
+            "tmdbid": "",
+            "image": "",
+            "rss_sites": "",
+            "search_sites": "",
+            "filter_restype": "",
+            "filter_pix": "",
+            "filter_rule": 0,
+            "filter_team": "",
+            "filter_include": "",
+            "filter_exclude": "",
+            "save_path": "",
+            "desc": "",
+            "note": "",
+            "over_edition": 0,
+            "download_setting": -1,
+            "fuzzy_match": 0,
+            "total_ep": 0,
+            "current_ep": 0,
+            "total": 0,
+            "lack": 0,
+        }
         for k, v in kwargs.items():
             col = field_map.get(k)
-            if col is not None:
-                if k in ("rss_sites", "search_sites") and isinstance(v, list):
-                    update_fields[col] = JsonUtils.dumps(v)
-                else:
-                    update_fields[col] = v
+            if col is None:
+                continue
+            if v is None and k in defaults:
+                v = defaults[k]
+            if k in ("rss_sites", "search_sites") and isinstance(v, list):
+                update_fields[col] = JsonUtils.dumps(v)
+            else:
+                update_fields[col] = v
         if not update_fields:
             return 0
         with self.session() as db:
@@ -835,6 +884,7 @@ class SubscribeRepository(BaseRepository):
         season: str | None = None,
         total: str | None = None,
         start: str | None = None,
+        note: str = "",
     ) -> None:
         """
         登记RSS历史
@@ -854,9 +904,80 @@ class SubscribeRepository(BaseRepository):
                     DESC=desc,
                     TOTAL=total,
                     START=start,
+                    NOTE=note,
                     FINISH_TIME=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
                 )
             )
+
+    def upsert_rss_history(
+        self,
+        rssid: int,
+        rtype: str,
+        name: str,
+        year: str,
+        tmdbid: str,
+        image: str,
+        desc: str,
+        season: str | None = None,
+        total: str | None = None,
+        start: str | None = None,
+        note: str = "",
+    ) -> None:
+        """
+        登记或更新RSS历史：按媒体维度去重，同一 TMDB ID + 季的记录只保留一条
+        """
+        with self.session() as db:
+            # 防御：同一 rssid 已完成过则跳过
+            if db.query(SubscribeHistory).filter(cast(SubscribeHistory.RSSID, Integer) == rssid).count() > 0:
+                return
+
+            query = db.query(SubscribeHistory).filter(
+                SubscribeHistory.TYPE == rtype,
+            )
+            if season:
+                query = query.filter(SubscribeHistory.SEASON == season)
+            else:
+                query = query.filter(
+                    or_(
+                        SubscribeHistory.SEASON == None,  # noqa: E711
+                        SubscribeHistory.SEASON == "",
+                    )
+                )
+            if tmdbid:
+                query = query.filter(SubscribeHistory.TMDBID == tmdbid)
+            else:
+                query = query.filter(
+                    SubscribeHistory.NAME == name,
+                    SubscribeHistory.YEAR == year,
+                )
+
+            existing = query.first()
+            finish_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+            if existing:
+                existing.RSSID = rssid
+                existing.IMAGE = image
+                existing.DESC = desc
+                existing.TOTAL = total
+                existing.START = start
+                existing.NOTE = note
+                existing.FINISH_TIME = finish_time
+            else:
+                db.add(
+                    SubscribeHistory(
+                        TYPE=rtype,
+                        RSSID=rssid,
+                        NAME=name,
+                        YEAR=year,
+                        TMDBID=tmdbid,
+                        SEASON=season,
+                        IMAGE=image,
+                        DESC=desc,
+                        TOTAL=total,
+                        START=start,
+                        NOTE=note,
+                        FINISH_TIME=finish_time,
+                    )
+                )
 
     def delete_rss_history(self, rssid: int | None) -> None:
         """

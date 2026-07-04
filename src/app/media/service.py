@@ -381,6 +381,7 @@ class MediaService:
             info.size = item.get("size", 0)
             info.seeders = item.get("seeders", 0)
             info.page_url = item.get("page_url")
+            info.org_string = item.get("title", "")
             results[idx] = info
 
         # 5. 集数映射（动漫合并季 / 绝对集号）

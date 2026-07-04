@@ -162,12 +162,24 @@ class SiteDefinition:
 def _extract_detail_labels(doc, site) -> str:
     labels: list[str] = []
     if site.html and site.html.torrents:
-        fields = site.html.torrents.fields
-        if hasattr(fields, "labels") and fields.labels and fields.labels.selector:
-            for el in doc.cssselect(fields.labels.selector):
-                txt = "".join(str(t) for t in el.itertext()).strip()
-                if txt:
-                    labels.append(txt)
+        if isinstance(site.html.torrents, dict):
+            fields = site.html.torrents.get("fields")
+        else:
+            fields = getattr(site.html.torrents, "fields", None)
+        if isinstance(fields, dict):
+            labels_selector = fields.get("labels", {}).get("selector")
+            if labels_selector:
+                for el in doc.cssselect(labels_selector):
+                    txt = "".join(str(t) for t in el.itertext()).strip()
+                    if txt:
+                        labels.append(txt)
+        elif fields is not None:
+            labels_field = getattr(fields, "labels", None)
+            if labels_field and getattr(labels_field, "selector", None):
+                for el in doc.cssselect(labels_field.selector):
+                    txt = "".join(str(t) for t in el.itertext()).strip()
+                    if txt:
+                        labels.append(txt)
     if not labels:
         tag_patterns = [
             "span[class*='tag']",

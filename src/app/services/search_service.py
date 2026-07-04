@@ -192,24 +192,24 @@ class SearchResultProcessor:
             else:
                 collection_priority = 0
             return "{}{}{}{}{}{}".format(
-                str(x.title).ljust(100, " "),
                 str(collection_priority).rjust(1, "0"),
                 str(episode_count).rjust(3, "0"),
                 str(x.res_order).rjust(3, "0"),
                 str(x.site_order).rjust(3, "0"),
                 str(x.seeders).rjust(10, "0"),
+                str(x.title).ljust(100, " "),
             )
 
         return sorted(media_list, key=_sort_key, reverse=True)
 
     def filter_downloaded(self, media_list: list) -> list:
-        """过滤掉已在下载历史中存在的资源"""
+        """过滤掉已完成下载历史中存在的资源（失败/进行中的任务不阻塞）"""
         filtered = []
         for media_item in media_list:
             if media_item.tmdb_id:
                 season_episode = media_item.get_season_episode_string()
-                if self._download_repo.is_exists_by_tmdb(media_item.tmdb_id, season_episode):
-                    log.info(f"[Searcher]{media_item.title} {season_episode} 已在下载历史中存在，跳过下载")
+                if self._download_repo.is_completed_by_tmdb(media_item.tmdb_id, season_episode):
+                    log.info(f"[Searcher]{media_item.title} {season_episode} 已存在完成下载，跳过下载")
                     continue
             filtered.append(media_item)
         return filtered

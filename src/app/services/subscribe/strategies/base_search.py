@@ -1,6 +1,9 @@
 """基础搜索策略 — 提取 subscribe_search_engine 公共逻辑."""
 
+import threading
 import traceback
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from typing import Any
 
 import log
@@ -42,6 +45,8 @@ class BaseSearchStrategy:
     _movie_repo: ISubscribeMovieRepository
     _tv_repo: ISubscribeTvRepository
     _tv_episode_repo: ISubscribeTvEpisodeRepository
+
+    LOCK_EXTEND_INTERVAL = 60
 
     def __init__(
         self,
@@ -85,120 +90,186 @@ class BaseSearchStrategy:
         """设置下载协调器（用于 SubscriptionMonitor 注入）."""
         self._coordinator = coordinator
 
+    def search_pending(self) -> None:
+        """触发一次队列搜索（处理 PENDING 订阅），供事件处理器调用."""
+        self._search_movies(state=SubscribeState.PENDING.value)
+        self._search_tvs(state=SubscribeState.PENDING.value)
+
+    def search_retry(self) -> None:
+        """重试 ERROR 状态的订阅."""
+        self._search_movies(state=SubscribeState.ERROR.value)
+        self._search_tvs(state=SubscribeState.ERROR.value)
+
+    @contextmanager
+    def _lock_context(self, media_info):
+        """持锁期间自动续期，并在退出时释放锁。"""
+        if self._coordinator is None or media_info is None:
+            yield
+            return
+
+        stop_event = threading.Event()
+
+        def _extend_loop():
+            while not stop_event.wait(self.LOCK_EXTEND_INTERVAL):
+                try:
+                    if self._coordinator is not None:
+                        self._coordinator.extend(media_info)
+                except Exception as e:
+                    log.debug(f"[BaseSearchStrategy] 锁续期失败: {e}")
+
+        thread = threading.Thread(target=_extend_loop, daemon=True)
+        thread.start()
+        try:
+            yield
+        finally:
+            stop_event.set()
+            thread.join(timeout=1)
+            self._coordinator.release(media_info)
+
     def _search_movies(self, state: str = SubscribeState.PENDING.value, rssid: int | None = None) -> None:
         if rssid:
             rss_movies = self._service.get_subscribe_movies(rid=rssid) if self._service else {}
         else:
             rss_movies = self._service.get_subscribe_movies(state=state) if self._service else {}
-        if rss_movies:
-            log.info(f"[Subscribe]共有 {len(rss_movies)} 个{MediaType.MOVIE.display_name}订阅需要搜索")
-        for rss_info in rss_movies.values():
+        if not rss_movies:
+            return
+        log.info(f"[Subscribe]共有 {len(rss_movies)} 个{MediaType.MOVIE.display_name}订阅需要搜索")
+
+        def _process_one(rss_info: dict) -> None:
             if rss_info.get("fuzzy_match"):
-                continue
-            rssid = rss_info.get("id")
-            name = rss_info.get("name")
-            year = rss_info.get("year") or ""
+                return
+            rid = rss_info.get("id")
+            name_val = rss_info.get("name")
+            year_val = rss_info.get("year") or ""
             tmdbid = rss_info.get("tmdbid")
             over_edition = rss_info.get("over_edition")
             keyword = rss_info.get("keyword")
 
-            media_info = self._get_media_info(tmdbid, name, year, MediaType.MOVIE)
-            if not media_info or not media_info.tmdb_info:
-                log.warn(f"[Subscribe]{MediaType.MOVIE.display_name} {name} TMDB 识别失败，标记为错误状态")
-                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state=SubscribeState.ERROR.value)
-                continue
-            media_info.set_download_info(
-                download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
-            )
-            media_info.keyword = keyword
-            if not over_edition:
-                exist_flag, no_exists, _ = self._downloader.check_exists_medias(meta_info=media_info)
-                if exist_flag:
-                    log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {media_info.get_title_string()} 已存在")
-                    if self._service:
-                        self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
-                    continue
-            else:
-                no_exists = {}
-                media_info.over_edition = over_edition
-                if rssid is not None:
-                    media_info.res_order = self._movie_repo.get_filter_order(rssid=rssid)
-
-            if self._coordinator and not self._coordinator.try_acquire(media_info):
-                log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {name} 已被其他策略处理，跳过")
-                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state=SubscribeState.RUNNING.value)
-                continue
-
-            self._movie_repo.update_state(title=None, year=None, rssid=rssid, state=SubscribeState.SEARCHING.value)
             media_info = None
-
             try:
-                filter_dict = {
-                    "restype": rss_info.get("filter_restype"),
-                    "pix": rss_info.get("filter_pix"),
-                    "team": rss_info.get("filter_team"),
-                    "rule": rss_info.get("filter_rule"),
-                    "include": rss_info.get("filter_include"),
-                    "exclude": rss_info.get("filter_exclude"),
-                    "site": rss_info.get("search_sites"),
-                }
-                search_result, _, _, _ = self._searcher.search_one_media(
-                    media_info=media_info,
-                    in_from=SearchType.SUBSCRIBE,
-                    no_exists=no_exists,
-                    sites=rss_info.get("search_sites"),
-                    filters=filter_dict,
+                media_info = self._get_media_info(tmdbid, name_val, year_val, MediaType.MOVIE)
+                if not media_info or not media_info.tmdb_info:
+                    log.warn(f"[Subscribe]{MediaType.MOVIE.display_name} {name_val} TMDB 识别失败，标记为错误状态")
+                    self._movie_repo.update_state(title=None, year=None, rssid=rid, state=SubscribeState.ERROR.value)
+                    return
+
+                media_info.set_download_info(
+                    download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
                 )
-                if search_result:
-                    if over_edition:
-                        if self._service:
-                            self._service.update_subscribe_over_edition(
-                                rtype=search_result.type, rssid=rssid, media=search_result
+                media_info.keyword = keyword
+
+                if self._coordinator and not self._coordinator.try_acquire(media_info):
+                    log.info(f"[Subscribe]{MediaType.MOVIE.display_name} {name_val} 已被其他策略处理，跳过")
+                    self._movie_repo.update_state(title=None, year=None, rssid=rid, state=SubscribeState.RUNNING.value)
+                    return
+
+                with self._lock_context(media_info):
+                    if not over_edition:
+                        exist_flag, no_exists, _ = self._downloader.check_exists_medias(meta_info=media_info)
+                        if exist_flag:
+                            log.info(
+                                f"[Subscribe]{MediaType.MOVIE.display_name} {media_info.get_title_string()} 已存在"
                             )
+                            if self._service:
+                                self._service.finish_rss_subscribe(rssid=rid, media=media_info)
+                            return
                     else:
-                        if self._service:
-                            self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
-                else:
+                        no_exists = {}
+                        media_info.over_edition = over_edition
+                        if rid is not None:
+                            media_info.res_order = self._movie_repo.get_filter_order(rssid=rid)
+
                     self._movie_repo.update_state(
-                        title=None, year=None, rssid=rssid, state=SubscribeState.RUNNING.value
+                        title=None, year=None, rssid=rid, state=SubscribeState.SEARCHING.value
                     )
-            except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as err:
-                self._movie_repo.update_state(title=None, year=None, rssid=rssid, state=SubscribeState.RUNNING.value)
-                log.error(f"[Subscribe]{MediaType.MOVIE.display_name} {name} 订阅搜索失败：{err!s}")
-                log.debug(f"异常详细信息: {traceback.format_exc()}")
-                continue
-            finally:
-                if self._coordinator and media_info is not None:
-                    self._coordinator.release(media_info)
+
+                    try:
+                        filters = {
+                            "restype": rss_info.get("filter_restype"),
+                            "pix": rss_info.get("filter_pix"),
+                            "team": rss_info.get("filter_team"),
+                            "rule": rss_info.get("filter_rule"),
+                            "include": rss_info.get("filter_include"),
+                            "exclude": rss_info.get("filter_exclude"),
+                            "site": rss_info.get("search_sites"),
+                        }
+                        search_result, _, _, _ = self._searcher.search_one_media(
+                            media_info=media_info,
+                            in_from=SearchType.SUBSCRIBE,
+                            no_exists=no_exists,
+                            sites=rss_info.get("search_sites"),
+                            filters=filters,
+                        )
+                        if search_result:
+                            if over_edition:
+                                if self._service:
+                                    self._service.update_subscribe_over_edition(
+                                        rtype=search_result.type, rssid=rid, media=search_result
+                                    )
+                            elif self._service:
+                                self._service.finish_rss_subscribe(rssid=rid, media=media_info)
+                        else:
+                            self._movie_repo.update_state(
+                                title=None, year=None, rssid=rid, state=SubscribeState.RUNNING.value
+                            )
+                    except (
+                        MediaError,
+                        DownloadError,
+                        IndexerError,
+                        RepositoryError,
+                        ServiceError,
+                        NetworkError,
+                    ):
+                        self._movie_repo.update_state(
+                            title=None, year=None, rssid=rid, state=SubscribeState.RUNNING.value
+                        )
+                        log.error(
+                            f"[Subscribe]{MediaType.MOVIE.display_name} {name_val}"
+                            f" 订阅搜索失败：{traceback.format_exc()}"
+                        )
+            except Exception:
+                log.error(
+                    f"[Subscribe]{MediaType.MOVIE.display_name} {name_val} 订阅处理失败：{traceback.format_exc()}"
+                )
+                if rid:
+                    try:
+                        self._movie_repo.update_state(
+                            title=None, year=None, rssid=rid, state=SubscribeState.ERROR.value
+                        )
+                    except Exception as update_err:
+                        log.debug(f"[Subscribe]设置 ERROR 状态失败 rssid={rid}: {update_err}")
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            list(executor.map(_process_one, list(rss_movies.values())))
 
     def _search_tvs(self, state: str = SubscribeState.PENDING.value, rssid: int | None = None) -> None:
         if rssid:
             rss_tvs = self._service.get_subscribe_tvs(rid=rssid) if self._service else {}
         else:
             rss_tvs = self._service.get_subscribe_tvs(state=state) if self._service else {}
-        if rss_tvs:
-            log.info(f"[Subscribe]共有 {len(rss_tvs)} 个{MediaType.TV.display_name}订阅需要检索")
-        rss_no_exists = {}
-        for rss_info in rss_tvs.values():
+        if not rss_tvs:
+            return
+        log.info(f"[Subscribe]共有 {len(rss_tvs)} 个{MediaType.TV.display_name}订阅需要检索")
+
+        def _process_one(rss_info: dict) -> None:
             if rss_info.get("fuzzy_match"):
-                continue
-            rssid = rss_info.get("id")
-            name = rss_info.get("name")
-            year = rss_info.get("year") or ""
+                return
+            rid = rss_info.get("id")
+            name_val = rss_info.get("name")
+            year_val = rss_info.get("year") or ""
             tmdbid = rss_info.get("tmdbid")
             over_edition = rss_info.get("over_edition")
             keyword = rss_info.get("keyword")
 
-            media_info = None
-
             try:
-                media_info = self._get_media_info(tmdbid, name, year, MediaType.TV)
+                media_info = self._get_media_info(tmdbid, name_val, year_val, MediaType.TV)
                 if not media_info or not media_info.tmdb_info:
-                    log.warn(f"[Subscribe]{MediaType.TV.display_name} {name} TMDB 识别失败，标记为错误状态")
+                    log.warn(f"[Subscribe]{MediaType.TV.display_name} {name_val} TMDB 识别失败，标记为错误状态")
                     self._tv_repo.update_state(
-                        title=None, year=None, season=None, rssid=rssid, state=SubscribeState.ERROR.value
+                        title=None, year=None, season=None, rssid=rid, state=SubscribeState.ERROR.value
                     )
-                    continue
+                    return
+
                 media_info.set_download_info(
                     download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
                 )
@@ -206,115 +277,122 @@ class BaseSearchStrategy:
                 if rss_info.get("season"):
                     season = int(str(rss_info.get("season")).replace("S", ""))
                 media_info.begin_season = season
-                media_info.rssid = rssid
+                media_info.rssid = rid
                 total_ep = rss_info.get("total")
                 current_ep = rss_info.get("current_ep")
                 media_info.keyword = keyword
-                episodes = self._tv_episode_repo.get(rss_info.get("id"))
+
+                episodes = self._tv_episode_repo.get(rid) if rid is not None else None
                 if episodes is None:
-                    episodes = []
-                    if current_ep:
-                        episodes = list(range(current_ep, total_ep + 1))
-                    rss_no_exists[media_info.tmdb_id] = [
-                        {"season": season, "episodes": episodes, "total_episodes": total_ep}
-                    ]
+                    episodes_list = []
+                    if current_ep and total_ep is not None:
+                        episodes_list = list(range(current_ep, total_ep + 1))
+                    elif total_ep is not None and total_ep > 0:
+                        tep: int = total_ep
+                        episodes_list = list(range(1, tep + 1))
                 else:
-                    rss_no_exists[media_info.tmdb_id] = [
-                        {"season": season, "episodes": episodes, "total_episodes": total_ep}
-                    ]
-                if not over_edition:
-                    exist_flag, library_no_exists, _ = self._downloader.check_exists_medias(
-                        meta_info=media_info, total_ep={season: total_ep}
-                    )
-                    if exist_flag:
-                        if not library_no_exists or not library_no_exists.get(media_info.tmdb_id):
-                            log.info(
-                                f"[Subscribe]{MediaType.TV.display_name} "
-                                f"{media_info.get_title_string()} 订阅剧集已全部存在"
-                            )
-                            if self._service:
-                                self._service.finish_rss_subscribe(rssid=rss_info.get("id"), media=media_info)
-                        continue
-                    rss_no_exists = Torrent.get_intersection_episodes(
-                        target=rss_no_exists, source=library_no_exists, title=media_info.tmdb_id
-                    )
-                    if rss_no_exists.get(media_info.tmdb_id):
-                        missing = rss_no_exists.get(media_info.tmdb_id)
-                        log.info(f"[Subscribe]{media_info.get_title_string()} 订阅缺失季集：{missing}")
-                        if self._service:
-                            self._service.update_subscribe_tv_lack(
-                                rssid=rssid, media_info=media_info, seasoninfo=missing
-                            )
-                else:
-                    media_info.over_edition = over_edition
-                    if rssid is not None:
-                        media_info.res_order = self._tv_repo.get_filter_order(rssid=rssid)
+                    episodes_list = episodes
+
+                rss_no_exists_local = {
+                    media_info.tmdb_id: [{"season": season, "episodes": episodes_list, "total_episodes": total_ep}]
+                }
 
                 if self._coordinator and not self._coordinator.try_acquire(media_info):
-                    log.info(f"[Subscribe]{MediaType.TV.display_name} {name} 已被其他策略处理，跳过")
+                    log.info(f"[Subscribe]{MediaType.TV.display_name} {name_val} 已被其他策略处理，跳过")
                     self._tv_repo.update_state(
-                        title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value
+                        title=None, year=None, season=None, rssid=rid, state=SubscribeState.RUNNING.value
                     )
-                    continue
+                    return
 
-                self._tv_repo.update_state(
-                    title=None, year=None, season=None, rssid=rssid, state=SubscribeState.SEARCHING.value
-                )
-                filter_dict = {
-                    "restype": rss_info.get("filter_restype"),
-                    "pix": rss_info.get("filter_pix"),
-                    "team": rss_info.get("filter_team"),
-                    "rule": rss_info.get("filter_rule"),
-                    "include": rss_info.get("filter_include"),
-                    "exclude": rss_info.get("filter_exclude"),
-                    "site": rss_info.get("search_sites"),
-                }
-                search_result, no_exists, _, _ = self._searcher.search_one_media(
-                    media_info=media_info,
-                    in_from=SearchType.SUBSCRIBE,
-                    no_exists=rss_no_exists,
-                    sites=rss_info.get("search_sites"),
-                    filters=filter_dict,
-                )
-                if over_edition:
-                    if search_result:
-                        if self._service:
-                            self._service.update_subscribe_over_edition(
-                                rtype=media_info.type, rssid=rssid, media=search_result
-                            )
-                    else:
-                        self._tv_repo.update_state(
-                            title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value
+                with self._lock_context(media_info):
+                    if not over_edition:
+                        exist_flag, library_no_exists, _ = self._downloader.check_exists_medias(
+                            meta_info=media_info, total_ep={season: total_ep}
                         )
-                elif not no_exists or not no_exists.get(media_info.tmdb_id):
-                    if self._service:
-                        self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
-                elif search_result:
-                    exist_flag, library_no_exists, _ = self._downloader.check_exists_medias(
-                        meta_info=media_info, total_ep={season: total_ep}
-                    )
-                    if not library_no_exists or not library_no_exists.get(media_info.tmdb_id):
-                        if self._service:
-                            self._service.finish_rss_subscribe(rssid=rssid, media=media_info)
+                        if exist_flag:
+                            if not library_no_exists or not library_no_exists.get(media_info.tmdb_id):
+                                log.info(
+                                    f"[Subscribe]{MediaType.TV.display_name}"
+                                    f" {media_info.get_title_string()} 订阅剧集已全部存在"
+                                )
+                                if self._service:
+                                    self._service.finish_rss_subscribe(rssid=rss_info.get("id"), media=media_info)
+                            return
+                        rss_no_exists_local = Torrent.get_intersection_episodes(
+                            target=rss_no_exists_local, source=library_no_exists, title=media_info.tmdb_id
+                        )
+                        if rss_no_exists_local.get(media_info.tmdb_id):
+                            missing = rss_no_exists_local.get(media_info.tmdb_id)
+                            log.info(f"[Subscribe]{media_info.get_title_string()} 订阅缺失季集：{missing}")
+                            if self._service:
+                                self._service.update_subscribe_tv_lack(
+                                    rssid=rid, media_info=media_info, seasoninfo=missing
+                                )
                     else:
-                        if self._service:
-                            self._service.update_subscribe_tv_lack(
-                                rssid=rssid, media_info=media_info, seasoninfo=library_no_exists.get(media_info.tmdb_id)
-                            )
-                elif no_exists and self._service:
-                    self._service.update_subscribe_tv_lack(
-                        rssid=rssid, media_info=media_info, seasoninfo=no_exists.get(media_info.tmdb_id)
+                        media_info.over_edition = over_edition
+                        if rid is not None:
+                            media_info.res_order = self._tv_repo.get_filter_order(rssid=rid)
+
+                    self._tv_repo.update_state(
+                        title=None, year=None, season=None, rssid=rid, state=SubscribeState.SEARCHING.value
                     )
-            except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as err:
-                log.error(f"[Subscribe]{MediaType.TV.display_name} {name} 订阅搜索失败：{err!s}")
-                log.debug(f"异常详细信息: {traceback.format_exc()}")
+                    filters_tv = {
+                        "restype": rss_info.get("filter_restype"),
+                        "pix": rss_info.get("filter_pix"),
+                        "team": rss_info.get("filter_team"),
+                        "rule": rss_info.get("filter_rule"),
+                        "include": rss_info.get("filter_include"),
+                        "exclude": rss_info.get("filter_exclude"),
+                        "site": rss_info.get("search_sites"),
+                    }
+                    search_result, no_exists, _, _ = self._searcher.search_one_media(
+                        media_info=media_info,
+                        in_from=SearchType.SUBSCRIBE,
+                        no_exists=rss_no_exists_local,
+                        sites=rss_info.get("search_sites"),
+                        filters=filters_tv,
+                    )
+                    if over_edition:
+                        if search_result:
+                            if self._service:
+                                self._service.update_subscribe_over_edition(
+                                    rtype=media_info.type, rssid=rid, media=search_result
+                                )
+                        else:
+                            self._tv_repo.update_state(
+                                title=None, year=None, season=None, rssid=rid, state=SubscribeState.RUNNING.value
+                            )
+                    elif not no_exists or not no_exists.get(media_info.tmdb_id):
+                        if self._service:
+                            self._service.finish_rss_subscribe(rssid=rid, media=media_info)
+                    elif search_result:
+                        exist_flag, library_no_exists, _ = self._downloader.check_exists_medias(
+                            meta_info=media_info, total_ep={season: total_ep}
+                        )
+                        if not library_no_exists or not library_no_exists.get(media_info.tmdb_id):
+                            if self._service:
+                                self._service.finish_rss_subscribe(rssid=rid, media=media_info)
+                        elif self._service:
+                            self._service.update_subscribe_tv_lack(
+                                rssid=rid, media_info=media_info, seasoninfo=library_no_exists.get(media_info.tmdb_id)
+                            )
+                    elif no_exists and self._service:
+                        self._service.update_subscribe_tv_lack(
+                            rssid=rid, media_info=media_info, seasoninfo=no_exists.get(media_info.tmdb_id)
+                        )
+            except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError):
+                log.error(f"[Subscribe]{MediaType.TV.display_name} {name_val} 订阅搜索失败：{traceback.format_exc()}")
                 self._tv_repo.update_state(
-                    title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value
+                    title=None, year=None, season=None, rssid=rid, state=SubscribeState.RUNNING.value
                 )
-                continue
-            finally:
-                if self._coordinator and media_info is not None:
-                    self._coordinator.release(media_info)
+            except Exception:
+                log.error(f"[Subscribe]{MediaType.TV.display_name} {name_val} 订阅处理失败：{traceback.format_exc()}")
+                self._tv_repo.update_state(
+                    title=None, year=None, season=None, rssid=rid, state=SubscribeState.ERROR.value
+                )
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            list(executor.map(_process_one, list(rss_tvs.values())))
 
     def _get_media_info(self, tmdbid, name, year, mtype, cache=True):
         """综合返回媒体信息；对空 tmdbid 的 name/year/mtype 组合做进程内缓存."""

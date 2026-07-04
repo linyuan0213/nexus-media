@@ -42,12 +42,55 @@ class DownloadRepository(BaseRepository):
             return False
 
         with self.session() as db:
-            query = db.query(DOWNLOADHISTORY.ID).filter(cast(DOWNLOADHISTORY.TMDBID, Integer) == tmdb_id)
+            query = db.query(DOWNLOADHISTORY.ID).filter(
+                DOWNLOADHISTORY.TMDBID != "", cast(DOWNLOADHISTORY.TMDBID, Integer) == tmdb_id
+            )
 
             if season_episode:
                 query = query.filter(season_episode == DOWNLOADHISTORY.SE)
 
             return query.first() is not None
+
+    def is_completed_download_history_by_tmdb(self, tmdb_id: int | str | None, season_episode: str | None) -> bool:
+        """
+        查询已完成的下载历史是否存在，根据TMDB ID和季集信息（仅匹配 STATE=completed）
+        """
+        if not tmdb_id:
+            return False
+
+        with self.session() as db:
+            query = db.query(DOWNLOADHISTORY.ID).filter(
+                DOWNLOADHISTORY.TMDBID != "",
+                DOWNLOADHISTORY.STATE == "completed",
+                cast(DOWNLOADHISTORY.TMDBID, Integer) == int(tmdb_id),
+            )
+
+            if season_episode:
+                query = query.filter(season_episode == DOWNLOADHISTORY.SE)
+
+            return query.first() is not None
+
+    def delete_download_history_by_tmdb(self, tmdb_id: int | str | None, season_prefix: str | None = None) -> int:
+        """
+        删除已完成的下载历史，根据TMDB ID和可选的季前缀（仅删除 STATE=completed，保留下载中的）
+        """
+        if not tmdb_id:
+            return 0
+
+        with self.session() as db:
+            query = db.query(DOWNLOADHISTORY).filter(
+                DOWNLOADHISTORY.TMDBID != "",
+                DOWNLOADHISTORY.STATE == "completed",
+                cast(DOWNLOADHISTORY.TMDBID, Integer) == int(tmdb_id),
+            )
+
+            if season_prefix:
+                query = query.filter(DOWNLOADHISTORY.SE.like(f"{season_prefix}%"))
+
+            count = query.count()
+            query.delete(synchronize_session="fetch")
+            db.commit()
+            return count
 
     def insert_download_history(self, media_info: Any, downloader: str, download_id: str, save_dir: str) -> None:
         """

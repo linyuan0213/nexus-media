@@ -26,6 +26,9 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
     def is_exists_by_tmdb(self, tmdb_id: str, season_episode: str) -> bool:
         return self._repo.is_exists_download_history_by_tmdb(int(tmdb_id), season_episode)
 
+    def is_completed_by_tmdb(self, tmdb_id: str, season_episode: str) -> bool:
+        return self._repo.is_completed_download_history_by_tmdb(int(tmdb_id), season_episode)
+
     def insert(self, media_info, downloader: str, download_id: str, save_dir: str) -> None:
         self._repo.insert_download_history(media_info, downloader, download_id, save_dir)
 
@@ -95,6 +98,9 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
         if not items:
             return
         self._repo.batch_update_download_state(items)
+
+    def delete_by_tmdb(self, tmdb_id: str, season_prefix: str | None = None) -> int:
+        return self._repo.delete_download_history_by_tmdb(tmdb_id, season_prefix)
 
 
 class DownloadSettingRepositoryAdapter:

@@ -19,7 +19,9 @@ from app.events.payloads import (
     SubscribeAddPayload,
     SubscribeFinishedPayload,
 )
+from app.infrastructure.thread import ThreadExecutor
 from app.services.subscribe.management.service import SubscribeService
+from app.services.subscribe.strategies.queue_search import QueueSearchStrategy
 
 
 @on_event(SUBSCRIBE_FINISHED)
@@ -110,3 +112,24 @@ def handle_media_episode_transferred(event: Event) -> None:
             tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state=SubscribeState.COMPLETED.value)
     except Exception as e:
         log.error(f"[Event]更新订阅进度失败：{e!s}")
+
+
+def build_subscribe_add_search_handler(queue_strategy: QueueSearchStrategy, thread_executor: ThreadExecutor):
+    """构造订阅添加/更新后自动触发队列搜索的事件处理器。"""
+
+    @on_event(SUBSCRIBE_ADD)
+    def _handle(event: Event) -> None:
+        payload = event.payload
+        if not isinstance(payload, SubscribeAddPayload):
+            payload = SubscribeAddPayload(**payload)
+        log.info(f"[Event]订阅添加/更新 rssid={payload.rssid}，触发即时队列搜索")
+
+        def _search():
+            try:
+                queue_strategy.run()
+            except Exception as e:
+                log.error(f"[Event]触发队列搜索失败：{e}")
+
+        thread_executor.submit(_search)
+
+    return _handle

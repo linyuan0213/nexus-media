@@ -118,6 +118,37 @@ class TestBaseSearchStrategy:
             strategy._search_tvs()
         strategy._service.finish_rss_subscribe.assert_called_once()
 
+    def test_search_movies_releases_coordinator_lock(self, strategy):
+        strategy._service.get_subscribe_movies.return_value = {"1": {"id": 1, "name": "Movie"}}
+        strategy._movie_repo = MagicMock()
+        media = _MediaInfo()
+        strategy._searcher.search_one_media.return_value = (None, None, None, None)
+        strategy._downloader.check_exists_medias.return_value = (False, {}, None)
+        coordinator = MagicMock()
+        coordinator.try_acquire.return_value = True
+        strategy.set_coordinator(coordinator)
+        with patch.object(strategy, "_get_media_info", return_value=media):
+            strategy._search_movies()
+        coordinator.try_acquire.assert_called_once()
+        coordinator.release.assert_called_once_with(media)
+
+    def test_search_tvs_releases_coordinator_lock(self, strategy):
+        strategy._service.get_subscribe_tvs.return_value = {"1": {"id": 1, "name": "TV", "season": 1, "total": 10}}
+        strategy._tv_repo = MagicMock()
+        strategy._tv_episode_repo = MagicMock()
+        strategy._tv_episode_repo.get.return_value = None
+        media = _MediaInfo()
+        media.type = "tv"
+        strategy._searcher.search_one_media.return_value = (None, {}, None, None)
+        strategy._downloader.check_exists_medias.return_value = (False, {123: [{"season": 1, "episodes": [1]}]}, None)
+        coordinator = MagicMock()
+        coordinator.try_acquire.return_value = True
+        strategy.set_coordinator(coordinator)
+        with patch.object(strategy, "_get_media_info", return_value=media):
+            strategy._search_tvs()
+        coordinator.try_acquire.assert_called_once()
+        coordinator.release.assert_called_once_with(media)
+
     def test_get_media_info_with_tmdbid(self, strategy):
         media = _MediaInfo()
         strategy._media_cache.get_tmdb_info.return_value = {"id": 123}

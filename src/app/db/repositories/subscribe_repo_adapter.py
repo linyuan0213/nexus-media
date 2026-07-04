@@ -276,9 +276,9 @@ class SubscribeHistoryRepositoryAdapter:
 
     # 兼容旧Repository方法名
     def insert_rss_history(
-        self, rssid, rtype, name, year, tmdbid, image, desc, season=None, total=None, start=None
+        self, rssid, rtype, name, year, tmdbid, image, desc, season=None, total=None, start=None, note=""
     ) -> None:
-        self.insert(rssid, rtype, name, year, tmdbid, image, desc, season, total, start)
+        self.insert(rssid, rtype, name, year, tmdbid, image, desc, season, total, start, note)
 
     # 兼容旧Repository方法名
     def check_rss_history(self, type_str, name, year, season) -> bool:
@@ -296,15 +296,17 @@ class SubscribeHistoryRepositoryAdapter:
             return []
         return [entity for entity in [SubscribeHistoryEntity.from_orm(r) for r in rows] if entity is not None]
 
-    def is_exists(self, rssid: str) -> bool:
-        return self._repo.is_exists_rss_history(int(rssid))
+    def is_exists(self, rssid: int | None) -> bool:
+        if rssid is None:
+            return False
+        return self._repo.is_exists_rss_history(rssid)
 
     def check_exists(self, type_str: str, name: str, year: str, season: str) -> bool:
         return self._repo.check_rss_history(type_str, name, year, season)
 
     def insert(
         self,
-        rssid: str,
+        rssid: int,
         rtype: str,
         name: str,
         year: str,
@@ -314,9 +316,10 @@ class SubscribeHistoryRepositoryAdapter:
         season: str | None = None,
         total: int | None = None,
         start: int | None = None,
+        note: str = "",
     ) -> None:
         self._repo.insert_rss_history(
-            int(rssid),
+            rssid,
             rtype,
             name,
             year,
@@ -326,7 +329,38 @@ class SubscribeHistoryRepositoryAdapter:
             season,
             str(total) if total is not None else None,
             str(start) if start is not None else None,
+            note,
         )
 
-    def delete(self, rssid: str) -> None:
-        self._repo.delete_rss_history(int(rssid))
+    def upsert(
+        self,
+        rssid: int,
+        rtype: str,
+        name: str,
+        year: str,
+        tmdbid: str,
+        image: str,
+        desc: str,
+        season: str | None = None,
+        total: int | None = None,
+        start: int | None = None,
+        note: str = "",
+    ) -> None:
+        self._repo.upsert_rss_history(
+            rssid,
+            rtype,
+            name,
+            year,
+            tmdbid,
+            image,
+            desc,
+            season,
+            str(total) if total is not None else None,
+            str(start) if start is not None else None,
+            note,
+        )
+
+    def delete(self, rssid: int | None) -> None:
+        if rssid is None:
+            return
+        self._repo.delete_rss_history(rssid)

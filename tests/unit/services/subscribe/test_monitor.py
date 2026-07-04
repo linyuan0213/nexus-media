@@ -30,6 +30,7 @@ def monitor():
         rss_strategy=MagicMock(),
         indexer_strategy=MagicMock(),
         coordinator=MagicMock(),
+        system_config=MagicMock(),
     )
     m._thread_executor.submit.side_effect = _submit_wrapper()  # type: ignore[attr-defined]
     return m
