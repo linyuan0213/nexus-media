@@ -30,7 +30,14 @@ class BrushTaskRepository:
         return self._repo.get_brushtask_torrents_by_domain(domain or "")
 
     def insert_brushtask_torrent(
-        self, brush_id: int | None, title: str, enclosure: str, downloader: int, download_id: str, size: int
+        self,
+        brush_id: int | None,
+        title: str,
+        enclosure: str,
+        downloader: int,
+        download_id: str,
+        size: int,
+        page_url: str = "",
     ) -> Any:
         return self._repo.insert_brushtask_torrent(
             brush_id=brush_id,
@@ -39,6 +46,7 @@ class BrushTaskRepository:
             downloader=str(downloader),
             download_id=download_id,
             size=str(size),
+            page_url=page_url,
         )
 
     def add_brushtask_download_count(self, brush_id: int | None) -> Any:

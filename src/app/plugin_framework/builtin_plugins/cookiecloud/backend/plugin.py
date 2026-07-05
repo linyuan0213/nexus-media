@@ -16,6 +16,7 @@ from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.plugin_framework.context import PluginContext
+from app.utils import StringUtils
 from app.utils.json_utils import JsonUtils
 
 
@@ -28,13 +29,11 @@ class CookieCloudPlugin:
         self,
         ctx: PluginContext,
         sites: Any,
-        site_resolver: Any,
         index_helper: Any,
         site_repo: Any = None,
     ):
         self.ctx = ctx
         self.sites = sites
-        self._site_resolver = site_resolver
         self._site_repo = site_repo or SiteRepositoryAdapter()
         self._index_helper = index_helper
         self._cache = get_cache_manager().get_or_create("plugin_cookiecloud", cache_type="redis")
@@ -53,7 +52,6 @@ class CookieCloudPlugin:
         self.ctx.unregister_message_command("cookiecloud")
 
     def _on_cookiecloud_cmd(self, client_type, user_id, text):
-        """消息命令 /cookiecloud 回调"""
         self.ctx.info(f"用户 {user_id} 通过 {client_type} 触发 CookieCloud 同步")
         self._cookie_sync()
 
@@ -69,7 +67,6 @@ class CookieCloudPlugin:
             self._local_storage_save()
 
     def run(self):
-        """立即运行同步"""
         self.ctx.info("手动触发 CookieCloud 同步")
         self._cookie_sync()
 
@@ -82,7 +79,6 @@ class CookieCloudPlugin:
             self.ctx.info("未启用定时同步，跳过")
             return
 
-        # 周期运行
         if enabled and cron:
             self.ctx.info(f"CookieCloud 同步服务启动，周期：{cron}")
             try:
@@ -96,7 +92,7 @@ class CookieCloudPlugin:
 
     @staticmethod
     def is_domain_in_list(domain, domain_list):
-        return any(re.match(pattern, domain) for pattern in domain_list)
+        return any(re.search(pattern, domain) for pattern in domain_list)
 
     def _check_domain(self, domain):
         config = self._get_config()
@@ -132,9 +128,8 @@ class CookieCloudPlugin:
 
         req_url = f"{server}/get/{key}"
         try:
-            ret = HttpClient(config=HttpClientConfig(default_headers={"Content-Type": "application/json"})).post(
-                url=req_url, json={"password": password}
-            )
+            with HttpClient(config=HttpClientConfig(default_headers={"Content-Type": "application/json"})) as http:
+                ret = http.post(url=req_url, json={"password": password})
             result = ret.json()
             content = {}
             if not result:
@@ -148,10 +143,8 @@ class CookieCloudPlugin:
             return {}, f"同步 CookieCloud 失败，错误码：{exc.status_code}", False
         except Exception:
             return {}, "CookieCloud 请求失败，请检查服务器地址、用户 KEY 及加密密码是否正确", False
-            return {}, "CookieCloud 请求失败，请检查服务器地址、用户 KEY 及加密密码是否正确", False
 
     def _cookie_sync(self):
-        """同步站点 Cookie（定时任务入口）"""
         self.ctx.info("同步服务开始 ...")
         contents, msg, flag = self._download_data()
         if not flag:
@@ -160,15 +153,25 @@ class CookieCloudPlugin:
             return
         if not contents:
             self.ctx.info("未从 CookieCloud 获取到数据")
-            self._send_message(msg)
+            self._send_message("未从 CookieCloud 获取到数据")
             return
 
-        update_count, add_count = self._process_cookies(contents if isinstance(contents, dict) else {})
+        try:
+            update_count, add_count = self._process_cookies(contents if isinstance(contents, dict) else {})
+        except Exception as e:
+            err_msg = f"处理 Cookie 数据异常: {e}"
+            self.ctx.error(err_msg)
+            self._send_message(err_msg)
+            return
 
-        if update_count or add_count:
-            msg = f"更新了 {update_count} 个站点的 Cookie 数据，新增了 {add_count} 个站点"
+        if not contents.get("local_storage_data"):
+            if update_count or add_count:
+                msg = f"更新了 {update_count} 个站点的 Cookie 数据，新增了 {add_count} 个站点"
+            else:
+                msg = "同步完成，但未更新任何站点数据！"
         else:
-            msg = "同步完成，但未更新任何站点数据！"
+            msg = f"同步完成：更新了 {update_count} 个站点的 Cookie 数据，新增了 {add_count} 个站点"
+
         self.ctx.info(msg)
 
         config = self._get_config()
@@ -176,7 +179,6 @@ class CookieCloudPlugin:
             self._send_message(msg)
 
     def _cookie_save(self):
-        """同步站点 Cookie 到 Redis（事件触发，只存 Redis 不更新站点）"""
         self.ctx.info("开始同步 Cookie 到 Redis ...")
         contents, msg, flag = self._download_data()
         if not flag:
@@ -189,7 +191,6 @@ class CookieCloudPlugin:
         self.ctx.info("Cookie 同步 Redis 成功")
 
     def _store_cookies_to_cache(self, contents: dict):
-        """公共逻辑：按域名分组、过滤、去重后存入 Redis，返回 domain->cookie_str 映射"""
         domain_cookie_groups = defaultdict(list)
         cookie_content = contents.get("cookie_data") or {}
         for _site, cookies in cookie_content.items():
@@ -228,68 +229,90 @@ class CookieCloudPlugin:
 
         return result
 
+    def _find_matching_sites(self, domain_url: str) -> list[dict]:
+        matched = []
+        for site in self.sites.get_sites():
+            strict_url = site.get("strict_url", "")
+            if not strict_url:
+                continue
+            site_domain = StringUtils.get_url_domain(strict_url)
+            if not site_domain:
+                continue
+            site_suffix = ".".join(site_domain.split(".")[-2:])
+            if site_suffix == domain_url:
+                matched.append(site)
+        return matched
+
     def _process_cookies(self, contents: dict):
         domain_cookies = self._store_cookies_to_cache(contents)
 
         update_count = 0
         add_count = 0
+        updated_ids: set[int] = set()
 
         for domain_url, cookie_str in domain_cookies.items():
-            site_info = self.sites.get_sites_by_suffix(domain_url)
-            if site_info:
-                sid = int(site_info.get("id") or 0)
-                success, _, _ = self._site_resolver.test_connection(site_id=sid)
-                if not success:
-                    self._site_repo.update_cookie_ua(sid, cookie=cookie_str)
-                    self.sites.refresh()
-                    update_count += 1
-            else:
-                indexer_info = self._index_helper.get_indexer_info(domain_url)
-                if indexer_info:
-                    site_pri = self.sites.get_max_site_pri() + 1
-                    self._site_repo.insert(
-                        SiteEntity(
-                            name=indexer_info.get("name"),
-                            pri=site_pri,
-                            sign_url=indexer_info.get("domain"),
-                            cookie=cookie_str,
-                            rss_uses=SiteUseType.STATISTIC.value,
+            try:
+                matched_sites = self._find_matching_sites(domain_url)
+                if matched_sites:
+                    for site_info in matched_sites:
+                        sid = int(site_info.get("id") or 0)
+                        if sid and sid not in updated_ids:
+                            self._site_repo.update_cookie_ua(sid, cookie=cookie_str)
+                            updated_ids.add(sid)
+                            update_count += 1
+                else:
+                    indexer_info = self._index_helper.get_indexer_info(domain_url)
+                    if indexer_info:
+                        site_pri = self.sites.get_max_site_pri() + 1
+                        self._site_repo.insert(
+                            SiteEntity(
+                                name=indexer_info.get("name"),
+                                pri=site_pri,
+                                sign_url=indexer_info.get("domain"),
+                                cookie=cookie_str,
+                                rss_uses=SiteUseType.STATISTIC.value,
+                            )
                         )
-                    )
-                    self.sites.refresh()
-                    add_count += 1
+                        add_count += 1
+            except Exception as e:
+                self.ctx.error(f"处理域名 {domain_url} 时出错: {e}")
+
+        if update_count or add_count:
+            self.sites.refresh()
 
         return update_count, add_count
 
     def _local_storage_save(self):
-        """同步 LocalStorage 到 Redis（事件触发）"""
         self.ctx.info("开始同步 LocalStorage ...")
         contents, msg, flag = self._download_data()
         if not flag:
             self.ctx.error(msg)
-            self._send_message(msg)
             return
         if not contents:
             self.ctx.info("未从 CookieCloud 获取到数据")
-            self._send_message(msg)
             return
 
         local_storage = contents.get("local_storage_data") or {}
+        synced = 0
         for site, storage in local_storage.items():
-            if not storage:
-                continue
-            if not self._check_domain(site):
-                continue
-            for cookie_data in storage:
-                if cookie_data.get("domain") and self._check_domain(cookie_data.get("domain", "")):  # type: ignore[union-attr]
-                    domain_parts = site.split(".")[-2:]
-                    domain_key = tuple(domain_parts)
-                    domain_url = ".".join(domain_key)
-                    domain_url = self.ctx.site_engine.normalize_domain(domain_url) or domain_url
+            try:
+                if not storage:
+                    continue
+                if not self._check_domain(site):
+                    continue
+                for cookie_data in storage:
+                    if cookie_data.get("domain") and self._check_domain(cookie_data.get("domain", "")):
+                        domain_parts = site.split(".")[-2:]
+                        domain_key = tuple(domain_parts)
+                        domain_url = ".".join(domain_key)
+                        domain_url = self.ctx.site_engine.normalize_domain(domain_url) or domain_url
 
-                    self._cache.set(f"local_storage:{domain_url}", JsonUtils.dumps(storage))
+                        self._cache.set(f"local_storage:{domain_url}", JsonUtils.dumps(storage))
+                        synced += 1
+            except Exception as e:
+                self.ctx.error(f"处理 LocalStorage {site} 时出错: {e}")
 
-        self.ctx.info("LocalStorage 同步 Redis 成功")
+        self.ctx.info(f"LocalStorage 同步 Redis 成功，共同步 {synced} 个站点")
 
     def _send_message(self, msg):
         self.ctx.notify(

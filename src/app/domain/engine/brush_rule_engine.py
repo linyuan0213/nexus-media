@@ -365,6 +365,134 @@ class BrushRuleEngine:
         return False, BrushStopType.NOTSTOP
 
     # --------------------------------------------------
+    # RSS 拒绝原因
+    # --------------------------------------------------
+    _RULE_FAIL_REASONS = {
+        "size": "体积不符合",
+        "include": "标题不匹配",
+        "exclude": "排除关键词命中",
+        "category_include": "分类不匹配",
+        "category_exclude": "分类排除命中",
+        "label_include": "标签不匹配",
+        "label_exclude": "标签排除命中",
+        "free": "优惠状态不符合",
+        "hr": "命中 HR",
+        "peercount": "做种人数不符合",
+        "pubdate": "发布时间不符合",
+        "exclude_subscribe": "已订阅",
+    }
+
+    @classmethod
+    def get_rss_reject_reason(
+        cls,
+        rss_rule: dict | None,
+        title: str,
+        torrent_size: float,
+        pubdate: datetime | None,
+        torrent_attr: dict,
+        category: str = "",
+        labels: str = "",
+        media_info: Any = None,
+        rss_movies: dict | None = None,
+        rss_tvs: dict | None = None,
+    ) -> str:
+        if not rss_rule:
+            return ""
+
+        try:
+            rule_checks: dict[str, Callable[[Any], bool]] = {
+                "size": lambda rv: cls.check_range_rule(torrent_size, rv, 1024**3),
+                "include": lambda rv: bool(re.search(rv, title, re.IGNORECASE)),
+                "exclude": lambda rv: not bool(re.search(rv, title, re.IGNORECASE)),
+                "category_include": lambda rv: bool(re.search(rv, category or "", re.IGNORECASE)),
+                "category_exclude": lambda rv: not bool(re.search(rv, category or "", re.IGNORECASE)),
+                "label_include": lambda rv: bool(re.search(rv, labels or "", re.IGNORECASE)),
+                "label_exclude": lambda rv: not bool(re.search(rv, labels or "", re.IGNORECASE)),
+                "free": lambda rv: cls._check_free_status(torrent_attr, rv),
+                "hr": lambda _rv: not torrent_attr.get("hr"),
+                "peercount": lambda rv: cls.check_range_rule(torrent_attr.get("peer_count"), rv),
+                "pubdate": lambda rv: cls._check_pubdate(pubdate, torrent_attr, rv),
+                "exclude_subscribe": lambda rv: not cls._check_subscribe_status(media_info, rss_movies, rss_tvs, rv),
+            }
+
+            for rule, check_func in rule_checks.items():
+                rule_value = rss_rule.get(rule)
+                if rule_value in ("#", SwitchState.OFF.value, None, ""):
+                    continue
+                if not check_func(rule_value):
+                    return cls._RULE_FAIL_REASONS.get(rule, rule)
+        except Exception:
+            return "规则检查异常"
+
+        return ""
+
+    # --------------------------------------------------
+    # RSS 匹配原因格式化
+    # --------------------------------------------------
+    @staticmethod
+    def format_rss_match_reason(rss_rule: dict | None) -> str:
+        if not rss_rule:
+            return "RSS 进种"
+
+        parts: list[str] = []
+
+        free_val = rss_rule.get("free")
+        if free_val == "FREE":
+            parts.append("免费")
+        elif free_val == "2XFREE":
+            parts.append("2X免费")
+        elif free_val == "NORMAL":
+            parts.append("普通种")
+
+        hr_val = rss_rule.get("hr")
+        if hr_val and hr_val not in ("#", "", None):
+            parts.append("排除HR")
+
+        size_val = rss_rule.get("size")
+        if size_val and size_val not in ("#", "", None):
+            parts.append("体积符合")
+
+        pubdate_val = rss_rule.get("pubdate")
+        if pubdate_val and pubdate_val not in ("#", "", None):
+            parts.append("发布时间符合")
+
+        include_val = rss_rule.get("include")
+        if include_val and include_val not in ("#", "", None):
+            parts.append("标题匹配")
+
+        exclude_val = rss_rule.get("exclude")
+        if exclude_val and exclude_val not in ("#", "", None):
+            parts.append("排除过滤")
+
+        category_include_val = rss_rule.get("category_include")
+        if category_include_val and category_include_val not in ("#", "", None):
+            parts.append("分类匹配")
+
+        category_exclude_val = rss_rule.get("category_exclude")
+        if category_exclude_val and category_exclude_val not in ("#", "", None):
+            parts.append("分类排除")
+
+        label_include_val = rss_rule.get("label_include")
+        if label_include_val and label_include_val not in ("#", "", None):
+            parts.append("标签匹配")
+
+        label_exclude_val = rss_rule.get("label_exclude")
+        if label_exclude_val and label_exclude_val not in ("#", "", None):
+            parts.append("标签排除")
+
+        peercount_val = rss_rule.get("peercount")
+        if peercount_val and peercount_val not in ("#", "", None):
+            parts.append("做种人数符合")
+
+        exclude_sub_val = rss_rule.get("exclude_subscribe")
+        if exclude_sub_val and exclude_sub_val not in ("#", "", None):
+            parts.append("排除已订阅")
+
+        if not parts:
+            return "RSS 进种"
+        return ", ".join(parts)
+
+    # --------------------------------------------------
     # 辅助方法
     # --------------------------------------------------
     @staticmethod

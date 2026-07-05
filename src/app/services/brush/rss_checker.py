@@ -222,8 +222,35 @@ class BrushRssChecker:
                     rss_movies=rss_movies,
                     rss_tvs=rss_tvs,
                 ):
+                    reject_reason = BrushRuleEngine.get_rss_reject_reason(
+                        rss_rule=rss_rule,
+                        title=torrent_name,
+                        torrent_size=size,
+                        pubdate=pubdate,
+                        torrent_attr=torrent_attr,
+                        category=category,
+                        labels=torrent_attr.get("labels", ""),
+                        media_info=media_info,
+                        rss_movies=rss_movies,
+                        rss_tvs=rss_tvs,
+                    )
+                    if reject_reason:
+                        self._helper.log_rejection(
+                            taskinfo=taskinfo,
+                            torrent_name=torrent_name,
+                            reason=f"选种未通过: {reject_reason}",
+                            site_name=site_info.get("name", ""),
+                            torrent_url=page_url or "",
+                        )
                     continue
                 if not self._helper.is_allow_new_torrent(taskinfo=taskinfo, dlcount=max_dlcount, torrent_size=size):
+                    self._helper.log_rejection(
+                        taskinfo=taskinfo,
+                        torrent_name=torrent_name,
+                        reason="选种未通过: 达到同时下载上限或种数限制",
+                        site_name=site_info.get("name", ""),
+                        torrent_url=page_url or "",
+                    )
                     continue
 
                 if self._helper.download_torrent(

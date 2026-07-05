@@ -51,6 +51,9 @@ class BrushTorrentLifecycle:
 
             task_torrents = self._repo.get_brushtask_torrents(taskid)
             torrent_id_maps = {item.DOWNLOAD_ID: item.ENCLOSURE for item in task_torrents if item.DOWNLOAD_ID}
+            torrent_page_url_maps = {
+                item.DOWNLOAD_ID: getattr(item, "PAGE_URL", "") or "" for item in task_torrents if item.DOWNLOAD_ID
+            }
             torrent_ids = list(torrent_id_maps.keys())
             if not torrent_ids:
                 return
@@ -86,6 +89,7 @@ class BrushTorrentLifecycle:
                 delete_ids,
                 update_torrents,
                 torrent_id_maps,
+                torrent_page_url_maps,
             )
             # 对正在下载的种子评估删种规则（含 dltime/pending_time）
             total_uploaded, total_downloaded, delete_ids, update_torrents = self._process_torrents(
@@ -99,6 +103,7 @@ class BrushTorrentLifecycle:
                 delete_ids,
                 update_torrents,
                 torrent_id_maps,
+                torrent_page_url_maps,
                 is_downloading=True,
             )
 
@@ -151,8 +156,11 @@ class BrushTorrentLifecycle:
         delete_ids,
         update_torrents,
         torrent_id_maps,
+        torrent_page_url_maps=None,
         is_downloading=False,
     ):
+        if torrent_page_url_maps is None:
+            torrent_page_url_maps = {}
         task_name = taskinfo.get("name")
         sendmessage = taskinfo.get("sendmessage")
         downloader_id = taskinfo.get("downloader")
@@ -209,6 +217,7 @@ class BrushTorrentLifecycle:
                         reason=delete_type_str,
                         downloader_name=downloader_cfg.get("name", ""),
                         site_name=site_info.get("name", "") if isinstance(site_info, dict) else "",
+                        torrent_url=torrent_page_url_maps.get(torrent_id, ""),
                     )
                     update_torrents.append((f"{torrent.uploaded},{torrent.downloaded}", taskinfo.get("id"), torrent_id))
 
@@ -246,6 +255,9 @@ class BrushTorrentLifecycle:
         log.info(f"[Brush]开始非免费种子暂停任务：{task_name}...")
         task_torrents = self._repo.get_brushtask_torrents(taskid)
         torrent_id_maps = {item.DOWNLOAD_ID: item.ENCLOSURE for item in task_torrents if item.DOWNLOAD_ID}
+        torrent_page_url_maps = {
+            item.DOWNLOAD_ID: getattr(item, "PAGE_URL", "") or "" for item in task_torrents if item.DOWNLOAD_ID
+        }
         torrent_ids = list(torrent_id_maps.keys())
         if not torrent_id_maps:
             return
@@ -302,6 +314,7 @@ class BrushTorrentLifecycle:
                     reason=stop_type_str,
                     downloader_name=downlaod_name,
                     site_name=site_info.get("name", "") if isinstance(site_info, dict) else "",
+                    torrent_url=torrent_page_url_maps.get(torrent_id, ""),
                 )
                 if sendmessage:
                     self._send_stop_message(task_name, torrent_name, downlaod_name, add_time)

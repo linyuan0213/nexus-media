@@ -80,7 +80,14 @@ class BrushTaskRepositoryAdapter:
         return self._repo.get_brushtask_torrent_by_enclosure(enclosure)
 
     def insert_brushtask_torrent(
-        self, brush_id: int, title: str, enclosure: str, downloader: str, download_id: str, size: str
+        self,
+        brush_id: int,
+        title: str,
+        enclosure: str,
+        downloader: str,
+        download_id: str,
+        size: str,
+        page_url: str = "",
     ) -> None:
         self._repo.insert_brushtask_torrent(
             brush_id=brush_id,
@@ -89,6 +96,7 @@ class BrushTaskRepositoryAdapter:
             downloader=downloader,
             download_id=download_id,
             size=size,
+            page_url=page_url,
         )
 
     def update_brushtask_torrent_state(self, update_torrents: list) -> None:
@@ -99,6 +107,25 @@ class BrushTaskRepositoryAdapter:
 
     def add_brushtask_upload_count(self, taskid: int, uploaded: int, downloaded: int, count: int) -> None:
         self._repo.add_brushtask_upload_count(taskid, uploaded, downloaded, count)
+
+    def insert_brush_event(
+        self,
+        task_id: int,
+        task_name: str,
+        torrent_name: str,
+        download_id: str,
+        action: str,
+        reason: str,
+        downloader_name: str = "",
+        site_name: str = "",
+        torrent_url: str = "",
+    ) -> None:
+        self._repo.insert_brush_event(
+            task_id, task_name, torrent_name, download_id, action, reason, downloader_name, site_name, torrent_url
+        )
+
+    def get_brush_events(self, task_id: int | None, action: str | None, page: int, page_size: int):
+        return self._repo.get_brush_events(task_id, action, page, page_size)
 
 
 class BrushTorrentRepositoryAdapter:
@@ -129,7 +156,14 @@ class BrushTorrentRepositoryAdapter:
         return self._repo.get_brushtask_torrents(brush_id, active)
 
     def insert_brushtask_torrent(
-        self, brush_id: int, title: str, enclosure: str, downloader: str, download_id: str, size: str
+        self,
+        brush_id: int,
+        title: str,
+        enclosure: str,
+        downloader: str,
+        download_id: str,
+        size: str,
+        page_url: str = "",
     ) -> None:
         return self._repo.insert_brushtask_torrent(
             brush_id=brush_id,
@@ -138,6 +172,7 @@ class BrushTorrentRepositoryAdapter:
             downloader=downloader,
             download_id=download_id,
             size=size,
+            page_url=page_url,
         )
 
     def update_brushtask_torrent_state(self, update_torrents: list) -> None:
@@ -161,9 +196,10 @@ class BrushTorrentRepositoryAdapter:
         reason: str,
         downloader_name: str = "",
         site_name: str = "",
+        torrent_url: str = "",
     ) -> None:
         self._repo.insert_brush_event(
-            task_id, task_name, torrent_name, download_id, action, reason, downloader_name, site_name
+            task_id, task_name, torrent_name, download_id, action, reason, downloader_name, site_name, torrent_url
         )
 
     def get_brush_events(self, task_id: int | None, action: str | None, page: int, page_size: int):

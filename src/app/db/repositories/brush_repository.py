@@ -101,6 +101,7 @@ class BrushRepository(BaseRepository):
         with self.session() as db:
             db.query(SITEBRUSHTASK).filter(int(brush_id) == SITEBRUSHTASK.ID).delete()
             db.query(SITEBRUSHTORRENTS).filter(cast(SITEBRUSHTORRENTS.TASK_ID, Integer) == brush_id).delete()
+            db.query(BRUSHEVENTLOG).filter(cast(BRUSHEVENTLOG.TASK_ID, Integer) == brush_id).delete()
 
     def get_brushtasks(self, brush_id: int | None = None) -> SITEBRUSHTASK | None | list[SITEBRUSHTASK]:
         """
@@ -206,7 +207,14 @@ class BrushRepository(BaseRepository):
             )
 
     def insert_brushtask_torrent(
-        self, brush_id: int | None, title: str, enclosure: str, downloader: str, download_id: str, size: str
+        self,
+        brush_id: int | None,
+        title: str,
+        enclosure: str,
+        downloader: str,
+        download_id: str,
+        size: str,
+        page_url: str = "",
     ) -> None:
         """
         增加刷流下载的种子信息
@@ -229,6 +237,7 @@ class BrushRepository(BaseRepository):
                     ENCLOSURE=enclosure,
                     DOWNLOADER=downloader,
                     DOWNLOAD_ID=download_id,
+                    PAGE_URL=page_url or "",
                     LST_MOD_DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
                 )
             )
@@ -392,6 +401,7 @@ class BrushRepository(BaseRepository):
         reason: str,
         downloader_name: str = "",
         site_name: str = "",
+        torrent_url: str = "",
     ) -> None:
         with self.session() as db:
             entity = BRUSHEVENTLOG(
@@ -403,6 +413,7 @@ class BrushRepository(BaseRepository):
                 REASON=reason,
                 DOWNLOADER_NAME=downloader_name,
                 SITE_NAME=site_name,
+                TORRENT_URL=torrent_url,
                 CREATED_AT=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
             )
             db.add(entity)

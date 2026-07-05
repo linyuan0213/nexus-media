@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.media import meta_info
 from app.message import Message
 from app.sites import SiteConf
@@ -44,6 +45,23 @@ class BrushTaskHelper:
 
     def add_hr_count(self, task_id: int) -> None:
         self._hr_counts[task_id] = self._hr_counts.get(task_id, 0) + 1
+
+    def log_rejection(
+        self, taskinfo: dict, torrent_name: str, reason: str, site_name: str = "", torrent_url: str = ""
+    ) -> None:
+        task_id = taskinfo.get("id") or 0
+        task_name = taskinfo.get("name") or ""
+        self._repo.insert_brush_event(
+            task_id=task_id,
+            task_name=task_name,
+            torrent_name=torrent_name,
+            download_id="",
+            action="skip",
+            reason=reason,
+            downloader_name="",
+            site_name=site_name,
+            torrent_url=torrent_url,
+        )
 
     def _get_downloader_hr_count(self, downloader_id: str, taskinfo: dict) -> int:
         return self._hr_counts.get(taskinfo.get("id") or 0, 0)
@@ -238,7 +256,9 @@ class BrushTaskHelper:
         torrents = self._downloader.get_torrents(downloader_id=downloader_id)
         return len(torrents) if torrents else 0
 
-    def download_torrent(self, taskinfo, rss_rule, site_info, title, enclosure, size, page_url, torrent_attr=None):
+    def download_torrent(
+        self, taskinfo, rss_rule, site_info, title, enclosure, size, page_url, torrent_attr=None, reason=""
+    ):
         if not enclosure:
             return False
         if self._sites.check_ratelimit(site_info.get("id")):
@@ -276,35 +296,65 @@ class BrushTaskHelper:
             upload_limit=upload_limit,
         )
         if not download_id:
-            log.warn(
-                f"[Brush]{taskname} 添加下载任务出错：{title}，"
-                f"错误原因：{retmsg or '下载器添加任务失败'}，"
-                f"种子链接：{enclosure}"
-            )
-            return False
+            if retmsg:
+                log.warn(f"[Brush]{taskname} 添加下载任务出错：{title}，错误原因：{retmsg}，种子链接：{enclosure}")
+                return False
+            log.info(f"[Brush]{title} 已存在于下载器中，记录进种")
         else:
             log.info(f"[Brush]成功添加下载：{title}")
-            downloader_cfg = self._downloader.get_downloader_conf(downloader_id)
-            downlaod_name = downloader_cfg.get("name") if downloader_cfg else ""
-            self._repo.insert_brush_event(
-                task_id=taskid or 0,
-                task_name=taskname or "",
-                torrent_name=title,
-                download_id=download_id,
-                action="download",
-                reason="RSS 进种",
-                downloader_name=downlaod_name,
-                site_name=site_info.get("name", ""),
+
+        downloader_cfg = self._downloader.get_downloader_conf(downloader_id)
+        downlaod_name = downloader_cfg.get("name") if downloader_cfg else ""
+
+        if not reason:
+            reason = BrushRuleEngine.format_rss_match_reason(rss_rule)
+        torrent_status = []
+        attr = torrent_attr or {}
+        if attr.get("free"):
+            torrent_status.append("免费")
+        if attr.get("2xfree"):
+            torrent_status.append("2X免费")
+        if attr.get("hr"):
+            torrent_status.append("HR")
+        if attr.get("peer_count"):
+            torrent_status.append(f"做种{attr['peer_count']}")
+        if size:
+            try:
+                size_num = int(float(size))
+            except (ValueError, TypeError):
+                size_num = 0
+            if size_num > 0:
+                torrent_status.append(StringUtils.str_filesize(size_num))
+        if not torrent_status:
+            m = re.search(r"\[(\d+\.?\d*\s*(?:GB|MB|TB|KB))\]", title)
+            if m:
+                torrent_status.append(m.group(1))
+
+        if not torrent_status and not reason:
+            reason = "RSS 进种"
+        if torrent_status:
+            reason = f"{reason} | 状态: {', '.join(torrent_status)}"
+
+        self._repo.insert_brush_event(
+            task_id=taskid or 0,
+            task_name=taskname or "",
+            torrent_name=title,
+            download_id=download_id or "",
+            action="download",
+            reason=reason,
+            downloader_name=downlaod_name,
+            site_name=site_info.get("name", ""),
+            torrent_url=page_url or "",
+        )
+        if sendmessage:
+            msg_title = f"[刷流任务 {taskname} 新增下载]"
+            msg_text = (
+                f"下载器名：{downlaod_name}\n"
+                f"种子名称：{title}\n"
+                f"种子大小：{StringUtils.str_filesize(size)}\n"
+                f"添加时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
             )
-            if sendmessage:
-                msg_title = f"[刷流任务 {taskname} 新增下载]"
-                msg_text = (
-                    f"下载器名：{downlaod_name}\n"
-                    f"种子名称：{title}\n"
-                    f"种子大小：{StringUtils.str_filesize(size)}\n"
-                    f"添加时间：{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
-                )
-                self._message.send_brushtask_added_message(title=msg_title, text=msg_text)
+            self._message.send_brushtask_added_message(title=msg_title, text=msg_text)
 
         if self._repo.insert_brushtask_torrent(
             brush_id=taskid,
@@ -313,6 +363,7 @@ class BrushTaskHelper:
             downloader=downloader_id,
             download_id=download_id,
             size=size,
+            page_url=page_url or "",
         ):
             self._repo.add_brushtask_download_count(brush_id=taskid)
         else:

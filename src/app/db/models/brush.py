@@ -31,8 +31,8 @@ class SITEBRUSHTASK(Base):
     SITE: Mapped[str] = mapped_column(String(255))
     RSSURL: Mapped[str] = mapped_column(String(512))
     FREELEECH: Mapped[str] = mapped_column(String(255))
-    RSS_RULE: Mapped[str] = mapped_column(String(255))
-    REMOVE_RULE: Mapped[str] = mapped_column(String(255))
+    RSS_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    REMOVE_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
     STOP_RULE: Mapped[str] = mapped_column(Text, nullable=False, default="")
     RSS_RULE_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("SITE_BRUSH_RULE.ID"), nullable=True)
     REMOVE_RULE_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("SITE_BRUSH_RULE.ID"), nullable=True)
@@ -74,6 +74,7 @@ class SITEBRUSHTORRENTS(Base):
     ENCLOSURE: Mapped[str] = mapped_column(String(8192))
     DOWNLOADER: Mapped[str] = mapped_column(String(255))
     DOWNLOAD_ID: Mapped[str] = mapped_column(String(255), index=True)
+    PAGE_URL: Mapped[str] = mapped_column(String(1024), default="")
     LST_MOD_DATE: Mapped[str] = mapped_column(String(255))
 
     def as_dict(self) -> dict[str, Any]:
@@ -91,6 +92,7 @@ class BRUSHEVENTLOG(Base):
     DOWNLOAD_ID: Mapped[str] = mapped_column(String(255), default="")
     ACTION: Mapped[str] = mapped_column(String(16), nullable=False)
     REASON: Mapped[str] = mapped_column(String(255), default="")
+    TORRENT_URL: Mapped[str] = mapped_column(String(512), default="")
     DOWNLOADER_NAME: Mapped[str] = mapped_column(String(255), default="")
     SITE_NAME: Mapped[str] = mapped_column(String(255), default="")
     CREATED_AT: Mapped[str] = mapped_column(String(32), default="")
