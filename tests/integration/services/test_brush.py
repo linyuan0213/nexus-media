@@ -31,7 +31,7 @@ class TestBrushTaskRepository:
         repo = BrushTaskRepository(mock_repo)
         repo.insert_brushtask_torrent(1, "title", "enc", 2, "dlid", 1024)
         mock_repo.insert_brushtask_torrent.assert_called_once_with(
-            brush_id=1, title="title", enclosure="enc", downloader="2", download_id="dlid", size="1024"
+            brush_id=1, title="title", enclosure="enc", downloader="2", download_id="dlid", size="1024", page_url=""
         )
 
     def test_delete_brushtask_defaults_zero(self):
