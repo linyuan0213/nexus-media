@@ -1,5 +1,20 @@
 # 版本历史
 
+## v4.2.1 (2026-07-05)
+
+### 修复
+- CookieCloud 插件重构：修复 `re.match` → `re.search` 黑/白名单关键词匹配失效；移除错误的 `test_connection` 条件门，始终同步云端 cookie；`HttpClient` 改用 `with` 上下文管理器防止连接池泄漏；域名别名支持（`_find_matching_sites` 遍历所有匹配站点而非仅第一条）
+- 修复 `BrushTaskRepositoryAdapter` 缺少 `insert_brush_event` 导致刷流进种异常
+- 修复 qBittorrent 已存在种子时 `DownloadPipeline` 返回空 `download_id` 导致误报"下载失败"：区分真实错误（retmsg 有内容）和 EXISTS 情况（retmsg 为空）
+- 修复 `RSS_RULE` / `REMOVE_RULE` 列 VARCHAR(255) 溢出为 TEXT：JSON 规则超过 255 字符时报 `Data too long`
+- 修复删除刷流任务时未清理对应的 `BRUSH_EVENT_LOG` 事件日志
+
+### 新增
+- 刷流事件日志详细原因：进种时记录匹配的选种规则（免费/2X免费/体积符合/发布时间符合等）+ 种子即时状态（免费标记/HR/做种数/体积）
+- 刷流未进种事件日志（skip）：被选种规则拒绝时记录具体拒绝原因
+- 刷流事件日志支持跳转种子详情页：新增 `TORRENT_URL` 列，前端种子名渲染为可点击链接
+- 刷流种子记录新增 `PAGE_URL` 列：删种/停种时也能获取种子详情页 URL
+
 ## v4.2.0 (2026-07-04)
 
 ### 新增
