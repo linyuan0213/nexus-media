@@ -30,6 +30,7 @@ from api.deps import (
     get_system_info_service,
     get_system_lifecycle_service,
     get_system_scheduler_service,
+    get_thread_executor,
     get_user_manage_service,
     get_web_search_service,
     require_any_permission,
@@ -531,16 +532,18 @@ def search(
     req: SearchRequest,
     current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
     svc=Depends(get_web_search_service),
+    executor=Depends(get_thread_executor),
 ):
     """
-    WEB资源搜索（同步执行，前端并行轮询进度）
+    WEB资源搜索（后台执行，前端轮询进度和结果）
     """
     session_id = str(uuid.uuid4())
     TokenCache.delete("search")
     TokenCache.set(f"search_session:{current_user.user_id}", session_id, ttl=600)
     search_word = req.search_word
     ident_flag = not req.unident
-    result = svc.search(
+    executor.submit(
+        svc.search,
         search_word=search_word,
         ident_flag=ident_flag,
         filters=req.filters,
@@ -548,8 +551,6 @@ def search(
         media_type=req.media_type,
         session_id=session_id,
     )
-    if result.code != 0:
-        return fail(code=result.code, msg=result.msg)
     return success()
 
 

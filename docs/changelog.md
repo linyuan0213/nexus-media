@@ -15,7 +15,7 @@
 ### 优化
 - 数据库连接池大幅缩减：`pool_size` 50→10、`max_overflow` 100→10、`pool_recycle` 3600s→1800s，容器内存从 ~782MB 降至 ~480MB（-39%）
 - `SceneChecker` 识别不区分大小写，支持 `★08(abema先行版)★` 等特殊格式的集号提取
-- NFO 生成器支持 `<uniqueid>` 写入 TMDB/IMDB ID
+- NFO 生成器支持 `&lt;uniqueid&gt;` 写入 TMDB/IMDB ID
 - 媒体刮削器支持海报多图下载并写入 NFO
 - Docker Compose 所有服务添加日志轮转（`max-size: 10m, max-file: 3`），防止日志撑爆磁盘
 
