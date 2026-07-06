@@ -4,15 +4,13 @@ WeworkIPChange Plugin v2
 """
 
 import contextlib
-import os
 import random
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from threading import Event
 from typing import Any
 
-import pytz
 from pyquery import PyQuery
 
 import log
@@ -37,6 +35,7 @@ class WeworkIPChangePlugin:
         self._cache = None
         self._tab_id = ""
         self._ip_url = "https://4.ipw.cn"
+        self._event = Event()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -50,6 +49,7 @@ class WeworkIPChangePlugin:
 
     def on_disable(self):
         self.ctx.info("企业微信可信IP更新插件已禁用")
+        self._event.set()
         self._stop_service()
 
     def on_hook(self, event, data):
@@ -64,7 +64,7 @@ class WeworkIPChangePlugin:
     def run(self):
         """立即运行IP更新"""
         self.ctx.info("手动触发企业微信可信IP更新")
-        self._change_ip()
+        self._change_ip(manual=True)
 
     def _init_chrome_tab(self):
         if not self._drissonpage_helper or not self._cache:
@@ -87,16 +87,11 @@ class WeworkIPChangePlugin:
         config = self._get_config()
         enabled = config.get("enabled", False)
         cron = config.get("cron")
-        onlyonce = config.get("onlyonce", False)
 
-        if not enabled and not onlyonce:
+        if not enabled:
             return
 
-        if onlyonce:
-            self.ctx.info("企业微信可信IP更新服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
-            self.ctx.schedule_date("change_ip_once", self._change_ip, run_date=run_date)
-            self.ctx.set_config("onlyonce", False)
+        self._event.clear()
 
         if cron:
             self.ctx.info(f"企业微信可信IP更新服务启动，周期：{cron}")
@@ -167,9 +162,12 @@ class WeworkIPChangePlugin:
         self.ctx.set_config("cookie", cookie)
         return True
 
-    def _change_ip(self):
-        self.ctx.info(f"当前时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))} 开始更新IP")
+    def _change_ip(self, manual=False):
         config = self._get_config()
+        if not manual and not config.get("enabled", False):
+            self.ctx.info("插件未启用，跳过IP更新")
+            return
+        self.ctx.info(f"当前时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))} 开始更新IP")
         use_cookiecloud = config.get("use_cookiecloud")
         use_chrome = config.get("use_chrome")
         cookie = config.get("cookie")
@@ -227,6 +225,8 @@ class WeworkIPChangePlugin:
             )
 
     def _process_single_app(self, app_id, cookie, dynamic_ip, overwrite):
+        if self._event.is_set():
+            return ""
         msg = ""
         update_status = False
         try:

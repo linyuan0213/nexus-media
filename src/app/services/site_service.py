@@ -118,7 +118,14 @@ class SiteService:
             site_hr = bool(attr.get("HR"))
         return SiteDetailDTO(site=site_info, site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
 
-    def get_sites(self, rss: bool = False, brush: bool = False, statistic: bool = False, basic: bool = False) -> Any:
+    def get_sites(
+        self,
+        rss: bool = False,
+        brush: bool = False,
+        statistic: bool = False,
+        basic: bool = False,
+        source: str | None = None,
+    ) -> Any:
         # RSS/刷流/统计场景只返回 builtin 站点
         if rss or brush or statistic:
             return self._sites.get_sites(rss=rss, brush=brush, statistic=statistic, public=True)
@@ -142,17 +149,18 @@ class SiteService:
                     "enabled": True,
                     "site_public": engine_by_name.get(s["name"], s.get("public", False)),
                 }
-            for row in config_rows:
-                if row.site_name not in merged and row.source != "builtin":
-                    if not self._is_indexer_enabled(row.source):
-                        continue
-                    merged[row.site_name] = {
-                        "id": str(row.id or 0),
-                        "name": row.site_name,
-                        "source": row.source,
-                        "enabled": bool(row.enabled),
-                        "third_party": True,
-                    }
+            if source != "builtin":
+                for row in config_rows:
+                    if row.site_name not in merged and row.source != "builtin":
+                        if not self._is_indexer_enabled(row.source):
+                            continue
+                        merged[row.site_name] = {
+                            "id": str(row.id or 0),
+                            "name": row.site_name,
+                            "source": row.source,
+                            "enabled": bool(row.enabled),
+                            "third_party": True,
+                        }
             return list(merged.values())
 
         merged = {s["name"]: {**s, "source": "builtin", "third_party": False} for s in builtin}

@@ -36,6 +36,7 @@ class AutoSubPlugin:
         self.ctx = ctx
         self._agent_service = agent_service
         self._running = False
+        self._stop = False
         self._end_token: list[str] = [".", "!", "?", "。", "！", "？", '。"', '！"', '？"', '."', '!"', '?"']
         self._noisy_token = [("(", ")"), ("[", "]"), ("{", "}"), ("[", "]"), ("♪", "♪"), ("♫", "♫"), ("♪♪", "♪♪")]
 
@@ -47,6 +48,7 @@ class AutoSubPlugin:
 
     def on_disable(self):
         self.ctx.info("AI字幕自动生成插件已禁用")
+        self._stop = True
 
     def on_hook(self, event, data):
         if event == "plugin.config_changed":
@@ -62,6 +64,7 @@ class AutoSubPlugin:
             self.ctx.warn("上一次任务还未完成，不进行处理")
             return
 
+        self._stop = False
         config = self._get_config()
         path_list_raw = config.get("path_list", "")
         file_size = config.get("file_size")
@@ -96,6 +99,9 @@ class AutoSubPlugin:
         try:
             self._running = True
             for path in path_list:
+                if self._stop:
+                    self.ctx.info("插件已禁用，停止处理")
+                    break
                 self.ctx.info(f"开始处理目录：{path} ...")
                 if not os.path.exists(path):
                     self.ctx.warn("目录不存在，不进行处理")

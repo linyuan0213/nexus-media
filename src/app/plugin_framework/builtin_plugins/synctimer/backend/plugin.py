@@ -52,6 +52,8 @@ class SyncTimerPlugin:
             self.ctx.remove_schedule("sync")
 
     def _do_sync(self):
+        if not self._get_config().get("cron"):
+            return
         self.ctx.info("开始定时同步 ...")
         self._sync.transfer_sync()
         self.ctx.info("定时同步完成")

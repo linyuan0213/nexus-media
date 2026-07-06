@@ -3,26 +3,22 @@ CloudflareSpeedTest Plugin v2
 测试 Cloudflare CDN 延迟和速度，自动优选IP
 """
 
+import ipaddress
 import os
 import platform
 import shutil
+import socket
 import subprocess
 import tarfile
 import zipfile
-from datetime import datetime, timedelta
 from pathlib import Path
 
-import pytz
-
 import log
-from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter
-from app.domain.entities.plugin import PluginConfigEntity
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.context import PluginContext
 from app.utils import IpUtils, SystemUtils
 from app.utils.config_tools import get_proxies
-from app.utils.json_utils import JsonUtils
 
 
 def _safe_extractall(tar, path):
@@ -52,10 +48,30 @@ def _safe_zip_extractall(zip_ref, path):
 class CloudflareSpeedTestPlugin:
     """Cloudflare IP优选插件"""
 
+    # Cloudflare 官方 IPv4 段 (https://www.cloudflare.com/ips-v4)
+    _CF_CIDRS = [
+        "173.245.48.0/20",
+        "103.21.244.0/22",
+        "103.22.200.0/22",
+        "103.31.4.0/22",
+        "141.101.64.0/18",
+        "108.162.192.0/18",
+        "190.93.240.0/20",
+        "188.114.96.0/20",
+        "197.234.240.0/22",
+        "198.41.128.0/17",
+        "162.158.0.0/15",
+        "104.16.0.0/13",
+        "104.24.0.0/14",
+        "172.64.0.0/13",
+        "131.0.72.0/22",
+    ]
+
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
         self._release_prefix = "https://github.com/XIU2/CloudflareSpeedTest/releases/download"
         self._binary_name = "cfst"
+        self._CF_NETWORKS = [ipaddress.ip_network(c) for c in self._CF_CIDRS]
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -78,21 +94,14 @@ class CloudflareSpeedTestPlugin:
     def run(self):
         """立即运行优选"""
         self.ctx.info("手动触发Cloudflare IP优选")
-        self._do_speedtest()
+        self._do_speedtest(manual=True)
 
     def _start_service(self):
         config = self._get_config()
         cron = config.get("cron")
-        onlyonce = config.get("onlyonce", False)
 
-        if not cron and not onlyonce:
+        if not cron:
             return
-
-        if onlyonce:
-            self.ctx.info("Cloudflare CDN优选服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
-            self.ctx.schedule_date("speedtest_once", self._do_speedtest, run_date=run_date)
-            self.ctx.set_config("onlyonce", False)
 
         if cron:
             self.ctx.info(f"Cloudflare CDN优选服务启动，周期：{cron}")
@@ -105,8 +114,10 @@ class CloudflareSpeedTestPlugin:
         except Exception as e:  # noqa: BLE001
             log.debug(f"[plugin]忽略异常: {e}")
 
-    def _do_speedtest(self):
+    def _do_speedtest(self, manual=False):
         config = self._get_config()
+        if not config.get("cron") and not manual:
+            return
         cf_ip = config.get("cf_ip")
         ipv4 = config.get("ipv4", True)
         ipv6 = config.get("ipv6", False)
@@ -192,17 +203,36 @@ class CloudflareSpeedTestPlugin:
             hosts = hosts.split("\n")
 
         new_hosts = []
+        replaced = 0
+        skipped_non_cf = []
         for host in hosts:
             if host and host != "\n":
                 host_arr = str(host).split()
                 if host_arr and host_arr[0] == cf_ip:
+                    domain = host_arr[1] if len(host_arr) > 1 else ""
+                    if domain and not self._is_cloudflare_domain(domain):
+                        new_hosts.append(host)
+                        skipped_non_cf.append(domain)
+                        continue
                     new_hosts.append(host.replace(cf_ip, best_ip))
+                    replaced += 1
                 else:
                     new_hosts.append(host)
 
+        if skipped_non_cf:
+            self.ctx.warn(f"以下域名非 Cloudflare 托管，已跳过替换（避免 SSL 握手失败）：{', '.join(skipped_non_cf)}")
+
+        if replaced == 0:
+            self.ctx.warn(
+                f"自定义Hosts中未找到与当前优选IP [{cf_ip}] 匹配且属于 Cloudflare 的行，未替换。"
+                f"请确认Hosts中的IP与优选IP一致，或开启「自动校准」"
+            )
+            self.ctx.set_config("cf_ip", best_ip)
+            return
+
         self._update_customhosts_config(
             {
-                "hosts": new_hosts,
+                "hosts": "\n".join(h.rstrip("\n") for h in new_hosts),
                 "err_hosts": customhosts_config.get("err_hosts"),
                 "enable": customhosts_config.get("enable", False),
             }
@@ -210,21 +240,15 @@ class CloudflareSpeedTestPlugin:
 
         old_ip = cf_ip
         self.ctx.set_config("cf_ip", best_ip)
-        self.ctx.info(f"Cloudflare CDN优选ip [{best_ip}] 已替换自定义Hosts插件")
-
-        # 通知CustomHosts插件重载
-        self.ctx.info("通知CustomHosts插件重载 ...")
-        self.ctx.emit("plugin.config_changed", {"plugin_id": "customhosts"})
+        self.ctx.info(f"Cloudflare CDN优选ip [{best_ip}] 已替换 {replaced} 条自定义Hosts记录")
 
         if notify:
             self.ctx.notify(title="[Cloudflare优选任务完成]", text=f"原ip：{old_ip}\n新ip：{best_ip}")
 
     def _get_customhosts_config(self):
         try:
-            repo = PluginConfigRepositoryAdapter()
-            entity = repo.get("customhosts")
-            if entity and entity.config:
-                config = entity.config if isinstance(entity.config, dict) else JsonUtils.loads(entity.config)
+            config = self.ctx.get_plugin_config("customhosts")
+            if config:
                 return config
         except Exception as e:
             self.ctx.error(f"获取CustomHosts配置失败: {e}")
@@ -232,14 +256,34 @@ class CloudflareSpeedTestPlugin:
 
     def _update_customhosts_config(self, config):
         try:
-            repo = PluginConfigRepositoryAdapter()
-            entity = PluginConfigEntity(plugin_id="customhosts", config=config)
-            repo.save(entity)
+            self.ctx.set_plugin_config("customhosts", config)
         except Exception as e:
             self.ctx.error(f"更新CustomHosts配置失败: {e}")
 
+    def _is_cloudflare_domain(self, domain: str) -> bool:
+        """通过真实DNS解析判断域名是否 Cloudflare 托管。
+
+        customhosts 使用应用层映射，socket 解析返回真实 DNS IP，
+        据此判断该域名是否落在 Cloudflare IP 段内。
+        """
+        try:
+            real_ip = socket.getaddrinfo(domain, 443)[0][4][0]
+        except Exception:
+            self.ctx.debug(f"域名 {domain} 解析失败，默认按 Cloudflare 处理")
+            return True
+        try:
+            ip_obj = ipaddress.ip_address(real_ip)
+        except ValueError:
+            return True
+        for net in self._CF_NETWORKS:
+            if ip_obj in net:
+                return True
+        return False
+
     def _check_cf_ip(self, hosts, cf_ip):
         """校正cf优选ip"""
+        if isinstance(hosts, str):
+            hosts = hosts.split("\n")
         ip_count = {}
         for host in hosts:
             if not host or not host.strip():

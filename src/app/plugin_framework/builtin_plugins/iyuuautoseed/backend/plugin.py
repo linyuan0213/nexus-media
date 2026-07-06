@@ -3,12 +3,8 @@ IYUUAutoSeed Plugin v2
 基于IYUU官方Api实现自动辅种
 """
 
-import os
-from datetime import datetime, timedelta
 from threading import Event
 from typing import Any
-
-import pytz
 
 import log
 from app.core.constants import MT_URL
@@ -74,16 +70,15 @@ class IYUUAutoSeedPlugin:
     def run(self):
         """立即运行辅种"""
         self.ctx.info("手动触发IYUU辅种")
-        self._do_seed()
+        self._do_seed(manual=True)
 
     def _start_service(self):
         config = self._get_config()
         enable = config.get("enable", False)
         cron = config.get("cron")
-        onlyonce = config.get("onlyonce", False)
         token = config.get("token")
 
-        if not enable and not onlyonce:
+        if not enable:
             return
         if not token:
             self.ctx.warn("未配置IYUU Token")
@@ -94,12 +89,6 @@ class IYUUAutoSeedPlugin:
         if cron:
             self.ctx.info(f"辅种服务启动，周期：{cron}")
             self.ctx.schedule_cron("seed", self._do_seed, cron=str(cron))
-
-        if onlyonce:
-            self.ctx.info("辅种服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
-            self.ctx.schedule_date("seed_once", self._do_seed, run_date=run_date)
-            self.ctx.set_config("onlyonce", False)
 
         # 种子校验服务
         self.ctx.schedule_interval("check_recheck", self._check_recheck, minutes=3)
@@ -126,7 +115,7 @@ class IYUUAutoSeedPlugin:
     def _save_cache(self, data):
         self.ctx.write_data("cache.json", JsonUtils.dumps(data, ensure_ascii=False, indent=2))
 
-    def _do_seed(self):
+    def _do_seed(self, manual=False):
         config = self._get_config()
         enable = config.get("enable", False)
         token = config.get("token")
@@ -136,7 +125,7 @@ class IYUUAutoSeedPlugin:
         notify = config.get("notify", False)
         clearcache = config.get("clearcache", False)
 
-        if not enable or not token or not downloaders:
+        if (not enable and not manual) or not token or not downloaders:
             self.ctx.warn("辅种服务未启用或未配置")
             return
 

@@ -73,7 +73,7 @@ class CookieCloudPlugin:
 
     def run(self):
         self.ctx.info("手动触发 CookieCloud 同步")
-        self._cookie_sync()
+        self._cookie_sync(manual=True)
 
     def _start_service(self):
         config = self._get_config()
@@ -178,7 +178,9 @@ class CookieCloudPlugin:
         except Exception:
             return {}, "CookieCloud 请求失败，请检查服务器地址、用户 KEY 及加密密码是否正确", False
 
-    def _cookie_sync(self):
+    def _cookie_sync(self, manual=False):
+        if not self._get_config().get("enabled") and not manual:
+            return
         self.ctx.info("同步服务开始 ...")
         contents, msg, flag = self._download_data()
         if not flag:

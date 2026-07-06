@@ -258,6 +258,20 @@ class DownloaderCore:
             downloader_id=downloader_id, download_limit=download_limit, upload_limit=upload_limit
         )
 
+    def get_torrent_trackers(self, tid, downloader_id=None):
+        return self._download_core.get_torrent_trackers(tid=tid, downloader_id=downloader_id)
+
+    def add_torrent_trackers(self, tid, urls, downloader_id=None):
+        return self._download_core.add_torrent_trackers(ids=tid, urls=urls, downloader_id=downloader_id)
+
+    def edit_torrent_tracker(self, tid, old_url, new_url, downloader_id=None):
+        return self._download_core.edit_torrent_tracker(
+            ids=tid, old_url=old_url, new_url=new_url, downloader_id=downloader_id
+        )
+
+    def remove_torrent_trackers(self, tid, urls, downloader_id=None):
+        return self._download_core.remove_torrent_trackers(ids=tid, urls=urls, downloader_id=downloader_id)
+
     # ---------- 存在性检查 ----------
 
     def check_exists_medias(self, meta_info, no_exists=None, total_ep=None) -> tuple[bool, dict, Any]:

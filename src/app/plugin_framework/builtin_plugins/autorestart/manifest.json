@@ -54,13 +54,6 @@
           "label": "运行时通知",
           "default": false,
           "help": "运行任务后会发送通知（需要打开插件消息通知）"
-        },
-        {
-          "key": "onlyonce",
-          "type": "switch",
-          "label": "立即运行一次",
-          "default": false,
-          "help": "打开后立即运行一次"
         }
       ]
     },

@@ -7,7 +7,7 @@ from app.infrastructure.http.auth import (
     CookieAuth,
 )
 from app.infrastructure.http.cache import HttpCacheConfig
-from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.client import HttpClient, register_global_host_mapping
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import (
     HttpAuthError,

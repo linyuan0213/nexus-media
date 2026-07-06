@@ -80,6 +80,25 @@ class PluginContext:
         entity = PluginConfigEntity(plugin_id=self._plugin_id, config=config)
         self._config_repo.save(entity)
 
+    def get_plugin_config(self, plugin_id: str, key: str | None = None, default: Any = None) -> Any:
+        """读取其他插件的配置"""
+        entity = self._config_repo.get(plugin_id)
+        if not entity:
+            return default if key else {}
+        try:
+            config = entity.config if isinstance(entity.config, dict) else JsonUtils.loads(entity.config or "{}")
+        except (json.JSONDecodeError, TypeError):
+            return default if key else {}
+        if key is None:
+            return config
+        return config.get(key, default)
+
+    def set_plugin_config(self, plugin_id: str, config: dict) -> None:
+        """写入其他插件的全部配置，并通知其重载"""
+        entity = PluginConfigEntity(plugin_id=plugin_id, config=config)
+        self._config_repo.save(entity)
+        self.emit("plugin.config_changed", {"plugin_id": plugin_id})
+
     def read_data(self, filename: str) -> str | None:
         """读取插件数据文件"""
         filepath = os.path.join(self._data_dir, filename)

@@ -43,6 +43,8 @@ class PluginSandbox:
         indexer_helper: Any | None = None,
         agent_service: Any | None = None,
         filetransfer_service: Any | None = None,
+        site_service: Any | None = None,
+        event_bus: Any | None = None,
     ):
         self._instances: dict[str, Any] = {}
         self._registry = plugin_registry
@@ -62,6 +64,8 @@ class PluginSandbox:
         self._indexer_helper = indexer_helper
         self._agent_service = agent_service
         self._filetransfer_service = filetransfer_service
+        self._site_service = site_service
+        self._event_bus = event_bus
 
     @staticmethod
     def _filter_kwargs(plugin_class: Any, deps: dict[str, Any]) -> dict[str, Any]:
@@ -188,10 +192,18 @@ class PluginSandbox:
                 "agent_service": self._agent_service,
                 "sync": self._sync_engine,
                 "filetransfer": self._filetransfer_service,
+                "site_service": self._site_service,
+                "event_bus": self._event_bus,
             }
             instance = plugin_class(ctx, **self._filter_kwargs(plugin_class, deps))
 
             self._instances[plugin_id] = instance
+
+            # 注册 manifest 声明的事件钩子
+            hooks = getattr(manifest.backend, "hooks", None) or []
+            for event in hooks:
+                if event:
+                    self._hook_system.register(event, plugin_id)
 
             # 调用生命周期方法
             if hasattr(instance, "on_enable"):
@@ -219,6 +231,9 @@ class PluginSandbox:
 
             self._instances.pop(plugin_id, None)
             self._cleanup_modules(plugin_id)
+
+            # 注销该插件的所有事件钩子
+            self._hook_system.unregister_all(plugin_id)
 
             # 自动注销该插件的所有消息命令
             self._message.clear_plugin_commands(plugin_id)

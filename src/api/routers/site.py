@@ -67,6 +67,7 @@ class SiteFilterRequest(BaseModel):
     brush: bool | None = False
     statistic: bool | None = False
     basic: bool | None = False
+    source: str | None = None
 
 
 class SiteCaptchaRequest(BaseModel):
@@ -223,7 +224,11 @@ def get_sites(
     svc: SiteService = Depends(get_site_service),
 ):
     sites = svc.get_sites(
-        rss=bool(req.rss), brush=bool(req.brush), statistic=bool(req.statistic), basic=bool(req.basic)
+        rss=bool(req.rss),
+        brush=bool(req.brush),
+        statistic=bool(req.statistic),
+        basic=bool(req.basic),
+        source=req.source,
     )
     return success(data=sites)
 

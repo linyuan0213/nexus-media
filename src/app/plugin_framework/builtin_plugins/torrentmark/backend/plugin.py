@@ -3,12 +3,8 @@ TorrentMark Plugin v2
 标记种子是否是PT
 """
 
-import os
-from datetime import datetime
 from threading import Event
 from typing import Any
-
-import pytz
 
 import log
 from app.plugin_framework.context import PluginContext
@@ -44,26 +40,19 @@ class TorrentMarkPlugin:
     def run(self):
         """立即运行标记"""
         self.ctx.info("手动触发种子标记")
-        self._do_mark()
+        self._do_mark(manual=True)
 
     def _start_service(self):
         config = self._get_config()
         enable = config.get("enable", False)
         cron = config.get("cron")
-        onlyonce = config.get("onlyonce", False)
 
-        if not enable and not onlyonce:
+        if not enable:
             return
 
         if cron:
             self.ctx.info(f"标记服务启动，周期：{cron}")
             self.ctx.schedule_cron("mark", self._do_mark, cron=str(cron))
-
-        if onlyonce:
-            self.ctx.info("标记服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC"))
-            self.ctx.schedule_date("mark_once", self._do_mark, run_date=run_date)
-            self.ctx.set_config("onlyonce", False)
 
     def _stop_service(self):
         self._event.set()
@@ -74,12 +63,12 @@ class TorrentMarkPlugin:
             log.debug(f"[plugin]忽略异常: {e}")
         self._event.clear()
 
-    def _do_mark(self):
+    def _do_mark(self, manual=False):
         config = self._get_config()
         enable = config.get("enable", False)
         downloaders = config.get("downloaders", [])
 
-        if not enable or not downloaders:
+        if not manual and (not enable or not downloaders):
             self.ctx.warn("标记服务未启用或未配置下载器")
             return
 

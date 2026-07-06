@@ -6,7 +6,7 @@ DoubanSync Plugin v2
 import contextlib
 import traceback
 from datetime import datetime
-from threading import Lock
+from threading import Event, Lock
 from typing import Any
 
 from app.domain.enums import SearchType
@@ -48,6 +48,7 @@ class DoubanSyncPlugin:
         self._cache_ttl = cache_ttl
         self._fetch_backoff = fetch_backoff_seconds
         self._failed_users: set[str] = set()
+        self._event = Event()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -58,6 +59,7 @@ class DoubanSyncPlugin:
 
     def on_disable(self):
         self.ctx.info("豆瓣同步插件已禁用")
+        self._event.set()
         self._stop_service()
 
     def on_hook(self, event, data):
@@ -72,13 +74,15 @@ class DoubanSyncPlugin:
     def run(self):
         """立即运行同步"""
         self.ctx.info("手动触发豆瓣同步")
-        self._sync()
+        self._sync(manual=True)
 
     def _start_service(self):
         config = self._get_config()
         enable = config.get("enable", False)
         if not enable:
             return
+
+        self._event.clear()
 
         sync_type = config.get("sync_type", "0")
         interval = config.get("interval", 0)
@@ -105,12 +109,15 @@ class DoubanSyncPlugin:
         for job_id in ["sync_full", "sync_rss", "sync_once"]:
             with contextlib.suppress(Exception):
                 self.ctx.remove_schedule(job_id)
+        self._event.set()
 
     def _is_enabled(self) -> bool:
         config = self._get_config()
         return bool(config.get("enable", False) and config.get("users") and config.get("types"))
 
-    def _sync(self):
+    def _sync(self, manual=False):
+        if not self._get_config().get("enable") and not manual:
+            return
         with _lock:
             self._do_sync()
 
@@ -136,6 +143,8 @@ class DoubanSyncPlugin:
         douban_ids = {}
 
         for user in user_list:
+            if self._event.is_set():
+                return
             if not user:
                 continue
             if user in self._failed_users:
@@ -159,6 +168,8 @@ class DoubanSyncPlugin:
 
         history_data = self._load_history()
         for doubanid, info in douban_ids.items():
+            if self._event.is_set():
+                return
             self._process_douban_media(doubanid, info, auto_search, auto_rss, history_data)
         self._save_history(history_data)
 

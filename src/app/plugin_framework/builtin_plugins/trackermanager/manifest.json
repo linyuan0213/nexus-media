@@ -1,0 +1,63 @@
+{
+  "manifest_version": "1.0",
+  "id": "trackermanager",
+  "name": "Tracker 管理",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "批量替换下载器中种子的 tracker 地址，支持正则匹配和替换。",
+  "category": "tool",
+  "tags": ["tracker", "下载器", "替换"],
+  "icon": "lucide:replace",
+  "color": "#8b5cf6",
+  "min_app_version": "4.0.0",
+  "backend": {
+    "entry": "backend.plugin:TrackerManagerPlugin",
+    "api_prefix": "/api/plugin/trackermanager",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "开启 Tracker 管理",
+          "default": false,
+          "help": "开启后定期检查并替换 tracker"
+        },
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "执行周期",
+          "default": "0 3 * * *",
+          "placeholder": "0 3 * * *",
+          "help": "检查并替换 tracker 的周期"
+        },
+        {
+          "key": "rules",
+          "type": "textarea",
+          "label": "替换规则",
+          "default": "",
+          "placeholder": "一行一条：旧URL -> 新URL\neg: http://old.tracker/announce -> https://new.tracker/announce",
+          "help": "支持正则替换，格式：源地址 -> 目标地址。每行一条规则"
+        },
+        {
+          "key": "downloaders",
+          "type": "multi_select",
+          "label": "下载器",
+          "source": "downloaders",
+          "default": [],
+          "help": "需要处理的下载器"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

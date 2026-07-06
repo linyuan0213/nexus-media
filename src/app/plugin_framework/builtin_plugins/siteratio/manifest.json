@@ -1,0 +1,70 @@
+{
+  "manifest_version": "1.0",
+  "id": "siteratio",
+  "name": "站点分享率监控",
+  "version": "1.0",
+  "author": "linyuan0213",
+  "author_url": "https://github.com/linyuan0213",
+  "description": "定时检查各站点分享率，低于阈值时发送通知提醒。依赖站点数据统计刷新。",
+  "category": "tool",
+  "tags": ["站点", "分享率", "监控"],
+  "icon": "lucide:alert-triangle",
+  "color": "#f59e0b",
+  "min_app_version": "4.0.0",
+  "backend": {
+    "entry": "backend.plugin:SiteRatioPlugin",
+    "api_prefix": "/api/plugin/siteratio",
+    "permissions": [],
+    "hooks": [
+      "plugin.config_changed"
+    ],
+    "supports_run": true
+  },
+  "frontend": {
+    "routes": [],
+    "settings": {
+      "component": "SettingsPage",
+      "fields": [
+        {
+          "key": "enable",
+          "type": "switch",
+          "label": "开启分享率监控",
+          "default": false,
+          "help": "开启后定期检查站点分享率，低于阈值时发送通知"
+        },
+        {
+          "key": "cron",
+          "type": "cron",
+          "label": "执行周期",
+          "default": "30 8 * * *",
+          "placeholder": "30 8 * * *",
+          "help": "检查分享率的周期，建议在站点数据统计刷新后执行"
+        },
+        {
+          "key": "ratio_threshold",
+          "type": "number",
+          "label": "分享率阈值",
+          "default": 1.0,
+          "help": "分享率低于此值时发送通知"
+        },
+        {
+          "key": "exclude_sites",
+          "type": "multi_select",
+          "label": "排除站点",
+          "source": "sites",
+          "source_filter": "builtin",
+          "default": [],
+          "help": "不监控分享率的站点"
+        },
+        {
+          "key": "notify_on_recovery",
+          "type": "switch",
+          "label": "恢复通知",
+          "default": false,
+          "help": "分享率从低于恢复至高于阈值时也发送通知"
+        }
+      ]
+    },
+    "slots": []
+  }
+}

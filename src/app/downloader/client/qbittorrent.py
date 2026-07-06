@@ -821,6 +821,48 @@ class Qbittorrent(_IDownloadClient):
             ExceptionUtils.exception_traceback(err)
             return
 
+    def get_torrent_trackers(self, torrent_hash) -> list[str]:
+        tracker_list = self._get_torrent_trackers(torrent_hash)
+        if not tracker_list:
+            return []
+        result = []
+        for t in tracker_list:
+            url = getattr(t, "url", None) or (t.get("url") if isinstance(t, dict) else None)
+            # 过滤 qb 的伪 tracker（DHT/PeX/LSD）
+            if url and str(url).startswith(("http://", "https://", "udp://")):
+                result.append(str(url))
+        return result
+
+    def add_torrent_trackers(self, torrent_hash, urls):
+        if not self.qbc:
+            return
+        try:
+            self.qbc.torrents_add_trackers(torrent_hashes=torrent_hash, urls=urls)
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+
+    def remove_torrent_trackers(self, torrent_hash, urls):
+        if not self.qbc:
+            return
+        try:
+            self.qbc.torrents_remove_trackers(torrent_hashes=torrent_hash, urls=urls)
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+
+    def edit_torrent_tracker(self, torrent_hash, old_url, new_url):
+        if not self.qbc:
+            return
+        try:
+            self.qbc.torrents_edit_tracker(torrent_hash=torrent_hash, original_url=old_url, new_url=new_url)
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+
     def _extract_tracker_errors(self, torrent_hash):
         tracker_list = self._get_torrent_trackers(torrent_hash) or []
         has_working = False

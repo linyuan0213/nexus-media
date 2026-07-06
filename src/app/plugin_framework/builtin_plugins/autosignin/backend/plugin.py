@@ -62,6 +62,8 @@ class AutoSignInPlugin:
 
     def run(self):
         self.ctx.info("手动触发站点签到")
+        if not self._get_config().get("enabled"):
+            return
         self._engine.run(
             self._get_config(),
             get_history=self._get_history,

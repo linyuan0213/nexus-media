@@ -3,11 +3,7 @@ LibraryScraper Plugin v2
 定时对媒体库进行刮削
 """
 
-import os
-from datetime import datetime, timedelta
 from threading import Event
-
-import pytz
 
 import log
 from app.media.scraper import Scraper
@@ -55,20 +51,13 @@ class LibraryScraperPlugin:
     def _start_service(self):
         config = self._get_config()
         cron = config.get("cron")
-        onlyonce = config.get("onlyonce", False)
 
-        if not cron and not onlyonce:
+        if not cron:
             return
 
         if cron:
             self.ctx.info(f"刮削服务启动，周期：{cron}")
             self.ctx.schedule_cron("scrape", self._do_scrape, cron=str(cron))
-
-        if onlyonce:
-            self.ctx.info("刮削服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
-            self.ctx.schedule_date("scrape_once", self._do_scrape, run_date=run_date)
-            self.ctx.set_config("onlyonce", False)
 
     def _stop_service(self):
         self._event.set()

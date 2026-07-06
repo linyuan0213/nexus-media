@@ -4,13 +4,11 @@ RSS自动生成
 """
 
 import copy
-import os
 import re
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from threading import Event
 from typing import cast
 
-import pytz
 from lxml import etree
 
 import log
@@ -45,6 +43,7 @@ class AutoGenRssPlugin:
         self._siteconf = siteconf or SiteConf(self.ctx.site_engine)
         self._site_cache = site_cache
         self._drissionpage_helper = drissionpage_helper or ChromeClient()
+        self._event = Event()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -55,6 +54,7 @@ class AutoGenRssPlugin:
 
     def on_disable(self):
         self.ctx.info("RSS自动生成插件已禁用")
+        self._event.set()
         self._stop_service()
 
     def on_hook(self, event, data):
@@ -66,29 +66,23 @@ class AutoGenRssPlugin:
     def run(self):
         """立即运行"""
         self.ctx.info("手动触发RSS生成")
-        self._do_gen_rss()
+        self._do_gen_rss(manual=True)
 
     def _start_service(self):
         config = self._get_config()
         enabled = config.get("enabled", False)
         cron = config.get("cron")
-        onlyonce = config.get("onlyonce", False)
 
-        if not enabled and not onlyonce:
+        if not enabled:
             return
 
+        self._event.clear()
         # 加载模块
         self._site_schema = SubmoduleLoader.import_submodules(
             "app.plugin_framework.builtin_plugins.autogenrss.backend._autogenrss",
             filter_func=lambda _, obj: hasattr(obj, "match"),
         )
         self.ctx.debug(f"加载特殊站点：{self._site_schema}")
-
-        if onlyonce:
-            self.ctx.info("RSS自动生成服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
-            self.ctx.schedule_date("gen_rss_once", self._do_gen_rss, run_date=run_date)
-            self.ctx.set_config("onlyonce", False)
 
         if cron:
             self.ctx.info(f"同步服务启动，周期：{cron}")
@@ -101,7 +95,9 @@ class AutoGenRssPlugin:
         except Exception as e:  # noqa: BLE001
             log.debug(f"[plugin]忽略异常: {e}")
 
-    def _do_gen_rss(self):
+    def _do_gen_rss(self, manual=False):
+        if not self._get_config().get("enabled") and not manual:
+            return
         config = self._get_config()
         rss_sites = config.get("rss_sites", [])
         notify = config.get("notify", False)
@@ -146,6 +142,8 @@ class AutoGenRssPlugin:
         return None
 
     def _gen_rss(self, site_info):
+        if self._event.is_set():
+            return None
         site_module = self._build_class(site_info.get("signurl"))
         if site_module and hasattr(site_module, "gen_rss"):
             try:

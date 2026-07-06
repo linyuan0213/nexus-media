@@ -761,3 +761,58 @@ class Transmission(_IDownloadClient):
                 "UNKNOWN": TorrentStatus.Unknown,
             }
             return state_mapping.get(state, TorrentStatus.Unknown)
+
+    def get_torrent_trackers(self, torrent_hash) -> list[str]:
+        if not self.trc:
+            return []
+        try:
+            torrent = self.trc.get_torrent(torrent_id=torrent_hash)
+            if not torrent or not torrent.trackers:
+                return []
+            return [t.announce for t in torrent.trackers if t.announce]
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+            return []
+
+    def add_torrent_trackers(self, torrent_hash, urls):
+        if not self.trc:
+            return
+        try:
+            self.trc.change_torrent(ids=torrent_hash, trackerAdd=urls)
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+
+    def remove_torrent_trackers(self, torrent_hash, urls):
+        if not self.trc:
+            return
+        try:
+            torrent = self.trc.get_torrent(torrent_id=torrent_hash)
+            if not torrent or not torrent.trackers:
+                return
+            url_set = set(urls) if isinstance(urls, (list, tuple, set)) else {urls}
+            tracker_ids = [t.id for t in torrent.trackers if t.announce in url_set]
+            if tracker_ids:
+                self.trc.change_torrent(ids=torrent_hash, trackerRemove=tracker_ids)
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+
+    def edit_torrent_tracker(self, torrent_hash, old_url, new_url):
+        if not self.trc:
+            return
+        try:
+            torrent = self.trc.get_torrent(torrent_id=torrent_hash)
+            if not torrent or not torrent.trackers:
+                return
+            for t in torrent.trackers:
+                if t.announce == old_url:
+                    self.trc.change_torrent(ids=torrent_hash, trackerReplace=[(t.id, new_url)])
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)

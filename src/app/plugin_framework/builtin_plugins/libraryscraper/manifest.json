@@ -61,13 +61,6 @@
           "default": "",
           "placeholder": "多个路径用,分割",
           "help": "需要排除的媒体库路径"
-        },
-        {
-          "key": "onlyonce",
-          "type": "switch",
-          "label": "立即运行一次",
-          "default": false,
-          "help": "打开后立即运行一次"
         }
       ]
     },

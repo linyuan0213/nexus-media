@@ -30,3 +30,6 @@ class HttpClientConfig:
 
     # 认证（httpx.Auth 子类）
     auth: httpx.Auth | None = field(default=None, repr=False)
+
+    # DNS 映射（主机名 → IP 地址），用于替代 /etc/hosts 修改
+    host_mapping: dict[str, str] | None = None

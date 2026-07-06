@@ -3,13 +3,11 @@ DoubanRank Plugin v2
 监控豆瓣热门榜单，自动添加订阅
 """
 
-import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from threading import Event
 
 import defusedxml.minidom  # type: ignore[import-untyped]
-import pytz
 
 import log
 from app.domain.enums import SearchType
@@ -70,26 +68,19 @@ class DoubanRankPlugin:
     def run(self):
         """立即运行刷新"""
         self.ctx.info("手动触发豆瓣榜单刷新")
-        self._refresh_rss()
+        self._refresh_rss(manual=True)
 
     def _start_service(self):
         config = self._get_config()
         enable = config.get("enable", False)
         cron = config.get("cron")
-        onlyonce = config.get("onlyonce", False)
 
-        if not enable and not onlyonce:
+        if not enable:
             return
 
         if cron:
             self.ctx.info(f"订阅服务启动，周期：{cron}")
             self.ctx.schedule_cron("refresh", self._refresh_rss, cron=str(cron))
-
-        if onlyonce:
-            self.ctx.info("订阅服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "")) + timedelta(seconds=3)
-            self.ctx.schedule_date("refresh_once", self._refresh_rss, run_date=run_date)
-            self.ctx.set_config("onlyonce", False)
 
     def _stop_service(self):
         self._event.set()
@@ -128,14 +119,14 @@ class DoubanRankPlugin:
         }
         self._save_history(data)
 
-    def _refresh_rss(self):
+    def _refresh_rss(self, manual=False):
         config = self._get_config()
         enable = config.get("enable", False)
         vote = float(config.get("vote") or 0) if config.get("vote") else 0
         rss_addrs = config.get("rss_addrs", [])
         ranks = config.get("ranks", [])
 
-        if not enable:
+        if not enable and not manual:
             return
 
         if isinstance(rss_addrs, str):

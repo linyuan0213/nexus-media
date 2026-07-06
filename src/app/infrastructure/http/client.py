@@ -17,6 +17,17 @@ from app.infrastructure.http.middleware import HttpMiddleware
 from app.infrastructure.http.retry import HttpRetryConfig
 from app.infrastructure.rate_limiter import RateLimitEngine
 
+_global_host_mapping: dict[str, str] = {}
+
+
+def register_global_host_mapping(mapping: dict[str, str]) -> None:
+    """注册全局 DNS 映射，对所有 HttpClient/AsyncHttpClient 生效。
+
+    映射在请求时动态读取，无需重建连接池。
+    """
+    _global_host_mapping.clear()
+    _global_host_mapping.update(mapping)
+
 
 class _ClientPool:
     """按 HttpClientConfig 复用底层 httpx.Client，减少连接池创建开销."""
@@ -109,7 +120,19 @@ class HttpClient:
             max_connections=self._config.max_connections,
             max_keepalive_connections=self._config.max_keepalive,
         )
-        transport = httpx.HTTPTransport(limits=limits, retries=0)
+        config_map = self._config.host_mapping or {}
+
+        class _MappedTransport(httpx.HTTPTransport):
+            def handle_request(self, request):
+                host = request.url.host
+                mapping = {**_global_host_mapping, **config_map}
+                if host and host in mapping:
+                    log.debug(f"[HostMapping] {host} -> {mapping[host]} ({request.url})")
+                    request.extensions["sni_hostname"] = host
+                    request.url = request.url.copy_with(host=mapping[host])
+                return super().handle_request(request)
+
+        transport = _MappedTransport(limits=limits, retries=0)
         timeout = httpx.Timeout(
             self._config.timeout,
             connect=self._config.connect_timeout,

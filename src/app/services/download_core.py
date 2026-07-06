@@ -414,6 +414,38 @@ class DownloadCore:
             upload_limit = 0
         _client.set_speed_limit(download_limit=download_limit, upload_limit=upload_limit)
 
+    def get_torrent_trackers(self, tid, downloader_id=None):
+        _client = (
+            self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        )
+        if not _client:
+            return []
+        return _client.get_torrent_trackers(tid) or []
+
+    def add_torrent_trackers(self, ids, urls, downloader_id=None):
+        _client = (
+            self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        )
+        if not _client:
+            return
+        _client.add_torrent_trackers(ids, urls)
+
+    def edit_torrent_tracker(self, ids, old_url, new_url, downloader_id=None):
+        _client = (
+            self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        )
+        if not _client:
+            return
+        _client.edit_torrent_tracker(ids, old_url, new_url)
+
+    def remove_torrent_trackers(self, ids, urls, downloader_id=None):
+        _client = (
+            self._client_factory.get_client(downloader_id) if downloader_id else self._client_factory.default_client
+        )
+        if not _client:
+            return
+        _client.remove_torrent_trackers(ids, urls)
+
     # ---------- 种子解析 ----------
 
     def get_torrent_episodes(self, url, page_url=None):

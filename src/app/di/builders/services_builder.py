@@ -455,6 +455,10 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         infra.plugin_sandbox._filetransfer_service = filetransfer_service
     if infra.plugin_sandbox._site_resolver is None:
         infra.plugin_sandbox._site_resolver = site_resolver
+    if infra.plugin_sandbox._site_service is None:
+        infra.plugin_sandbox._site_service = site_service
+    if infra.plugin_sandbox._event_bus is None:
+        infra.plugin_sandbox._event_bus = infra.event_bus
 
     return ServiceObjects(
         downloader_core=downloader_core,

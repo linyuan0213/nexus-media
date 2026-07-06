@@ -64,13 +64,6 @@
           "help": "运行辅助任务后发送通知"
         },
         {
-          "key": "onlyonce",
-          "type": "switch",
-          "label": "立即运行一次",
-          "default": false,
-          "help": "打开后立即运行一次"
-        },
-        {
           "key": "clearcache",
           "type": "switch",
           "label": "下一次运行时清除缓存",

@@ -304,6 +304,19 @@ class _IDownloadClient(metaclass=ABCMeta):
     def get_free_space(self, path: str) -> int | None:
         """获取剩余空间"""
 
+    def get_torrent_trackers(self, torrent_hash: str) -> list[str]:
+        """获取种子 tracker URL 列表"""
+        return []
+
+    def add_torrent_trackers(self, torrent_hash: str, urls: list[str] | str) -> None:
+        """添加 tracker"""
+
+    def remove_torrent_trackers(self, torrent_hash: str, urls: list[str] | str) -> None:
+        """移除 tracker"""
+
+    def edit_torrent_tracker(self, torrent_hash: str, old_url: str, new_url: str) -> None:
+        """替换 tracker"""
+
     @abstractmethod
     def _map_status(self, raw_state: Any) -> TorrentStatus:
         """将下载器原始状态映射为通用 TorrentStatus"""

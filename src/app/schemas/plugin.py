@@ -54,6 +54,7 @@ class PluginFieldConfig:
     placeholder: str = ""
     options: Any = None
     source: str = ""
+    source_filter: str = ""
     multiple: bool = False
     required: bool = False
     help: str = ""

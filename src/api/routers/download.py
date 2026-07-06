@@ -452,6 +452,15 @@ def get_downloaders(
     return success(data=svc.get_downloader_conf(did=req.did))
 
 
+@router.post("/downloaders/simple", response_model=CommonResponse, summary="获取下载器列表")
+def get_downloaders_simple(
+    user: str = Depends(require_any_permission("download:view", "download:manage")),
+    svc: Downloader = Depends(get_downloader_service),
+):
+    data = svc.get_downloader_conf_simple()
+    return success(data=[{"id": v["id"], "name": v["name"]} for v in data.values()])
+
+
 @router.post("/downloaders/default", response_model=CommonResponse, summary="设置默认下载器")
 def set_default_downloader(
     req: SetDefaultDownloaderRequest,

@@ -6,9 +6,6 @@ AutoRestart Plugin v2
 import os
 import signal
 import time
-from datetime import datetime, timedelta
-
-import pytz
 
 import log
 from app.plugin_framework.context import PluginContext
@@ -47,17 +44,9 @@ class AutoRestartPlugin:
         config = self._get_config()
         enabled = config.get("enabled", False)
         cron = config.get("cron")
-        onlyonce = config.get("onlyonce", False)
 
-        if not enabled and not onlyonce:
+        if not enabled:
             return
-
-        if onlyonce:
-            self.ctx.info("重启服务启动，立即运行一次")
-            run_date = datetime.now(tz=pytz.timezone(os.environ.get("TZ") or "UTC")) + timedelta(seconds=3)
-            self.ctx.schedule_date("restart_once", self._do_restart, run_date=run_date)
-            # 关闭一次性开关并保存
-            self.ctx.set_config("onlyonce", False)
 
         if enabled and cron:
             self.ctx.info(f"定时重启服务启动，周期：{cron}")

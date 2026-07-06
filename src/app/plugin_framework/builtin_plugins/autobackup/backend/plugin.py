@@ -47,7 +47,7 @@ class AutoBackupPlugin:
     def run(self):
         """立即运行备份"""
         self.ctx.info("手动触发备份")
-        self._do_backup()
+        self._do_backup(manual=True)
 
     def _start_service(self):
         """启动备份服务"""
@@ -74,9 +74,11 @@ class AutoBackupPlugin:
         with contextlib.suppress(Exception):
             self.ctx.remove_schedule("backup")
 
-    def _do_backup(self):
+    def _do_backup(self, manual=False):
         """执行备份"""
         config = self._get_config()
+        if not config.get("enabled") and not manual:
+            return
         storage_type = config.get("storage_type", "local")
         full = config.get("full", False)
         cnt = config.get("cnt")

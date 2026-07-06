@@ -5,12 +5,12 @@
   "version": "1.0",
   "author": "linyuan0213",
   "author_url": "https://github.com/linyuan0213",
-  "description": "修改系统hosts文件，加速网络访问。",
+  "description": "应用层 DNS 映射，无需 root 权限，仅对当前进程生效。",
   "category": "system",
-  "tags": ["hosts", "网络"],
+  "tags": ["hosts", "DNS", "网络"],
   "icon": "lucide:globe",
   "color": "#06b6d4",
-  "min_app_version": "3.0.0",
+  "min_app_version": "4.0.0",
   "backend": {
     "entry": "backend.plugin:CustomHostsPlugin",
     "api_prefix": "/api/plugin/customhosts",
@@ -30,15 +30,15 @@
           "type": "switch",
           "label": "开启hosts同步",
           "default": false,
-          "help": "将自定义hosts更新到系统中生效，如因权限问题等无法更新到系统时此开关将自动关闭"
+          "help": "开启后将自定义DNS映射注入到所有HTTP请求中，无需系统权限"
         },
         {
           "key": "hosts",
           "type": "textarea",
-          "label": "hosts配置",
+          "label": "DNS 配置",
           "default": "",
-          "placeholder": "每行一个配置，格式为：ip host1 host2 ...",
-          "help": "hosts配置，会追加到系统hosts文件中生效"
+          "placeholder": "每行一个配置，格式为：ip host1 host2 ...\n示例：1.2.3.4 pt.example.com",
+          "help": "IP 后跟一个或多个域名，空格分隔。仅对 Nexus Media 自身流量生效。"
         }
       ]
     },

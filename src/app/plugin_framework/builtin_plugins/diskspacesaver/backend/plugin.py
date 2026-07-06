@@ -6,6 +6,7 @@ DiskSpaceSaver Plugin v2
 import datetime
 import hashlib
 import os
+from threading import Event
 
 from app.plugin_framework.context import PluginContext
 from app.utils.json_utils import JsonUtils
@@ -16,6 +17,7 @@ class DiskSpaceSaverPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
+        self._event = Event()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -25,14 +27,18 @@ class DiskSpaceSaverPlugin:
 
     def on_disable(self):
         self.ctx.info("磁盘空间释放插件已禁用")
+        self._event.set()
 
     def run(self):
         """立即运行"""
         self.ctx.info("手动触发磁盘空间释放")
-        self._do_dedup()
+        self._do_dedup(manual=True)
 
-    def _do_dedup(self):
+    def _do_dedup(self, manual=False):
         config = self._get_config()
+        if not config.get("enabled") and not manual:
+            return
+        self._event.clear()
         path_list = config.get("path_list", "")
         file_size = config.get("file_size", 100)
         ext_list = config.get("ext_list", "")
@@ -51,6 +57,8 @@ class DiskSpaceSaverPlugin:
         result_path = os.path.join(self.ctx.data_dir, "sha1.json")
 
         for path in path_list:
+            if self._event.is_set():
+                return
             if not path or not os.path.exists(path) or not os.path.isdir(path) or not os.path.isabs(path):
                 continue
 
