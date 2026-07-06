@@ -38,7 +38,7 @@ class SearchResultService:
                 "video_encode": video_encode,
                 "size": StringUtils.str_filesize(item.SIZE),
                 "reseffect": reseffect,
-                "releasegroup": item.OTHERINFO,
+                "releasegroup": item.OTHERINFO or "未知",
             }
             title_string = f"{item.TITLE}"
             if item.YEAR:
@@ -66,7 +66,7 @@ class SearchResultService:
                 "respix": respix,
                 "restype": restype,
                 "reseffect": reseffect,
-                "releasegroup": item.OTHERINFO,
+                "releasegroup": item.OTHERINFO or "未知",
                 "video_encode": video_encode,
                 "labels": labels,
             }
@@ -74,7 +74,7 @@ class SearchResultService:
                 "value": f"{item.UPLOAD_VOLUME_FACTOR} {item.DOWNLOAD_VOLUME_FACTOR}",
                 "name": MediaInfo.get_free_string(item.UPLOAD_VOLUME_FACTOR, item.DOWNLOAD_VOLUME_FACTOR),
             }
-            releasegroup = item.OTHERINFO if item.OTHERINFO is not None else "未知"
+            releasegroup = item.OTHERINFO if item.OTHERINFO else "未知"
             filter_season = se_key.split()[0] if se_key and se_key != MediaType.MOVIE.value else None
 
             if search_results_dict.get(title_string):
