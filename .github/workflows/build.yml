@@ -91,15 +91,13 @@ jobs:
 
       - name: Prepare Telegram notification
         run: |
-          cat > notes.txt << 'NOTES_EOF'
-          ${{ steps.extract.outputs.notes }}
-          NOTES_EOF
-          sed -i 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' notes.txt
           {
             echo '<b>Nexus Media ${{ steps.extract.outputs.tag }} 已发布</b>'
             echo ''
             echo '<pre>'
-            cat notes.txt
+            sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' << 'NOTES_EOF'
+          ${{ steps.extract.outputs.notes }}
+          NOTES_EOF
             echo '</pre>'
             echo ''
             echo '📦 Docker: <code>docker pull linyuan0213/nexus-media:${{ steps.extract.outputs.version }}</code>'
