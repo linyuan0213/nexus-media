@@ -41,6 +41,7 @@ class DownloadConfig:
     params: dict[str, str] | None = None
     download_url: str | None = None
     selectors: dict | None = None
+    presigned: bool = False
 
 
 @dataclass
@@ -148,6 +149,7 @@ class SiteDefinition:
                 params=dl.get("params"),
                 download_url=dl.get("download_url"),
                 selectors=dl.get("selectors"),
+                presigned=dl.get("presigned", False),
             )
         if data.get("torrent_attr"):
             d.torrent_attr = data["torrent_attr"]

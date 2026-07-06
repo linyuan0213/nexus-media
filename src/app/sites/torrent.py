@@ -88,9 +88,12 @@ class Torrent:
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, site_def)
 
-        # 预签名下载链接（含 sign 参数，如 M-Team RSS dlv2）自带认证，
-        # 不能再附加站点 API Key，否则站点会当作 API 认证并返回 JSON 错误
-        is_presigned = bool(parse_qs(urlparse(url).query).get("sign"))
+        # 预签名下载链接自带认证(如 M-Team RSS dlv2 的 sign 参数)，
+        # 不能再附加站点 API Key，否则站点会当作 API 认证并返回 JSON 错误。
+        # 优先读站点配置 download.presigned，回退到 sign 参数启发式判断。
+        is_presigned = bool(site_def and site_def.download and site_def.download.presigned)
+        if not is_presigned:
+            is_presigned = bool(parse_qs(urlparse(url).query).get("sign"))
 
         if site_def and site_def.api and not is_presigned:
             user_config = {
