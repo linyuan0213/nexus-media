@@ -90,14 +90,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Prepare Telegram notification
+        env:
+          NOTES: ${{ steps.extract.outputs.notes }}
         run: |
+          printf '%s\n' "$NOTES" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' > notes.txt
           {
             echo '<b>Nexus Media ${{ steps.extract.outputs.tag }} 已发布</b>'
             echo ''
             echo '<pre>'
-            sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' << 'NOTES_EOF'
-          ${{ steps.extract.outputs.notes }}
-          NOTES_EOF
+            cat notes.txt
             echo '</pre>'
             echo ''
             echo '📦 Docker: <code>docker pull linyuan0213/nexus-media:${{ steps.extract.outputs.version }}</code>'

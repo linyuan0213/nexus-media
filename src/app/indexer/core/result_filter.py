@@ -216,14 +216,10 @@ class ResultFilter:
             seeders = item.get("seeders")
             peers = item.get("peers")
             page_url = item.get("page_url")
-            uploadvolumefactor = (
-                round(float(item.get("uploadvolumefactor")), 1) if item.get("uploadvolumefactor") is not None else 1.0
-            )
-            downloadvolumefactor = (
-                round(float(item.get("downloadvolumefactor")), 1)
-                if item.get("downloadvolumefactor") is not None
-                else 1.0
-            )
+            uv = item.get("uploadvolumefactor")
+            dv = item.get("downloadvolumefactor")
+            uploadvolumefactor = round(float(uv), 1) if uv not in (None, "") else 1.0
+            downloadvolumefactor = round(float(dv), 1) if dv not in (None, "") else 1.0
             imdbid = item.get("imdbid")
             labels = item.get("labels")
             indexer_name = item.get("_indexer_name", "")
@@ -373,14 +369,10 @@ class ResultFilter:
             seeders = item.get("seeders")
             peers = item.get("peers")
             page_url = item.get("page_url")
-            uploadvolumefactor = (
-                round(float(item.get("uploadvolumefactor")), 1) if item.get("uploadvolumefactor") is not None else 1.0
-            )
-            downloadvolumefactor = (
-                round(float(item.get("downloadvolumefactor")), 1)
-                if item.get("downloadvolumefactor") is not None
-                else 1.0
-            )
+            uv = item.get("uploadvolumefactor")
+            dv = item.get("downloadvolumefactor")
+            uploadvolumefactor = round(float(uv), 1) if uv not in (None, "") else 1.0
+            downloadvolumefactor = round(float(dv), 1) if dv not in (None, "") else 1.0
             enclosure = item.get("enclosure")
             cache_key = BatchIdentifier.build_cache_key(meta_info, torrent_name)
             indexer_name = cand.indexer_name

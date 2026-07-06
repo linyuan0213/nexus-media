@@ -46,7 +46,7 @@ class SearchResultService:
             mtype = item.TYPE or ""
             parsed_mtype = MediaType.from_string(mtype)
             se_key = item.ES_STRING if item.ES_STRING and parsed_mtype != MediaType.MOVIE else MediaType.MOVIE.value
-            media_type = parsed_mtype.display_name if parsed_mtype != MediaType.UNKNOWN else None
+            media_type = parsed_mtype.value if parsed_mtype != MediaType.UNKNOWN else mtype
             labels = [
                 label
                 for label in str(item.NOTE).split("|")

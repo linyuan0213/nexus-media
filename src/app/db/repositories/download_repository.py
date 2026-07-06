@@ -346,10 +346,10 @@ class DownloadRepository(BaseRepository):
                         "CATEGORY": category,
                         "TAGS": tags,
                         "IS_PAUSED": int(is_paused),
-                        "UPLOAD_LIMIT": int(float(upload_limit)),
-                        "DOWNLOAD_LIMIT": int(float(download_limit)),
-                        "RATIO_LIMIT": int(round(float(ratio_limit), 2) * 100),
-                        "SEEDING_TIME_LIMIT": int(float(seeding_time_limit)),
+                        "UPLOAD_LIMIT": int(float(upload_limit or 0)),
+                        "DOWNLOAD_LIMIT": int(float(download_limit or 0)),
+                        "RATIO_LIMIT": int(round(float(ratio_limit or 0), 2) * 100),
+                        "SEEDING_TIME_LIMIT": int(float(seeding_time_limit or 0)),
                         "DOWNLOADER": downloader,
                     }
                 )
@@ -360,10 +360,10 @@ class DownloadRepository(BaseRepository):
                         CATEGORY=category,
                         TAGS=tags,
                         IS_PAUSED=int(is_paused),
-                        UPLOAD_LIMIT=int(float(upload_limit)),
-                        DOWNLOAD_LIMIT=int(float(download_limit)),
-                        RATIO_LIMIT=int(round(float(ratio_limit), 2) * 100),
-                        SEEDING_TIME_LIMIT=int(float(seeding_time_limit)),
+                        UPLOAD_LIMIT=int(float(upload_limit or 0)),
+                        DOWNLOAD_LIMIT=int(float(download_limit or 0)),
+                        RATIO_LIMIT=int(round(float(ratio_limit or 0), 2) * 100),
+                        SEEDING_TIME_LIMIT=int(float(seeding_time_limit or 0)),
                         DOWNLOADER=downloader,
                     )
                 )

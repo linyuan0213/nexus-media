@@ -104,8 +104,8 @@ class DownloadService:
                 size=res.SIZE,
                 site=res.SITE,
                 page_url=res.PAGEURL,
-                upload_volume_factor=float(res.UPLOAD_VOLUME_FACTOR),
-                download_volume_factor=float(res.DOWNLOAD_VOLUME_FACTOR),
+                upload_volume_factor=float(res.UPLOAD_VOLUME_FACTOR or 1.0),
+                download_volume_factor=float(res.DOWNLOAD_VOLUME_FACTOR or 1.0),
             )
             _, ret, ret_msg = self._downloader.download(
                 media_info=media,
@@ -160,8 +160,8 @@ class DownloadService:
         media.enclosure = enclosure
         media.page_url = page_url
         media.size = int(size or 0)
-        media.upload_volume_factor = float(uploadvolumefactor)
-        media.download_volume_factor = float(downloadvolumefactor)
+        media.upload_volume_factor = float(uploadvolumefactor or 1.0)
+        media.download_volume_factor = float(downloadvolumefactor or 1.0)
         media.seeders = int(seeders or 0)
 
         _, ret, ret_msg = self._downloader.download(

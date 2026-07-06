@@ -11,11 +11,19 @@
 - 修复 `IndexerSiteConfig` 缺少适配器导致刷流取种异常
 - 修复图片代理路由 `/img` 缺少去重逻辑导致重复下载
 - 修复字符串工具 `SPLIT_CHARS` 缺少 `★` 分隔符导致剧集标题识别失败
+- 修复搜索进度在任务完成后返回 0 导致前端轮询永不结束：`ProgressTracker.get_process()` 在 `end()` 后因 `enable=False` 返回 `None`，改为始终返回已有进度详情
+- 修复种子限速参数（上传/下载/分享率/做种时间）为 `None` 时 `float(None)` 报错导致下载记录入库失败
+- 修复种子促销因子（`uploadvolumefactor`/`downloadvolumefactor`）为空字符串时 `float("")` 报错导致搜索结果过滤异常
+- 修复搜索结果 `media_type` 使用 `display_name`（如 "TV Show"）而非 `value`（如 "TV"）导致前端类型筛选失败
+- 修复 WEB 搜索同步阻塞请求线程导致前端超时，改为后台线程池异步执行
+
+### CI
+- 修复 Telegram 发布通知中 changelog 含 `<uniqueid>` 等不支持的 HTML 标签导致消息发送失败
 
 ### 优化
 - 数据库连接池大幅缩减：`pool_size` 50→10、`max_overflow` 100→10、`pool_recycle` 3600s→1800s，容器内存从 ~782MB 降至 ~480MB（-39%）
 - `SceneChecker` 识别不区分大小写，支持 `★08(abema先行版)★` 等特殊格式的集号提取
-- NFO 生成器支持 `<uniqueid>` 写入 TMDB/IMDB ID
+- NFO 生成器支持 `&lt;uniqueid&gt;` 写入 TMDB/IMDB ID
 - 媒体刮削器支持海报多图下载并写入 NFO
 - Docker Compose 所有服务添加日志轮转（`max-size: 10m, max-file: 3`），防止日志撑爆磁盘
 
