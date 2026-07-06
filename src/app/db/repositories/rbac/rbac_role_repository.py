@@ -23,7 +23,16 @@ class RBACRoleRepository(BaseRepository):
 
     def _get_role_by_id(self, db: Session, role_id: int) -> RBACRole | None:
         """在同一 session 内根据ID获取角色。"""
-        return db.query(RBACRole).filter(RBACRole.ID == role_id).first()
+        return (
+            db.query(RBACRole)
+            .options(
+                selectinload(RBACRole.permissions),
+                selectinload(RBACRole.menus),
+                selectinload(RBACRole.users),
+            )
+            .filter(RBACRole.ID == role_id)
+            .first()
+        )
 
     def get_role_by_id(self, role_id: int) -> RBACRole | None:
         """
@@ -49,7 +58,16 @@ class RBACRoleRepository(BaseRepository):
             角色对象或None
         """
         with self.session() as db:
-            return db.query(RBACRole).filter(RBACRole.ROLE_CODE == role_code, RBACRole.STATUS == 1).first()
+            return (
+                db.query(RBACRole)
+                .options(
+                    selectinload(RBACRole.permissions),
+                    selectinload(RBACRole.menus),
+                    selectinload(RBACRole.users),
+                )
+                .filter(RBACRole.ROLE_CODE == role_code, RBACRole.STATUS == 1)
+                .first()
+            )
 
     def get_all_roles(self, status: int | None = None) -> list[RBACRole]:
         """
@@ -85,7 +103,17 @@ class RBACRoleRepository(BaseRepository):
         with self.session() as db:
             query = db.query(RBACRole).filter(RBACRole.STATUS == 1)
             total = query.count()
-            roles = query.order_by(RBACRole.ROLE_LEVEL).offset((page - 1) * page_size).limit(page_size).all()
+            roles = (
+                query.options(
+                    selectinload(RBACRole.permissions),
+                    selectinload(RBACRole.menus),
+                    selectinload(RBACRole.users),
+                )
+                .order_by(RBACRole.ROLE_LEVEL)
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+                .all()
+            )
             return roles, total
 
     def is_role_exists(self, role_code: str) -> bool:
