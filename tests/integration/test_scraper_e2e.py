@@ -118,7 +118,10 @@ def mock_media_service() -> MagicMock:
 
 @pytest.fixture
 def scraper(mock_media_service) -> Scraper:
-    scraper = Scraper(media_service=mock_media_service)
+    mock_config = MagicMock()
+    mock_config.get.return_value = None
+    mock_config.get_user_local_language = MagicMock(return_value="chinese")
+    scraper = Scraper(media_service=mock_media_service, system_config=mock_config)
     scraper._scraper_flag = True
     scraper._scraper_nfo = {
         "movie": {"basic": True, "credits": True},
