@@ -54,6 +54,11 @@
       "seeding": {"selector": "//a[contains(@href,'pop=8')]", "pattern": "(\\d+)", "extract": "int"},
       "leeching": {"selector": "//a[contains(@href,'pop=9')]", "pattern": "(\\d+)", "extract": "int"},
       "bonus": {"selector": "//a[contains(@href,'bonus_hour')]", "pattern": "([\\d,.]+)", "extract": "float"}
+    },
+    "seeding": {
+      "page": "p_torrent/torrent_user.php?pop=8&uid={userid}",
+      "list_selector": "table#table_tm tr[id='tr_list']",
+      "size_selector": "td:nth-child(4)"
     }
   }
 }

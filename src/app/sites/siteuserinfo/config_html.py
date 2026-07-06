@@ -258,14 +258,10 @@ class ConfigHtmlUserInfo:
                 try:
                     se = row.cssselect(ss)
                     if not se:
-                        se = row.xpath(ss)
-                    sd_els = row.cssselect(sd)
-                    if not sd_els:
-                        sd_els = row.xpath(sd)
-                    if not se:
                         continue
-                    size = StringUtils.num_filesize(se[0].xpath("string(.)").strip())
+                    sd_els = row.cssselect(sd)
                     seeders = StringUtils.str_int(sd_els[0].xpath("string(.)").strip()) if sd_els else 0
+                    size = StringUtils.num_filesize(se[0].xpath("string(.)").strip())
                     total += size
                     cnt += 1
                     info.append([seeders, size])
@@ -283,47 +279,65 @@ class ConfigHtmlUserInfo:
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
         method = sc.get("method", "GET").upper()
-        path = sc.get("path", "").format(userid=self.userid or "")
-        url = urljoin(self._base_url_str + "/", path)
+        path_tpl = sc.get("path", "")
         headers = {"User-Agent": self._ua} if self._ua else {}
-        if method == "POST":
-            body = sc.get("body") or {}
-            proxy_url = self._proxies.get("http") if self._proxies else None
-            res = HttpClient(
-                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
-                rate_limiter=rate_limiter_engine,
-            ).post(
-                url=url,
-                data=JsonUtils.dumps(body),
-                headers=headers,
-                cookies=self._cookie if self._cookie else None,
-                **rl_kwargs,
-            )
-        else:
-            res = self._fetch_html(url)
-        if not res:
-            return
-        try:
-            data = JsonUtils.loads(res) if isinstance(res, str) else res
-        except Exception:
-            return
         total_size = 0
         info = []
+        pn = int(sc.get("page_start", 1))
+        has_pagination = "{page}" in path_tpl
         items_key = sc.get("response", {}).get("items_key", "data")
         size_field = sc.get("response", {}).get("size_field", "size")
         seeders_field = sc.get("response", {}).get("seeders_field", "seeders")
-        items = self._get_nested(data, items_key.split(".")) if isinstance(data, dict) else []
-        if not isinstance(items, list):
-            items = []
-        for _total, item in enumerate(items, start=1):
-            if isinstance(item, dict):
-                size = int(self._get_nested(item, size_field.split(".")) or 0)
-                seeders = int(self._get_nested(item, seeders_field.split(".")) or 0)
+        total_count_field = sc.get("response", {}).get("total_count_field", "")
+        total_count = 0
+        while True:
+            url = urljoin(self._base_url_str + "/", path_tpl.format(userid=self.userid or "", page=pn))
+            if method == "POST":
+                body = sc.get("body") or {}
+                proxy_url = self._proxies.get("http") if self._proxies else None
+                res = HttpClient(
+                    config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                    rate_limiter=rate_limiter_engine,
+                ).post(
+                    url=url,
+                    data=JsonUtils.dumps(body),
+                    headers=headers,
+                    cookies=self._cookie if self._cookie else None,
+                    **rl_kwargs,
+                )
             else:
-                size = StringUtils.num_filesize(str(item))
-                seeders = 0
-            total_size += size
-            info.append([seeders, size])
+                res = self._fetch_html(url)
+            if not res:
+                break
+            try:
+                data = JsonUtils.loads(res) if isinstance(res, str) else res
+            except Exception:
+                break
+            items = self._get_nested(data, items_key.split(".")) if isinstance(data, dict) else []
+            if not isinstance(items, list):
+                items = []
+            for _total, item in enumerate(items, start=1):
+                if isinstance(item, dict):
+                    raw_size = self._get_nested(item, size_field.split("."))
+                    if isinstance(raw_size, str) and not raw_size.isdigit():
+                        size_val = StringUtils.num_filesize(raw_size)
+                    else:
+                        size_val = int(raw_size or 0)
+                    seeders = int(self._get_nested(item, seeders_field.split(".")) or 0)
+                else:
+                    size_val = StringUtils.num_filesize(str(item))
+                    seeders = 0
+                total_size += size_val
+                info.append([seeders, size_val])
+            if total_count_field and isinstance(data, dict):
+                tc = self._get_nested(data, total_count_field.split("."))
+                total_count = int(tc or 0)
+            if not has_pagination or len(items) == 0:
+                break
+            if total_count > 0 and len(info) >= total_count:
+                break
+            pn += 1
+        self.seeding = total_count if total_count > 0 else len(info)
         self.seeding_size = total_size
         self.seeding_info = JsonUtils.dumps(info)
 

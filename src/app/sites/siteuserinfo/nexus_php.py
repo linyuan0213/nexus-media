@@ -108,10 +108,11 @@ def _parse_traffic(ins: ConfigHtmlUserInfo) -> None:
         if not tmps:
             tmps = doc.xpath('//a[contains(@href,"mybonus")]/text()')
         if tmps:
-            bm = re.search(r"([\d,.]+)", str(tmps[0]).strip())
-            if bm and bm.group(1):
-                ins.bonus = StringUtils.str_float(bm.group(1))
-                return
+            for t in tmps:
+                bm = re.search(r"([\d,.]+)", str(t).strip())
+                if bm and bm.group(1):
+                    ins.bonus = StringUtils.str_float(bm.group(1))
+                    return
     m = re.search(r"mybonus.[\[\]:：<>/a-zA-Z_\-=\"'\s#;.(使用魔力值豆]+\s*([\d,.]+)[<()&\s]", html)
     if m and m.group(1).strip():
         ins.bonus = StringUtils.str_float(m.group(1))
@@ -128,6 +129,15 @@ def _parse_seeding(ins: ConfigHtmlUserInfo) -> None:
     detail_page_text = ins._fetch_html(urljoin(ins._base_url_str + "/", f"userdetails.php?id={ins.userid}"))
     referer = f"{ins._base_url_str}/userdetails.php?id={ins.userid}"
     if detail_page_text:
+        detail_text = re.sub(r"&nbsp;", " ", detail_page_text)
+        m = re.search(r"\(\s*(\d+)\s*个种子[,，]\s*共计\s*([\d.]+\s*[KMGT]B)\s*\)", detail_text)
+        if not m:
+            m = re.search(r"(\d+)\s*个种子[,，]\s*共计\s*([\d.]+\s*[KMGT]B)", detail_text)
+        if m:
+            ins.seeding = StringUtils.str_int(m.group(1))
+            ins.seeding_size = StringUtils.num_filesize(m.group(2))
+            ins.seeding_info = "[]"
+            return
         detail_doc: Any = etree.HTML(detail_page_text)
         if detail_doc is not None:
             for tag, base in [("a", "@href"), ("form", "@action")]:
@@ -140,7 +150,6 @@ def _parse_seeding(ins: ConfigHtmlUserInfo) -> None:
                         if href not in page_paths:
                             page_paths.append(href)
                         break
-    page_paths.append(f"getusertorrentlist.php?do_ajax=1&userid={ins.userid}&type=seeding")
     for page_path in page_paths:
         page_url = urljoin(ins._base_url_str + "/", page_path)
         is_ajax = "ajax" in page_path.lower() or "torrentlist" in page_path.lower()
@@ -151,8 +160,6 @@ def _parse_seeding(ins: ConfigHtmlUserInfo) -> None:
         if doc is None:
             continue
         _parse_seeding_html(ins, doc, html_text)
-        if ins.seeding > 0:
-            break
         next_url = _next_page_url(ins, doc)
         while next_url:
             html_text = ins._fetch_html(next_url, referer=referer)
@@ -163,6 +170,26 @@ def _parse_seeding(ins: ConfigHtmlUserInfo) -> None:
                 break
             _parse_seeding_html(ins, doc, html_text)
             next_url = _next_page_url(ins, doc)
+
+
+def _detect_col_index(doc: Any, table_prefix: str, class_names: list[str]) -> int:
+    for cls_name in class_names:
+        tds = doc.xpath(f'{table_prefix}//tr[1]//img[@class="{cls_name}"]/ancestor::td[1]')
+        if not tds:
+            continue
+        header_row = doc.xpath(f"{table_prefix}//tr[1]")[0]
+        for i, td in enumerate(header_row.xpath("td"), start=1):
+            if td is tds[0]:
+                return i
+    return 4
+
+
+def _is_filesize_text(text: str) -> bool:
+    return bool(re.search(r"\d+(\.\d+)?\s*[KMGTP]?B?", text, re.I))
+
+
+def _is_int_text(text: str) -> bool:
+    return bool(re.search(r"^\d+$", text.strip()))
 
 
 def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> None:
@@ -188,7 +215,10 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> No
     if list_sel:
         rows = doc.cssselect(list_sel)
         if not rows:
-            rows = doc.xpath(list_sel)
+            try:
+                rows = doc.xpath(list_sel)
+            except Exception:
+                rows = []
         info = JsonUtils.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
         size_sel = sc.get("size_selector", "td:nth-child(4)")
         seeders_sel = sc.get("seeders_selector", "td:nth-child(5)")
@@ -198,14 +228,10 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> No
             try:
                 se = row.cssselect(size_sel)
                 if not se:
-                    se = row.xpath(size_sel)
-                sd_els = row.cssselect(seeders_sel)
-                if not sd_els:
-                    sd_els = row.xpath(seeders_sel)
-                if not se:
                     continue
-                size = StringUtils.num_filesize(se[0].xpath("string(.)").strip())
+                sd_els = row.cssselect(seeders_sel)
                 seeders = StringUtils.str_int(sd_els[0].xpath("string(.)").strip()) if sd_els else 0
+                size = StringUtils.num_filesize(se[0].xpath("string(.)").strip())
                 ins.seeding_size += size
                 ins.seeding += 1
                 info.append([seeders, size])
@@ -213,17 +239,39 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> No
                 log.debug(f"[nexus_php]忽略异常: {e}")
         ins.seeding_info = JsonUtils.dumps(info)
         return
-    table_prefix = '//table[@class="torrents"]' if doc.xpath('//table[@class="torrents"]') else ""
-    size_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[4]")
-    seeders_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[5]/b/a/text()")
-    if not seeders_texts:
-        seeders_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[5]//text()")
+    table_prefix = (
+        '//table[@class="torrents"]'
+        if doc.xpath('//table[@class="torrents"]')
+        else (
+            '//table[.//td[contains(@class,"colhead")]]'
+            if doc.xpath('//table[.//td[contains(@class,"colhead")]]')
+            else ""
+        )
+    )
+    if table_prefix and "torrents" not in table_prefix:
+        size_col = _detect_col_index(doc, table_prefix, ["size"])
+        seeders_col = _detect_col_index(doc, table_prefix, ["seeders"])
+    else:
+        size_col = 4
+        seeders_col = 5
+    size_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[{size_col}]")
+    if table_prefix:
+        seeders_els = doc.xpath(f"{table_prefix}//tr[position()>1]/td[{seeders_col}]")
+        seeders_texts = [el.xpath("string(.)").strip() for el in seeders_els]
+    else:
+        seeders_texts = doc.xpath(f"{table_prefix}//tr[position()>1]/td[{seeders_col}]//text()")
     if not isinstance(size_texts, list):
         return
     info = JsonUtils.loads(ins.seeding_info) if ins.seeding_info and ins.seeding_info != "[]" else []
     for i, sz in enumerate(size_texts):
-        size = StringUtils.num_filesize(str(sz.xpath("string(.)")).strip())
-        sd = StringUtils.str_int(seeders_texts[i]) if isinstance(seeders_texts, list) and i < len(seeders_texts) else 0
+        size_str = str(sz.xpath("string(.)")).strip()
+        if not _is_filesize_text(size_str):
+            continue
+        size = StringUtils.num_filesize(size_str)
+        sd = 0
+        if isinstance(seeders_texts, list) and i < len(seeders_texts):
+            sd_str = str(seeders_texts[i]).strip()
+            sd = StringUtils.str_int(sd_str) if _is_int_text(sd_str) else 0
         ins.seeding_size += size
         ins.seeding += 1
         info.append([sd, size])
@@ -232,12 +280,17 @@ def _parse_seeding_html(ins: ConfigHtmlUserInfo, doc: Any, html_text: str) -> No
 
 def _next_page_url(ins: ConfigHtmlUserInfo, doc: Any) -> str | None:
     links = doc.xpath('//a[contains(.,"下一页") or contains(.,"下一頁")]/@href')
-    if not links:
-        return None
-    next_url = links[-1].strip()
-    if ins.userid and "userid" not in next_url:
-        next_url = f"{next_url}&userid={ins.userid}&type=seeding"
-    return urljoin(ins._base_url_str + "/", str(next_url or ""))
+    if links:
+        next_url = str(links[-1]).strip()
+        if "javascript:" in next_url:
+            m = re.search(r"getusertorrentlistajax\(\d+,'\w+','[^']*',(\d+)\)", next_url)
+            if m and m.group(1):
+                next_url = f"getusertorrentlistajax.php?userid={ins.userid}&type=seeding&page={m.group(1)}"
+                return urljoin(ins._base_url_str + "/", next_url)
+        if ins.userid and "userid" not in next_url:
+            next_url = f"{next_url}&userid={ins.userid}&type=seeding"
+        return urljoin(ins._base_url_str + "/", next_url)
+    return None
 
 
 def _parse_detail(ins: ConfigHtmlUserInfo) -> None:

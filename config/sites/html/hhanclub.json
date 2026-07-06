@@ -186,14 +186,46 @@
   },
   "user_info": {
     "type": "html",
+    "page": "userdetails.php?id={userid}",
+    "fields": {
+      "user_level": {
+        "selector": "//span[contains(text(),\"等级\")]/following-sibling::span[1]/img[1]",
+        "attribute": "alt",
+        "extract": "text"
+      },
+      "join_at": {
+        "selector": "//span[contains(text(),\"加入日期\")]/following-sibling::span[1]",
+        "extract": "text",
+        "pattern": "\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"
+      },
+      "upload": {
+        "selector": "//span[contains(text(),\"上传量\")]/following-sibling::span[1]",
+        "extract": "filesize"
+      },
+      "download": {
+        "selector": "//span[contains(text(),\"下载量\")]/following-sibling::span[1]",
+        "extract": "filesize"
+      },
+      "ratio": {
+        "selector": "//span[contains(text(),\"分享率\")]/following-sibling::span[1]",
+        "extract": "float",
+        "pattern": "^([\\d.]+)"
+      },
+      "bonus": {
+        "selector": "//span[contains(text(),\"做种积分\")]/following-sibling::span[1]",
+        "extract": "float"
+      }
+    },
     "seeding": {
       "type": "api",
       "method": "GET",
-      "path": "/getusertorrentlistajax.php?type=seeding&userid={userid}&ajax=1",
+      "path": "/getusertorrentlistajax.php?type=seeding&userid={userid}&ajax=1&page={page}",
+      "page_start": 0,
       "response": {
         "items_key": "data",
         "size_field": "size",
-        "seeders_field": "seeders"
+        "seeders_field": "seeders",
+        "total_count_field": "count"
       }
     }
   }
