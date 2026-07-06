@@ -18,7 +18,7 @@
 - 修复 WEB 搜索同步阻塞请求线程导致前端超时，改为后台线程池异步执行
 
 ### CI
-- 修复 Telegram 发布通知中 changelog 含 `<uniqueid>` 等不支持的 HTML 标签导致消息发送失败
+- 修复 Telegram 发布通知中 changelog 含未转义 HTML 标签导致消息发送失败
 
 ### 优化
 - 数据库连接池大幅缩减：`pool_size` 50→10、`max_overflow` 100→10、`pool_recycle` 3600s→1800s，容器内存从 ~782MB 降至 ~480MB（-39%）
