@@ -56,6 +56,9 @@ class IndexerSiteConfigRepositoryAdapter(IIndexerSiteConfigRepository):
     def update_enabled(self, site_name: str, enabled: bool) -> None:
         self._repo.update_enabled(site_name=site_name, enabled=enabled)
 
+    def delete_by_name(self, site_name: str) -> None:
+        self._repo.delete_by_name(site_name)
+
     def update_download_setting(self, site_name: str, download_setting: int | None) -> None:
         self._repo.update_download_setting(site_name=site_name, download_setting=download_setting)
 

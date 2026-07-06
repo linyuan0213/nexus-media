@@ -129,7 +129,7 @@ class SiteUserInfo:
                 if not site_user_info.site_favicon:
                     site_def = self._site_engine.get_by_url(site_url)
                     if site_def and site_def.favicon:
-                        self._fetch_favicon_from_url(site_user_info, site_def.favicon)
+                        site_user_info.site_favicon = site_def.favicon
 
                 # 获取不到数据时，仅返回错误信息，不做历史数据更新
                 if site_user_info.err_msg:
@@ -522,7 +522,7 @@ class SiteUserInfo:
             return min(dates).strftime("%Y-%m-%d")
         return ""
 
-    def _fetch_favicon_from_url(self, site_user_info, url):
+    def _fetch_favicon_from_url(self, site_user_info, url, ua=""):
         try:
             engine = self._site_engine
             rate_limiter = getattr(engine, "site_limiter", None)
@@ -531,7 +531,7 @@ class SiteUserInfo:
                 config=HttpClientConfig(timeout=10),
                 rate_limiter=rate_limiter_engine,
             )
-            res = client.get(url=url)
+            res = client.get(url=url, headers={"User-Agent": ua or "Mozilla/5.0"})
             site_user_info.site_favicon = base64.b64encode(res.content).decode()
         except Exception as e:  # noqa: BLE001
             log.debug(f"[site_userinfo]忽略异常: {e}")

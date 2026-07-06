@@ -32,6 +32,7 @@ async def _serve_image(
     image_url: str,
     size: str | None = None,
     referer: str | None = None,
+    media_type: str = "image/jpeg",
     downloader=None,
 ):
     """FastAPI 版本的缓存检查/下载/返回图片"""
@@ -40,7 +41,7 @@ async def _serve_image(
         try:
             stat = os.stat(cache_path)
             if stat.st_size > 0 and time.time() - stat.st_mtime < MAX_CACHE_DAYS * 24 * 3600:
-                return FileResponse(cache_path, media_type="image/jpeg")
+                return FileResponse(cache_path, media_type=media_type)
             else:
                 os.remove(cache_path)
         except (ServiceError, DomainError) as e:
@@ -71,7 +72,7 @@ async def _serve_image(
     except Exception as e:
         log.error(f"[ImageProxy]保存缓存失败: {str(e)}")
 
-    return Response(image_data, media_type="image/jpeg")
+    return Response(image_data, media_type=media_type)
 
 
 @router.get("/tmdb/{size}/{img_path:path}", summary="代理 TMDB 图片")
@@ -152,3 +153,19 @@ def proxy_image_redirect(request: Request, url: str | None = None):
 
     # 兜底：无法生成代理路径时，直接代理
     raise HTTPException(status_code=404, detail="无法处理该图片 URL")
+
+
+@router.get("/favicon/external/{encoded_url:path}", summary="代理外部 favicon URL")
+async def proxy_favicon_external(encoded_url: str):
+    """代理外部 favicon URL."""
+    favicon_url = urllib.parse.unquote(encoded_url)
+    cache_path = get_cache_path("favicon", urllib.parse.quote(favicon_url, safe=""))
+    return await _serve_image(cache_path, favicon_url, referer=favicon_url, media_type="image/x-icon")
+
+
+@router.get("/favicon/{domain:path}", summary="代理站点 favicon")
+async def proxy_favicon(domain: str):
+    """代理站点 favicon.ico，下载到本地缓存并返回."""
+    favicon_url = f"https://{domain}/favicon.ico"
+    cache_path = get_cache_path("favicon", domain)
+    return await _serve_image(cache_path, favicon_url, referer=f"https://{domain}", media_type="image/x-icon")

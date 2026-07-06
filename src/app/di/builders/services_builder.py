@@ -34,7 +34,6 @@ from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositor
 from app.db.repositories.word_repo_adapter import CustomWordGroupRepositoryAdapter, CustomWordRepositoryAdapter
 from app.di.models import BusinessFacades, InfrastructureObjects, ServiceObjects
 from app.downloader.client_factory import DownloadClientFactory
-from app.indexer.configuration import IndexerHelper
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.indexer import Indexer
 from app.infrastructure.progress.tracker import ProgressTracker
@@ -195,7 +194,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
 
     indexer = Indexer(
         search_pipeline=search_pipeline,
-        indexer_helper=IndexerHelper(),
+        indexer_helper=infra.indexer_helper,
         site_cache=site_cache,
         site_engine=site_engine,
         site_config_repo=indexer_site_config_repo,
@@ -203,7 +202,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
 
     indexer_service = IndexerService(
         indexer=indexer,
-        indexer_helper=IndexerHelper(),
+        indexer_helper=infra.indexer_helper,
         site_cache=site_cache,
         site_engine=site_engine,
         indexer_statistics_repo=IndexerStatisticsRepositoryAdapter(),

@@ -42,6 +42,9 @@ def _parse_userid(ins: ConfigHtmlUserInfo) -> None:
         ins.userid = m.group(1)
     elif re.search(r"userdetails", html):
         ins.userid = None
+    m = re.search(r"user_detail\.php\?uid=(\d+)", html)
+    if m and m.group(1):
+        ins.userid = m.group(1)
 
 
 def _parse_base_info(ins: ConfigHtmlUserInfo) -> None:

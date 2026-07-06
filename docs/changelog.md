@@ -1,5 +1,28 @@
 # 版本历史
 
+## v4.2.2 (2026-07-06)
+
+### 修复
+- 修复插件首次启用菜单不加载：`RBACMenu.to_dict()` 在 session 关闭后访问 `children` 触发 `DetachedInstanceError`，异常被静默吞掉导致角色菜单分配失败。改为 `object_session(self) is not None` 检查
+- 修复 `HttpClient` / `AsyncHttpClient` keep-alive 模式下连接复用导致远程返回陈旧数据
+- 修复 `CookieCloud` 插件 `re.match` → `re.search` 关键词匹配失效、同步时未正确遍历所有站点、域名别名匹配不完整
+- 修复站点 favicon 下载时未处理连接超时导致引擎初始化阻塞
+- 修复站点图标缓存 key 未区分域名导致不同站点图标错乱
+- 修复 `IndexerSiteConfig` 缺少适配器导致刷流取种异常
+- 修复图片代理路由 `/img` 缺少去重逻辑导致重复下载
+- 修复字符串工具 `SPLIT_CHARS` 缺少 `★` 分隔符导致剧集标题识别失败
+
+### 优化
+- 数据库连接池大幅缩减：`pool_size` 50→10、`max_overflow` 100→10、`pool_recycle` 3600s→1800s，容器内存从 ~782MB 降至 ~480MB（-39%）
+- `SceneChecker` 识别不区分大小写，支持 `★08(abema先行版)★` 等特殊格式的集号提取
+- NFO 生成器支持 `<uniqueid>` 写入 TMDB/IMDB ID
+- 媒体刮削器支持海报多图下载并写入 NFO
+- Docker Compose 所有服务添加日志轮转（`max-size: 10m, max-file: 3`），防止日志撑爆磁盘
+
+### 新增
+- 前端 Docker 镜像新增 `BACKEND_HOST` / `BACKEND_PORT` 环境变量，支持独立 `docker run` 部署时动态指定后端地址
+- Docker 部署文档：修正后端镜像描述（Debian 非 Alpine），新增前端单独部署章节，统一 `installation.md` 与 `docker/readme.md`
+
 ## v4.2.1 (2026-07-05)
 
 ### 修复

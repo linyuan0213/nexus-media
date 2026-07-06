@@ -25,23 +25,18 @@
         "path": "/api/torrent/advancedSearch",
         "body": {
           "page": "{page_1}",
-          "size": 100,
+          "size": 20,
           "type": "title",
+          "order": "",
           "keyword": "{keyword}",
-          "sorter": "id",
-          "order": "desc",
           "tags": [],
-          "category": [
-            501,
-            502,
-            503,
-            504
-          ],
+          "category": [],
           "medium": [],
           "videoCoding": [],
-          "audioCoding": [],
           "resolution": [],
-          "group": []
+          "connStatus": 0,
+          "downloadStatus": 0,
+          "more": false
         },
         "response": {
           "items_key": "data.torrents",
@@ -75,7 +70,7 @@
               "source": "uploadRate"
             },
             "imdbid": {
-              "source": "imdb"
+              "source": "imdb_id"
             },
             "enclosure": {
               "type": "template",
@@ -97,19 +92,22 @@
       },
       "test_connection": {
         "method": "GET",
-        "path": "/"
+        "path": "/api/user/getInfo",
+        "params": {
+          "id": ""
+        }
       },
       "user_info": {
         "method": "GET",
-        "path": "/api/user/info"
+        "path": "/api/user/getInfo"
       }
     }
   },
   "user_info": {
     "type": "api",
-    "profile": {
-      "method": "GET",
-      "path": "/api/user/getMainInfo",
+"profile": {
+        "method": "GET",
+        "path": "/api/user/getInfo",
       "response": {
         "field_mapping": {
           "username": {
@@ -159,10 +157,13 @@
   },
   "torrent_attr": {
     "method": "GET",
-    "path": "/api/torrent/info/{tid}",
+    "path": "/api/torrent/info",
+    "params": {
+      "id": "{tid}"
+    },
     "response": {
-      "free_key": "data.discount",
-      "free_value": "FREE"
+      "free_key": "data.torrent.downloadRate",
+      "free_value": 0
     }
   },
   "favicon": "https://zhuque.in/assets/images/512.png"

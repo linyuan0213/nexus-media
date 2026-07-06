@@ -6,7 +6,7 @@ RBAC (Role-Based Access Control) 权限管理模型
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, object_session, relationship
 
 from app.db.models.base import Base
 
@@ -277,14 +277,15 @@ class RBACMenu(Base):
         """转换为字典"""
         # 处理children，避免递归和类型错误
         children_list = []
-        if self.children:
+        if object_session(self) is not None:
             try:
-                # children可能是列表或单个对象
-                if isinstance(self.children, list):
-                    children_list = [child.to_dict() for child in self.children]
-                else:
-                    # 单个对象情况
-                    children_list = [self.children.to_dict()]
+                if self.children:
+                    # children可能是列表或单个对象
+                    if isinstance(self.children, list):
+                        children_list = [child.to_dict() for child in self.children]
+                    else:
+                        # 单个对象情况
+                        children_list = [self.children.to_dict()]
             except (TypeError, AttributeError):
                 children_list = []
 

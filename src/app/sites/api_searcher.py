@@ -111,9 +111,12 @@ class ApiSiteSearcher:
                 params = dict(search_config.get("params") or {})
                 params = self._render_template(params, **template_vars)
                 res = client.get(url=url, params=params, headers=headers, **rl_kwargs)
+            if not res.is_success:
+                log.warn(f"[ApiSiteSearcher]{self._site.name} HTTP {res.status_code}, url={url}")
+                return []
             resp_data = res.json()
-        except Exception:
-            log.warn(f"[ApiSiteSearcher]{self._site.name} 搜索失败, url={url}")
+        except Exception as e:
+            log.warn(f"[ApiSiteSearcher]{self._site.name} 搜索失败, url={url}, error={e}")
             return []
         result = self._parse_response(resp_data, search_config)
         log.warn(f"[ApiSiteSearcher]{self._site.name} 返回 {len(result)} 条结果, url={url}")
@@ -187,6 +190,14 @@ class ApiSiteSearcher:
         items = self._get_nested(data, items_key.split(".")) or []
         if not isinstance(items, list):
             items = []
+        torrents_key = response_config.get("torrents_key", "")
+        if torrents_key and isinstance(items, list):
+            flattened = []
+            for group in items:
+                sub = group.get(torrents_key, []) if isinstance(group, dict) else []
+                if isinstance(sub, list):
+                    flattened.extend(sub)
+            items = flattened
         results = []
         for item in items:
             result = {}

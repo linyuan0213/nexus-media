@@ -2,9 +2,10 @@
 
 ## 镜像特点
 
-- 基于 Alpine，镜像体积小
+- 基于 Debian（`python:3.14-slim-trixie`）
 - 支持 amd64 / arm64 架构
-- 非 root 用户运行（nexus:nexus）
+- 内嵌 nginx 反代，统一 8080 端口对外
+- 非 root 用户运行（nexus:nexus，UID 911）
 - s6-overlay 进程管理，支持优雅退出
 - 数据库迁移在启动时自动执行（alembic upgrade head）
 
@@ -92,11 +93,56 @@ services:
     container_name: nexus-media
 ```
 
+## 单独部署前端
+
+### 两种后端地址配置方式
+
+前端 Docker 镜像支持两种方式指定后端地址：
+
+1. **环境变量**（Nginx 代理层）：容器启动时通过 `BACKEND_HOST` / `BACKEND_PORT` 配置 nginx 反代目标，所有 `/api/`、`/ws` 等请求由 nginx 转发。
+2. **运行时设置**（浏览器端）：在页面 **Settings** 中设置后端地址，前端直接跨域请求后端，绕过 nginx 代理。该值存储在浏览器 `localStorage` 中。
+
+### 环境变量方式
+
+**docker cli**
+
+```bash
+docker run -d \
+  --name nexus-media-web \
+  -p 8080:8080 \
+  -e BACKEND_HOST=192.168.1.100 \
+  -e BACKEND_PORT=3000 \
+  linyuan0213/nexus-media-web:latest
+```
+
+**docker-compose**
+
+```yaml
+services:
+  nexus-media-web:
+    image: linyuan0213/nexus-media-web:latest
+    ports:
+      - 8080:8080
+    environment:
+      - BACKEND_HOST=nexus-media
+      - BACKEND_PORT=8080
+    restart: always
+    container_name: nexus-media-web
+```
+
+> 使用项目根目录 `docker-compose.yml` 部署时无需手动设置，默认值即为 compose 网络内后端服务名。
+
+### 运行时设置方式
+
+若不设置环境变量，或需要动态切换后端，可在前端页面 **Settings** → **Backend URL** 中输入后端完整地址（如 `http://192.168.1.100:3000`）。此时前端直连后端，需确保后端允许 CORS。
+
 ## 环境变量
 
 环境变量优先级：`环境变量 > .env > config.yaml`。除 Docker 镜像专用变量外，其余变量对应 `src/app/core/settings.py` 中的配置节点，使用 `__` 作为嵌套分隔符，例如 `APP__WEB_HOST`、`DATABASE__TYPE`、`REDIS__HOST`。
 
 ### Docker 镜像专用变量
+
+**后端镜像 (`linyuan0213/nexus-media`)**
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
@@ -106,6 +152,13 @@ services:
 | `NEXUS_PORT` | 3000 | 容器内部服务端口 |
 | `SKIP_MIGRATION` | false | 设为 `true` 跳过启动时数据库迁移 |
 | `TZ` | Asia/Shanghai | 时区 |
+
+**前端镜像 (`linyuan0213/nexus-media-web`)**
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `BACKEND_HOST` | `nexus-media` | 后端服务地址（compose 内为服务名，独立部署时设为 IP 或域名） |
+| `BACKEND_PORT` | `8080` | 后端服务端口（容器内端口，即 compose 中后端 `host` 端口） |
 
 ### 前后端配置变量（`app` 节点）
 

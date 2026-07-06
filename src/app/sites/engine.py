@@ -22,6 +22,7 @@ from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.sites import engine_connection, engine_download, engine_tools, engine_user_info
+from app.sites.utils import is_logged_in
 from app.utils import JsonUtils
 from app.utils.config_tools import get_proxies
 
@@ -71,6 +72,7 @@ class SiteHtmlConfig:
     conf: dict = field(default_factory=dict)
     browse: dict | None = None
     parser_type: str = "flat"
+    test_connection: str | None = None
 
 
 @dataclass
@@ -98,9 +100,14 @@ class SiteDefinition:
         if not url or not self.domain:
             return False
         url_lower = url.lower()
-        if self.domain.lower() in url_lower:
+        domain_lower = self.domain.lower()
+        if domain_lower in url_lower or url_lower in domain_lower:
             return True
-        return any(alias.lower() in url_lower for alias in self.domain_aliases)
+        url_stripped = url_lower.replace("www.", "")
+        domain_stripped = domain_lower.replace("www.", "")
+        if domain_stripped in url_stripped or url_stripped in domain_stripped:
+            return True
+        return any(alias.lower() in url_lower or url_lower in alias.lower() for alias in self.domain_aliases)
 
     @classmethod
     def from_dict(cls, data: dict) -> "SiteDefinition":
@@ -128,6 +135,7 @@ class SiteDefinition:
                 conf=html.get("conf", {}),
                 browse=html.get("browse"),
                 parser_type=html.get("parser_type", "flat"),
+                test_connection=html.get("test_connection"),
             )
         if data.get("download"):
             dl = data["download"]
@@ -519,9 +527,17 @@ class SiteEngine:
             start = time.time()
             result = engine_tools._call_endpoint(self, test_cfg, site, user_config, {})
             latency = int((time.time() - start) * 1000)
-            if result is not None:
-                return True, "连接成功", latency
-            return False, "连接失败", latency
+            if result is None:
+                return False, "连接失败", latency
+            raw = JsonUtils.dumps(result, separators=(",", ":")) if not isinstance(result, str) else result
+            if not is_logged_in(raw):
+                auth_type = (site.api.auth.get("type") if site.api.auth else "") or ""
+                if auth_type in ("cookie", "csrf"):
+                    return False, "Cookie失效", latency
+                if auth_type == "bearer":
+                    return False, "Token失效", latency
+                return False, "密钥失效", latency
+            return True, "连接成功", latency
         if site.html:
             return engine_connection.test_html_connection(self, site, user_config)
         return False, "未配置 API 或 HTML 端点", 0

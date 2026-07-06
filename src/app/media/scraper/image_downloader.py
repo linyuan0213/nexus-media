@@ -1,6 +1,7 @@
 """刮削器 — 图片与 NFO 文件下载/保存"""
 
 import io
+import mimetypes
 import os
 
 import log
@@ -9,6 +10,16 @@ from app.infrastructure.http.client import HttpClient
 from app.storage.backends.base import StorageBackend
 from app.utils import ExceptionUtils
 from app.utils.commons import retry
+
+_CONTENT_TYPE_EXT_MAP = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+    "image/bmp": ".bmp",
+    "image/tiff": ".tiff",
+    "image/svg+xml": ".svg",
+}
 
 
 class ImageDownloader:
@@ -27,7 +38,8 @@ class ImageDownloader:
         if not url or not out_path:
             return
         if itype:
-            image_path = os.path.join(out_path, "{}.{}".format(itype, str(url).split(".")[-1]))
+            ext = self._guess_extension(url)
+            image_path = os.path.join(out_path, f"{itype}{ext}")
         else:
             image_path = out_path
         if not force and os.path.exists(image_path):
@@ -36,12 +48,13 @@ class ImageDownloader:
             log.info(f"[Scraper]正在下载{itype}图片：{url} ...")
             r = HttpClient().get(url=url, raise_exception=True)
             if r:
+                resolved_path = self._resolve_extension(image_path, r.headers.get("content-type", ""))
                 if self._dst_backend:
-                    self._dst_backend.write_stream(image_path, io.BytesIO(r.content), len(r.content))
+                    self._dst_backend.write_stream(resolved_path, io.BytesIO(r.content), len(r.content))
                 else:
-                    with open(file=image_path, mode="wb") as img:
+                    with open(file=resolved_path, mode="wb") as img:
                         img.write(r.content)
-                log.info(f"[Scraper]{itype}图片已保存：{image_path}")
+                log.info(f"[Scraper]{itype}图片已保存：{resolved_path}")
             else:
                 log.info(f"[Scraper]{itype}图片下载失败，请检查网络连通性")
         except HttpClientError as ex:
@@ -49,6 +62,28 @@ class ImageDownloader:
         except Exception as err:
             log.error(f"[Scraper]下载{itype}图片失败：{image_path}，错误：{err}")
             ExceptionUtils.exception_traceback(err)
+
+    @staticmethod
+    def _guess_extension(url: str) -> str:
+        url_path = str(url).split("?")[0]
+        _, ext = os.path.splitext(url_path)
+        if ext and len(ext) <= 5 and ext.isascii():
+            return ext.lower()
+        return ".jpg"
+
+    @staticmethod
+    def _resolve_extension(image_path: str, content_type: str) -> str:
+        ct = content_type.split(";")[0].strip().lower()
+        mapped = _CONTENT_TYPE_EXT_MAP.get(ct)
+        if mapped:
+            base, _ = os.path.splitext(image_path)
+            return base + mapped
+        if ct.startswith("image/"):
+            guessed = mimetypes.guess_extension(ct)
+            if guessed:
+                base, _ = os.path.splitext(image_path)
+                return base + guessed
+        return image_path
 
     def save_nfo(self, doc, out_file):
         """保存 NFO XML 文件"""

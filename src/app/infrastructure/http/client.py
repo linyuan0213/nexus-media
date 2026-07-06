@@ -1,6 +1,7 @@
 """同步 HTTP 客户端 Facade."""
 
 import contextlib
+import hashlib
 import io
 import threading
 from collections.abc import Callable
@@ -26,7 +27,12 @@ class _ClientPool:
 
     def _make_key(self, config: HttpClientConfig) -> tuple:
         headers = tuple(sorted((config.default_headers or {}).items()))
-        auth_key = type(config.auth).__name__ if config.auth is not None else ""
+        auth_key = ""
+        if config.auth is not None:
+            auth_key = type(config.auth).__name__
+            cookies = getattr(config.auth, "_cookies", None)
+            if cookies:
+                auth_key += "::" + hashlib.md5(str(sorted(cookies.items())).encode()).hexdigest()
         return (
             config.proxy_url,
             headers,

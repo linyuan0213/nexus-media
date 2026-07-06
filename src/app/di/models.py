@@ -53,6 +53,7 @@ class InfrastructureObjects:
     plugin_registry: PluginRegistry
     apikey_service: APIKeyService
     indexer_site_config_repo: IndexerSiteConfigRepositoryAdapter
+    indexer_helper: Any
 
 
 @dataclass(frozen=True)

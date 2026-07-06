@@ -355,9 +355,15 @@ def get_plugin_asset(
 
     if not os.path.exists(target) or not os.path.isfile(target):
         if relative_path.endswith("index.mjs"):
-            # 返回空 ESM 占位，避免前端 loader 报 404
             empty_esm = "export default {};\n"
-            return Response(content=empty_esm, media_type="application/javascript")
+            return Response(
+                content=empty_esm,
+                media_type="application/javascript",
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+            )
         return fail(msg="文件不存在")
 
-    return FileResponse(target)
+    return FileResponse(
+        target,
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )

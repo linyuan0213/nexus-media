@@ -197,21 +197,25 @@ class Scraper:
 
         self._download_tv_images(media, tv_root, scraper_tv_pic, force_pic)
 
+        need_season_detail = (
+            scraper_tv_nfo.get("season_basic")
+            or scraper_tv_nfo.get("episode_basic")
+            or scraper_tv_nfo.get("episode_credits")
+            or scraper_tv_pic.get("season_poster")
+        )
+        seasoninfo = None
+        if need_season_detail:
+            seasoninfo = self.media.get_tmdb_tv_season_detail(tmdbid=media.tmdb_id, season=int(media.get_season_seq()))
+
         # season nfo
         if scraper_tv_nfo.get("season_basic"):
             if force_nfo or not os.path.exists(os.path.join(dir_path, "season.nfo")):
-                seasoninfo = self.media.get_tmdb_tv_season_detail(
-                    tmdbid=media.tmdb_id, season=int(media.get_season_seq())
-                )
                 if seasoninfo:
                     self._nfo_gen.gen_season_nfo(seasoninfo, int(media.get_season_seq()), dir_path)
 
         # episode nfo
         if scraper_tv_nfo.get("episode_basic") or scraper_tv_nfo.get("episode_credits"):
             if force_nfo or not os.path.exists(os.path.join(dir_path, f"{file_name}.nfo")):
-                seasoninfo = self.media.get_tmdb_tv_season_detail(
-                    tmdbid=media.tmdb_id, season=int(media.get_season_seq())
-                )
                 if seasoninfo:
                     self._nfo_gen.gen_episode_nfo(
                         seasoninfo,
@@ -230,17 +234,13 @@ class Scraper:
             )
             if seasonposter:
                 self._downloader.download(seasonposter, tv_root, season_poster, force_pic)
-            else:
-                seasoninfo = self.media.get_tmdb_tv_season_detail(
-                    tmdbid=media.tmdb_id, season=int(media.get_season_seq())
+            elif seasoninfo:
+                self._downloader.download(
+                    ImageProxy.get_tmdbimage_url(seasoninfo.get("poster_path"), prefix="original", use_proxy=False),
+                    tv_root,
+                    season_poster,
+                    force_pic,
                 )
-                if seasoninfo:
-                    self._downloader.download(
-                        ImageProxy.get_tmdbimage_url(seasoninfo.get("poster_path"), prefix="original", use_proxy=False),
-                        tv_root,
-                        season_poster,
-                        force_pic,
-                    )
 
         # season banner
         if scraper_tv_pic.get("season_banner"):

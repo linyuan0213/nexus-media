@@ -97,6 +97,12 @@ class PluginFrameworkRepository(BaseRepository):
             db.query(PLUGINMANIFEST).filter(plugin_id == PLUGINMANIFEST.ID).update({"INSTALLED": installed})
             return True
 
+    def get_enabled_plugin_ids(self) -> list[str]:
+        """获取所有已启用的插件ID"""
+        with self.session() as db:
+            rows = db.query(PLUGINMANIFEST.ID).filter(PLUGINMANIFEST.ENABLED).all()
+            return [r[0] for r in rows]
+
     # ==================== Plugin Config ====================
 
     def get_config(self, plugin_id: str) -> PLUGINCONFIG:

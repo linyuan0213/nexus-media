@@ -3,7 +3,6 @@ RBAC 领域实体
 包含用户、角色、权限、菜单等实体
 """
 
-import contextlib
 from dataclasses import dataclass, fields
 from datetime import datetime
 from typing import Any, Optional
@@ -106,14 +105,20 @@ class RBACRoleEntity:
         menus = []
         users_count = 0
 
-        with contextlib.suppress(Exception):
+        try:
             perms = [p.to_dict() for p in orm_model.permissions]
+        except Exception as e:
+            log.debug(f"[RBAC] 获取角色权限失败 (role_id={orm_model.ID}): {e}")
 
-        with contextlib.suppress(Exception):
+        try:
             menus = [m.to_dict() for m in orm_model.menus]
+        except Exception as e:
+            log.debug(f"[RBAC] 获取角色菜单失败 (role_id={orm_model.ID}): {e}")
 
-        with contextlib.suppress(Exception):
+        try:
             users_count = len(list(orm_model.users))
+        except Exception as e:
+            log.debug(f"[RBAC] 获取角色用户数失败 (role_id={orm_model.ID}): {e}")
 
         return cls(
             id=orm_model.ID,

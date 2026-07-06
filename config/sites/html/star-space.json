@@ -1,0 +1,59 @@
+{
+  "id": "star-space",
+  "name": "星空",
+  "domain": "https://star-space.net/",
+  "domain_aliases": ["https://www.star-space.net/"],
+  "detail_page_url": "/p_torrent/video_detail.php?tid={tid}",
+  "encoding": "UTF-8",
+  "public": false,
+  "html": {
+    "test_connection": "/p_index/index.php",
+    "parser_type": "nested",
+    "search": {
+      "paths": [{"path": "/p_torrent/video_list_g.php", "method": "get"}],
+      "params": {
+        "cat": "{cat}",
+        "search": "{keyword}",
+        "area": "name",
+        "column": "g_last_upload_date",
+        "sort": "desc",
+        "btn_search": "搜索"
+      }
+    },
+    "torrents": {
+      "container_xpath": "//table[contains(@class, 'gm_table')]",
+      "row_xpath": ".//tr[@id='gm_tr_item']",
+      "container_fields": {
+        "imdbid": {"xpath": ".//*[@id='gm_td_title']/a[contains(@href, 'imdb')]/@href", "filters": [{"name": "regex", "args": ["tt\\d+", 0]}]},
+        "description": {"xpath": ".//*[@id='gm_td_title']/div[@id='gm_div_title']/text()"}
+      },
+      "fields": {
+        "tid": {"xpath": ".//div[@id='gm_div_name']/a/@href", "filters": [{"name": "regex", "args": ["tid=(\\d+)", 1]}]},
+        "title": {"xpath": ".//div[@id='gm_div_name']/a/text()"},
+        "labels": {"xpath": ".//span[@class='tag']/text()", "join": "|"},
+        "enclosure": {"xpath": ".//td[@id='gm_td_icon']/div/a[contains(@href, 'download')]/@href", "replace": {"../": "{domain}/"}},
+        "pubdate": {"xpath": ".//td[@id='gm_td_user']/text()"},
+        "size": {"xpath": ".//td[@id='gm_td_size']/text()", "transform": "num_filesize_B"},
+        "seeders": {"xpath": ".//span[@id='user_info' and a/img[contains(@title, '做种数')]]/a/text()", "filters": [{"name": "strip"}]},
+        "leechers": {"xpath": ".//span[@id='user_info' and a/img[contains(@title, '下载数')]]/a/text()", "filters": [{"name": "strip"}]},
+        "downloadvolumefactor": {"xpath": ".//span[@id='free']", "if_present": 0.0},
+        "page_url": {"template": "/p_torrent/video_detail.php?tid={tid}"}
+      }
+    }
+  },
+  "user_info": {
+    "type": "html",
+    "brief_page": "p_index/index.php",
+    "page": "p_user/user_detail.php?uid={userid}",
+    "fields": {
+      "username": {"selector": "//td[text()='用户名称']/following-sibling::td[1]//span", "extract": "text"},
+      "user_level": {"selector": "//td[text()='用户等级']/following-sibling::td[1]/img[1]", "attribute": "alt", "values": {"class1": "User", "class2": "Power User", "class3": "Elite User", "class4": "Crazy User", "class5": "Insane User", "class6": "Veteran User", "class7": "Extreme User", "class8": "Ultimate User", "class9": "Master User", "class10": "Star User", "class11": "God User"}, "extract": "text"},
+      "join_at": {"selector": "//td[text()='加入日期']/following-sibling::td[1]", "extract": "datetime"},
+      "upload": {"selector": "//a[contains(@href,'user_upload')]", "pattern": "[：:]\\s*([\\d,.]+\\s*[KMGT]?)", "extract": "filesize"},
+      "download": {"selector": "//span[@id='user_info_no_hover']", "pattern": "[：:]\\s*([\\d,.]+\\s*[KMGT]?)", "extract": "filesize"},
+      "seeding": {"selector": "//a[contains(@href,'pop=8')]", "pattern": "(\\d+)", "extract": "int"},
+      "leeching": {"selector": "//a[contains(@href,'pop=9')]", "pattern": "(\\d+)", "extract": "int"},
+      "bonus": {"selector": "//a[contains(@href,'bonus_hour')]", "pattern": "([\\d,.]+)", "extract": "float"}
+    }
+  }
+}

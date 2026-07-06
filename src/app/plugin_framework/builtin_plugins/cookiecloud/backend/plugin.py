@@ -5,6 +5,7 @@ CookieCloud Plugin v2
 
 import contextlib
 import re
+import time
 from collections import defaultdict
 from typing import Any
 
@@ -12,11 +13,14 @@ from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.domain.entities.site import SiteEntity
 from app.domain.enums import SiteUseType
 from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.plugin_framework.context import PluginContext
+from app.sites.utils import is_logged_in
 from app.utils import StringUtils
+from app.utils.config_tools import get_ua
 from app.utils.json_utils import JsonUtils
 
 
@@ -61,6 +65,7 @@ class CookieCloudPlugin:
                 self.ctx.info("配置已变更，重载服务")
                 self._stop_service()
                 self._start_service()
+                self._write_domain_list()
         elif event == "site.cookie_sync":
             self._cookie_save()
         elif event == "site.local_storage_sync":
@@ -112,6 +117,35 @@ class CookieCloudPlugin:
 
         return False
 
+    def _get_filter_names(self) -> set[str] | None:
+        config = self._get_config()
+        raw = (config.get("cookie_name_filter") or "").strip()
+        if not raw:
+            return None
+        return {line.strip() for line in raw.splitlines() if line.strip()}
+
+    def _allow_cookie_name(self, name: str) -> bool:
+        allowed = self._get_filter_names()
+        if allowed is None:
+            return True
+        return name in allowed
+
+    def _write_domain_list(self):
+        try:
+            all_sites = self.ctx.site_engine.all_sites()
+        except Exception:
+            self.ctx.info("[CookieCloud]站点引擎未就绪，跳过域名列表写入")
+            return
+        try:
+            domain_list = [{"label": s.name, "value": s.domain} for s in all_sites if not s.public and s.domain]
+            if domain_list:
+                self.ctx.write_data("domains.json", JsonUtils.dumps(domain_list))
+                self.ctx.info(f"[CookieCloud]已写入 {len(domain_list)} 个站点域名")
+            else:
+                self.ctx.info("[CookieCloud]站点列表为空，稍后在同步时刷新")
+        except Exception as e:
+            self.ctx.warn(f"[CookieCloud]写入域名列表失败: {e}")
+
     def _download_data(self) -> tuple[dict, str, bool]:
         config = self._get_config()
         server = config.get("server", "")
@@ -157,7 +191,7 @@ class CookieCloudPlugin:
             return
 
         try:
-            update_count, add_count = self._process_cookies(contents if isinstance(contents, dict) else {})
+            update_ok, add_ok, failed, _results = self._process_cookies(contents if isinstance(contents, dict) else {})
         except Exception as e:
             err_msg = f"处理 Cookie 数据异常: {e}"
             self.ctx.error(err_msg)
@@ -165,12 +199,15 @@ class CookieCloudPlugin:
             return
 
         if not contents.get("local_storage_data"):
-            if update_count or add_count:
-                msg = f"更新了 {update_count} 个站点的 Cookie 数据，新增了 {add_count} 个站点"
+            if update_ok or add_ok:
+                msg = f"更新了 {update_ok} 个站点的 Cookie 数据，新增了 {add_ok} 个站点"
             else:
                 msg = "同步完成，但未更新任何站点数据！"
         else:
-            msg = f"同步完成：更新了 {update_count} 个站点的 Cookie 数据，新增了 {add_count} 个站点"
+            msg = f"同步完成：更新了 {update_ok} 个站点的 Cookie 数据，新增了 {add_ok} 个站点"
+
+        if failed:
+            msg += f"（{failed} 个失败/跳过）"
 
         self.ctx.info(msg)
 
@@ -197,8 +234,8 @@ class CookieCloudPlugin:
             for cookie in cookies:
                 if not self._check_domain(cookie["domain"]):
                     continue
-                domain_parts = cookie["domain"].split(".")[-2:]
-                domain_key = tuple(domain_parts)
+                raw_domain = cookie["domain"].lstrip(".")
+                domain_key = raw_domain
                 domain_cookie_groups[domain_key].append(cookie)
 
         result = {}
@@ -206,8 +243,7 @@ class CookieCloudPlugin:
             if not content_list:
                 continue
 
-            domain_url = ".".join(domain)
-            domain_url = self.ctx.site_engine.normalize_domain(domain_url) or domain_url
+            domain_url = domain
 
             cloudflare_cookie = True
             for content in content_list:
@@ -221,7 +257,9 @@ class CookieCloudPlugin:
                 [
                     f"{content.get('name')}={content.get('value')}"
                     for content in content_list
-                    if content.get("name") and content.get("name") not in self._ignore_cookies
+                    if content.get("name")
+                    and content.get("name") not in self._ignore_cookies
+                    and self._allow_cookie_name(content.get("name"))
                 ]
             )
             self._cache.set(f"cookie:{domain_url}", cookie_str)
@@ -238,49 +276,169 @@ class CookieCloudPlugin:
             site_domain = StringUtils.get_url_domain(strict_url)
             if not site_domain:
                 continue
-            site_suffix = ".".join(site_domain.split(".")[-2:])
-            if site_suffix == domain_url:
+            if domain_url in site_domain or site_domain in domain_url:
                 matched.append(site)
+            else:
+                site_suffix = ".".join(site_domain.split(".")[-2:])
+                domain_suffix = ".".join(domain_url.split(".")[-2:])
+                if site_suffix == domain_suffix:
+                    matched.append(site)
         return matched
 
     def _process_cookies(self, contents: dict):
         domain_cookies = self._store_cookies_to_cache(contents)
 
-        update_count = 0
-        add_count = 0
+        results: list[dict] = []
         updated_ids: set[int] = set()
 
         for domain_url, cookie_str in domain_cookies.items():
+            matched_sites = []
             try:
                 matched_sites = self._find_matching_sites(domain_url)
                 if matched_sites:
                     for site_info in matched_sites:
                         sid = int(site_info.get("id") or 0)
+                        site_name = site_info.get("name", domain_url)
                         if sid and sid not in updated_ids:
                             self._site_repo.update_cookie_ua(sid, cookie=cookie_str)
                             updated_ids.add(sid)
-                            update_count += 1
-                else:
-                    indexer_info = self._index_helper.get_indexer_info(domain_url)
-                    if indexer_info:
-                        site_pri = self.sites.get_max_site_pri() + 1
-                        self._site_repo.insert(
-                            SiteEntity(
-                                name=indexer_info.get("name"),
-                                pri=site_pri,
-                                sign_url=indexer_info.get("domain"),
-                                cookie=cookie_str,
-                                rss_uses=SiteUseType.STATISTIC.value,
+                            results.append(
+                                {
+                                    "action": "更新",
+                                    "domain": domain_url,
+                                    "site": site_name,
+                                    "status": "成功",
+                                    "reason": "",
+                                }
                             )
+                else:
+                    site_url = f"https://{domain_url}"
+                    site_def = self.ctx.site_engine.get_by_url(site_url)
+                    if not site_def:
+                        if self._index_helper is not None:
+                            site_def = self._index_helper.get_indexer_info(domain_url)
+                    if not site_def:
+                        results.append(
+                            {
+                                "action": "新增",
+                                "domain": domain_url,
+                                "site": "-",
+                                "status": "跳过",
+                                "reason": "无匹配站点配置",
+                            }
                         )
-                        add_count += 1
+                        continue
+
+                    if not self._verify_cookie(domain_url, cookie_str):
+                        results.append(
+                            {
+                                "action": "新增",
+                                "domain": domain_url,
+                                "site": site_def.name
+                                if hasattr(site_def, "name")
+                                else site_def.get("name", domain_url),
+                                "status": "失败",
+                                "reason": "Cookie 验证失败",
+                            }
+                        )
+                        continue
+
+                    site_name = site_def.name if hasattr(site_def, "name") else site_def.get("name", domain_url)
+                    site_domain = site_def.domain if hasattr(site_def, "domain") else site_def.get("domain", domain_url)
+                    pt_sites = self.sites.get_sites(public=False)
+                    site_pri = max((int(s.get("pri", 0)) for s in pt_sites), default=0) + 1 if pt_sites else 1
+                    self._site_repo.insert(
+                        SiteEntity(
+                            name=site_name,
+                            pri=site_pri,
+                            sign_url=site_domain,
+                            cookie=cookie_str,
+                            rss_uses=SiteUseType.STATISTIC.value,
+                        )
+                    )
+                    results.append(
+                        {
+                            "action": "新增",
+                            "domain": domain_url,
+                            "site": site_name,
+                            "status": "成功",
+                            "reason": "",
+                        }
+                    )
             except Exception as e:
+                results.append(
+                    {
+                        "action": "更新" if matched_sites else "新增",
+                        "domain": domain_url,
+                        "site": "-",
+                        "status": "失败",
+                        "reason": str(e),
+                    }
+                )
                 self.ctx.error(f"处理域名 {domain_url} 时出错: {e}")
 
-        if update_count or add_count:
-            self.sites.refresh()
+        update_ok = sum(1 for r in results if r["action"] == "更新" and r["status"] == "成功")
+        add_ok = sum(1 for r in results if r["action"] == "新增" and r["status"] == "成功")
+        failed = sum(1 for r in results if r["status"] in ("失败", "跳过"))
 
-        return update_count, add_count
+        if updated_ids or add_ok:
+            self.sites.refresh()
+        failed = sum(1 for r in results if r["status"] in ("失败", "跳过"))
+
+        summary = {
+            "id": int(time.time() * 1000),
+            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "update_ok": update_ok,
+            "add_ok": add_ok,
+            "failed": failed,
+            "results": results,
+        }
+        try:
+            existing = self.ctx.read_data("sync_history.json") or []
+            if not isinstance(existing, list):
+                existing = []
+            existing.insert(0, summary)
+            if len(existing) > 10:
+                existing = existing[:10]
+            self.ctx.write_data("sync_history.json", JsonUtils.dumps(existing, ensure_ascii=False, indent=2))
+        except Exception as e:
+            self.ctx.warn(f"[CookieCloud]写入同步记录失败: {e}")
+
+        return update_ok, add_ok, failed, results
+
+    def _verify_cookie(self, domain_url: str, cookie_str: str) -> bool:
+        site_url = f"https://{domain_url}"
+        ua = get_ua()
+
+        site_def = self.ctx.site_engine.get_by_url(site_url)
+        if site_def:
+            user_config = {
+                "cookie": cookie_str,
+                "api_key": "",
+                "bearer_token": "",
+                "ua": ua,
+                "headers": {},
+                "proxy": False,
+            }
+            success, msg, _ = self.ctx.site_engine.test_connection(site_url, user_config)
+            if not success:
+                self.ctx.warn(f"[CookieCloud]Cookie 失效 {domain_url}: {msg}")
+            return success
+
+        try:
+            res = HttpClient(
+                config=HttpClientConfig(default_headers={"User-Agent": ua}),
+            ).get(url=site_url, auth=CookieAuth(cookie_str))
+            if res and res.status_code == 200 and is_logged_in(res.text):
+                return True
+            self.ctx.warn(f"[CookieCloud]Cookie 失效 {domain_url}")
+            return False
+        except HttpClientError as e:
+            self.ctx.warn(f"[CookieCloud]请求异常 {domain_url}: {e}")
+            return False
+        except Exception as e:
+            self.ctx.warn(f"[CookieCloud]验证异常 {domain_url}: {e}")
+            return False
 
     def _local_storage_save(self):
         self.ctx.info("开始同步 LocalStorage ...")
@@ -305,7 +463,6 @@ class CookieCloudPlugin:
                         domain_parts = site.split(".")[-2:]
                         domain_key = tuple(domain_parts)
                         domain_url = ".".join(domain_key)
-                        domain_url = self.ctx.site_engine.normalize_domain(domain_url) or domain_url
 
                         self._cache.set(f"local_storage:{domain_url}", JsonUtils.dumps(storage))
                         synced += 1

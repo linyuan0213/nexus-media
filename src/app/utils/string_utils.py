@@ -32,15 +32,15 @@ class StringUtils:
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return 0
-        if text.find("PB") != -1 or text.find("PIB") != -1:
+        if text.find("PB") != -1 or text.find("PIB") != -1 or text.endswith("P"):
             size *= 1024**5
-        elif text.find("TB") != -1 or text.find("TIB") != -1:
+        elif text.find("TB") != -1 or text.find("TIB") != -1 or text.endswith("T"):
             size *= 1024**4
-        elif text.find("GB") != -1 or text.find("GIB") != -1:
+        elif text.find("GB") != -1 or text.find("GIB") != -1 or text.endswith("G"):
             size *= 1024**3
-        elif text.find("MB") != -1 or text.find("MIB") != -1:
+        elif text.find("MB") != -1 or text.find("MIB") != -1 or text.endswith("M"):
             size *= 1024**2
-        elif text.find("KB") != -1 or text.find("KIB") != -1:
+        elif text.find("KB") != -1 or text.find("KIB") != -1 or text.endswith("K"):
             size *= 1024
         return round(size)
 

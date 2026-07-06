@@ -2,7 +2,7 @@
   "manifest_version": "1.0",
   "id": "cookiecloud",
   "name": "CookieCloud同步",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "author": "linyuan0213",
   "author_url": "https://github.com/linyuan0213",
   "description": "从 CookieCloud 云端同步数据，自动新增站点或更新已有站点 Cookie。",
@@ -23,7 +23,14 @@
     "supports_run": true
   },
   "frontend": {
-    "routes": [],
+    "routes": [
+      {
+        "path": "sync-history",
+        "title": "同步记录",
+        "icon": "lucide:history",
+        "component": "SyncHistoryPage"
+      }
+    ],
     "settings": {
       "component": "SettingsPage",
       "fields": [
@@ -78,18 +85,26 @@
         {
           "key": "whitelist",
           "type": "textarea",
-          "label": "白名单",
+          "label": "域名白名单",
           "default": "",
-          "placeholder": "每行一个关键词，支持正则",
-          "help": "白名单为空时默认放行所有域名"
+          "placeholder": "每行一个关键词，支持正则；为空放行所有",
+          "help": "与域名选择器联动，在域名选择器中勾选的域名自动加入白名单"
         },
         {
           "key": "blacklist",
           "type": "textarea",
-          "label": "黑名单",
+          "label": "域名黑名单",
           "default": "",
           "placeholder": "每行一个关键词，支持正则",
           "help": "黑名单中的域名将被排除"
+        },
+        {
+          "key": "cookie_name_filter",
+          "type": "textarea",
+          "label": "Cookie 名称过滤",
+          "default": "",
+          "placeholder": "每行一个 Cookie 名称，仅保留匹配的项",
+          "help": "填写后只同步名称匹配的 Cookie，为空则全部同步（会自动忽略 CookieAutoDeleteBrowsingDataCleanup）"
         }
       ]
     },

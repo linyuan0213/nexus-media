@@ -15,6 +15,9 @@ def test_html_connection(engine, site, user_config):
     domain = site.domain.rstrip("/") if site.domain else ""
     if not domain.startswith("http"):
         domain = f"https://{domain}"
+    if site.html and getattr(site.html, "test_connection", None):
+        test_path = str(site.html.test_connection).lstrip("/")
+        domain = f"{domain}/{test_path}"
     start = time.time()
     cookie = user_config.get("cookie", "")
     ua = user_config.get("ua", "")

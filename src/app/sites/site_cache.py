@@ -86,6 +86,7 @@ class SiteCache:
                 self._indexer_site_config_repo.upsert_site(
                     site_name=site_info["name"],
                     source="builtin",
+                    enabled=True,
                 )
         except Exception as e:
             log.error(f"[SiteCache]同步索引器站点配置失败: {e!s}")
@@ -94,14 +95,12 @@ class SiteCache:
         """自动创建所有公开（BT）内置站点，BT 站点无需 Cookie 即可使用。"""
         try:
             existing = {s.name for s in self._repo.list_all()}
-            disabled = {row.site_name for row in self._indexer_site_config_repo.list_all() if not row.enabled}
+            tracked = {row.site_name.lower() for row in self._indexer_site_config_repo.list_all()}
             created = 0
             for site_def in self._site_engine.all_sites():
                 if not site_def.public:
                     continue
-                if site_def.name in existing:
-                    continue
-                if site_def.name.lower() in {n.lower() for n in disabled}:
+                if site_def.name in existing or site_def.name.lower() in tracked:
                     continue
                 signurl = site_def.domain
                 if not signurl.startswith(("http://", "https://")):

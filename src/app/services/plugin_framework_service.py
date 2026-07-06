@@ -57,42 +57,74 @@ class PluginFrameworkService:
         if not manifest or not manifest.frontend or not manifest.frontend.routes:
             return
 
-        parent_menu = self._get_plugin_parent_menu()
-        if not parent_menu:
+        root_parent = self._get_plugin_parent_menu()
+        if not root_parent:
             log.warn("[PluginFrameworkService] Plugin 父菜单不存在，跳过菜单同步")
             return
 
-        new_menu_ids = []
+        # 1. 为插件创建父菜单（作为收起项）
+        plugin_parent_code = f"Plugin_{plugin_id}"
+        plugin_parent = self._menu_repo.get_menu_by_code(plugin_parent_code)
+        if not plugin_parent:
+            result = self._menu_repo.create_menu(
+                menu_name=manifest.name,
+                menu_code=plugin_parent_code,
+                parent_id=root_parent.id,
+                path=f"/plugin/{plugin_id}",
+                icon=manifest.icon or "lucide:puzzle",
+                component="",
+                sort_order=100,
+                menu_level=2,
+                permission_code="plugin:view",
+                hide_in_menu=0,
+            )
+            plugin_parent = result if hasattr(result, "id") else self._menu_repo.get_menu_by_code(plugin_parent_code)
+        else:
+            self._menu_repo.update_menu(
+                plugin_parent.id,
+                parent_id=root_parent.id,
+                menu_name=manifest.name,
+                icon=manifest.icon or "lucide:puzzle",
+                status=1,
+            )
+
+        if not plugin_parent:
+            return
+
+        new_menu_ids = [plugin_parent.id]
         for idx, route in enumerate(manifest.frontend.routes):
             if not route.menu:
                 continue
 
-            # 生成唯一 menu_code
             safe_path = route.path.strip("/").replace("/", "_") or "index"
             menu_code = f"Plugin_{plugin_id}_{safe_path}"
+            menu_name = route.title or manifest.name
+            menu_icon = route.icon or "lucide:puzzle"
 
-            # 已存在则跳过
             existing = self._menu_repo.get_menu_by_code(menu_code)
             if existing:
-                if existing.parent_id != parent_menu.id:
-                    # 如果挂错了位置，修正一下
-                    self._menu_repo.update_menu(existing.id, parent_id=parent_menu.id, status=1)
+                self._menu_repo.update_menu(
+                    existing.id,
+                    parent_id=plugin_parent.id,
+                    status=1,
+                    menu_name=menu_name,
+                    icon=menu_icon,
+                )
                 new_menu_ids.append(existing.id)
                 continue
 
-            # 计算完整路由路径（与前端 loader.ts 保持一致）
             base_path = f"/plugin/{plugin_id}"
             full_path = route.path if route.path.startswith("/") else f"{base_path}/{route.path}"
 
             result = self._menu_repo.create_menu(
-                menu_name=route.title or manifest.name,
+                menu_name=menu_name,
                 menu_code=menu_code,
-                parent_id=parent_menu.id,
+                parent_id=plugin_parent.id,
                 path=full_path,
-                icon=route.icon or manifest.icon or "lucide:puzzle",
+                icon=menu_icon,
                 component="",
                 sort_order=100 + idx,
-                menu_level=2,
+                menu_level=3,
                 permission_code="plugin:view",
                 hide_in_menu=0,
             )
@@ -101,25 +133,33 @@ class PluginFrameworkService:
                 new_menu_ids.append(menu.id)
                 log.info(f"[PluginFrameworkService] 创建插件菜单: {menu_code} -> {full_path}")
 
-        if new_menu_ids:
+        if len(new_menu_ids) > 1:
             self._assign_menus_to_authorized_roles(new_menu_ids)
 
     def _remove_plugin_menus(self, plugin_id: str) -> None:
         """
-        删除插件对应的 RBAC 菜单。
+        删除插件对应的 RBAC 菜单（含插件父菜单及子路由菜单）。
         """
-        parent_menu = self._get_plugin_parent_menu()
-        if not parent_menu:
-            return
-
-        children = self._menu_repo.get_children_menus(parent_menu.id)
-        prefix = f"Plugin_{plugin_id}_"
+        plugin_parent_code = f"Plugin_{plugin_id}"
+        plugin_parent = self._menu_repo.get_menu_by_code(plugin_parent_code)
         removed = 0
-        for child in children:
-            if child.menu_code.startswith(prefix):
+        if plugin_parent:
+            children = self._menu_repo.get_children_menus(plugin_parent.id)
+            for child in children:
                 self._menu_repo.delete_menu(child.id)
                 removed += 1
-                log.info(f"[PluginFrameworkService] 删除插件菜单: {child.menu_code}")
+            self._menu_repo.delete_menu(plugin_parent.id)
+            removed += 1
+        else:
+            # 兼容旧版：路由菜单直接挂在 Plugin 下
+            root = self._get_plugin_parent_menu()
+            if root:
+                children = self._menu_repo.get_children_menus(root.id)
+                prefix = f"Plugin_{plugin_id}_"
+                for child in children:
+                    if child.menu_code.startswith(prefix):
+                        self._menu_repo.delete_menu(child.id)
+                        removed += 1
         if removed:
             log.info(f"[PluginFrameworkService] 共删除 {removed} 个插件菜单")
 
@@ -439,6 +479,28 @@ class PluginFrameworkService:
                 log.error(f"[PluginFrameworkService] 插件加载返回失败: {plugin_id}")
         except Exception as e:
             log.error(f"[PluginFrameworkService] 插件后台加载异常 {plugin_id}: {e}")
+
+    def refresh_plugin_menus_at_startup(self) -> None:
+        """启动时：同步已启用插件的菜单，清理已卸载插件的残留菜单."""
+        enabled_ids = self._repo.get_enabled_plugin_ids()
+        enabled_codes = {f"Plugin_{pid}" for pid in enabled_ids}
+
+        # 1. 同步已启用插件的菜单
+        for plugin_id in enabled_ids:
+            self._sync_plugin_menus(plugin_id)
+
+        # 2. 清理已卸载/禁用插件的残留菜单（含插件父菜单）
+        parent_menu = self._get_plugin_parent_menu()
+        if not parent_menu:
+            return
+        children = self._menu_repo.get_children_menus(parent_menu.id)
+        for child in children:
+            if not child.menu_code.startswith("Plugin_"):
+                continue
+            belongs_to_enabled = any(child.menu_code.startswith(c) for c in enabled_codes)
+            if not belongs_to_enabled:
+                self._menu_repo.delete_menu(child.id)
+                log.info(f"[PluginFrameworkService] 清理残留菜单: {child.menu_code}")
 
     def enable(self, plugin_id: str) -> None:
         """启用插件（更新数据库和注册表缓存）"""

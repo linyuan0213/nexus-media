@@ -17,7 +17,7 @@ from app.media.parser.episode_mapper import EpisodeMapper
 from app.media.parser.llm import LLMParser
 from app.media.parser.regex import RegexParser
 from app.storage.backends.base import StorageBackend
-from app.utils import EpisodeFormat, PathUtils, StringUtils
+from app.utils import EpisodeFormat, PathUtils
 
 
 class MediaService:
@@ -652,48 +652,58 @@ class MediaService:
             return None, False
         log.info(f"[Meta]开始通过搜索引擎辅助查询：{feature_name} ...")
 
-        def calculate_scores(matches, results):
-            if not matches:
-                return {}
-            search_results = {}
-            for match in matches:
-                match_title = match[0]
-                match_url = match[1]
-                if not match_title or not match_url:
-                    continue
-                _mt = StringUtils.handler_special_chars(str(match_title))
-                match_title = _mt.upper() if isinstance(_mt, str) else str(match_title).upper()
-                for result in results:
-                    if not result:
-                        continue
-                    _rt = StringUtils.handler_special_chars(str(result.get("title") or result.get("name", "")))
-                    result_title = (
-                        _rt.upper()
-                        if isinstance(_rt, str)
-                        else str(result.get("title") or result.get("name", "")).upper()
-                    )
-                    if not result_title:
-                        continue
-                    ratio = difflib.SequenceMatcher(None, match_title, result_title).ratio()
-                    if ratio >= 0.8:
-                        search_id = result.get("id")
-                        if search_id not in search_results:
-                            search_results[search_id] = {
-                                "id": search_id,
-                                "title": result.get("title") or result.get("name"),
-                                "type": result.get("media_type"),
-                                "year": result.get("release_date", "")[:4]
-                                if result.get("media_type") == MediaType.MOVIE
-                                else result.get("first_air_date", "")[:4],
-                                "count": 0,
-                                "score": 0.0,
-                            }
-                        search_results[search_id]["count"] += 1
-                        search_results[search_id]["score"] += ratio
-            return search_results
+        clean_name = self._clean_search_keyword(feature_name)
+        if not clean_name:
+            return None, False
 
-        # 简化的搜索引擎 fallback 实现
+        candidates = self._lookup.search.search_multi_infos(clean_name)
+        if not candidates:
+            candidates = self._lookup.search.search_movie_infos(clean_name, None)
+            if not candidates:
+                return None, False
+            matched = self._best_match(clean_name, candidates)
+            return (matched.get("title"), True) if matched else (None, False)
+
+        matched = self._best_match(clean_name, candidates)
+        if matched:
+            is_movie = matched.get("media_type") == MediaType.MOVIE
+            return matched.get("title"), is_movie
+
         return None, False
+
+    @staticmethod
+    def _clean_search_keyword(name: str) -> str:
+        cleaned = re.sub(r"[\[\]【】\(\)（）{}]", " ", name)
+        cleaned = re.sub(r"\d{4}[-\s]*\d{2}[-\s]*\d{2}", " ", cleaned)
+        cleaned = re.sub(r"\b\d{3,}p?\b", " ", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(
+            r"\b(?:hdtv|bluray|web-dl|webrip|brrip|dvdrip|x264|x265|hevc|avc|av1|aac|ac3|dts|"
+            r"ddp?\d*\.?\d*|flac|atmos|truehd|hdr\d*|dv|sdr|hlg|remux|imax|repack|proper|"
+            r"internal|extended|uncut|directors\s*cut|theatrical|unrated|rerelease|remastered|"
+            r"upscaled)\b",
+            " ",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
+
+    @staticmethod
+    def _best_match(name: str, candidates: list) -> dict | None:
+        if not candidates:
+            return None
+        name_lower = name.lower()
+        best = None
+        best_score = 0.0
+        for c in candidates:
+            title = (c.get("title") or c.get("name") or "").lower()
+            if not title:
+                continue
+            score = difflib.SequenceMatcher(None, name_lower, title).ratio()
+            if score > best_score:
+                best_score = score
+                best = c
+        return best if best_score >= 0.6 else None
 
     # ---------- TMDB 代理方法 ----------
 

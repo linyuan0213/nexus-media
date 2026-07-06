@@ -30,7 +30,9 @@ def init_rbac_menus(menu_repo: Any = None):
 
     # 2. 获取数据库中所有现有菜单，删除不在 DEFAULT_MENUS 中的
     existing_menus = menu_repo.get_all_menus()
-    menus_to_delete = [m for m in existing_menus if m.MENU_CODE not in default_codes]
+    menus_to_delete = [
+        m for m in existing_menus if m.MENU_CODE not in default_codes and not m.MENU_CODE.startswith("Plugin_")
+    ]
     deleted_count = 0
     # 按 menu_level 降序删除，确保先删子菜单
     for menu in sorted(menus_to_delete, key=lambda m: getattr(m, "MENU_LEVEL", 1), reverse=True):

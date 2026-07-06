@@ -106,6 +106,7 @@ class ConfigHtmlUserInfo:
         if cfg.get("type") == "html" and cfg.get("fields"):
             nexus_php._parse_userid(self)
             self._parse_fields(cfg)
+            self.user_level = self.user_level or ""
             self._parse_seeding(cfg)
             return
         for check, parser in _ARCH_PARSERS:
@@ -119,11 +120,30 @@ class ConfigHtmlUserInfo:
         fields = cfg.get("fields", {})
         if not fields:
             return
+        if not self.userid:
+            brief_page = cfg.get("brief_page", "")
+            if brief_page:
+                brief_url = urljoin(self._base_url_str + "/", brief_page)
+                brief_html = self._fetch_html(brief_url, use_ajax_headers=False)
+                if brief_html:
+                    m = re.search(r"user_detail\.php\?uid=(\d+)", brief_html)
+                    if m and m.group(1):
+                        self.userid = m.group(1)
         page = cfg.get("page")
         html_text = self._index_html
         if page:
-            url = urljoin(self._base_url_str + "/", page.format(userid=self.userid or ""))
-            html_text = self._fetch_html(url)
+            if not self.userid and "{userid}" in page:
+                brief_page = cfg.get("brief_page", "")
+                if brief_page:
+                    brief_url = urljoin(self._base_url_str + "/", brief_page)
+                    brief_html = self._fetch_html(brief_url, use_ajax_headers=False)
+                    if brief_html:
+                        m = re.search(r"user_detail\.php\?uid=(\d+)", brief_html)
+                        if m and m.group(1):
+                            self.userid = m.group(1)
+            if self.userid or "{userid}" not in page:
+                url = urljoin(self._base_url_str + "/", page.format(userid=self.userid or ""))
+                html_text = self._fetch_html(url, use_ajax_headers=False)
         if not html_text:
             return
         doc: Any = etree.HTML(html_text)
@@ -165,6 +185,9 @@ class ConfigHtmlUserInfo:
                 raw = m.group(1) if m.lastindex else m.group(0)
         if raw is None:
             return None
+        values = cfg.get("values", {})
+        if values and raw in values:
+            raw = values[raw]
         if extract == "filesize":
             return StringUtils.num_filesize(str(raw))
         elif extract == "float":

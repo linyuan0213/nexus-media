@@ -13,6 +13,7 @@ from app.events.constants import DOWNLOAD_FAILED, DOWNLOAD_STARTED, SUBSCRIBE_FI
 from app.events.decorators import auto_register
 from app.events.middleware import ErrorHandlingMiddleware, LoggingMiddleware
 from app.events.registry import EventHandlerRegistry
+from app.indexer.configuration import IndexerHelper
 from app.infrastructure.queue.factory import MessageQueueFactory
 from app.infrastructure.thread import ThreadExecutor
 from app.message.message import Message
@@ -53,6 +54,7 @@ def build_infrastructure() -> InfrastructureObjects:
     site_engine.site_limiter = site_rate_limiter
     message_queue = MessageQueueFactory.create()
     hook_system = HookSystem(plugin_sandbox=None)
+    indexer_helper = IndexerHelper()
 
     plugin_sandbox = PluginSandbox(
         plugin_registry=plugin_registry,
@@ -62,6 +64,7 @@ def build_infrastructure() -> InfrastructureObjects:
         site_engine=site_engine,
         media_service=None,
         plugin_log_repo=PluginLogRepositoryAdapter(),
+        indexer_helper=indexer_helper,
     )
     hook_system.set_plugin_sandbox(plugin_sandbox)
 
@@ -96,4 +99,5 @@ def build_infrastructure() -> InfrastructureObjects:
         plugin_registry=plugin_registry,
         apikey_service=apikey_service,
         indexer_site_config_repo=indexer_site_config_repo,
+        indexer_helper=indexer_helper,
     )

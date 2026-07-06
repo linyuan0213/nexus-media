@@ -96,6 +96,8 @@ async def lifespan(app: FastAPI):
         plugin_sandbox = app_context.plugin_sandbox
         plugin_sandbox.load_all()
         log.info("[FastAPI]插件加载完成")
+        app_context.plugin_framework_service.refresh_plugin_menus_at_startup()
+        log.info("[FastAPI]插件菜单同步完成")
         _ = message.active_clients
         log.info("[FastAPI]消息客户端初始化完成")
         message.refresh_menus()

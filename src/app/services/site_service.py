@@ -98,6 +98,7 @@ class SiteService:
                 return 0
             self._site_entity_repo.delete(int(tid))
             self._indexer_site_config_repo.upsert_site(site_name=site.name, source="builtin", enabled=False)
+            self._sites.refresh()
             return 1
         except Exception:
             return 0

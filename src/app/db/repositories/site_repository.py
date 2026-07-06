@@ -204,9 +204,12 @@ class SiteRepository(BaseRepository):
                     )
                 else:
                     row.SITE = info.site_name
-                    row.USERNAME = info.username
-                    row.USER_LEVEL = info.user_level
-                    row.JOIN_AT = info.join_at or ""
+                    if info.username is not None:
+                        row.USERNAME = info.username
+                    if info.user_level is not None:
+                        row.USER_LEVEL = info.user_level
+                    if info.join_at is not None:
+                        row.JOIN_AT = info.join_at
                     row.UPDATE_AT = update_at
                     row.UPLOAD = info.upload
                     row.DOWNLOAD = info.download
@@ -269,11 +272,19 @@ class SiteRepository(BaseRepository):
 
         with self.session() as db:
             for site_user_info in site_user_infos:
-                site_icon = (
-                    "data:image/ico;base64," + site_user_info.site_favicon
-                    if site_user_info.site_favicon
-                    else site_user_info.site_url + "/favicon.ico"
-                )
+                if site_user_info.site_favicon:
+                    fav = site_user_info.site_favicon
+                    if fav.startswith("data:"):
+                        site_icon = fav
+                    elif fav.startswith("http"):
+                        site_icon = f"/img/favicon/external/{fav}"
+                    else:
+                        site_icon = "data:image/ico;base64," + fav
+                else:
+                    site_icon = (
+                        "/img/favicon/"
+                        + site_user_info.site_url.replace("https://", "").replace("http://", "").split("/")[0]
+                    )
 
                 if not self.is_exists_site_favicon(site_user_info.site_name):
                     db.add(SITEFAVICON(SITE=site_user_info.site_name, URL=site_user_info.site_url, FAVICON=site_icon))

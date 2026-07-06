@@ -2,14 +2,15 @@
 
 import os
 import time
+import xml.dom.minidom
 
-import defusedxml.minidom  # type: ignore[import-untyped]
+import defusedxml.minidom  # type: ignore[import-untyped]  # noqa: F401 — XXE防护副作用导入
 
 from app.utils import DomUtils
 
 
 def _create_document():
-    return defusedxml.minidom.getDOMImplementation().createDocument(None, "root", None)  # type: ignore[attr-defined]
+    return xml.dom.minidom.getDOMImplementation().createDocument(None, None, None)
 
 
 class NfoGenerator:

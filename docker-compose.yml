@@ -1,3 +1,9 @@
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 x-backend-common: &backend-common
   image: linyuan0213/nexus-media:latest
   ports:
@@ -13,6 +19,7 @@ x-backend-common: &backend-common
     nexus-media-network:
       aliases:
         - backend
+  logging: *logging
   healthcheck:
     test: "wget -qO- http://localhost:8080/health || exit 1"
     interval: 30s
@@ -51,6 +58,7 @@ services:
       - 8080:8080
     restart: always
     container_name: nexus-media-web
+    logging: *logging
     networks:
       - nexus-media-network
     depends_on:
@@ -76,6 +84,7 @@ services:
     profiles: ["", "basic-mysql", "basic-postgresql", "full-mysql", "full-postgresql"]
     image: redis:7-alpine
     container_name: nexus-media-redis
+    logging: *logging
     volumes:
       - ./data/redis_data:/data
     command: redis-server --save "" --appendonly no --dir /data
@@ -88,6 +97,7 @@ services:
     profiles: ["", "basic-mysql", "full-mysql"]
     image: mysql:8.4
     container_name: nexus-media-mysql
+    logging: *logging
     environment:
       - MYSQL_ROOT_PASSWORD=root_password
       - MYSQL_DATABASE=nexus_media
@@ -147,6 +157,7 @@ services:
     profiles: ["basic-postgresql", "full-postgresql"]
     image: postgres:17-alpine
     container_name: nexus-media-postgresql
+    logging: *logging
     environment:
       - POSTGRES_USER=nexus_media
       - POSTGRES_PASSWORD=nexus_media_password
@@ -202,6 +213,7 @@ services:
     profiles: ["full-mysql", "full-postgresql"]
     image: linyuan0213/nexus-media-ocr:latest
     container_name: nexus-media-ocr
+    logging: *logging
     ports:
       - 9300:9300
     restart: always
@@ -212,6 +224,7 @@ services:
     profiles: ["full-mysql", "full-postgresql"]
     image: linyuan0213/nexus-media-chrome:latest
     container_name: nexus-media-chrome
+    logging: *logging
     shm_size: 2g
     environment:
       - VNC_PASSWORD=password
