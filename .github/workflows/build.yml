@@ -89,16 +89,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Prepare Telegram notification
+        run: |
+          cat > /tmp/notes.txt << 'NOTES_EOF'
+          ${{ steps.extract.outputs.notes }}
+          NOTES_EOF
+          sed -i 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' /tmp/notes.txt
+          {
+            echo '<b>Nexus Media ${{ steps.extract.outputs.tag }} 已发布</b>'
+            echo ''
+            echo '<pre>'
+            cat /tmp/notes.txt
+            echo '</pre>'
+            echo ''
+            echo '📦 Docker: <code>docker pull linyuan0213/nexus-media:${{ steps.extract.outputs.version }}</code>'
+            echo '🔗 <a href="https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract.outputs.tag }}">查看 Release</a>'
+          } > /tmp/telegram_msg.txt
+
       - name: Send Telegram Notification
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           format: html
-          message: |
-            <b>Nexus Media ${{ steps.extract.outputs.tag }} 已发布</b>
-
-            <pre>${{ steps.extract.outputs.notes }}</pre>
-
-            📦 Docker: <code>docker pull linyuan0213/nexus-media:${{ steps.extract.outputs.version }}</code>
-            🔗 <a href="https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract.outputs.tag }}">查看 Release</a>
+          message_file: /tmp/telegram_msg.txt
