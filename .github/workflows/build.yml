@@ -91,20 +91,20 @@ jobs:
 
       - name: Prepare Telegram notification
         run: |
-          cat > /tmp/notes.txt << 'NOTES_EOF'
+          cat > notes.txt << 'NOTES_EOF'
           ${{ steps.extract.outputs.notes }}
           NOTES_EOF
-          sed -i 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' /tmp/notes.txt
+          sed -i 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' notes.txt
           {
             echo '<b>Nexus Media ${{ steps.extract.outputs.tag }} 已发布</b>'
             echo ''
             echo '<pre>'
-            cat /tmp/notes.txt
+            cat notes.txt
             echo '</pre>'
             echo ''
             echo '📦 Docker: <code>docker pull linyuan0213/nexus-media:${{ steps.extract.outputs.version }}</code>'
             echo '🔗 <a href="https://github.com/${{ github.repository }}/releases/tag/${{ steps.extract.outputs.tag }}">查看 Release</a>'
-          } > /tmp/telegram_msg.txt
+          } > telegram_msg.txt
 
       - name: Send Telegram Notification
         uses: appleboy/telegram-action@master
@@ -112,4 +112,4 @@ jobs:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           format: html
-          message_file: /tmp/telegram_msg.txt
+          message_file: telegram_msg.txt
