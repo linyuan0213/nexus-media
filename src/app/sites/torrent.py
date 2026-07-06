@@ -1,7 +1,7 @@
 import datetime
 import os.path
 import re
-from urllib.parse import unquote
+from urllib.parse import parse_qs, unquote, urlparse
 
 from bencode import bdecode
 
@@ -88,7 +88,11 @@ class Torrent:
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, site_def)
 
-        if site_def and site_def.api:
+        # 预签名下载链接（含 sign 参数，如 M-Team RSS dlv2）自带认证，
+        # 不能再附加站点 API Key，否则站点会当作 API 认证并返回 JSON 错误
+        is_presigned = bool(parse_qs(urlparse(url).query).get("sign"))
+
+        if site_def and site_def.api and not is_presigned:
             user_config = {
                 "cookie": cookie or "",
                 "api_key": api_key or "",
@@ -98,6 +102,8 @@ class Torrent:
             }
             auth_headers, auth = engine_tools._build_auth(engine, site_def, user_config)
             headers.update(auth_headers)
+        elif is_presigned:
+            auth = None
         else:
             auth = CookieAuth(cookie)
 

@@ -269,6 +269,37 @@ class DownloadPipeline:
                     proxy=proxy if proxy is not None else site_info.get("proxy") or False,
                 )
 
+                # enclosure 下载失败且为 API 站(如 M-Team 预签名链接过期)时，
+                # 用详情页 tid 重新走下载 API 拿新鲜链接后重试一次
+                if not file_path and media_info.enclosure and media_info.page_url:
+                    page_site = self._site_engine.get_by_url(media_info.page_url)
+                    if page_site and page_site.download and page_site.download.type in ("api", "api_chained"):
+                        log.info(f"[Pipeline]下载链接可能已过期，尝试重新获取：{media_info.page_url}")
+                        page_info = self._sites.get_sites(siteurl=media_info.page_url)
+                        fresh_url = self._site_engine.resolve_download_url(
+                            page_url=media_info.page_url,
+                            user_config={
+                                "cookie": page_info.get("cookie", ""),
+                                "ua": page_info.get("ua", ""),
+                                "headers": page_info.get("headers", {}),
+                                "proxy": page_info.get("proxy"),
+                                "api_key": page_info.get("api_key", ""),
+                                "bearer_token": page_info.get("bearer_token", ""),
+                            },
+                        )
+                        if fresh_url and fresh_url != url:
+                            file_path, content, dl_files_folder, dl_files, retmsg = Torrent(
+                                self._site_engine
+                            ).get_torrent_info(
+                                url=fresh_url,
+                                cookie=cookie,
+                                api_key=api_key,
+                                bearer_token=bearer_token,
+                                ua=site_info.get("ua"),
+                                referer=media_info.page_url,
+                                proxy=proxy if proxy is not None else site_info.get("proxy") or False,
+                            )
+
         return content, file_path, dl_files_folder, dl_files, retmsg, site_info, torrent_attr
 
     # ---------- 阶段2：配置解析 ----------
