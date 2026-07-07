@@ -249,6 +249,24 @@ class Indexer:
                 order_seq = 100 - int(getattr(indexer, "pri", 0))
                 work_items.append((client, indexer, order_seq))
 
+        # 同域名索引器去重：内置优先，跳过被内置覆盖的第三方(如 jackett)重复站点
+        builtin_domains = {
+            StringUtils.get_url_domain(getattr(indexer, "domain", "") or "")
+            for client, indexer, _ in work_items
+            if client.get_client_id() == "builtin"
+        }
+        builtin_domains.discard("")
+        if builtin_domains:
+            filtered_items = []
+            for client, indexer, order_seq in work_items:
+                if client.get_client_id() != "builtin":
+                    dom = StringUtils.get_url_domain(getattr(indexer, "domain", "") or "")
+                    if dom and dom in builtin_domains:
+                        log.info(f"[Indexer]跳过第三方重复站点 {indexer.name}（内置已覆盖 {dom}）")
+                        continue
+                filtered_items.append((client, indexer, order_seq))
+            work_items = filtered_items
+
         if not work_items:
             log.error("没有可用索引器站点，无法搜索！")
             return []

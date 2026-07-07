@@ -94,8 +94,12 @@ class SearchRepository(BaseRepository):
                     "SITE_ORDER": media_item.site_order or "0",
                     "PAGEURL": media_item.page_url or (enclosure[:200] if enclosure else ""),
                     "OTHERINFO": media_item.resource_team or "",
-                    "UPLOAD_VOLUME_FACTOR": media_item.upload_volume_factor or 1.0,
-                    "DOWNLOAD_VOLUME_FACTOR": media_item.download_volume_factor or 1.0,
+                    "UPLOAD_VOLUME_FACTOR": (
+                        media_item.upload_volume_factor if media_item.upload_volume_factor is not None else 1.0
+                    ),
+                    "DOWNLOAD_VOLUME_FACTOR": (
+                        media_item.download_volume_factor if media_item.download_volume_factor is not None else 1.0
+                    ),
                     "NOTE": "|".join(media_item.labels)
                     if isinstance(media_item.labels, list)
                     else (media_item.labels or ""),

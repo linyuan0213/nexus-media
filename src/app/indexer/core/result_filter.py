@@ -225,6 +225,9 @@ class ResultFilter:
             indexer_name = item.get("_indexer_name", "")
             indexer_order = item.get("_indexer_order", 0)
             indexer_public = item.get("_indexer_public", False)
+            # 公开站(BT站)无魔力/分享率系统，种子均为免费
+            if indexer_public:
+                downloadvolumefactor = 0.0
 
             if filter_args.get("seeders") and not indexer_public and str(seeders) == "0":
                 log.info(f"[ResultFilter]{torrent_name} 做种数为0")
@@ -373,6 +376,9 @@ class ResultFilter:
             dv = item.get("downloadvolumefactor")
             uploadvolumefactor = round(float(uv), 1) if uv not in (None, "") else 1.0
             downloadvolumefactor = round(float(dv), 1) if dv not in (None, "") else 1.0
+            # 公开站(BT站)无魔力/分享率系统，种子均为免费
+            if item.get("_indexer_public", False):
+                downloadvolumefactor = 0.0
             enclosure = item.get("enclosure")
             cache_key = BatchIdentifier.build_cache_key(meta_info, torrent_name)
             indexer_name = cand.indexer_name
@@ -494,6 +500,11 @@ class ResultFilter:
                 f"[ResultFilter]{display_name} {description} 识别为 {media_info.get_title_string()} "
                 f"{media_info.get_season_episode_string()} 匹配成功"
             )
+            # 只订阅免费：download_volume_factor==0 视为免费(free/2xfree)
+            if filter_args.get("free") and downloadvolumefactor != 0.0:
+                log.info(f"[ResultFilter]{display_name} 非免费种子(dl_factor={downloadvolumefactor})，仅订阅免费，跳过")
+                stats.index_rule_fail += 1
+                continue
             media_info.set_torrent_info(
                 site=indexer_name,
                 site_order=indexer_order,
