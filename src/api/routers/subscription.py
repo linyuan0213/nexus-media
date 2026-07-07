@@ -62,6 +62,7 @@ class AddRssMediaRequest(BaseModel):
     filter_rule: str | None = None
     filter_include: str | None = None
     filter_exclude: str | None = None
+    filter_free: bool | None = None
     save_path: str | None = None
     download_setting: str | None = None
     total_ep: int | None = None
@@ -113,6 +114,7 @@ class DefaultSubscribeSettingSaveRequest(BaseModel):
     rule: str | None = None
     include: str | None = None
     exclude: str | None = None
+    free: bool | None = None
     download_setting: str | None = None
     rss_sites: list | None = None
     search_sites: list | None = None
@@ -147,6 +149,7 @@ def _build_add_kwargs(req: AddRssMediaRequest) -> dict:
         "filter_rule": req.filter_rule,
         "filter_include": req.filter_include,
         "filter_exclude": req.filter_exclude,
+        "filter_free": req.filter_free,
         "save_path": req.save_path,
         "download_setting": req.download_setting,
     }
@@ -171,6 +174,7 @@ def _build_update_kwargs(req: AddRssMediaRequest) -> dict:
         "filter_rule": req.filter_rule,
         "filter_include": req.filter_include,
         "filter_exclude": req.filter_exclude,
+        "filter_free": req.filter_free,
         "save_path": req.save_path,
         "download_setting": req.download_setting,
         "image": req.image,

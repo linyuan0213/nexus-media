@@ -198,6 +198,7 @@ class SubscribeRepository(BaseRepository):
         filter_rule: int | str | None = None,
         filter_include: str | None = None,
         filter_exclude: str | None = None,
+        filter_free: bool | None = None,
         save_path: str | None = None,
         download_setting: int = -1,
         fuzzy_match: int = 0,
@@ -258,6 +259,7 @@ class SubscribeRepository(BaseRepository):
                     FILTER_TEAM=filter_team,
                     FILTER_INCLUDE=filter_include,
                     FILTER_EXCLUDE=filter_exclude,
+                    FILTER_FREE=None if filter_free is None else int(filter_free),
                     SAVE_PATH=save_path,
                     DOWNLOAD_SETTING=download_setting,
                     FUZZY_MATCH=fuzzy_match,
@@ -293,6 +295,7 @@ class SubscribeRepository(BaseRepository):
             "filter_team": "FILTER_TEAM",
             "filter_include": "FILTER_INCLUDE",
             "filter_exclude": "FILTER_EXCLUDE",
+            "filter_free": "FILTER_FREE",
             "save_path": "SAVE_PATH",
             "download_setting": "DOWNLOAD_SETTING",
             "fuzzy_match": "FUZZY_MATCH",
@@ -329,6 +332,8 @@ class SubscribeRepository(BaseRepository):
                 v = defaults[k]
             if k in ("rss_sites", "search_sites") and isinstance(v, list):
                 update_fields[col] = JsonUtils.dumps(v)
+            elif k == "filter_free":
+                update_fields[col] = None if v is None else (1 if v else 0)
             else:
                 update_fields[col] = v
         if not update_fields:
@@ -472,6 +477,7 @@ class SubscribeRepository(BaseRepository):
         filter_rule: int | str | None = None,
         filter_include: str | None = None,
         filter_exclude: str | None = None,
+        filter_free: bool | None = None,
         save_path: str | None = None,
         download_setting: int = -1,
         total_ep: int | str | None = None,
@@ -551,6 +557,7 @@ class SubscribeRepository(BaseRepository):
                     FILTER_TEAM=filter_team,
                     FILTER_INCLUDE=filter_include,
                     FILTER_EXCLUDE=filter_exclude,
+                    FILTER_FREE=None if filter_free is None else int(filter_free),
                     SAVE_PATH=save_path,
                     DOWNLOAD_SETTING=download_setting,
                     FUZZY_MATCH=fuzzy_match,
@@ -591,6 +598,7 @@ class SubscribeRepository(BaseRepository):
             "filter_team": "FILTER_TEAM",
             "filter_include": "FILTER_INCLUDE",
             "filter_exclude": "FILTER_EXCLUDE",
+            "filter_free": "FILTER_FREE",
             "save_path": "SAVE_PATH",
             "download_setting": "DOWNLOAD_SETTING",
             "fuzzy_match": "FUZZY_MATCH",
@@ -636,6 +644,8 @@ class SubscribeRepository(BaseRepository):
                 v = defaults[k]
             if k in ("rss_sites", "search_sites") and isinstance(v, list):
                 update_fields[col] = JsonUtils.dumps(v)
+            elif k == "filter_free":
+                update_fields[col] = None if v is None else (1 if v else 0)
             else:
                 update_fields[col] = v
         if not update_fields:

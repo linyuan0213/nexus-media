@@ -62,6 +62,7 @@ class SubscribeAddService:
         filter_rule: int | str | None = None,
         filter_include: str | None = None,
         filter_exclude: str | None = None,
+        filter_free: bool | None = None,
         save_path: str | None = None,
         download_setting: int | str | None = None,
         total_ep: int | None = None,
@@ -90,6 +91,7 @@ class SubscribeAddService:
                 default_rule = default_rss_setting.get("rule")
                 default_include = default_rss_setting.get("include")
                 default_exclude = default_rss_setting.get("exclude")
+                default_free = default_rss_setting.get("free")
                 default_download_setting = default_rss_setting.get("download_setting")
                 default_over_edition = default_rss_setting.get("over_edition")
                 default_rss_sites = default_rss_setting.get("rss_sites")
@@ -106,6 +108,8 @@ class SubscribeAddService:
                     filter_include = default_include
                 if filter_exclude is None and default_exclude:
                     filter_exclude = default_exclude
+                if filter_free is None and default_free is not None:
+                    filter_free = bool(default_free)
                 if over_edition is None and default_over_edition:
                     over_edition = 1 if default_over_edition == "1" else 0
                 if download_setting is None and default_download_setting:
@@ -184,6 +188,7 @@ class SubscribeAddService:
                     filter_rule=filter_rule,
                     filter_include=filter_include,
                     filter_exclude=filter_exclude,
+                    filter_free=filter_free,
                     save_path=save_path,
                     download_setting=download_setting,
                     total_ep=total_ep,
@@ -206,6 +211,7 @@ class SubscribeAddService:
                     filter_team=filter_team,
                     filter_rule=filter_rule,
                     filter_include=filter_include,
+                    filter_free=filter_free,
                     filter_exclude=filter_exclude,
                     save_path=save_path,
                     download_setting=download_setting,
@@ -232,6 +238,7 @@ class SubscribeAddService:
                     filter_pix=filter_pix,
                     filter_team=filter_team,
                     filter_rule=filter_rule,
+                    filter_free=filter_free,
                     filter_include=filter_include,
                     filter_exclude=filter_exclude,
                     save_path=save_path,
@@ -252,6 +259,7 @@ class SubscribeAddService:
                     filter_restype=filter_restype,
                     filter_pix=filter_pix,
                     filter_team=filter_team,
+                    filter_free=filter_free,
                     filter_rule=filter_rule,
                     filter_include=filter_include,
                     filter_exclude=filter_exclude,

@@ -123,6 +123,12 @@ class IndexerFilterEngine:
             if downloadvolumefactor and dl_factor not in ("*", str(downloadvolumefactor)):
                 return False, 0, f"{meta_info.org_string} 不符合促销要求"
 
+        # 只订阅免费：download_volume_factor==0 视为免费(free/2xfree)
+        # downloadvolumefactor 为 None 表示无法判断(站点未开启解析)，保守跳过(搜索会补充)
+        if filter_args.get("free"):
+            if downloadvolumefactor is None or float(downloadvolumefactor) != 0.0:
+                return False, 0, f"{meta_info.org_string} 非免费种子，仅订阅免费"
+
         # 过滤包含
         if filter_args.get("include"):
             include = filter_args.get("include")

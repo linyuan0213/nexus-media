@@ -191,6 +191,7 @@ class BaseSearchStrategy:
                             "rule": rss_info.get("filter_rule"),
                             "include": rss_info.get("filter_include"),
                             "exclude": rss_info.get("filter_exclude"),
+                            "free": rss_info.get("filter_free"),
                             "site": rss_info.get("search_sites"),
                         }
                         search_result, _, _, _ = self._searcher.search_one_media(
@@ -343,6 +344,7 @@ class BaseSearchStrategy:
                         "rule": rss_info.get("filter_rule"),
                         "include": rss_info.get("filter_include"),
                         "exclude": rss_info.get("filter_exclude"),
+                        "free": rss_info.get("filter_free"),
                         "site": rss_info.get("search_sites"),
                     }
                     search_result, no_exists, _, _ = self._searcher.search_one_media(

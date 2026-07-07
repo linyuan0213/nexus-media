@@ -176,6 +176,7 @@ class SubscribeMatcher:
             "rule": filter_rule,
             "include": match_rss_info.get("filter_include"),
             "exclude": match_rss_info.get("filter_exclude"),
+            "free": match_rss_info.get("filter_free"),
         }
 
         group_repo = FilterGroupRepositoryAdapter()

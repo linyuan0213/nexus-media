@@ -135,6 +135,7 @@ class SubscribeMovieEntity:
     state: str
     description: str
     note: str
+    filter_free: bool = False
 
     @property
     def state_enum(self) -> SubscribeState:
@@ -225,6 +226,7 @@ class SubscribeMovieEntity:
             filter_team=orm_model.FILTER_TEAM or "",
             filter_include=orm_model.FILTER_INCLUDE or "",
             filter_exclude=orm_model.FILTER_EXCLUDE or "",
+            filter_free=bool(orm_model.FILTER_FREE),
             save_path=orm_model.SAVE_PATH or "",
             download_setting=orm_model.DOWNLOAD_SETTING,
             fuzzy_match=bool(orm_model.FUZZY_MATCH),
@@ -268,6 +270,7 @@ class SubscribeMovieEntity:
             "filter_team": self.filter_team,
             "filter_include": self.filter_include,
             "filter_exclude": self.filter_exclude,
+            "filter_free": self.filter_free,
             "save_path": self.save_path,
             "download_setting": self.download_setting,
             "fuzzy_match": self.fuzzy_match,
@@ -363,6 +366,7 @@ class SubscribeTvEntity:
     state: str
     description: str
     note: str
+    filter_free: bool = False
 
     @property
     def state_enum(self) -> SubscribeState:
@@ -469,6 +473,7 @@ class SubscribeTvEntity:
             filter_team=orm_model.FILTER_TEAM or "",
             filter_include=orm_model.FILTER_INCLUDE or "",
             filter_exclude=orm_model.FILTER_EXCLUDE or "",
+            filter_free=bool(orm_model.FILTER_FREE),
             save_path=orm_model.SAVE_PATH or "",
             download_setting=orm_model.DOWNLOAD_SETTING,
             fuzzy_match=bool(orm_model.FUZZY_MATCH),
@@ -517,6 +522,7 @@ class SubscribeTvEntity:
             "filter_team": self.filter_team,
             "filter_include": self.filter_include,
             "filter_exclude": self.filter_exclude,
+            "filter_free": self.filter_free,
             "save_path": self.save_path,
             "download_setting": self.download_setting,
             "fuzzy_match": self.fuzzy_match,
