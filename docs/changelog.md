@@ -1,5 +1,33 @@
 # 版本历史
 
+## v4.2.3 (2026-07-07)
+
+### 修复
+- 修复 M-Team RSS 订阅下载失败：预签名下载链接（dlv2 的 `sign` 参数自带认证）不再附加站点 API Key，避免被当作 API 认证返回 JSON 错误；enclosure 链接过期时自动用详情页 tid 重新申请新链接重试
+- 修复插件框架加载时从未注册 manifest 声明的事件钩子，导致 `on_hook`（`plugin.config_changed` 等）全部失效
+- 修复 RBAC 角色查询在 session 关闭后访问懒加载关系触发 `DetachedInstanceError` 刷屏日志，改为 `selectinload` 预加载
+- 修复搜索进度任务完成后返回 0 导致前端轮询无法结束
+- 修复搜索结果制作组为空时显示空按钮，改为显示"未知"
+- 修复媒体搜索有结果时仍显示"未找到相关媒体"空状态
+- 修复多站点做种数据解析（hhanclub/hdsky/star-space/织梦等 NexusPHP 站点）：自动检测表头列索引、支持 JS 分页、用户详情页汇总提取、修复字符串逐字符遍历导致的 IP 统计错误
+
+### 新增
+- 内置索引器关键字搜索支持自动翻页（最多 5 页），修复海贼王等长剧集只能获取首页 100 条数据的问题
+- 新增「站点分享率监控」插件：定时检查各站点分享率，低于阈值发送通知，自动排除第三方索引器
+- 新增「Tracker 管理」插件：批量替换下载器中种子的 tracker 地址，支持正则匹配
+- 应用层 DNS 映射：`HttpClient`/`AsyncHttpClient` 支持 `host_mapping` 及全局映射注册，请求时动态解析无需重建连接池
+- `customhosts` 插件改为应用层 DNS 映射，无需 root 权限修改 `/etc/hosts`
+- `PluginContext` 新增 `get_plugin_config`/`set_plugin_config` 跨插件配置 API
+- 下载器客户端补充 tracker 增删改方法
+- 站点详细数据对无上传下载的不活跃站点整行降低透明度标识
+
+### 优化
+- `cloudflarespeedtest` 替换 hosts 前检查域名是否 Cloudflare 托管，避免非 CF 站点 SSL 握手失败
+- 预签名下载链接判断改为配置驱动（`download.presigned`）
+- 插件质量统一整改（18 个）：手动运行绕过启用检查、移除「立即运行一次」冗余开关、补充协作式线程停止
+- 下载器/站点 API 支持 `source` 过滤，排除第三方索引器站点
+- 更新项目依赖
+
 ## v4.2.2 (2026-07-06)
 
 ### 修复
