@@ -283,9 +283,6 @@ class TestRBACMenuService:
     def test_get_user_menus_superadmin(self):
         menu_repo = MagicMock()
         user_repo = MagicMock()
-        user = MagicMock()
-        user.IS_SUPERADMIN = 1
-        user_repo.get_user_by_id.return_value = user
         menu = MagicMock()
         menu.ID = 1
         menu.PARENT_ID = None
@@ -296,7 +293,7 @@ class TestRBACMenuService:
         menu.SORT_ORDER = 0
         menu.PERMISSION_CODE = None
         menu.COMPONENT = None
-        menu_repo.get_all_menus.return_value = [menu]
+        menu_repo.get_user_menus.return_value = [menu]
         svc = RBACMenuService(menu_repo, user_repo)
 
         result = svc.get_user_menus(1)
@@ -330,6 +327,26 @@ class TestRBACMenuService:
 class TestRBACCheckService:
     """Test suite for RBACCheckService."""
 
+    @staticmethod
+    def _mock_user_with_perms(user_repo, role_repo, user_id=1, permission_codes=None) -> RBACCheckService:
+        """创建模拟的 RBACCheckService，user 拥有指定权限（通过角色驱动）。"""
+        user_repo.get_user_by_id.return_value = MagicMock()
+        if permission_codes:
+            role = MagicMock()
+            role.id = 99
+            role.status = 1
+            perms = []
+            for code in permission_codes:
+                p = MagicMock()
+                p.permission_code = code
+                p.status = 1
+                perms.append(p)
+            role_repo.get_role_permissions.return_value = perms
+            user_repo.get_user_roles.return_value = [role]
+        else:
+            user_repo.get_user_roles.return_value = []
+        return RBACCheckService(user_repo, role_repo, MagicMock(), MagicMock())
+
     def test_get_user_permissions_user_not_found(self):
         user_repo = MagicMock()
         user_repo.get_user_by_id.return_value = None
@@ -340,24 +357,16 @@ class TestRBACCheckService:
 
     def test_get_user_permissions_superadmin(self):
         user_repo = MagicMock()
-        user = MagicMock()
-        user.is_superadmin = 1
-        user_repo.get_user_by_id.return_value = user
-        perm_repo = MagicMock()
-        perm = MagicMock()
-        perm.permission_code = "test:read"
-        perm_repo.get_all_permissions.return_value = [perm]
-        svc = RBACCheckService(user_repo, MagicMock(), perm_repo, MagicMock())
+        role_repo = MagicMock()
+        svc = self._mock_user_with_perms(user_repo, role_repo, permission_codes=["test:read"])
 
         result = svc.get_user_permissions(1)
         assert "test:read" in result
 
     def test_check_permission_superadmin(self):
         user_repo = MagicMock()
-        user = MagicMock()
-        user.IS_SUPERADMIN = 1
-        user_repo.get_user_by_id.return_value = user
-        svc = RBACCheckService(user_repo, MagicMock(), MagicMock(), MagicMock())
+        role_repo = MagicMock()
+        svc = self._mock_user_with_perms(user_repo, role_repo, permission_codes=["any:perm"])
 
         assert svc.check_permission(1, "any:perm") is True
 
@@ -370,28 +379,26 @@ class TestRBACCheckService:
 
     def test_check_any_permission_superadmin(self):
         user_repo = MagicMock()
-        user = MagicMock()
-        user.IS_SUPERADMIN = 1
-        user_repo.get_user_by_id.return_value = user
-        svc = RBACCheckService(user_repo, MagicMock(), MagicMock(), MagicMock())
+        role_repo = MagicMock()
+        svc = self._mock_user_with_perms(user_repo, role_repo, permission_codes=["a:1", "b:2"])
 
         assert svc.check_any_permission(1, ["a:1", "b:2"]) is True
 
     def test_check_all_permissions_superadmin(self):
         user_repo = MagicMock()
-        user = MagicMock()
-        user.IS_SUPERADMIN = 1
-        user_repo.get_user_by_id.return_value = user
-        svc = RBACCheckService(user_repo, MagicMock(), MagicMock(), MagicMock())
+        role_repo = MagicMock()
+        svc = self._mock_user_with_perms(user_repo, role_repo, permission_codes=["a:1", "b:2"])
 
         assert svc.check_all_permissions(1, ["a:1", "b:2"]) is True
 
     def test_check_menu_access_superadmin(self):
         user_repo = MagicMock()
-        user = MagicMock()
-        user.IS_SUPERADMIN = 1
-        user_repo.get_user_by_id.return_value = user
-        svc = RBACCheckService(user_repo, MagicMock(), MagicMock(), MagicMock())
+        menu_repo = MagicMock()
+        user_repo.get_user_by_id.return_value = MagicMock()
+        menu = MagicMock()
+        menu.MENU_CODE = "dashboard"
+        menu_repo.get_user_menus.return_value = [menu]
+        svc = RBACCheckService(user_repo, MagicMock(), MagicMock(), menu_repo)
 
         assert svc.check_menu_access(1, "dashboard") is True
 

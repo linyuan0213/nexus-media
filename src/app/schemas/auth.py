@@ -43,7 +43,7 @@ class UserContext(BaseModel):
         return False
 
     def has_permission(self, permission_code: str) -> bool:
-        return permission_code in self.permissions
+        return "*" in self.permissions or permission_code in self.permissions
 
 
 class LoginRequest(BaseModel):
