@@ -1,5 +1,6 @@
 import contextlib
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
@@ -455,43 +456,63 @@ def get_library_home(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MediaLibraryService = Depends(get_media_library_service),
 ):
-    server_success = False
-    media_counts = {}
-    try:
-        result = svc.get_media_count()
-        if result:
-            media_counts = result
-            server_success = True
-    except Exception as e:  # noqa: BLE001
-        log.debug(f"[MediaLibrary]获取媒体数量失败: {e}")
+    # 6 项数据均为独立的媒体服务器请求，并发获取以降低整体耗时
+    def _media_counts():
+        try:
+            return svc.get_media_count() or None
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[MediaLibrary]获取媒体数量失败: {e}")
+            return None
 
-    activity = []
-    with contextlib.suppress(Exception):
-        activity = svc.get_play_history() or []
+    def _activity():
+        with contextlib.suppress(Exception):
+            return svc.get_play_history() or []
+        return []
 
-    library_spaces = {}
-    try:
-        space_info = svc.get_space_info()
-        library_spaces = {
-            "UsedPercent": space_info.used_percent,
-            "FreeSpace": space_info.free_space,
-            "UsedSpace": space_info.used_space,
-            "TotalSpace": space_info.total_space,
-        }
-    except Exception as e:  # noqa: BLE001
-        log.debug(f"[MediaLibrary]获取空间信息失败: {e}")
+    def _spaces():
+        try:
+            space_info = svc.get_space_info()
+            return {
+                "UsedPercent": space_info.used_percent,
+                "FreeSpace": space_info.free_space,
+                "UsedSpace": space_info.used_space,
+                "TotalSpace": space_info.total_space,
+            }
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[MediaLibrary]获取空间信息失败: {e}")
+            return {}
 
-    libraries = []
-    with contextlib.suppress(Exception):
-        libraries = svc.get_libraries() or []
+    def _libraries():
+        with contextlib.suppress(Exception):
+            return svc.get_libraries() or []
+        return []
 
-    resumes = []
-    with contextlib.suppress(Exception):
-        resumes = svc.get_resume() or []
+    def _resumes():
+        with contextlib.suppress(Exception):
+            return svc.get_resume() or []
+        return []
 
-    latests = []
-    with contextlib.suppress(Exception):
-        latests = svc.get_latest() or []
+    def _latests():
+        with contextlib.suppress(Exception):
+            return svc.get_latest() or []
+        return []
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        f_counts = executor.submit(_media_counts)
+        f_activity = executor.submit(_activity)
+        f_spaces = executor.submit(_spaces)
+        f_libraries = executor.submit(_libraries)
+        f_resumes = executor.submit(_resumes)
+        f_latests = executor.submit(_latests)
+
+        counts_result = f_counts.result()
+        server_success = counts_result is not None
+        media_counts = counts_result or {}
+        activity = f_activity.result()
+        library_spaces = f_spaces.result()
+        libraries = f_libraries.result()
+        resumes = f_resumes.result()
+        latests = f_latests.result()
 
     return success(
         data={
