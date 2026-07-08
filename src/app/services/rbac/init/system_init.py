@@ -60,9 +60,7 @@ def init_admin_user(
 
         password_hash = generate_password_hash(admin_password)
 
-        user = user_repo.create_user(
-            username=admin_username, password_hash=password_hash, nickname="系统管理员", is_superadmin=1
-        )
+        user = user_repo.create_user(username=admin_username, password_hash=password_hash, nickname="系统管理员")
 
         superadmin_role = role_repo.get_role_by_code("superadmin")
         if superadmin_role:

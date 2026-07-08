@@ -67,7 +67,6 @@ def _extract_user_from_api_key(
 
     # 查询创建用户的权限，API Key 继承创建者权限
     permissions = []
-    is_superadmin = False
     level = 0
     username: str = "api_key"
     nickname = cast(str, api_key.name)
@@ -80,7 +79,6 @@ def _extract_user_from_api_key(
                 username = cast(str, getattr(user, "USERNAME", username) or username)
                 nickname = cast(str, api_key.name)
                 level = getattr(user, "LEVEL", 0) or 0
-                is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
                 try:
                     perms = rbac_service.get_user_permissions(created_by)
                     permissions = list(perms) if perms else []
@@ -95,7 +93,6 @@ def _extract_user_from_api_key(
         nickname=nickname,
         level=level,
         permissions=permissions,
-        is_superadmin=is_superadmin,
     )
 
 
@@ -123,7 +120,7 @@ def get_current_user(
     # 2) 旧 Token 认证（APIv1 兼容）
     username = _extract_user_from_token(auth_header)
     if username:
-        return UserContext(user_id=0, username=username, level=0, permissions=[], is_superadmin=False)
+        return UserContext(user_id=0, username=username, level=0, permissions=[])
 
     # 3) API Key 认证
     query_key = request.query_params.get("apikey")
@@ -167,7 +164,7 @@ def require_permission(permission: str):
     """
 
     def checker(user: UserContext = current_user_dependency) -> UserContext:
-        if permission not in user.permissions and not user.is_superadmin:
+        if permission not in user.permissions:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"权限不足: {permission}")
         return user
 
@@ -181,8 +178,6 @@ def require_any_permission(*permissions: str):
     """
 
     def checker(user: UserContext = current_user_dependency) -> UserContext:
-        if user.is_superadmin:
-            return user
         if any(p in user.permissions for p in permissions):
             return user
         raise HTTPException(
@@ -199,8 +194,6 @@ def require_all_permissions(*permissions: str):
     """
 
     def checker(user: UserContext = current_user_dependency) -> UserContext:
-        if user.is_superadmin:
-            return user
         missing = [p for p in permissions if p not in user.permissions]
         if missing:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"权限不足，缺少: {', '.join(missing)}")

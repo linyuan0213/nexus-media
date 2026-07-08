@@ -820,7 +820,7 @@ def stream_logging(
         )
 
     # 权限检查
-    if not user_ctx.is_superadmin and "log:view" not in user_ctx.permissions:
+    if "log:view" not in user_ctx.permissions:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="权限不足，需要日志查看权限",
@@ -849,8 +849,8 @@ def update_site_config(
     payload: EmptyRequest | None = None,
 ):
     """手动触发站点配置更新"""
-    if not user.is_superadmin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+    if "setting:update" not in user.permissions:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要站点配置更新权限")
 
     try:
         force = bool(payload and payload.data and payload.data.get("force"))
