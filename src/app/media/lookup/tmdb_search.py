@@ -12,6 +12,7 @@ from app.infrastructure.tmdb import get_rate_limiter
 from app.media.lookup.tmdb_client import TmdbClient, compare_tmdb_names
 from app.media.lookup.tmdb_detail import TmdbDetail
 from app.utils import StringUtils
+from app.utils.config_tools import get_proxies
 
 
 class TmdbSearch:
@@ -375,8 +376,10 @@ class TmdbSearch:
         log.info(f"[Meta]正在从TheDbMovie网站查询：{name}...")
         tmdb_url = f"https://www.themoviedb.org/search?query={name}"
         tmdb_limiter = get_rate_limiter()
+        _proxies = get_proxies() or {}
+        _proxy_url = _proxies.get("http") or _proxies.get("https") if isinstance(_proxies, dict) else None
         client = HttpClient(
-            config=HttpClientConfig(timeout=5),
+            config=HttpClientConfig(proxy_url=_proxy_url, timeout=5),
             rate_limiter=tmdb_limiter.engine,
         )
         res = client.get(tmdb_url, rate_limit_key="tmdb:web", rate_limit_rate="2.5/s")

@@ -8,8 +8,17 @@ from app.core.settings import settings
 
 
 def get_proxies():
-    """获取代理配置"""
-    return settings.get("app").get("proxies")
+    """获取代理配置。
+
+    统一规范化：只要 http/https 任一被配置（含 socks5://、socks5h:// 等），
+    就把两个键都填成同一个地址，避免调用方只读 http 键时取不到 https 键里配置的代理。
+    """
+    proxies = settings.get("app").get("proxies")
+    if isinstance(proxies, dict):
+        proxy_url = proxies.get("http") or proxies.get("https")
+        if proxy_url:
+            return {"http": proxy_url, "https": proxy_url}
+    return proxies
 
 
 def get_ua():

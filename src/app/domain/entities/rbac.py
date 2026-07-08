@@ -232,6 +232,7 @@ class RBACMenuEntity:
     active_icon: str | None
     badge: str | None
     badge_type: str | None
+    is_builtin: int
     created_at: datetime | None
     updated_at: datetime | None
 
@@ -263,6 +264,7 @@ class RBACMenuEntity:
             active_icon=getattr(orm_model, "ACTIVE_ICON", None),
             badge=getattr(orm_model, "BADGE", None),
             badge_type=getattr(orm_model, "BADGE_TYPE", None),
+            is_builtin=getattr(orm_model, "IS_BUILTIN", 0),
             created_at=getattr(orm_model, "CREATED_AT", None),
             updated_at=getattr(orm_model, "UPDATED_AT", None),
         )

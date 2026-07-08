@@ -15,6 +15,7 @@ import log
 from app.core.module_config import ModuleConf
 from app.core.settings import settings
 from app.core.system_config import SystemConfig
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.domain.enums import SystemConfigKey
 from app.domain.mediatypes import MediaType
 from app.infrastructure.ffmpeg import FfmpegProcessor
@@ -87,13 +88,37 @@ class Scraper:
                     mi.set_tmdb_info(self.media.get_tmdb_info(mtype=mi.type, tmdbid=tmdbid, append_to_response="all"))
                     media_info = mi
                 else:
-                    medias = self.media.get_media_info_on_files(
-                        file_list=[file], append_to_response="all", backend=dst_backend
-                    )
-                    if not medias:
-                        log.warn(f"[Scraper]{file} 无法识别媒体信息")
-                        continue
-                    media_info = next(iter(medias.values()), None)
+                    # 尝试从下载历史中读取订阅时记录的 TMDB 信息（TMDB 身份确定，季/集仍从文件名解析）
+                    dl_tmdbid, dl_type = self._download_history_tmdb(file)
+                    if dl_tmdbid and not force_nfo:
+                        log.info(f"[Scraper]从下载历史读取到tmdbid：{dl_tmdbid}，类型={dl_type}")
+                        tmdb_details = self.media.get_tmdb_info(
+                            mtype=dl_type, tmdbid=dl_tmdbid, append_to_response="all"
+                        )
+                        if tmdb_details:
+                            mi.set_tmdb_info(tmdb_details)
+                            # 再用 identify_files 解析季/集（有 tmdb_info 时跳过网络查询，仅做本地解析）
+                            medias = self.media.get_media_info_on_files(
+                                file_list=[file],
+                                tmdb_info=tmdb_details,
+                                media_type=dl_type,
+                                append_to_response="all",
+                                backend=dst_backend,
+                            )
+                            if medias:
+                                media_info = next(iter(medias.values()), mi)
+                            else:
+                                media_info = mi
+                        else:
+                            media_info = mi
+                    else:
+                        medias = self.media.get_media_info_on_files(
+                            file_list=[file], append_to_response="all", backend=dst_backend
+                        )
+                        if not medias:
+                            log.warn(f"[Scraper]{file} 无法识别媒体信息")
+                            continue
+                        media_info = next(iter(medias.values()), None)
                 if not media_info or not media_info.tmdb_info:
                     log.warn(f"[Scraper]{file} 无法获取TMDB信息")
                     continue
@@ -111,6 +136,29 @@ class Scraper:
         except Exception as e:
             log.error(f"[Scraper]刮削异常：{e}")
             ExceptionUtils.exception_traceback(e)
+
+    def _download_history_tmdb(self, file_path):
+        """从下载历史中读取订阅时记录的 TMDB 信息。
+
+        匹配方式：下载历史的 SAVE_PATH 是文件/目录所在路径。
+        返回 (tmdbid: int, media_type: str)，未匹配时返回 (None, "")。
+        """
+        try:
+            repo = DownloadHistoryRepositoryAdapter()
+            history = repo.get_download_history_by_path(file_path)
+            if not history:
+                parent = os.path.dirname(file_path)
+                if parent and parent != file_path:
+                    history = repo.get_download_history_by_path(parent)
+            if history:
+                # get_download_history_by_path 返回原始 ORM 对象，字段为大写
+                tmdbid = getattr(history, "TMDBID", "") or ""
+                mtype = getattr(history, "TYPE", "") or ""
+                if tmdbid:
+                    return int(tmdbid), mtype
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[Scraper]读取下载历史 TMDB 失败: {file_path} - {e}")
+        return None, ""
 
     def _extract_tmdbid(self, file_path, meta_info, dst_backend=None):
         """从本地 NFO 文件提取 TMDB ID"""

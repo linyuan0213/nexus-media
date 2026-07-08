@@ -7,9 +7,20 @@ import os
 import log
 from app.infrastructure.http import HttpClientError
 from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.storage.backends.base import StorageBackend
 from app.utils import ExceptionUtils
 from app.utils.commons import retry
+from app.utils.config_tools import get_proxies
+
+
+def _proxy_url_from_settings() -> str | None:
+    """图片多来自 TMDB/Fanart/Bangumi 等境外源，需按配置走代理。"""
+    proxies = get_proxies() or {}
+    if isinstance(proxies, dict):
+        return proxies.get("http") or proxies.get("https")
+    return None
+
 
 _CONTENT_TYPE_EXT_MAP = {
     "image/jpeg": ".jpg",
@@ -46,7 +57,9 @@ class ImageDownloader:
             return
         try:
             log.info(f"[Scraper]正在下载{itype}图片：{url} ...")
-            r = HttpClient().get(url=url, raise_exception=True)
+            r = HttpClient(config=HttpClientConfig(proxy_url=_proxy_url_from_settings())).get(
+                url=url, raise_exception=True
+            )
             if r:
                 resolved_path = self._resolve_extension(image_path, r.headers.get("content-type", ""))
                 if self._dst_backend:
