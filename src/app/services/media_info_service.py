@@ -348,6 +348,18 @@ class MediaInfoService:
             mediaid=media_info.tmdb_id,
         )
         seasons = self._media.get_tmdb_tv_seasons(media_info.tmdb_info)
+        sub_seasons: list[int] = []
+        if mtype == MediaType.TV:
+            try:
+                sub_seasons = self._subscribe.get_subscribe_seasons(
+                    tmdbid=media_info.tmdb_id,
+                    title=media_info.title,
+                    year=media_info.year,
+                )
+            except (ServiceError, RepositoryError, DomainError):
+                raise
+            except Exception as e:
+                log.error(f"[media_detail]查询已订阅季失败: {str(e)}")
         if seasons:
             for season in seasons:
                 try:
@@ -372,6 +384,7 @@ class MediaInfoService:
         return {
             "tmdbid": media_info.tmdb_id,
             "douban_id": media_info.douban_id,
+            "type": mtype.value,
             "background": self._media.get_tmdb_backdrops(tmdbinfo=media_info.tmdb_info),
             "image": poster_image,
             "vote": media_info.vote_average,
@@ -389,4 +402,5 @@ class MediaInfoService:
             "item_url": item_url,
             "rssid": rssid,
             "seasons": seasons,
+            "sub_seasons": sub_seasons,
         }

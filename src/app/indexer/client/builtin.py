@@ -329,8 +329,13 @@ class BuiltinIndexer(_IIndexClient):
                 if site_def.detail_page_url and tid:
                     detail = site_def.detail_page_url.format(tid=tid)
                     if detail.startswith("/"):
-                        domain = site_def.domain
-                        detail = f"https://{domain}{detail}" if domain else detail
+                        # 详情页地址优先使用用户配置的站点域名（签到域名/别名），回退站点规范域名
+                        base = (getattr(indexer, "domain", "") or "").rstrip("/")
+                        if not base and site_def.domain:
+                            base = (
+                                site_def.domain if site_def.domain.startswith("http") else f"https://{site_def.domain}"
+                            )
+                        detail = f"{base}{detail}" if base else detail
                     item["page_url"] = detail
         return False, result_array
 

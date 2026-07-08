@@ -207,7 +207,12 @@ class ProgressService:
     def get_progress(self, ptype: str) -> ProgressResultDTO:
         detail = self._progress.get_process(ProgressKey(ptype))
         if detail:
-            return ProgressResultDTO(value=detail.get("value", 0), text=detail.get("text", ""), exists=True)
+            return ProgressResultDTO(
+                value=detail.get("value", 0),
+                text=detail.get("text", ""),
+                exists=True,
+                enable=bool(detail.get("enable", False)),
+            )
         return ProgressResultDTO(exists=False, text="正在处理...")
 
 

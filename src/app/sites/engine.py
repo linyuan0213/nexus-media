@@ -528,7 +528,7 @@ class SiteEngine:
                 return False, "站点未配置连接测试端点", 0
             start = time.time()
             result = engine_tools._call_endpoint(self, test_cfg, site, user_config, {})
-            latency = int((time.time() - start) * 1000)
+            latency = round(time.time() - start, 3)
             if result is None:
                 return False, "连接失败", latency
             raw = JsonUtils.dumps(result, separators=(",", ":")) if not isinstance(result, str) else result
@@ -541,7 +541,7 @@ class SiteEngine:
                 return False, "密钥失效", latency
             return True, "连接成功", latency
         if site.html:
-            return engine_connection.test_html_connection(self, site, user_config)
+            return engine_connection.test_html_connection(self, site, user_config, base_url=url)
         return False, "未配置 API 或 HTML 端点", 0
 
     # ---- 用户信息 ----
