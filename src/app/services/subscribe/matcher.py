@@ -83,6 +83,14 @@ class SubscribeMatcher:
 
                 match_flag = True
                 match_rss_info = rss_info
+                # 将订阅中已确认的 TMDB 信息写入 media_info，
+                # 使下载/转移/刮削环节可直接复用而非依赖文件名解析
+                if rss_info.get("tmdbid"):
+                    media_info.tmdb_id = int(rss_info["tmdbid"])
+                if rss_info.get("type"):
+                    media_info.type = MediaType(rss_info["type"])
+                if rss_info.get("year"):
+                    media_info.year = rss_info["year"]
                 break
 
         # ---------- 匹配电视剧 ----------
@@ -120,6 +128,13 @@ class SubscribeMatcher:
 
                 match_flag = True
                 match_rss_info = rss_info
+                # 将订阅中已确认的 TMDB 信息写入 media_info
+                if rss_info.get("tmdbid"):
+                    media_info.tmdb_id = int(rss_info["tmdbid"])
+                if rss_info.get("type"):
+                    media_info.type = MediaType(rss_info["type"])
+                if rss_info.get("year"):
+                    media_info.year = rss_info["year"]
                 break
 
         # ---------- 匹配成功，应用过滤规则 ----------

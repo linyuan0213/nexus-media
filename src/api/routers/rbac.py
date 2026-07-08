@@ -492,6 +492,18 @@ def delete_menu(
         return fail(success=False, message=e.message)
 
 
+@router.post("/menus/reset", response_model=CommonResponse, summary="重置菜单到初始状态")
+def reset_menus(
+    current_user: UserContext = Depends(require_permission("menu:update")),
+    svc=Depends(get_rbac_service),
+):
+    try:
+        affected = svc.reset_menus()
+        return success(data={"success": True, "affected": affected, "message": "菜单已重置为默认"})
+    except (ResourceAlreadyExistsError, ResourceNotFoundError) as e:
+        return fail(success=False, message=e.message)
+
+
 @router.post("/menus/update", response_model=CommonResponse, summary="更新菜单")
 def update_menu(
     req: UpdateMenuRequest,

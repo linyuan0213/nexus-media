@@ -80,13 +80,11 @@ class PluginFrameworkService:
             )
             plugin_parent = result if hasattr(result, "id") else self._menu_repo.get_menu_by_code(plugin_parent_code)
         else:
-            self._menu_repo.update_menu(
-                plugin_parent.id,
-                parent_id=root_parent.id,
-                menu_name=manifest.name,
-                icon=manifest.icon or "lucide:puzzle",
-                status=1,
-            )
+            # 与默认菜单一致：仅确保启用与技术路由，保留用户自定义（名称/图标/排序/显隐/父级）
+            parent_updates: dict = {"status": 1}
+            if plugin_parent.path != f"/plugin/{plugin_id}":
+                parent_updates["path"] = f"/plugin/{plugin_id}"
+            self._menu_repo.update_menu(plugin_parent.id, **parent_updates)
 
         if not plugin_parent:
             return
@@ -100,21 +98,18 @@ class PluginFrameworkService:
             menu_code = f"Plugin_{plugin_id}_{safe_path}"
             menu_name = route.title or manifest.name
             menu_icon = route.icon or "lucide:puzzle"
+            base_path = f"/plugin/{plugin_id}"
+            full_path = route.path if route.path.startswith("/") else f"{base_path}/{route.path}"
 
             existing = self._menu_repo.get_menu_by_code(menu_code)
             if existing:
-                self._menu_repo.update_menu(
-                    existing.id,
-                    parent_id=plugin_parent.id,
-                    status=1,
-                    menu_name=menu_name,
-                    icon=menu_icon,
-                )
+                # 与默认菜单一致：仅确保启用与技术路由，保留用户自定义（名称/图标/排序/显隐/父级）
+                child_updates: dict = {"status": 1}
+                if existing.path != full_path:
+                    child_updates["path"] = full_path
+                self._menu_repo.update_menu(existing.id, **child_updates)
                 new_menu_ids.append(existing.id)
                 continue
-
-            base_path = f"/plugin/{plugin_id}"
-            full_path = route.path if route.path.startswith("/") else f"{base_path}/{route.path}"
 
             result = self._menu_repo.create_menu(
                 menu_name=menu_name,

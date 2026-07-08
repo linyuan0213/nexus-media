@@ -154,6 +154,9 @@ class RBACService:
     def get_all_menus(self):
         return self._menu.get_all_menus()
 
+    def reset_menus(self) -> int:
+        return self._menu.reset_menus()
+
     def get_menu_by_id(self, menu_id: int):
         return self._menu.get_menu_by_id(menu_id)
 
