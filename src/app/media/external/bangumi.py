@@ -5,6 +5,16 @@ import log
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.utils.config_tools import get_proxies
+
+
+def _proxy_url_from_settings() -> str | None:
+    """从全局配置读取代理地址（api.bgm.tv 为境外服务，需走代理）。"""
+    proxies = get_proxies() or {}
+    if isinstance(proxies, dict):
+        return proxies.get("http") or proxies.get("https")
+    return None
 
 
 class Bangumi:
@@ -29,7 +39,9 @@ class Bangumi:
         params = {}
         if kwargs:
             params.update(kwargs)
-        resp = HttpClient().get(url=req_url, params=params)
+        resp = HttpClient(config=HttpClientConfig(proxy_url=_proxy_url_from_settings(), timeout=10)).get(
+            url=req_url, params=params
+        )
         return resp.json()
 
     def calendar(self):
