@@ -664,6 +664,7 @@ DEFAULT_ROLES = [
         "code": "superadmin",
         "description": "拥有系统所有权限",
         "level": 1,
+        "all_permissions": True,
         "permissions": [],
         "menus": [],
     },

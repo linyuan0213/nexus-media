@@ -37,14 +37,13 @@ class UserContext(BaseModel):
     nickname: str | None = None
     level: int
     permissions: list[str]
-    is_superadmin: bool
 
     @property
     def is_admin(self) -> bool:
-        return self.is_superadmin
+        return False
 
     def has_permission(self, permission_code: str) -> bool:
-        return self.is_superadmin or permission_code in self.permissions
+        return permission_code in self.permissions
 
 
 class LoginRequest(BaseModel):

@@ -60,16 +60,12 @@ class AuthService:
         except (ServiceError, RepositoryError):
             permissions = []
 
-        level = getattr(user, "LEVEL", 0) or 0
-        is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
-
         return UserContext(
             user_id=user.ID,
             username=user.USERNAME,
-            nickname=getattr(user, "NICKNAME", None) or None,
-            level=level,
+            nickname=getattr(user, "NICKNAME", None),
+            level=getattr(user, "LEVEL", 0) or 0,
             permissions=permissions,
-            is_superadmin=is_superadmin,
         )
 
     @staticmethod
@@ -87,7 +83,6 @@ class AuthService:
             "nickname": user_ctx.nickname,
             "level": user_ctx.level,
             "permissions": user_ctx.permissions,
-            "is_superadmin": user_ctx.is_superadmin,
             "iat": now,
             "exp": now + timedelta(minutes=_ACCESS_TOKEN_EXPIRE_MINUTES),
             "jti": str(uuid.uuid4()),
@@ -135,7 +130,6 @@ class AuthService:
                 permissions = []
 
             level = getattr(user, "LEVEL", 0) or 0
-            is_superadmin = getattr(user, "IS_SUPERADMIN", 0) == 1
 
             ctx = UserContext(
                 user_id=user_id,
@@ -143,7 +137,6 @@ class AuthService:
                 nickname=getattr(user, "NICKNAME", None) or None,
                 level=level,
                 permissions=permissions,
-                is_superadmin=is_superadmin,
             )
             return AuthService.create_token_pair(ctx)
 
@@ -166,7 +159,6 @@ class AuthService:
                 nickname=payload.get("nickname", None),
                 level=payload.get("level", 0),
                 permissions=payload.get("permissions", []),
-                is_superadmin=payload.get("is_superadmin", False),
             )
         except (jwt.InvalidTokenError, ValueError):
             return None

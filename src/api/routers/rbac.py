@@ -242,8 +242,8 @@ def get_users(
 
 
 def _is_admin(user: UserContext) -> bool:
-    """检查是否为管理员（超级管理员或有 user:update 权限）"""
-    return user.is_superadmin or "user:update" in (user.permissions or [])
+    """检查是否为管理员（拥有 user:update 权限）"""
+    return "user:update" in (user.permissions or [])
 
 
 @router.post("/users/{user_id}/reset-password", response_model=CommonResponse, summary="重置密码")

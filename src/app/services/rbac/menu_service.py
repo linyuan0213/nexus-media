@@ -97,11 +97,7 @@ class RBACMenuService:
 
     def get_user_menus(self, user_id: int) -> list[dict]:
         """获取用户的菜单树（Vben 格式）"""
-        user = self.user_repo.get_user_by_id(user_id)
-        if user and user.IS_SUPERADMIN == 1:
-            menus = self.menu_repo.get_all_menus()
-        else:
-            menus = self.menu_repo.get_user_menus(user_id)
+        menus = self.menu_repo.get_user_menus(user_id)
 
         menu_ids = {m.ID for m in menus}
         all_menus = list(menus)
