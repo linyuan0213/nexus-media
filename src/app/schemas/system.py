@@ -67,6 +67,7 @@ class ProgressResultDTO:
     value: int = 0
     text: str = ""
     exists: bool = False
+    enable: bool = False
 
 
 @dataclass

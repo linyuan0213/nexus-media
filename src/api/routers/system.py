@@ -724,7 +724,14 @@ def refresh_process(
     svc=Depends(get_progress_service),
 ):
     result = svc.get_progress(ptype=req.type)
-    return success(data={"value": result.value, "text": result.text or "正在处理..."})
+    return success(
+        data={
+            "value": result.value,
+            "text": result.text or "正在处理...",
+            "enable": result.enable,
+            "exists": result.exists,
+        }
+    )
 
 
 @router.post("/messages/send", response_model=CommonResponse, summary="发送自定义消息")

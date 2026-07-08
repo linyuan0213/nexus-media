@@ -68,6 +68,7 @@ class IndexerHelper:
                     pri=pri,
                     api_key=api_key,
                     bearer_token=bearer_token,
+                    url=url,
                 )
         return None
 
@@ -91,13 +92,16 @@ class IndexerConf:
         pri=None,
         api_key=None,
         bearer_token=None,
+        url=None,
     ):
         if not datas:
             return
         self.id = datas.get("id")
         self.name = name if name else datas.get("name")
         self.builtin = builtin
-        self.domain = datas.get("domain")
+        # 优先使用用户实际配置的站点地址（签到域名/别名），回退站点规范域名，
+        # 确保搜索/浏览请求打到用户当前可用的域名
+        self.domain = StringUtils.get_base_url(url) if url else datas.get("domain")
         self.search = datas.get("search", {})
         self.batch = self.search.get("batch", {}) if builtin else {}
         self.parser = parser if parser is not None else datas.get("parser")

@@ -159,7 +159,9 @@
   "torrent_attr": {
     "method": "POST",
     "path": "/api/torrent/detail",
-    "body": {"id": "{tid}"},
+    "body": {
+      "id": "{tid}"
+    },
     "body_format": "form",
     "response": {
       "free_key": "data.status.discount",

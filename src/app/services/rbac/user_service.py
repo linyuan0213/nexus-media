@@ -52,7 +52,15 @@ class RBACUserService:
         user = self.user_repo.get_user_by_id(user_id)
         if not user:
             raise ResourceNotFoundError(f"用户不存在: id={user_id}")
-        if "email" in kwargs and kwargs["email"] != user.EMAIL:
+        if "username" in kwargs:
+            new_username = (kwargs["username"] or "").strip()
+            if not new_username or new_username == user.username:
+                kwargs.pop("username")
+            elif self.user_repo.is_user_exists(new_username):
+                raise ResourceAlreadyExistsError(f"用户名已被使用: {new_username}")
+            else:
+                kwargs["username"] = new_username
+        if "email" in kwargs and kwargs["email"] != user.email:
             if self.user_repo.is_email_exists(kwargs["email"]):
                 raise ResourceAlreadyExistsError(f"邮箱已被使用: {kwargs['email']}")
         success = self.user_repo.update_user(user_id, **kwargs)

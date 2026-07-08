@@ -287,11 +287,184 @@ class CookieCloudPlugin:
                     matched.append(site)
         return matched
 
+    def _site_def_id(self, site_def) -> str:
+        """获取站点定义的唯一 id（来自站点 JSON 配置，如 "chdbits"）。"""
+        if site_def is None:
+            return ""
+        if hasattr(site_def, "id"):
+            return str(getattr(site_def, "id", "") or "")
+        if isinstance(site_def, dict):
+            return str(site_def.get("id", "") or "")
+        return ""
+
+    def _site_def_aliases(self, site_def) -> list[str]:
+        if site_def is None:
+            return []
+        if hasattr(site_def, "domain_aliases"):
+            return list(site_def.domain_aliases or [])
+        if isinstance(site_def, dict):
+            return list(site_def.get("domain_aliases") or [])
+        return []
+
+    def _dedupe_existing_sites(self) -> int:
+        """清理重复站点：依据站点 JSON 配置的唯一 id 分组，同一站点存在多条时仅保留最后（id 最大）一条。
+
+        返回删除的条数。"""
+        groups: dict[str, list[int]] = defaultdict(list)
+        for e in self._site_repo.list_all():
+            url = e.sign_url or e.rss_url
+            if not url or not e.id:
+                continue
+            try:
+                def_id = self._site_def_id(self.ctx.site_engine.get_by_url(url))
+            except Exception:
+                def_id = ""
+            if def_id:
+                groups[def_id].append(int(e.id))
+        removed = 0
+        for def_id, ids in groups.items():
+            if len(ids) <= 1:
+                continue
+            keep = max(ids)
+            drop = [sid for sid in ids if sid != keep]
+            for sid in drop:
+                with contextlib.suppress(Exception):
+                    self._site_repo.delete(sid)
+                    removed += 1
+            self.ctx.info(f"[CookieCloud]站点去重 [{def_id}] 保留 id={keep}，删除 {len(drop)} 条重复")
+        if removed:
+            with contextlib.suppress(Exception):
+                self.sites.refresh()
+        return removed
+
+    def _probe_domain(self, domain: str, cookie_str: str, attempts: int = 3) -> tuple[float, float]:
+        """多次探测域名，返回 (成功率, 平均延时ms)。
+
+        成功 = HTTP 200 且判定为已登录。全部失败时平均延时为 inf。
+        用于比较多个候选域名的可用性/稳定性/延时。"""
+        url = domain if domain.startswith("http") else f"https://{domain}"
+        ok = 0
+        latencies: list[float] = []
+        for _ in range(max(1, attempts)):
+            start = time.time()
+            try:
+                res = HttpClient(
+                    config=HttpClientConfig(
+                        default_headers={"User-Agent": get_ua()},
+                        timeout=10.0,
+                        connect_timeout=5.0,
+                    )
+                ).get(url=url, auth=CookieAuth(cookie_str) if cookie_str else None, raise_for_status=False)
+                if res is not None and res.status_code == 200 and is_logged_in(res.text):
+                    ok += 1
+                    latencies.append((time.time() - start) * 1000)
+            except Exception as e:
+                self.ctx.debug(f"[CookieCloud]探测 {url} 失败: {e}")
+        rate = ok / max(1, attempts)
+        avg_latency = sum(latencies) / len(latencies) if latencies else float("inf")
+        return rate, avg_latency
+
+    def _select_best_site_domain(self, site_info: dict, synced_domains: dict[str, str]) -> None:
+        """在多个候选域名（CookieCloud 同步域名 + 当前签到域名 + 配置别名）中，
+        综合「可用性、稳定性(成功率)、延时」选出最优域名并更新站点签到地址。
+
+        含迟滞：当前域名足够好时不因微小延时差异来回切换。"""
+        strict_url = site_info.get("strict_url", "")
+        sid = int(site_info.get("id") or 0)
+        if not sid:
+            return
+        current_base = StringUtils.get_url_domain(strict_url)
+
+        # 汇总候选：base_domain -> (探测用 host, 对应 cookie)
+        hosts: dict[str, str] = {}
+        cookies: dict[str, str] = {}
+        synced_bases: set[str] = set()
+        any_cookie = next(iter(synced_domains.values()), "")
+
+        def _base(d: str) -> str:
+            return StringUtils.get_url_domain(d if d.startswith("http") else f"https://{d}")
+
+        for d, ck in synced_domains.items():
+            b = _base(d)
+            if b and b not in hosts:
+                hosts[b], cookies[b] = d, ck
+                synced_bases.add(b)
+        if current_base and current_base not in hosts:
+            hosts[current_base], cookies[current_base] = current_base, any_cookie
+        try:
+            site_def = self.ctx.site_engine.get_by_url(strict_url)
+        except Exception:
+            site_def = None
+        for alias in self._site_def_aliases(site_def):
+            b = _base(alias)
+            if b and b not in hosts:
+                hosts[b], cookies[b] = alias, any_cookie
+
+        # 只有一个候选域名，无需比较
+        if len(hosts) <= 1:
+            return
+
+        scored: list[tuple[float, float, str]] = []  # (成功率, 延时, base)
+        for base, host in hosts.items():
+            rate, latency = self._probe_domain(host, cookies.get(base, ""))
+            self.ctx.debug(f"[CookieCloud]候选域名 {host} 成功率={rate:.0%} 平均延时={latency:.0f}ms")
+            if rate > 0:
+                scored.append((rate, latency, base))
+        if not scored:
+            return
+        scored.sort(key=lambda x: (-x[0], x[1]))
+        best_rate, best_latency, best_base = scored[0]
+
+        # 迟滞：当前域名可用且成功率不低于最优、延时未被显著超越（>30%）→ 保持不变
+        current_entry = next((s for s in scored if s[2] == current_base), None)
+        if current_entry is not None:
+            cur_rate, cur_latency = current_entry[0], current_entry[1]
+            if cur_rate >= best_rate - 1e-9 and best_latency >= cur_latency * 0.7:
+                return
+
+        if best_base == current_base:
+            return
+
+        entity = self._site_repo.get_by_id(sid)
+        if not entity:
+            return
+        best_host = hosts[best_base]
+        new_url = best_host if best_host.startswith("http") else f"https://{best_host}"
+        old_url = entity.sign_url
+        entity.sign_url = new_url
+        if best_base in synced_bases and cookies.get(best_base):
+            entity.cookie = cookies[best_base]
+        self._site_repo.update(entity)
+        self.ctx.info(
+            f"[CookieCloud]站点 {site_info.get('name', strict_url)} 择优切换签到地址："
+            f"{old_url} → {new_url}（成功率 {best_rate:.0%}，延时 {best_latency:.0f}ms）"
+        )
+
     def _process_cookies(self, contents: dict):
         domain_cookies = self._store_cookies_to_cache(contents)
 
+        # 同步前先清理历史重复站点（同一站点仅保留最后一条），再配合下方去重逻辑防止新增重复
+        with contextlib.suppress(Exception):
+            self._dedupe_existing_sites()
+
         results: list[dict] = []
         updated_ids: set[int] = set()
+        # 收集每个已匹配站点对应的所有同步域名及其 Cookie，用于同步后择优选择签到域名
+        site_candidates: dict[int, dict] = {}
+        # 新增站点优先级递增计数器（缓存在同步期间不刷新，需本地自增避免重复）
+        pt_sites = self.sites.get_sites(public=False)
+        next_pri = max((int(s.get("pri", 0)) for s in pt_sites), default=0) + 1 if pt_sites else 1
+        # 站点定义 id -> 已存在站点 id 映射，用于新增去重。
+        # 依据站点 JSON 配置（domain + domain_aliases）判定是否同一站点，
+        # 从而识别 hhanclub.net 与 hhan.club 这类同站不同域名的情况，避免重复新增。
+        existing_by_defid: dict[str, int] = {}
+        for _e in self._site_repo.list_all():
+            _url = _e.sign_url or _e.rss_url
+            if not _url or not _e.id:
+                continue
+            _defid = self._site_def_id(self.ctx.site_engine.get_by_url(_url))
+            if _defid:
+                existing_by_defid.setdefault(_defid, int(_e.id))
 
         for domain_url, cookie_str in domain_cookies.items():
             matched_sites = []
@@ -301,18 +474,25 @@ class CookieCloudPlugin:
                     for site_info in matched_sites:
                         sid = int(site_info.get("id") or 0)
                         site_name = site_info.get("name", domain_url)
-                        if sid and sid not in updated_ids:
-                            self._site_repo.update_cookie_ua(sid, cookie=cookie_str)
+                        if not sid:
+                            continue
+                        entry = site_candidates.setdefault(sid, {"site_info": site_info, "domains": {}})
+                        entry["domains"][domain_url] = cookie_str
+                        if sid not in updated_ids:
                             updated_ids.add(sid)
-                            results.append(
-                                {
-                                    "action": "更新",
-                                    "domain": domain_url,
-                                    "site": site_name,
-                                    "status": "成功",
-                                    "reason": "",
-                                }
-                            )
+                            old_cookie = site_info.get("cookie") or ""
+                            # Cookie 无变化则不更新、不记录，避免“显示已更新但实际未变”
+                            if cookie_str and cookie_str != old_cookie:
+                                self._site_repo.update_cookie_ua(sid, cookie=cookie_str)
+                                results.append(
+                                    {
+                                        "action": "更新",
+                                        "domain": domain_url,
+                                        "site": site_name,
+                                        "status": "成功",
+                                        "reason": f"更新同步域名 {domain_url} 的 Cookie",
+                                    }
+                                )
                 else:
                     site_url = f"https://{domain_url}"
                     site_def = self.ctx.site_engine.get_by_url(site_url)
@@ -346,9 +526,33 @@ class CookieCloudPlugin:
                         continue
 
                     site_name = site_def.name if hasattr(site_def, "name") else site_def.get("name", domain_url)
-                    site_domain = site_def.domain if hasattr(site_def, "domain") else site_def.get("domain", domain_url)
-                    pt_sites = self.sites.get_sites(public=False)
-                    site_pri = max((int(s.get("pri", 0)) for s in pt_sites), default=0) + 1 if pt_sites else 1
+                    # 去重：依据站点 JSON 配置的唯一 id 判定是否同一站点（覆盖同站不同域名/别名），
+                    # 若已存在则仅更新其 Cookie，不重复新增
+                    def_id = self._site_def_id(site_def)
+                    existing_id = existing_by_defid.get(def_id) if def_id else None
+                    if existing_id:
+                        # existing_id == -1 表示本次同步刚新增；已在 updated_ids 表示本次已处理过。
+                        if existing_id > 0 and existing_id not in updated_ids:
+                            updated_ids.add(existing_id)
+                            entity = self._site_repo.get_by_id(existing_id)
+                            old_cookie = (entity.cookie if entity else "") or ""
+                            # Cookie 无变化则不更新、不记录
+                            if cookie_str and cookie_str != old_cookie:
+                                self._site_repo.update_cookie_ua(existing_id, cookie=cookie_str)
+                                results.append(
+                                    {
+                                        "action": "更新",
+                                        "domain": domain_url,
+                                        "site": site_name,
+                                        "status": "成功",
+                                        "reason": f"已存在同一站点，更新同步域名 {domain_url} 的 Cookie",
+                                    }
+                                )
+                        continue
+                    # 新增站点使用 Cookie 实际来源域名（已通过登录校验），避免写入不可用的规范域名
+                    site_domain = f"https://{domain_url}"
+                    site_pri = next_pri
+                    next_pri += 1
                     self._site_repo.insert(
                         SiteEntity(
                             name=site_name,
@@ -358,13 +562,15 @@ class CookieCloudPlugin:
                             rss_uses=SiteUseType.STATISTIC.value,
                         )
                     )
+                    if def_id:
+                        existing_by_defid[def_id] = -1
                     results.append(
                         {
                             "action": "新增",
                             "domain": domain_url,
                             "site": site_name,
                             "status": "成功",
-                            "reason": "",
+                            "reason": f"新增站点，同步域名 {domain_url}",
                         }
                     )
             except Exception as e:
@@ -378,6 +584,11 @@ class CookieCloudPlugin:
                     }
                 )
                 self.ctx.error(f"处理域名 {domain_url} 时出错: {e}")
+
+        # 同步完成后，对存在多个候选域名的站点，择优选择签到域名（可用性/稳定性/延时）
+        for entry in site_candidates.values():
+            with contextlib.suppress(Exception):
+                self._select_best_site_domain(entry["site_info"], entry["domains"])
 
         update_ok = sum(1 for r in results if r["action"] == "更新" and r["status"] == "成功")
         add_ok = sum(1 for r in results if r["action"] == "新增" and r["status"] == "成功")

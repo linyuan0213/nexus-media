@@ -26,6 +26,10 @@ class SiteIdRequest(BaseModel):
     id: str | None = None
 
 
+class SiteBatchTestRequest(BaseModel):
+    ids: list[str] = []
+
+
 class SiteUrlRequest(BaseModel):
     url: str | None = None
 
@@ -251,6 +255,16 @@ def test_site(
 ):
     dto = svc.test_site(req.id or "")
     return fail(code=dto.code, msg=dto.msg, time=dto.times)
+
+
+@router.post("/sites/test_batch", response_model=CommonResponse, summary="批量测试站点连接")
+def test_sites_batch(
+    req: SiteBatchTestRequest,
+    user: str = Depends(require_permission("site:manage")),
+    svc: SiteService = Depends(get_site_service),
+):
+    results = svc.test_sites_batch(req.ids or [])
+    return success(data=results)
 
 
 @router.post("/sites/update", response_model=CommonResponse, summary="更新站点配置")

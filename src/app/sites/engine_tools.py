@@ -143,7 +143,8 @@ def _call_endpoint(
                     body[k] = {sk: sv.format(**template_vars) if isinstance(sv, str) else sv for sk, sv in v.items()}
                 else:
                     body[k] = v
-            post_data = JsonUtils.dumps(body, separators=(",", ":")) if body else None
+            # 始终发送 JSON 请求体（空 body 也发送 "{}"），部分站点对空 body 会返回“请求参数错误”
+            post_data = JsonUtils.dumps(body, separators=(",", ":"))
             res = client.post(url=url, data=post_data, headers=headers, auth=auth, **rl_kwargs)
         else:
             params = cfg.get("params")

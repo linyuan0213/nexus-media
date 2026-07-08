@@ -105,6 +105,7 @@ class CreateUserRequest(BaseModel):
 
 class UpdateUserRequest(BaseModel):
     id: int
+    username: str | None = None
     email: str | None = None
     nickname: str | None = None
     status: int | None = None
@@ -176,7 +177,7 @@ def update_user(
         return fail(success=False, message="用户ID不能为空")
 
     update_fields = {}
-    for field in ["email", "nickname", "status", "avatar"]:
+    for field in ["username", "email", "nickname", "status", "avatar"]:
         val = getattr(req, field, None)
         if val is not None:
             update_fields[field] = val
@@ -184,7 +185,8 @@ def update_user(
     try:
         svc.update_user(req.id, **update_fields)
 
-        if req.role_ids is not None:
+        # 仅当明确传入非空角色列表时才重新分配角色，避免编辑资料时误传空列表清空角色导致权限丢失
+        if req.role_ids:
             svc.assign_roles_to_user(req.id, req.role_ids)
 
         return success(data={"success": True, "message": "更新成功"})

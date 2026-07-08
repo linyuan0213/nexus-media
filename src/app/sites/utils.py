@@ -9,10 +9,24 @@ def is_logged_in(html_text: str) -> bool:
     """判断站点是否已经登录."""
     if JsonUtils.is_valid_json(html_text):
         json_data = JsonUtils.loads(html_text)
+        if not isinstance(json_data, dict):
+            return False
         message = json_data.get("message")
         success = json_data.get("success")
         error_message = json_data.get("errorMessage")
-        return bool(message and message.upper() == "SUCCESS" or success or error_message and "已签" in error_message)
+        if message and str(message).upper() == "SUCCESS":
+            return True
+        if success:
+            return True
+        if error_message and "已签" in str(error_message):
+            return True
+        # 兼容 {"code":0/"0",...} 或 {"status":200,...} 且带有效 data 的成功响应（如朱雀）
+        code = json_data.get("code")
+        status = json_data.get("status")
+        data = json_data.get("data")
+        if data and (str(code) in ("0", "200") or str(status) in ("0", "200")):
+            return True
+        return False
     if "签到成功" in html_text:
         return True
 
