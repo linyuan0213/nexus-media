@@ -4,6 +4,8 @@ from typing import Any
 
 import log
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError
+from app.services.rbac.init.menu_init import init_rbac_menus
+from app.services.rbac.init.menu_tombstone import add_menu_tombstone, clear_all_menu_tombstones
 
 
 class RBACMenuService:
@@ -59,9 +61,17 @@ class RBACMenuService:
         menu = self.menu_repo.get_menu_by_id(menu_id)
         if not menu:
             raise ResourceNotFoundError(f"菜单不存在: id={menu_id}")
+        is_builtin = getattr(menu, "is_builtin", 0) == 1
+        menu_code = getattr(menu, "menu_code", "")
         success = self.menu_repo.delete_menu(menu_id)
         if not success:
             raise ResourceNotFoundError("删除失败")
+        # 内置菜单被删除后记录墓碑，避免下次启动初始化又重建
+        if is_builtin and menu_code:
+            try:
+                add_menu_tombstone(menu_code)
+            except Exception as e:  # noqa: BLE001
+                log.warn(f"[RBAC]记录菜单墓碑失败: {menu_code} - {e}")
         log.info(f"[RBAC]删除菜单: {menu.MENU_NAME}")
 
     def get_menu_tree(self, include_hidden: bool = False) -> list[dict[str, Any]]:
@@ -71,6 +81,15 @@ class RBACMenuService:
     def get_all_menus(self):
         """获取所有菜单"""
         return self.menu_repo.get_all_menus()
+
+    def reset_menus(self) -> int:
+        """重置菜单到初始状态：清空墓碑并按 DEFAULT_MENUS 强制恢复内置菜单。
+
+        保留用户自建菜单与插件菜单；被删除的内置菜单会被重建，用户对内置菜单的
+        名称/图标/排序/父级/显隐等自定义会被恢复为默认。返回受影响的菜单数量。
+        """
+        clear_all_menu_tombstones()
+        return init_rbac_menus(self.menu_repo, force_defaults=True)
 
     def get_menu_by_id(self, menu_id: int):
         """根据 ID 获取菜单"""
