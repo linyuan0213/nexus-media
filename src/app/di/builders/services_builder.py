@@ -155,7 +155,12 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         blacklist_repo=TransferBlacklistRepositoryAdapter(),
         backend_repo=StorageBackendRepositoryAdapter(),
     )
-    register_download_completed_handler(event_bus=event_bus, transfer_pipeline=transfer_pipeline)
+    register_download_completed_handler(
+        event_bus=event_bus,
+        transfer_pipeline=transfer_pipeline,
+        download_history_repo=DownloadHistoryRepositoryAdapter(),
+        media_cache=MediaCache(),
+    )
 
     shared_client_factory = DownloadClientFactory()
 
