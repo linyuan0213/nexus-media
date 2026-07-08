@@ -167,6 +167,7 @@ class RBACMenuRepository(BaseRepository):
                 "ACTIVE_ICON",
                 "BADGE",
                 "BADGE_TYPE",
+                "IS_BUILTIN",
             ]
             for key, value in kwargs.items():
                 if key.upper() in vben_fields:
@@ -204,6 +205,7 @@ class RBACMenuRepository(BaseRepository):
                 "ACTIVE_ICON",
                 "BADGE",
                 "BADGE_TYPE",
+                "IS_BUILTIN",
             ]
             for key, value in kwargs.items():
                 if key.upper() in allowed_fields:

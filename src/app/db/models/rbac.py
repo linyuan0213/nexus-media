@@ -259,6 +259,8 @@ class RBACMenu(Base):
     ACTIVE_ICON: Mapped[str] = mapped_column(String(512), nullable=True)
     BADGE: Mapped[str] = mapped_column(String(64), nullable=True)
     BADGE_TYPE: Mapped[str] = mapped_column(String(32), nullable=True)
+    # 是否内置菜单（由 DEFAULT_MENUS 初始化）。0=用户自建/插件，1=内置。用户自建菜单不会在启动初始化时被清理
+    IS_BUILTIN: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 时间戳
     CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
