@@ -21,7 +21,6 @@ def client():
         username="admin",
         level=0,
         permissions=["download:view", "download:manage"],
-        is_superadmin=False,
     )
     app.dependency_overrides[get_current_user] = lambda: user_ctx
     with TestClient(app) as c:
@@ -85,7 +84,6 @@ class TestDownloadEventsSSE:
             username="user",
             level=0,
             permissions=[],
-            is_superadmin=False,
         )
         app.dependency_overrides[get_current_user] = lambda: user_ctx
         with TestClient(app) as c:

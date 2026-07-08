@@ -61,7 +61,6 @@ def client(mock_sync_service, mock_filetransfer_service):
         username="admin",
         level=0,
         permissions=["setting:view", "setting:update", "subscription:view", "subscription:manage"],
-        is_superadmin=True,
     )
     app.dependency_overrides[get_current_user] = lambda: admin_ctx
     app.dependency_overrides[get_sync_service] = lambda: mock_sync_service
