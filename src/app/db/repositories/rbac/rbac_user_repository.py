@@ -201,7 +201,7 @@ class RBACUserRepository(BaseRepository):
             if not user:
                 return False
 
-            allowed_fields = ["EMAIL", "NICKNAME", "AVATAR", "STATUS", "PASSWORD_HASH"]
+            allowed_fields = ["USERNAME", "EMAIL", "NICKNAME", "AVATAR", "STATUS", "PASSWORD_HASH"]
             for key, value in kwargs.items():
                 if key.upper() in allowed_fields:
                     setattr(user, key.upper(), value)
