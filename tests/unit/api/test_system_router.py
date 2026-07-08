@@ -20,7 +20,6 @@ def client():
         username="admin",
         level=0,
         permissions=["log:view"],
-        is_superadmin=True,
     )
     app.dependency_overrides[get_current_user] = lambda: admin_ctx
     with TestClient(app) as c:
@@ -46,7 +45,6 @@ class TestSystemRouter:
             username="user",
             level=0,
             permissions=[],
-            is_superadmin=False,
         )
         with patch("app.services.auth_service.AuthService.verify_token", return_value=user_ctx):
             resp = client.get("/api/v1/system/stream-logging?token=valid")
@@ -59,7 +57,6 @@ class TestSystemRouter:
             username="admin",
             level=0,
             permissions=["log:view"],
-            is_superadmin=True,
         )
         stream_mock = MagicMock()
         stream_mock.__iter__ = MagicMock(return_value=iter([b"data: log\n\n"]))

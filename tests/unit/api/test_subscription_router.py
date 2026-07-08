@@ -83,7 +83,6 @@ def client(
         username="admin",
         level=0,
         permissions=["subscription:view", "subscription:manage"],
-        is_superadmin=True,
     )
     app.dependency_overrides[get_current_user] = lambda: admin_ctx
     app.dependency_overrides[get_subscribe_service] = lambda: mock_subscribe_service
