@@ -32,9 +32,7 @@ class TestAuthSchemas:
             username="admin",
             level=0,
             permissions=["*"],
-            is_superadmin=True,
         )
-        assert ctx.is_admin is True
         assert ctx.has_permission("anything") is True
 
     def test_user_context_permission_check(self):
@@ -43,7 +41,6 @@ class TestAuthSchemas:
             username="user",
             level=1,
             permissions=["read", "write"],
-            is_superadmin=False,
         )
         assert ctx.has_permission("read") is True
         assert ctx.has_permission("delete") is False
