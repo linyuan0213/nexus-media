@@ -104,7 +104,6 @@ async def get_current_user_info(
                 "user_id": 0,
                 "level": 0,
                 "permissions": [],
-                "is_superadmin": False,
                 "roles": [],
             },
         }
@@ -122,7 +121,6 @@ async def get_current_user_info(
             "avatar": avatar,
             "level": user.level,
             "permissions": user.permissions,
-            "is_superadmin": user.is_superadmin,
             "roles": [role.role_name for role in roles] if roles else [],
         },
     }
