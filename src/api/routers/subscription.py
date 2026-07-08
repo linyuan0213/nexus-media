@@ -101,6 +101,12 @@ class SubscribeDetailRequest(BaseModel):
     rsstype: str | None = None
 
 
+class SubscribeSeasonsRequest(BaseModel):
+    tmdbid: str | int | None = None
+    name: str | None = None
+    year: str | None = None
+
+
 class GetDefaultSubscribeSettingRequest(BaseModel):
     mtype: str | None = None
 
@@ -179,6 +185,23 @@ def _build_update_kwargs(req: AddRssMediaRequest) -> dict:
         "download_setting": req.download_setting,
         "image": req.image,
     }
+
+
+def _normalize_season(season) -> str | None:
+    """将季号统一为数据库存储格式 "S01"。
+
+    前端传入的季号为纯数字（如 "1"、2），而数据库 SEASON 字段存储为 "S01"。
+    """
+    if season is None:
+        return None
+    s = str(season).strip()
+    if not s:
+        return None
+    if s.upper().startswith("S"):
+        return s.upper()
+    if s.isdigit():
+        return f"S{int(s):02d}"
+    return s
 
 
 def _invoke_for_seasons(
@@ -315,7 +338,7 @@ def remove_rss_media(
         svc.delete_subscribe(
             mtype=MediaType.TV,
             title=name or "",
-            season=str(req.season) if req.season is not None else None,
+            season=_normalize_season(req.season),
             rssid=rssid,
             tmdbid=tmdbid,
         )
@@ -476,6 +499,20 @@ def get_tv_rss_list(
 ):
     result = svc.get_subscribe_tvs()
     return success(data=list(result.values()) if isinstance(result, dict) else result)
+
+
+@router.post("/tv/seasons", response_model=CommonResponse, summary="获取电视剧已订阅季列表")
+def get_tv_subscribed_seasons(
+    req: SubscribeSeasonsRequest,
+    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    svc: SubscribeService = Depends(get_subscribe_service),
+):
+    seasons = svc.get_subscribe_seasons(
+        tmdbid=str(req.tmdbid) if req.tmdbid is not None else None,
+        title=req.name,
+        year=req.year,
+    )
+    return success(data={"seasons": seasons})
 
 
 @router.post("/history/clear", response_model=CommonResponse, summary="清空 RSS 历史")

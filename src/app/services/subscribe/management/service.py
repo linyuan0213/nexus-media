@@ -109,6 +109,9 @@ class SubscribeService:
     def get_subscribe_tv_episodes(self, rssid):
         return self._query_svc.get_subscribe_tv_episodes(rssid)
 
+    def get_subscribe_seasons(self, tmdbid=None, title=None, year=None):
+        return self._query_svc.get_subscribe_seasons(tmdbid, title, year)
+
     def check_history(self, type_str, name, year=None, season=None):
         return self._query_svc.check_history(type_str, name, year, season)
 
