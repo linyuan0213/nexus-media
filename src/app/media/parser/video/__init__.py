@@ -11,7 +11,6 @@ from app.domain.mediatypes import MediaType
 from app.media.models import MediaInfo
 from app.media.parser._customization import CustomizationMatcher
 from app.media.parser._release_groups import ReleaseGroupsMatcher
-from app.media.parser.video.constants import _name_no_begin_re
 from app.media.parser.video.encode_parser import init_audio_encode, init_video_encode
 from app.media.parser.video.name_parser import fix_name, init_name
 from app.media.parser.video.resource_parser import init_part, init_resource_pix, init_resource_type
@@ -74,7 +73,21 @@ def parse_video_title(
             info.type = MediaType.TV
 
     # 预处理
-    title = re.sub(rf"{_name_no_begin_re}", "", title, count=1)
+    # 移除开头的方括号标签：
+    #   - 纯非中日韩内容（如 [HDArea]、[FRDS]）视为发布组 → 移除
+    #   - 含「字幕/压制/制作组/发布组/站点域名」等特征的中文标签（如 [XX字幕组]、[电影天堂www.dy.com]）→ 移除
+    #   - 其余含中日韩文的方括号（如 [虚颜]、[庆余年]）视为剧名 → 保留，避免只剩英文名而误配
+    _begin_bracket = re.match(r"^\[(.+?)]", title)
+    if _begin_bracket:
+        _inner = _begin_bracket.group(1)
+        _has_cjk = bool(re.search(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff]", _inner))
+        _looks_like_group = bool(
+            re.search(
+                r"字幕|压制|制作组|发布组|字幕社|工作室|论坛|www\.|\.(?:com|net|cc|org|tv)", _inner, re.IGNORECASE
+            )
+        )
+        if not _has_cjk or _looks_like_group:
+            title = title[_begin_bracket.end() :]
     title = re.sub(r"([\s.]+)(\d{4})-(\d{4})", r"\1\2", title)
     title = re.sub(r"[0-9.]+\s*[MGT]i?B(?![A-Z]+)", "", title, flags=re.IGNORECASE)
     title = re.sub(r"\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}", "", title)
