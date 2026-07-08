@@ -19,7 +19,6 @@ class TestAuthServiceCompatibility:
             nickname=None,
             level=0,
             permissions=[],
-            is_superadmin=False,
         )
         before = datetime.now(timezone.utc)
         pair = AuthService.create_token_pair(ctx)
@@ -41,7 +40,6 @@ class TestAuthServiceCompatibility:
             nickname=None,
             level=0,
             permissions=["read"],
-            is_superadmin=False,
         )
         pair = AuthService.create_token_pair(ctx)
         import jwt
