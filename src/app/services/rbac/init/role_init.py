@@ -59,7 +59,7 @@ def init_rbac_roles(
             if menu_ids:
                 role_repo.assign_menus_to_role(role_id, menu_ids)
                 log.info(f"[RBAC初始化]为角色 {role_data['name']} 分配 {len(menu_ids)} 个菜单")
-        elif role_data.get("all_permissions") and not existing:
+        elif role_data.get("all_permissions"):
             # all_permissions 标记的角色同时拥有所有菜单
             all_menus = menu_repo.get_all_menus()
             menu_ids = [m.ID for m in all_menus]
