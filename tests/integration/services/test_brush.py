@@ -1,6 +1,7 @@
 """Tests for app.services.brush package."""
 
-from unittest.mock import MagicMock
+from datetime import time as dtime
+from unittest.mock import MagicMock, patch
 
 from app.services.brush.helpers import BrushTaskHelper
 from app.services.brush.repository import BrushTaskRepository
@@ -146,3 +147,70 @@ class TestBrushTaskHelper:
     def test_download_torrent_no_enclosure(self):
         helper = BrushTaskHelper(MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock())
         assert helper.download_torrent({}, {}, {}, "title", None, 0, "") is False
+
+
+class TestTimeRangeCrossDay:
+    """is_in_time_range 跨天时间段测试."""
+
+    @staticmethod
+    def _now_at(hour: int, minute: int = 0):
+        class _FakeNow:
+            @staticmethod
+            def time():
+                return dtime(hour, minute)
+
+        return _FakeNow
+
+    def test_same_day_in_range(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(10, 0)
+            assert BrushTaskHelper.is_in_time_range("08:00-18:00") is True
+
+    def test_same_day_before_range(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(6, 0)
+            assert BrushTaskHelper.is_in_time_range("08:00-18:00") is False
+
+    def test_same_day_after_range(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(20, 0)
+            assert BrushTaskHelper.is_in_time_range("08:00-18:00") is False
+
+    def test_same_day_at_boundary(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(8, 0)
+            assert BrushTaskHelper.is_in_time_range("08:00-18:00") is True
+            mock_dt.now.return_value = self._now_at(18, 0)
+            assert BrushTaskHelper.is_in_time_range("08:00-18:00") is True
+
+    def test_cross_day_midnight(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(23, 0)
+            assert BrushTaskHelper.is_in_time_range("22:00-06:00") is True
+
+    def test_cross_day_early_morning(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(3, 0)
+            assert BrushTaskHelper.is_in_time_range("22:00-06:00") is True
+
+    def test_cross_day_outside_range(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(12, 0)
+            assert BrushTaskHelper.is_in_time_range("22:00-06:00") is False
+
+    def test_cross_day_at_boundary(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(22, 0)
+            assert BrushTaskHelper.is_in_time_range("22:00-06:00") is True
+            mock_dt.now.return_value = self._now_at(6, 0)
+            assert BrushTaskHelper.is_in_time_range("22:00-06:00") is True
+
+    def test_multiple_periods_with_cross_day(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(3, 0)
+            assert BrushTaskHelper.is_in_time_range("08:00-18:00,22:00-06:00") is True
+
+    def test_multiple_periods_outside_all(self):
+        with patch("app.services.brush.helpers.datetime") as mock_dt:
+            mock_dt.now.return_value = self._now_at(20, 0)
+            assert BrushTaskHelper.is_in_time_range("08:00-18:00,22:00-06:00") is False

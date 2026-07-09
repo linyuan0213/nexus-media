@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import dateutil
+import dateutil.parser
 import pytz
 
 import log
@@ -63,8 +64,11 @@ class BrushRuleEngine:
         operator = rule_parts[0]
         range_values = rule_parts[1].split(",")
 
-        min_value = float(range_values[0]) * multiplier if range_values[0] else 0.0
-        max_value = float(range_values[1]) * multiplier if len(range_values) > 1 and range_values[1] else None
+        try:
+            min_value = float(range_values[0]) * multiplier if range_values[0] else 0.0
+            max_value = float(range_values[1]) * multiplier if len(range_values) > 1 and range_values[1] else None
+        except (ValueError, TypeError):
+            return True
 
         if operator == "gt" and value < min_value:
             return False
@@ -247,6 +251,7 @@ class BrushRuleEngine:
             "freespace": params.get("freespace"),
             "alive_time": _calc_alive_hours(params.get("add_time")),
             "freestatus": params.get("torrent_attr", {}).get("free", False),
+            "hr": params.get("torrent_attr", {}).get("hr", False),
             "tracker_error": params.get("tracker_error"),
         }
 
@@ -256,7 +261,7 @@ class BrushRuleEngine:
             "ratio": (BrushDeleteType.RATIO, lambda value, rv: cls.check_range_rule(value, rv)),
             "uploadsize": (BrushDeleteType.UPLOADSIZE, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
             "dltime": (BrushDeleteType.DLTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
-            "avg_upspeed": (BrushDeleteType.AVGUPSPEED, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
+            "avg_upspeed": (BrushDeleteType.AVGUPSPEED, lambda value, rv: cls.check_range_rule(value, rv, 1024)),
             "iatime": (BrushDeleteType.IATIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "pending_time": (BrushDeleteType.PENDINGTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "freespace": (BrushDeleteType.FREESPACE, lambda value, rv: cls.check_range_rule(value, rv, 1024**3)),
@@ -296,7 +301,7 @@ class BrushRuleEngine:
                     return False, BrushDeleteType.NOTDELETE
                 continue
 
-            matched = check_func(value)
+            matched = check_func(value, rule_value)
             if matched:
                 triggered_types.append(delete_type)
                 log.info(f"[删种规则] {rule} 触发: 当前={value}, 规则={rule_value}")
@@ -340,7 +345,7 @@ class BrushRuleEngine:
             ),
             "avg_upspeed": (
                 BrushStopType.AVGUPSPEED,
-                lambda rv: cls.check_range_rule(values["avg_upspeed"], rv, 1024**3),
+                lambda rv: cls.check_range_rule(values["avg_upspeed"], rv, 1024),
             ),
             "stopfree": (
                 BrushStopType.FREEEND,
