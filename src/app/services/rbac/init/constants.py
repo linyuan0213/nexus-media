@@ -712,7 +712,6 @@ DEFAULT_ROLES = [
         ],
         "menus": [
             "Home",
-            "Dashboard",
             "MediaSearch",
             "Discovery",
             "Ranking",
@@ -788,7 +787,6 @@ DEFAULT_ROLES = [
         ],
         "menus": [
             "Home",
-            "Dashboard",
             "MediaSearch",
             "Discovery",
             "Ranking",
@@ -825,7 +823,6 @@ DEFAULT_ROLES = [
         "permissions": ["library:view", "search:view", "discovery:view"],
         "menus": [
             "Home",
-            "Dashboard",
             "MediaSearch",
             "Discovery",
             "Ranking",
