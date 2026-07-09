@@ -275,49 +275,52 @@ class BrushTorrentLifecycle:
 
         stopfree_enabled = stop_rule and stop_rule.get("stopfree") == SwitchState.ON.value
         for torrent in torrents:
-            torrent_id = torrent.id
-            torrent_name = torrent.name
-            add_time = torrent.add_time
-            enclosure = torrent_id_maps.get(torrent_id)
-            if not enclosure:
-                continue
-            torrent_attr = {}
-            if stopfree_enabled:
-                torrent_url, torrent_attr = self._helper.get_torrent_attr(
-                    site_info if isinstance(site_info, dict) else {}, enclosure
-                )
-                log.debug(f"[Brush]{torrent_url} 解析详情 {torrent_attr}")
+            try:
+                torrent_id = torrent.id
+                torrent_name = torrent.name
+                add_time = torrent.add_time
+                enclosure = torrent_id_maps.get(torrent_id)
+                if not enclosure:
+                    continue
+                torrent_attr = {}
+                if stopfree_enabled:
+                    torrent_url, torrent_attr = self._helper.get_torrent_attr(
+                        site_info if isinstance(site_info, dict) else {}, enclosure
+                    )
+                    log.debug(f"[Brush]{torrent_url} 解析详情 {torrent_attr}")
 
-            need_stop, stop_type = BrushRuleEngine.check_stop_rule(
-                stop_rule,
-                params={
-                    "ratio": round(torrent.ratio or 0, 2),
-                    "uploaded": torrent.uploaded,
-                    "seeding_time": torrent.seeding_time,
-                    "avg_upspeed": torrent.avg_upload_speed,
-                    **torrent_attr,
-                },
-            )
-            if need_stop:
-                if isinstance(stop_type, list):
-                    stop_type_str = ", ".join(t.value for t in stop_type)
-                else:
-                    stop_type_str = stop_type.value
-                log.info(f"[Brush]{torrent_name} 触发停种条件：{stop_type_str}，暂停任务...")
-                self._downloader.stop_torrents(downloader_id, [torrent_id])
-                self._repo.insert_brush_event(
-                    task_id=taskid or 0,
-                    task_name=task_name,
-                    torrent_name=torrent_name or "",
-                    download_id=torrent_id or "",
-                    action="stop",
-                    reason=stop_type_str,
-                    downloader_name=downlaod_name,
-                    site_name=site_info.get("name", "") if isinstance(site_info, dict) else "",
-                    torrent_url=torrent_page_url_maps.get(torrent_id, ""),
+                need_stop, stop_type = BrushRuleEngine.check_stop_rule(
+                    stop_rule,
+                    params={
+                        "ratio": round(torrent.ratio or 0, 2),
+                        "uploaded": torrent.uploaded,
+                        "seeding_time": torrent.seeding_time,
+                        "avg_upspeed": torrent.avg_upload_speed,
+                        **torrent_attr,
+                    },
                 )
-                if sendmessage:
-                    self._send_stop_message(task_name, torrent_name, downlaod_name, add_time)
+                if need_stop:
+                    if isinstance(stop_type, list):
+                        stop_type_str = ", ".join(t.value for t in stop_type)
+                    else:
+                        stop_type_str = stop_type.value
+                    log.info(f"[Brush]{torrent_name} 触发停种条件：{stop_type_str}，暂停任务...")
+                    self._downloader.stop_torrents(downloader_id, [torrent_id])
+                    self._repo.insert_brush_event(
+                        task_id=taskid or 0,
+                        task_name=task_name,
+                        torrent_name=torrent_name or "",
+                        download_id=torrent_id or "",
+                        action="stop",
+                        reason=stop_type_str,
+                        downloader_name=downlaod_name,
+                        site_name=site_info.get("name", "") if isinstance(site_info, dict) else "",
+                        torrent_url=torrent_page_url_maps.get(torrent_id, ""),
+                    )
+                    if sendmessage:
+                        self._send_stop_message(task_name, torrent_name, downlaod_name, add_time)
+            except Exception as e:
+                ExceptionUtils.exception_traceback(e)
 
         if stopfree_enabled:
             self._resume_free_torrents(
