@@ -58,7 +58,7 @@ class Rousi(SiteSigninHandler):
             return SigninResult.fail(site, "无法获取签到token，请检查LocalStorage或站点Headers配置")
 
         self._plugin_ctx.info(f"{site} 开始签到")
-        client = self._http_client(ctx, timeout=30.0, auth=BearerAuth(token))
+        client = self._http_client(ctx, timeout=90.0, auth=BearerAuth(token))
 
         res_text = None
         try:

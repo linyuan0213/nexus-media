@@ -6,6 +6,23 @@ import httpx
 
 
 @dataclass
+class BrowserModeConfig:
+    """浏览器自动化模式配置."""
+
+    enabled: bool = False
+    server_url: str = ""
+    session_key: str = "default"
+    site_key: str = "default"
+    fingerprint_profile: str = "stealth"
+    user_agent: str | None = None
+    proxy_url: str | None = None
+    navigate_timeout: int = 90
+    auto_navigate_on_challenge: bool = True
+    browser_fetch_on_challenge: bool = True
+    render_html: bool = False
+
+
+@dataclass
 class HttpClientConfig:
     """HTTP 客户端配置."""
 
@@ -14,7 +31,7 @@ class HttpClientConfig:
     max_keepalive: int = 20
 
     # 超时
-    timeout: float = 30.0
+    timeout: float = 120.0
     connect_timeout: float = 10.0
 
     # 行为
@@ -33,3 +50,6 @@ class HttpClientConfig:
 
     # DNS 映射（主机名 → IP 地址），用于替代 /etc/hosts 修改
     host_mapping: dict[str, str] | None = None
+
+    # 浏览器自动化模式（None 表示不启用）
+    browser: BrowserModeConfig | None = None

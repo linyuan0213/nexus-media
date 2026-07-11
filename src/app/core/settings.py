@@ -139,6 +139,7 @@ class LaboratoryConfig(BaseModel):
     show_more_sites: bool = True
     ocr_server_host: str = ""
     search_multi_language: bool = True
+    chrome_enabled: bool = True
     chrome_server_host: str = ""
 
 
@@ -168,7 +169,7 @@ class DatabaseConfig(BaseModel):
     port: int = 0
     username: str = ""
     password: str = ""
-    database: str = "nas_tools"
+    database: str = "nexus_media"
 
 
 class RedisConfig(BaseModel):

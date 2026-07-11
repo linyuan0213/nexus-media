@@ -27,7 +27,7 @@ from app.infrastructure.rate_limiter import MemoryTokenBucketBackend, RateLimitE
 
 def test_http_client_default_init():
     client = HttpClient()
-    assert client._config.timeout == 30.0
+    assert client._config.timeout == 120.0
     client.close()
 
 
@@ -286,7 +286,7 @@ def test_retry_timeout():
 
 def test_http_client_config_defaults():
     config = HttpClientConfig()
-    assert config.timeout == 30.0
+    assert config.timeout == 120.0
     assert config.connect_timeout == 10.0
     assert config.verify_ssl is True
     assert config.follow_redirects is True

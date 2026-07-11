@@ -365,6 +365,7 @@ class DownloadRepository(BaseRepository):
                         RATIO_LIMIT=int(round(float(ratio_limit or 0), 2) * 100),
                         SEEDING_TIME_LIMIT=int(float(seeding_time_limit or 0)),
                         DOWNLOADER=downloader,
+                        NOTE="",
                     )
                 )
 

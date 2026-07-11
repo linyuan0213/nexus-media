@@ -23,7 +23,7 @@ def resolve_download_api(engine, url, site, user_config, tid):
     rl_kwargs = _get_rate_limit_kwargs(engine, site)
     try:
         client = HttpClient(
-            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            config=HttpClientConfig(proxy_url=proxy_url),
             rate_limiter=rate_limiter_engine,
         )
         if site.download.method == "POST":
@@ -45,7 +45,7 @@ def resolve_download_chained(engine, url, site, user_config, tid):
     rl_kwargs = _get_rate_limit_kwargs(engine, site)
     try:
         res = HttpClient(
-            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            config=HttpClientConfig(proxy_url=proxy_url),
             rate_limiter=rate_limiter_engine,
         ).get(url=url, headers=headers, auth=auth, **rl_kwargs)
         token = res.json().get(site.download.response_key, "")

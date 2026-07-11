@@ -13,7 +13,6 @@ from lxml import etree
 
 import log
 from app.db.repositories.site_repository import SiteRepository
-from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.cloudflare import under_challenge
 from app.infrastructure.http.client import HttpClient, HttpClientError
 from app.infrastructure.http.config import HttpClientConfig
@@ -22,6 +21,7 @@ from app.sites.site_cache import SiteCache
 from app.sites.siteconf import SiteConf
 from app.sites.utils import is_logged_in
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
+from app.utils.browser_mode import build_browser_mode
 from app.utils.config_tools import get_proxies
 from app.utils.submodule_loader import SubmoduleLoader
 
@@ -35,14 +35,12 @@ class AutoGenRssPlugin:
         site_cache: SiteCache,
         site_repo: SiteRepository | None = None,
         siteconf: SiteConf | None = None,
-        drissionpage_helper: ChromeClient | None = None,
     ):
         self.ctx = ctx
         self._site_schema = []
         self._site_repo = site_repo or SiteRepository()
         self._siteconf = siteconf or SiteConf(self.ctx.site_engine)
         self._site_cache = site_cache
-        self._drissionpage_helper = drissionpage_helper or ChromeClient()
         self._event = Event()
 
     def _get_config(self):
@@ -175,59 +173,59 @@ class AutoGenRssPlugin:
 
             home_url = StringUtils.get_base_url(site_url)
             rss_url = f"{home_url}/getrss.php"
-            chrome = self._drissionpage_helper
-            if site_info.get("chrome") and chrome.get_status():
-                self.ctx.info(f"开始生成RSS站点（Chrome）：{site}")
-                # TODO: Chrome仿真实现
-                return f"[{site}]Chrome仿真生成RSS暂未实现"
-            else:
-                self.ctx.info(f"开始生成RSS站点：{site}")
-                data = {
-                    "inclbookmarked": "0",
-                    "itemcategory": "1",
-                    "itemsmalldescr": "1",
-                    "itemsize": "1",
-                    "showrows": "50",
-                    "search": "",
-                    "search_mode": "1",
-                }
-                headers.update({"User-Agent": ua, "Referer": site_url})
-                proxy = get_proxies() if site_info.get("proxy") else None
-                proxy_url = proxy.get("http") if proxy else None
-                engine = self.ctx.site_engine
-                rate_limiter = getattr(engine, "site_limiter", None)
-                rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-                try:
-                    res = HttpClient(
-                        config=HttpClientConfig(proxy_url=proxy_url),
-                        rate_limiter=rate_limiter_engine,
-                    ).post(url=rss_url, data=data, headers=headers, cookies=site_cookie)
-                    text = res.text
-                except HttpClientError as exc:
-                    if exc.status_code in [500, 403]:
-                        self.ctx.warn(f"{site} 生成RSS失败，状态码：{exc.status_code}")
-                        return f"[{site}]生成RSS失败，状态码：{exc.status_code}！"
-                    self.ctx.warn(f"{site} 生成RSS失败，无法打开网站")
-                    return f"[{site}]生成RSS失败，无法打开网站！"
+            self.ctx.info(f"开始生成RSS站点：{site}")
+            data = {
+                "inclbookmarked": "0",
+                "itemcategory": "1",
+                "itemsmalldescr": "1",
+                "itemsize": "1",
+                "showrows": "50",
+                "search": "",
+                "search_mode": "1",
+            }
+            headers.update({"User-Agent": ua, "Referer": site_url})
+            proxy = get_proxies() if site_info.get("proxy") else None
+            proxy_url = proxy.get("http") if proxy else None
+            engine = self.ctx.site_engine
+            rate_limiter = getattr(engine, "site_limiter", None)
+            rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+            browser = build_browser_mode(
+                site_info=site_info,
+                site_key=site_info.get("domain") or site,
+                proxy_url=proxy_url,
+                render_html=False,
+            )
+            try:
+                res = HttpClient(
+                    config=HttpClientConfig(proxy_url=proxy_url, browser=browser),
+                    rate_limiter=rate_limiter_engine,
+                ).post(url=rss_url, data=data, headers=headers, cookies=site_cookie)
+                text = res.text
+            except HttpClientError as exc:
+                if exc.status_code in [500, 403]:
+                    self.ctx.warn(f"{site} 生成RSS失败，状态码：{exc.status_code}")
+                    return f"[{site}]生成RSS失败，状态码：{exc.status_code}！"
+                self.ctx.warn(f"{site} 生成RSS失败，无法打开网站")
+                return f"[{site}]生成RSS失败，无法打开网站！"
 
-                if not is_logged_in(text):
-                    if under_challenge(text):
-                        msg = "站点被Cloudflare防护，请开启浏览器仿真"
-                    else:
-                        msg = "Cookie已失效"
-                    self.ctx.warn(f"{site} 生成RSS失败，{msg}")
-                    return f"[{site}]生成RSS失败，{msg}！"
+            if not is_logged_in(text):
+                if under_challenge(text):
+                    msg = "站点被Cloudflare防护，请开启浏览器仿真"
                 else:
-                    if re.search(r"完成两步验证", text, re.IGNORECASE):
-                        self.ctx.warn(f"{site} 生成RSS失败，需要两步验证")
-                        return f"[{site}]生成RSS失败，需要两步验证"
+                    msg = "Cookie已失效"
+                self.ctx.warn(f"{site} 生成RSS失败，{msg}")
+                return f"[{site}]生成RSS失败，{msg}！"
+            else:
+                if re.search(r"完成两步验证", text, re.IGNORECASE):
+                    self.ctx.warn(f"{site} 生成RSS失败，需要两步验证")
+                    return f"[{site}]生成RSS失败，需要两步验证"
 
-                    gen_rss_url = self._parse_rss_link(text)
-                    self.ctx.debug(f"生成的rss: {gen_rss_url}")
-                    if gen_rss_url:
-                        self._site_repo.update_site_rssurl(site_info.get("id"), gen_rss_url)
-                        self.ctx.info(f"{site} 生成RSS成功")
-                        return f"[{site}]生成RSS成功"
+                gen_rss_url = self._parse_rss_link(text)
+                self.ctx.debug(f"生成的rss: {gen_rss_url}")
+                if gen_rss_url:
+                    self._site_repo.update_site_rssurl(site_info.get("id"), gen_rss_url)
+                    self.ctx.info(f"{site} 生成RSS成功")
+                    return f"[{site}]生成RSS成功"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             self.ctx.warn(f"{site} 生成RSS失败：{e!s}")

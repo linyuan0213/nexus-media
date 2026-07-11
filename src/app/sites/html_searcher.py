@@ -19,13 +19,12 @@ from lxml import etree
 import log
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
-from app.infrastructure.http.auth import CookieAuth
-from app.infrastructure.http.client import HttpClient
-from app.infrastructure.http.config import HttpClientConfig
+from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.sites import engine_tools
 from app.sites.api_searcher import ApiSiteSearcher
 from app.sites.engine import SiteDefinition
 from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
+from app.utils.browser_mode import build_browser_mode
 from app.utils.config_tools import get_proxies
 
 
@@ -136,9 +135,19 @@ class HtmlSiteSearcher:
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._site)
+        browser = build_browser_mode(
+            site_info={
+                "chrome": self._user_config.get("chrome"),
+                "ua": ua,
+                "browser_render": self._user_config.get("browser_render"),
+            },
+            site_key=self._user_config.get("domain") or self._site.domain or "",
+            proxy_url=proxy_url,
+            render_html=bool(self._user_config.get("browser_render")),
+        )
         try:
             res = HttpClient(
-                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                config=HttpClientConfig(proxy_url=proxy_url, browser=browser),
                 rate_limiter=rate_limiter_engine,
             ).get(url=url, headers=headers, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs)
         except Exception:

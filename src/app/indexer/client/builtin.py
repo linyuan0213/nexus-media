@@ -18,7 +18,6 @@ from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 from app.indexer.client._base import _IIndexClient
 from app.indexer.configuration import IndexerHelper
 from app.indexer.schema import IndexerConfigSchema
-from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.progress import ProgressTracker
 from app.sites.engine import SiteEngine
 from app.sites.searcher_factory import create_searcher
@@ -62,7 +61,6 @@ class BuiltinIndexer(_IIndexClient):
         progress_helper: ProgressTracker | None = None,
         download_repo: DownloadRepository | None = None,
         system_config: SystemConfig | None = None,
-        drissionpage_helper: ChromeClient | None = None,
         site_config_repo: IndexerSiteConfigRepositoryAdapter | None = None,
         idx_config_repo: IndexerConfigRepositoryAdapter | None = None,
     ):
@@ -72,7 +70,6 @@ class BuiltinIndexer(_IIndexClient):
         self._progress = progress_helper or ProgressTracker()
         self._download_repo = download_repo or DownloadRepository()
         self._system_config = system_config or SystemConfig()
-        self._drissionpage_helper = drissionpage_helper or ChromeClient()
         self._site_engine = site_engine
         self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
         self._idx_config_repo = idx_config_repo or IndexerConfigRepositoryAdapter()
@@ -102,8 +99,6 @@ class BuiltinIndexer(_IIndexClient):
         ret_indexers = []
         enabled_names = set(n.lower() for n in self._site_config_repo.list_enabled_names())
         _indexer_domains = []
-
-        chrome_ok = self._drissionpage_helper.get_status()
 
         engine_sites = []
         for s in self._site_engine.all_sites():
@@ -149,7 +144,7 @@ class BuiltinIndexer(_IIndexClient):
             if not is_public and not has_auth:
                 continue
 
-            render = False if not chrome_ok else site.get("chrome")
+            render = bool(site.get("chrome"))
             indexer = self._indexer_helper.get_indexer(
                 url=url,
                 siteid=site.get("id"),
@@ -164,6 +159,8 @@ class BuiltinIndexer(_IIndexClient):
                 public=is_public,
                 proxy=bool(site.get("proxy")),
                 render=render,
+                chrome=site.get("chrome"),
+                browser_render=site.get("browser_render"),
             )
             if indexer:
                 if indexer_id and (str(indexer.id) == str(indexer_id) or site.get("name") == indexer_id):
@@ -349,6 +346,8 @@ class BuiltinIndexer(_IIndexClient):
             "domain": getattr(indexer, "domain", "") or "",
             "api_key": getattr(indexer, "api_key", "") or "",
             "bearer_token": getattr(indexer, "bearer_token", "") or "",
+            "chrome": getattr(indexer, "chrome", False),
+            "browser_render": getattr(indexer, "browser_render", False),
         }
         if indexer.headers and not user_config.get("api_key") and not user_config.get("bearer_token"):
             try:

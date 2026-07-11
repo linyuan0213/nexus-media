@@ -1,5 +1,5 @@
 """Chrome 浏览器自动化."""
 
-from app.infrastructure.chrome.client import ChromeClient
+from app.infrastructure.chrome.session import AsyncBrowserSession, BrowserSession
 
-__all__ = ["ChromeClient"]
+__all__ = ["BrowserSession", "AsyncBrowserSession"]
