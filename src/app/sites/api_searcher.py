@@ -97,7 +97,7 @@ class ApiSiteSearcher:
         rl_kwargs = engine_tools._get_rate_limit_kwargs(self._engine, self._site)
         try:
             client = HttpClient(
-                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                config=HttpClientConfig(proxy_url=proxy_url),
                 rate_limiter=rate_limiter_engine,
             )
             if method == "POST":

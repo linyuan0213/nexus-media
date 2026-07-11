@@ -91,8 +91,9 @@ def backup(full_backup=False, bk_path=None):
         else:
             backup_path = data_path / "backup_file" / backup_file
         backup_path.mkdir(parents=True)
-        shutil.copy(f"{data_path}/config.yaml", backup_path)
-        shutil.copy(f"{data_path}/default-category.yaml", backup_path)
+        config_file = data_path / "config.yaml"
+        if config_file.exists():
+            shutil.copy(str(config_file), backup_path)
 
         db_type = DatabaseFactory._get_config_db_type()
         engine = DatabaseFactory.create_engine()

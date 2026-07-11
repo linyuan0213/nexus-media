@@ -9,7 +9,7 @@ from lxml import etree
 from PIL import Image
 
 import log
-from app.infrastructure.chrome import ChromeClient
+from app.infrastructure.chrome import BrowserSession
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient, HttpClientError
 from app.infrastructure.http.config import HttpClientConfig
@@ -19,6 +19,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninHandler,
 )
 from app.utils import StringUtils
+from app.utils.browser_mode import get_chrome_server_url
 from app.utils.chinese_utils import to_simplified
 from app.utils.json_utils import JsonUtils
 from app.utils.path_utils import get_temp_path
@@ -33,9 +34,8 @@ class Tjupt(SiteSigninHandler):
         "重新签到成功，本次签到获得\\d+个魔力值",
     ]
 
-    def __init__(self, plugin_ctx, rate_limiter=None, drissionpage_helper=None):
+    def __init__(self, plugin_ctx, rate_limiter=None):
         super().__init__(plugin_ctx, rate_limiter)
-        self._drissionpage_helper = drissionpage_helper or ChromeClient()
 
     @property
     def _answer_file(self) -> str:
@@ -158,7 +158,13 @@ class Tjupt(SiteSigninHandler):
         self._plugin_ctx.error("豆瓣图片匹配，未获取到匹配答案")
 
         image_search_url = f"https://lens.google.com/uploadbyurl?url={img_url}"
-        html_text = self._drissionpage_helper.get_page_html(url=image_search_url)
+        server_url = get_chrome_server_url()
+        if not server_url:
+            self._plugin_ctx.info("Chrome 服务器未配置或未启用，跳过 Google 识图")
+            return SigninResult.fail(site, "未配置 Chrome 服务器")
+        with BrowserSession(site_key="tjupt", server_url=server_url) as session:
+            session.navigate(image_search_url)
+            html_text = session.html()
         search_results = BeautifulSoup(html_text, "lxml").find_all("div", class_="UAiK1e")
         if not search_results:
             self._plugin_ctx.info("Google识图失败，未获取到识图结果")

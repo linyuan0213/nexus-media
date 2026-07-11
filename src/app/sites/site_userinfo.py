@@ -9,7 +9,6 @@ import log
 from app.db.models import SITEUSERINFOSTATS as _S
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.db.repositories.site_repository import SiteRepository
-from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.infrastructure.rate_limiter import MemoryTokenBucketBackend, RateLimitEngine
 from app.infrastructure.thread import ThreadExecutor
@@ -18,6 +17,7 @@ from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.site_favicon_service import SiteFaviconService
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
+from app.utils.browser_mode import build_browser_mode
 from app.utils.config_tools import get_proxies
 
 lock = Lock()
@@ -44,7 +44,6 @@ class SiteUserInfo:
         site_favicon_service: SiteFaviconService,
         site_engine: SiteEngine,
         message: Message | None = None,
-        drissionpage_helper: ChromeClient | None = None,
         thread_executor: ThreadExecutor | None = None,
         rate_limiter: RateLimitEngine | None = None,
     ):
@@ -52,7 +51,6 @@ class SiteUserInfo:
         self._site_repository = site_repository
         self._site_favicon_service = site_favicon_service
         self._site_engine = site_engine
-        self._drissionpage_helper = drissionpage_helper or ChromeClient()
         self._message = message
         self._thread_executor = thread_executor or ThreadExecutor(
             max_workers=self._MAX_CONCURRENCY, name="site_refresh"
@@ -209,32 +207,31 @@ class SiteUserInfo:
             ) or _log_error(site_name)
 
         html_text = None
-        if emulate:
-            chrome = self._drissionpage_helper
-            html_text = chrome.get_page_html(url=url, cookies=site_cookie)
-            if not html_text:
-                log.error(f"[Sites]{site_name} 跳转站点失败")
-                return None
+        proxies = get_proxies() if proxy else None
+        proxy_url = proxies.get("http") if proxies else None
+        rate_limiter = getattr(engine, "site_limiter", None)
+        rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        rl_kwargs = {}
+        if rate_limiter and site_id:
+            rate_config = rate_limiter.get_rate(str(site_id))
+            if rate_config:
+                rl_kwargs = {"rate_limit_key": f"site:{site_id}", "rate_limit_rate": rate_config[0]}
+        browser = build_browser_mode(
+            site_info={"chrome": emulate, "ua": ua, "browser_render": False},
+            site_key=site_name or url,
+            proxy_url=proxy_url,
+            render_html=False,
+        )
+        client = HttpClient(
+            config=HttpClientConfig(proxy_url=proxy_url, browser=browser),
+            rate_limiter=rate_limiter_engine,
+        )
+        res = client.get(url=url, headers=site_headers, auth=CookieAuth(site_cookie), **rl_kwargs)
+        if res.status_code == 200:
+            html_text = res.text
         else:
-            proxies = get_proxies() if proxy else None
-            proxy_url = proxies.get("http") if proxies else None
-            rate_limiter = getattr(engine, "site_limiter", None)
-            rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-            rl_kwargs = {}
-            if rate_limiter and site_id:
-                rate_config = rate_limiter.get_rate(str(site_id))
-                if rate_config:
-                    rl_kwargs = {"rate_limit_key": f"site:{site_id}", "rate_limit_rate": rate_config[0]}
-            client = HttpClient(
-                config=HttpClientConfig(timeout=10, proxy_url=proxy_url),
-                rate_limiter=rate_limiter_engine,
-            )
-            res = client.get(url=url, headers=site_headers, auth=CookieAuth(site_cookie), **rl_kwargs)
-            if res.status_code == 200:
-                html_text = res.text
-            else:
-                log.error(f"[Sites]站点 {site_name} 无法访问：{url}")
-                return None
+            log.error(f"[Sites]站点 {site_name} 无法访问：{url}")
+            return None
 
         return engine.get_user_info(
             url,
@@ -528,7 +525,7 @@ class SiteUserInfo:
             rate_limiter = getattr(engine, "site_limiter", None)
             rate_limiter_engine = rate_limiter.engine if rate_limiter else None
             client = HttpClient(
-                config=HttpClientConfig(timeout=10),
+                config=HttpClientConfig(),
                 rate_limiter=rate_limiter_engine,
             )
             res = client.get(url=url, headers={"User-Agent": ua or "Mozilla/5.0"})

@@ -12,13 +12,12 @@ HandlerFactory = Callable[[], SiteSigninHandler]
 
 
 class HandlerRegistry:
-    def __init__(self, plugin_ctx, rate_limiter, site_configs: list, agent_service=None, drissionpage_helper=None):
+    def __init__(self, plugin_ctx, rate_limiter, site_configs: list, agent_service=None):
         self._plugin_ctx = plugin_ctx
         self._rate_limiter = rate_limiter
+        self._agent_service = agent_service
         self._site_configs = {cfg.site_url: cfg for cfg in site_configs}
         self._handlers: dict[str, HandlerFactory] = {}
-        self._agent_service = agent_service
-        self._drissionpage_helper = drissionpage_helper
 
     def load(self):
         self._handlers.clear()
@@ -37,7 +36,6 @@ class HandlerRegistry:
                     c,
                     {
                         "agent_service": self._agent_service,
-                        "drissionpage_helper": self._drissionpage_helper,
                     },
                 ),
             )

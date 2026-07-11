@@ -65,4 +65,4 @@ class DOWNLOADSETTING(Base):
     RATIO_LIMIT: Mapped[int] = mapped_column(Integer)
     SEEDING_TIME_LIMIT: Mapped[int] = mapped_column(Integer)
     DOWNLOADER: Mapped[str] = mapped_column(String(255))
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str | None] = mapped_column(Text, nullable=True)

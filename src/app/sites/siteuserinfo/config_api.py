@@ -232,7 +232,7 @@ class ConfigApiUserInfo:
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
-        client = HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=30), rate_limiter=rate_limiter_engine)
+        client = HttpClient(config=HttpClientConfig(proxy_url=proxy_url), rate_limiter=rate_limiter_engine)
         try:
             if method == "POST":
                 data = JsonUtils.dumps(body or {}, separators=(",", ":"))
