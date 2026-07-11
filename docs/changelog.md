@@ -4,7 +4,7 @@
 
 ### 新增
 - 网页自动化（浏览器过盾）原生集成到 `HttpClient`：站点开启 `chrome` 开关后，抓取请求自动经 Chrome 服务器过盾（Cloudflare / 五秒盾 / 雷池）并复用 Cookie，上层调用点无需改动（ADR-017）
-- 新增站点级 `browser_render` 开关：可选返回浏览器渲染后的 DOM（适配 JS 前端渲染站点），渲染 HTML 解析前自动剥离 `<tbody>` 归一化，现有 `> tr` 选择器规则无需修改
+- 新增站点级 `browser_render` 开关：可选返回浏览器渲染后的 DOM（适配 JS 前端渲染站点），渲染 HTML 解析前自动剥离 tbody 归一化，现有直接子选择器规则无需修改
 - 新增 `BrowserSession` / `AsyncBrowserSession` 交互式浏览器会话客户端，用于签到等多步流程（navigate / click / input / execute / fetch）
 - 实验室配置新增 `chrome_enabled` 全局开关（站点级仍需单独开启 `chrome`）
 
