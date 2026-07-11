@@ -1,5 +1,24 @@
 # 版本历史
 
+## v4.2.8 (2026-07-11)
+
+### 新增
+- 网页自动化（浏览器过盾）原生集成到 `HttpClient`：站点开启 `chrome` 开关后，抓取请求自动经 Chrome 服务器过盾（Cloudflare / 五秒盾 / 雷池）并复用 Cookie，上层调用点无需改动（ADR-017）
+- 新增站点级 `browser_render` 开关：可选返回浏览器渲染后的 DOM（适配 JS 前端渲染站点），渲染 HTML 解析前自动剥离 `<tbody>` 归一化，现有 `> tr` 选择器规则无需修改
+- 新增 `BrowserSession` / `AsyncBrowserSession` 交互式浏览器会话客户端，用于签到等多步流程（navigate / click / input / execute / fetch）
+- 实验室配置新增 `chrome_enabled` 全局开关（站点级仍需单独开启 `chrome`）
+
+### 优化
+- 签到（autosignin）、企业微信 IP 变更、自动生成 RSS 等插件改用新的 `BrowserSession` 交互客户端
+- 索引器透传 `chrome` / `browser_render` 站点配置，浏览器模式判定不再依赖全局 Chrome 探活
+- `HttpClientConfig` 默认超时提升，适配浏览器过盾耗时
+
+### 修复
+- 修复 Alembic 迁移 `oxrva77k36j6` 父节点挂接错误导致迁移链分叉出多个 head，`alembic upgrade head` 失败、迁移无法执行
+- `DOWNLOAD_SETTING.NOTE` 列改为可空，避免下载设置备注为空时写入失败
+- 备份时 `config.yaml` 不存在（纯环境变量运行）导致备份中断，改为存在才复制
+- 移除失效的旧 `ChromeClient`（仍在调用已下线的 `/tabs` 接口）
+
 ## v4.2.7 (2026-07-10)
 
 ### 修复

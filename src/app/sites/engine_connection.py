@@ -30,7 +30,7 @@ def test_html_connection(engine, site, user_config, base_url=None):
     rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, site)
     try:
         res = HttpClient(
-            config=HttpClientConfig(proxy_url=proxy_url, timeout=15, auth=CookieAuth(cookie) if cookie else None),
+            config=HttpClientConfig(proxy_url=proxy_url, auth=CookieAuth(cookie) if cookie else None),
             rate_limiter=rate_limiter_engine,
         ).get(url=domain, headers=headers, **rl_kwargs)
     except Exception as e:

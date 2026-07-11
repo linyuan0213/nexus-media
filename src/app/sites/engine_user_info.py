@@ -47,7 +47,7 @@ def prefetch_user_profile(
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = _get_rate_limit_kwargs(engine, site_def)
         client = HttpClient(
-            config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+            config=HttpClientConfig(proxy_url=proxy_url),
             rate_limiter=rate_limiter_engine,
         )
         if method == "POST":

@@ -6,12 +6,12 @@
 
 from datetime import datetime
 
-from app.infrastructure.chrome import ChromeClient
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.utils import is_logged_in
 from app.utils import JsonUtils, StringUtils
+from app.utils.browser_mode import build_browser_mode
 from app.utils.config_tools import get_proxies, get_ua
 
 
@@ -22,11 +22,9 @@ class SiteResolver:
         self,
         cache: SiteCache,
         site_engine: SiteEngine,
-        drissionpage_helper: ChromeClient | None = None,
     ):
         self._cache = cache
         self._site_engine = site_engine
-        self._drissionpage_helper = drissionpage_helper or ChromeClient()
 
     def test_connection(self, site_id: int | str) -> tuple[bool, str, float]:
         """测试站点连通性.
@@ -44,7 +42,6 @@ class SiteResolver:
         headers = site_info.get("headers")
         ua = site_info.get("ua") or get_ua()
         proxy = site_info.get("proxy")
-        chrome = site_info.get("chrome")
 
         site_url = StringUtils.get_base_url(site_info.get("signurl") or site_info.get("rssurl"))
         if not site_url:
@@ -88,20 +85,15 @@ class SiteResolver:
             return self._site_engine.test_connection(site_url, user_config)
 
         # 兜底：HTML 站点
-        if chrome:
-            start_time = datetime.now()
-            html_text = self._drissionpage_helper.get_page_html(url=site_url, cookies=site_cookie)
-            seconds = round((datetime.now() - start_time).total_seconds(), 3)
-            if not html_text:
-                return False, "获取站点源码失败", 0.0
-            if is_logged_in(html_text):
-                return True, "连接成功", seconds
-            return False, "Cookie失效", seconds
-
         start_time = datetime.now()
         proxy_url = get_proxies().get("http") if proxy and get_proxies() else None
+        browser = build_browser_mode(
+            site_info=site_info,
+            site_key=site_info.get("domain") or site_info.get("name") or site_url,
+            proxy_url=proxy_url,
+        )
         res = HttpClient(
-            config=HttpClientConfig(proxy_url=proxy_url),
+            config=HttpClientConfig(proxy_url=proxy_url, browser=browser),
         ).get(url=site_url, headers=headers, auth=CookieAuth(site_cookie))
         seconds = round((datetime.now() - start_time).total_seconds(), 3)
         if res and res.status_code == 200:

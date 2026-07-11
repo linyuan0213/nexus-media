@@ -381,7 +381,7 @@ class SiteEngine:
                 rate_limiter_engine = rate_limiter.engine if rate_limiter else None
                 rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
                 client = HttpClient(
-                    config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                    config=HttpClientConfig(proxy_url=proxy_url),
                     rate_limiter=rate_limiter_engine,
                 )
                 if method == "POST":
@@ -508,7 +508,7 @@ class SiteEngine:
             auth = CookieAuth(cookie) if cookie else None
         try:
             res = HttpClient(
-                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                config=HttpClientConfig(proxy_url=proxy_url),
                 rate_limiter=rate_limiter_engine,
             ).get(url=url, headers=headers, auth=auth, **rl_kwargs)
             return res.text

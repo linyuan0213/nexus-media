@@ -12,7 +12,6 @@ def resolver():
     return SiteResolver(
         cache=MagicMock(),
         site_engine=MagicMock(),
-        drissionpage_helper=MagicMock(),
     )
 
 
@@ -81,12 +80,16 @@ class TestSiteResolver:
             "chrome": True,
         }
         resolver._site_engine.get_by_url.return_value = None
-        resolver._drissionpage_helper.get_page_html.return_value = """
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.text = """
         <html>
           <a href="/logout">logout</a>
         </html>
         """
-        ok, msg, seconds = resolver.test_connection(1)
+        with patch("app.sites.site_resolver.HttpClient") as mock_client:
+            mock_client.return_value.get.return_value = resp
+            ok, msg, seconds = resolver.test_connection(1)
         assert ok is True
         assert msg == "连接成功"
 

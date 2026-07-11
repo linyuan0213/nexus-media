@@ -165,5 +165,7 @@ laboratory:
   show_more_sites: true
   # 验证码识别服务器
   ocr_server_host: http://127.0.0.1:9300
+  # 是否启用网页自动化（站点级仍需单独开启 chrome 开关）
+  chrome_enabled: true
   # 网页自动化服务器
   chrome_server_host: http://127.0.0.1:9850

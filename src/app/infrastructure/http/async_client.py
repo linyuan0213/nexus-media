@@ -10,6 +10,7 @@ from typing import Any
 import httpx
 
 import log
+from app.infrastructure.http.browser_transport import AsyncChromeTransport
 from app.infrastructure.http.cache import HttpCacheConfig
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError, HttpSSLError
@@ -44,6 +45,18 @@ class _AsyncClientPool:
             cookies = getattr(config.auth, "_cookies", None)
             if cookies:
                 auth_key += "::" + hashlib.md5(str(sorted(cookies.items())).encode()).hexdigest()
+        browser_key = (False, "", "", "", "", False)
+        if config.browser is not None:
+            b = config.browser
+            browser_key = (
+                b.enabled,
+                b.server_url,
+                b.session_key,
+                b.fingerprint_profile,
+                b.user_agent or "",
+                b.proxy_url or "",
+                b.render_html,
+            )
         return (
             config.proxy_url,
             headers,
@@ -55,7 +68,7 @@ class _AsyncClientPool:
             config.max_connections,
             config.max_keepalive,
             config.enable_http2,
-        )
+        ) + browser_key
 
     def acquire(self, config: HttpClientConfig, builder: Callable[[], httpx.AsyncClient]) -> httpx.AsyncClient:
         key = self._make_key(config)
@@ -127,6 +140,23 @@ class AsyncHttpClient:
             max_keepalive_connections=self._config.max_keepalive,
         )
         config_map = self._config.host_mapping or {}
+
+        if self._config.browser and self._config.browser.enabled:
+            transport = AsyncChromeTransport(self._config.browser, limits=limits)
+            timeout = httpx.Timeout(
+                self._config.timeout,
+                connect=self._config.connect_timeout,
+            )
+            return httpx.AsyncClient(
+                transport=transport,
+                timeout=timeout,
+                follow_redirects=self._config.follow_redirects,
+                verify=self._config.verify_ssl,
+                http2=self._config.enable_http2,
+                proxy=self._config.proxy_url,
+                auth=self._config.auth,
+                headers=self._config.default_headers,
+            )
 
         class _MappedAsyncTransport(httpx.AsyncHTTPTransport):
             async def handle_async_request(self, request):

@@ -296,7 +296,7 @@ class ConfigHtmlUserInfo:
                 body = sc.get("body") or {}
                 proxy_url = self._proxies.get("http") if self._proxies else None
                 res = HttpClient(
-                    config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                    config=HttpClientConfig(proxy_url=proxy_url),
                     rate_limiter=rate_limiter_engine,
                 ).post(
                     url=url,
@@ -391,7 +391,7 @@ class ConfigHtmlUserInfo:
         rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
         try:
             res = HttpClient(
-                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                config=HttpClientConfig(proxy_url=proxy_url),
                 rate_limiter=rate_limiter_engine,
             ).get(
                 url=url,

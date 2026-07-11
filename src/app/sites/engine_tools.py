@@ -116,7 +116,7 @@ def _call_endpoint(
         headers.pop("Content-Type", None)
         try:
             res = HttpClient(
-                config=HttpClientConfig(proxy_url=proxy_url, timeout=30),
+                config=HttpClientConfig(proxy_url=proxy_url),
                 rate_limiter=rate_limiter_engine,
             ).get(url=url, headers=headers, auth=auth, **rl_kwargs)
             if download_dir:
@@ -129,7 +129,7 @@ def _call_endpoint(
             return False
 
     client = HttpClient(
-        config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+        config=HttpClientConfig(proxy_url=proxy_url),
         rate_limiter=rate_limiter_engine,
     )
     try:
@@ -187,7 +187,7 @@ def _fetch_csrf_token(engine: Any, site: Any, user_config: dict) -> str | None:
     rl_kwargs = _get_rate_limit_kwargs(engine, site)
     try:
         res = HttpClient(
-            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            config=HttpClientConfig(proxy_url=proxy_url),
             rate_limiter=rate_limiter_engine,
         ).get(url=csrf_url, headers={"User-Agent": ua}, auth=CookieAuth(cookie) if cookie else None, **rl_kwargs)
     except Exception as e:
@@ -226,7 +226,7 @@ def _fetch_passkey(engine: Any, site: Any, user_config: dict) -> str | None:
     rl_kwargs = _get_rate_limit_kwargs(engine, site)
     try:
         client = HttpClient(
-            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            config=HttpClientConfig(proxy_url=proxy_url),
             rate_limiter=rate_limiter_engine,
         )
         if method.upper() == "GET":
@@ -268,7 +268,7 @@ def _call_html_endpoint(engine: Any, url: str, html_cfg: dict, user_config: dict
 
     try:
         client = HttpClient(
-            config=HttpClientConfig(proxy_url=proxy_url, timeout=15),
+            config=HttpClientConfig(proxy_url=proxy_url),
             rate_limiter=rate_limiter_engine,
         )
         if method == "POST":
