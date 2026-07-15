@@ -51,3 +51,15 @@ class SiteResourcesResultDTO:
 class SiteUpdateResultDTO:
     code: int | None = None
     msg: str | None = None
+
+
+@dataclass
+class SiteDefinitionDTO:
+    id: str = ""
+    name: str = ""
+    domain: str = ""
+    type: str = ""  # api / html
+    public: bool = False
+    domain_aliases: list[str] = field(default_factory=list)
+    encoding: str = "UTF-8"
+    detail_page_url: str = ""

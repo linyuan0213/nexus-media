@@ -1,0 +1,12 @@
+{
+  "site_id": "hares",
+  "type": "api",
+  "endpoint": {
+    "method": "GET",
+    "path": "/attendance.php?action=sign"
+  },
+  "auth": "cookie_raw",
+  "json_success_path": "code",
+  "json_success_value": 0,
+  "already_markers": ["已签到"]
+}

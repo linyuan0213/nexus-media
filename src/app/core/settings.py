@@ -138,6 +138,7 @@ class LaboratoryConfig(BaseModel):
     search_en_title: bool = True
     show_more_sites: bool = True
     ocr_server_host: str = ""
+    ocr_enabled: bool = True
     search_multi_language: bool = True
     chrome_enabled: bool = True
     chrome_server_host: str = ""

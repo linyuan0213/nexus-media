@@ -1,0 +1,12 @@
+{
+  "site_id": "pterclubnet",
+  "type": "api",
+  "endpoint": {
+    "method": "GET",
+    "path": "/attendance-ajax.php"
+  },
+  "auth": "cookie_raw",
+  "json_success_path": "status",
+  "json_success_value": "1",
+  "already_markers": ["已经签到", "请勿重复刷新"]
+}

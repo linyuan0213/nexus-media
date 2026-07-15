@@ -671,14 +671,20 @@ class CookieCloudPlugin:
                     continue
                 if not self._check_domain(site):
                     continue
-                for cookie_data in storage:
-                    if cookie_data.get("domain") and self._check_domain(cookie_data.get("domain", "")):
-                        domain_parts = site.split(".")[-2:]
-                        domain_key = tuple(domain_parts)
-                        domain_url = ".".join(domain_key)
-
-                        self._cache.set(f"local_storage:{domain_url}", JsonUtils.dumps(storage))
-                        synced += 1
+                if isinstance(storage, dict):
+                    domain_parts = site.split(".")[-2:]
+                    domain_key = tuple(domain_parts)
+                    domain_url = ".".join(domain_key)
+                    self._cache.set(f"local_storage:{domain_url}", JsonUtils.dumps(storage))
+                    synced += 1
+                elif isinstance(storage, list):
+                    for cookie_data in storage:
+                        if cookie_data.get("domain") and self._check_domain(cookie_data.get("domain", "")):
+                            domain_parts = site.split(".")[-2:]
+                            domain_key = tuple(domain_parts)
+                            domain_url = ".".join(domain_key)
+                            self._cache.set(f"local_storage:{domain_url}", JsonUtils.dumps(storage))
+                            synced += 1
             except Exception as e:
                 self.ctx.error(f"处理 LocalStorage {site} 时出错: {e}")
 

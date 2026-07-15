@@ -25,6 +25,17 @@ class TestSiteEngine:
         assert engine.get_by_domain("EXAMPLE.COM") is site
         assert engine.get_by_domain("unknown.com") is None
 
+    def test_get_by_name(self):
+        engine = SiteEngine(definitions_dir="/nonexistent")
+        site = SiteDefinition(id="t1", name="TestSite")
+        engine.register(site)
+        assert engine.get_by_name("TestSite") is site
+        assert engine.get_by_name("testsite") is site
+        assert engine.get_by_name("t1") is site
+        assert engine.get_by_name("T1") is site
+        assert engine.get_by_name("unknown") is None
+        assert engine.get_by_name("") is None
+
     def test_extract_detail_labels_with_dict_fields(self):
         site = MagicMock()
         site.html = MagicMock()

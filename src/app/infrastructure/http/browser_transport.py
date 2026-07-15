@@ -1,6 +1,6 @@
 """HTTP Transport 实现浏览器自动化透明集成.
 
-将 httpx.Request 转发给 nexus-media-chrome 服务器的 /sessions/{id}/request 端点,
+将 httpx.Request 转发给 nexus-chrome 服务器的 /sessions/{id}/request 端点,
 并把响应重新组装成 httpx.Response, 使上层 HttpClient 调用无感知.
 """
 

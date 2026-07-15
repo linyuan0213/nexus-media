@@ -4,6 +4,7 @@ import pytest
 
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import (
     SigninResult,
+    SiteSigninContext,
     SiteSigninHandler,
 )
 
@@ -35,6 +36,51 @@ class TestSigninResult:
         assert SigninResult.COOKIE_EXPIRED == "cookie失效"
         assert SigninResult.SITE_UNREACHABLE == "请检查站点连通性"
         assert SigninResult.REQUEST_FAILED == "签到接口请求失败"
+
+
+class TestSiteSigninContext:
+    def test_from_site_info_without_engine(self):
+        ctx = SiteSigninContext.from_site_info(
+            {"id": 1, "name": "test", "signurl": "https://test.com/sign", "cookie": "c"}
+        )
+        assert ctx.site_id == "1"
+        assert ctx.site == "test"
+        assert ctx.site_url == "https://test.com/sign"
+        assert ctx.cookie == "c"
+
+    def test_from_site_info_resolves_canonical_id(self):
+        site_def = MagicMock()
+        site_def.id = "btschool"
+        site_def.name = "学校"
+        site_def.domain = "https://pt.btschool.club"
+        engine = MagicMock()
+        engine.get_by_url = MagicMock(return_value=site_def)
+
+        ctx = SiteSigninContext.from_site_info(
+            {"id": 71, "name": "学校", "signurl": "https://pt.btschool.club/index.php?action=addbonus"},
+            site_engine=engine,
+        )
+        assert ctx.site_id == "btschool"
+        assert ctx.site == "学校"
+        assert ctx.site_url == "https://pt.btschool.club/index.php?action=addbonus"
+        engine.get_by_url.assert_called_once()
+
+    def test_from_site_info_fallback_by_name(self):
+        site_def = MagicMock()
+        site_def.id = "audiences"
+        site_def.name = "Audiences"
+        site_def.domain = "https://audiences.me"
+        engine = MagicMock()
+        engine.get_by_url = MagicMock(return_value=None)
+        engine.get_by_name = MagicMock(return_value=site_def)
+
+        ctx = SiteSigninContext.from_site_info(
+            {"id": 3, "name": "Audiences", "strict_url": "", "signurl": "", "rssurl": ""},
+            site_engine=engine,
+        )
+        assert ctx.site_id == "audiences"
+        assert ctx.site == "Audiences"
+        assert ctx.site_url == "https://audiences.me"
 
 
 class TestSiteSigninHandler:

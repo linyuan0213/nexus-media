@@ -2,5 +2,5 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers._types imp
 
 
 class PtCHDBits(BakatestQaHandler):
-    site_url = "ptchdbits.co"
+    site_id = "chdbits"
     _name = "ptchdbits"

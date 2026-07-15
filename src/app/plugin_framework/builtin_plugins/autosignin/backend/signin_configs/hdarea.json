@@ -1,0 +1,10 @@
+{
+  "site_id": "HDarea",
+  "type": "http",
+  "method": "post",
+  "path": "sign_in.php",
+  "data": {"action": "sign_in"},
+  "auth": "cookie_raw",
+  "success_markers": ["此次签到您获得"],
+  "already_markers": ["请不要重复签到哦"]
+}

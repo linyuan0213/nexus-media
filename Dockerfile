@@ -22,7 +22,7 @@ ARG UV_INDEX_URL=https://pypi.org/simple
 ENV UV_INDEX_URL=${UV_INDEX_URL}
 
 RUN uv venv .venv \
-    && uv sync --frozen --no-cache --no-editable
+    && uv sync --frozen --no-cache --no-install-package nexus-media
 
 # ==================== 运行时 ====================
 FROM python:3.14-slim-trixie
@@ -56,6 +56,7 @@ ENV S6_SERVICES_GRACETIME=30000 \
     LANG="C.UTF-8" \
     TZ="Asia/Shanghai" \
     NEXUS_MEDIA_CONFIG="/data/config.yaml" \
+    NEXUS_MEDIA_DATA="/data" \
     PS1="\u@\h:\w \$ " \
     PUID=0 \
     PGID=0 \

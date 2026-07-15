@@ -13,7 +13,7 @@ from app.utils.json_utils import JsonUtils
 
 
 class HDSky(SiteSigninHandler):
-    site_url = "hdsky.me"
+    site_id = "hdsky"
 
     def signin(self, ctx: SiteSigninContext) -> SigninResult:
         site = ctx.site
@@ -70,7 +70,19 @@ class HDSky(SiteSigninHandler):
         times = 0
         ocr_result = None
         while times <= 3:
-            ocr_result = OcrRecognizer().get_captcha_text(image_url=img_get_url, cookie=cookie, ua=ua)
+            try:
+                ocr_result = (
+                    OcrRecognizer()
+                    .recognize(
+                        {"task_type": "captcha", "image_url": img_get_url},
+                        cookie=cookie,
+                        ua=ua,
+                    )
+                    .text
+                    or ""
+                )
+            except Exception:
+                ocr_result = ""
             self._plugin_ctx.debug(f"ocr识别{site}验证码 {ocr_result}")
             if ocr_result and len(ocr_result) == 6:
                 self._plugin_ctx.info(f"ocr识别{site}验证码成功 {ocr_result}")
