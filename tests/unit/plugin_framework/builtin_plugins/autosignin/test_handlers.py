@@ -6,7 +6,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers._types imp
 class TestBakatestQaHandler:
     def test_name_and_answer_file(self):
         class TestHandler(BakatestQaHandler):
-            site_url = "test.site"
+            site_id = "test"
             _name = "test"
 
         handler = TestHandler(MagicMock())
@@ -22,7 +22,7 @@ class TestBakatestQaHandler:
 
     def test_lookup_local_answer_not_found(self):
         class TestHandler(BakatestQaHandler):
-            site_url = "test.site"
+            site_id = "test"
             _name = "test"
 
             @property
@@ -38,7 +38,7 @@ class TestBakatestQaHandler:
         mock_open.return_value.__enter__.return_value.read.return_value = '{"question": [1]}'
 
         class TestHandler(BakatestQaHandler):
-            site_url = "test.site"
+            site_id = "test"
             _name = "test"
 
             @property

@@ -2,5 +2,5 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers._types imp
 
 
 class FWpt(BakatestQaHandler):
-    site_url = "52pt.site"
+    site_id = "52pt"
     _name = "52pt"

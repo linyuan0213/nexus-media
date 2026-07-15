@@ -12,6 +12,7 @@ from app.domain.interfaces.site_repo import ISiteRepository
 from app.schemas.site import (
     SiteActivityDTO,
     SiteAttrDTO,
+    SiteDefinitionDTO,
     SiteDetailDTO,
     SiteHistoryDTO,
     SiteResourcesResultDTO,
@@ -86,6 +87,32 @@ class SiteService:
             site_2xfree=bool(site_attr.get("2XFREE")),
             site_hr=bool(site_attr.get("HR")),
         )
+
+    # ------------------------------------------------------------------
+    # 站点定义
+    # ------------------------------------------------------------------
+    def get_site_definitions(self) -> list[SiteDefinitionDTO]:
+        """返回所有内置站点定义，供前端选择添加站点。"""
+        definitions = []
+        for site in self._site_engine.all_sites():
+            site_type = ""
+            if site.api:
+                site_type = "api"
+            elif site.html:
+                site_type = "html"
+            definitions.append(
+                SiteDefinitionDTO(
+                    id=site.id,
+                    name=site.name,
+                    domain=site.domain,
+                    type=site_type,
+                    public=site.public,
+                    domain_aliases=site.domain_aliases,
+                    encoding=site.encoding,
+                    detail_page_url=site.detail_page_url,
+                )
+            )
+        return sorted(definitions, key=lambda x: x.name)
 
     # ------------------------------------------------------------------
     # CRUD
@@ -310,6 +337,8 @@ class SiteService:
                 log.error(f"[SiteService]更新站点失败: {e}")
                 return SiteUpdateResultDTO(code=500, msg=str(e))
         else:
+            if not self._site_engine.get_by_name(name or ""):
+                return SiteUpdateResultDTO(code=400, msg="站点不存在于站点定义中，无法添加")
             try:
                 self._site_entity_repo.insert(entity)
                 self._sites.refresh()

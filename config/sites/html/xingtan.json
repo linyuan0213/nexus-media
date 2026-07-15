@@ -1,0 +1,357 @@
+{
+  "id": "xingtan",
+  "name": "杏坛",
+  "domain": "https://xingtan.one",
+  "encoding": "UTF-8",
+  "public": false,
+  "html": {
+    "search": {
+      "paths": [
+        {
+          "path": "torrents.php",
+          "method": "get"
+        }
+      ],
+      "params": {
+        "search": "{keyword}"
+      },
+      "batch": {
+        "delimiter": " ",
+        "space_replace": "_"
+      }
+    },
+    "category": {
+      "tv": [
+        {
+          "id": 947,
+          "cat": "高等教育",
+          "desc": "高等教育"
+        },
+        {
+          "id": 791,
+          "cat": "小学教育",
+          "desc": "小学教育"
+        },
+        {
+          "id": 786,
+          "cat": "科学教育",
+          "desc": "科学教育"
+        },
+        {
+          "id": 959,
+          "cat": "英语语言文学",
+          "desc": "英语语言文学"
+        },
+        {
+          "id": 493,
+          "cat": "微电子学与固体电子学",
+          "desc": "微电子学与固体电子学"
+        },
+        {
+          "id": 522,
+          "cat": "土木工程",
+          "desc": "土木工程"
+        },
+        {
+          "id": 422,
+          "cat": "全科医学",
+          "desc": "全科医学"
+        },
+        {
+          "id": 434,
+          "cat": "基础医学",
+          "desc": "基础医学"
+        },
+        {
+          "id": 955,
+          "cat": "中国古代文学",
+          "desc": "中国古代文学"
+        },
+        {
+          "id": 417,
+          "cat": "眼耳鼻喉",
+          "desc": "眼耳鼻喉"
+        },
+        {
+          "id": 433,
+          "cat": "医学其他",
+          "desc": "医学其他"
+        },
+        {
+          "id": 591,
+          "cat": "飞行器动力工程",
+          "desc": "飞行器动力工程"
+        },
+        {
+          "id": 977,
+          "cat": "基础数学",
+          "desc": "基础数学"
+        },
+        {
+          "id": 975,
+          "cat": "中国古代史",
+          "desc": "中国古代史"
+        },
+        {
+          "id": 827,
+          "cat": "历史学",
+          "desc": "历史学"
+        },
+        {
+          "id": 647,
+          "cat": "应用气象学",
+          "desc": "应用气象学"
+        },
+        {
+          "id": 956,
+          "cat": "中国现当代文学",
+          "desc": "中国现当代文学"
+        },
+        {
+          "id": 903,
+          "cat": "中国哲学",
+          "desc": "中国哲学"
+        },
+        {
+          "id": 963,
+          "cat": "日语语言文学",
+          "desc": "日语语言文学"
+        },
+        {
+          "id": 964,
+          "cat": "印度语言文学",
+          "desc": "印度语言文学"
+        },
+        {
+          "id": 762,
+          "cat": "社会学",
+          "desc": "社会学"
+        },
+        {
+          "id": 707,
+          "cat": "经济与金融",
+          "desc": "经济与金融"
+        },
+        {
+          "id": 976,
+          "cat": "中国近现代史",
+          "desc": "中国近现代史"
+        },
+        {
+          "id": 979,
+          "cat": "概率论与数理统计",
+          "desc": "概率论与数理统计"
+        },
+        {
+          "id": 911,
+          "cat": "西方经济学",
+          "desc": "西方经济学"
+        },
+        {
+          "id": 924,
+          "cat": "政治学理论",
+          "desc": "政治学理论"
+        },
+        {
+          "id": 1195,
+          "cat": "待整理",
+          "desc": "待整理"
+        },
+        {
+          "id": 1159,
+          "cat": "军事历史",
+          "desc": "军事历史"
+        },
+        {
+          "id": 967,
+          "cat": "欧洲语言文学",
+          "desc": "欧洲语言文学"
+        },
+        {
+          "id": 824,
+          "cat": "哲学其它",
+          "desc": "哲学其它"
+        },
+        {
+          "id": 828,
+          "cat": "世界史",
+          "desc": "世界史"
+        },
+        {
+          "id": 425,
+          "cat": "药学",
+          "desc": "药学"
+        },
+        {
+          "id": 965,
+          "cat": "西班牙语语言文学",
+          "desc": "西班牙语语言文学"
+        },
+        {
+          "id": 663,
+          "cat": "应用心理学",
+          "desc": "应用心理学"
+        },
+        {
+          "id": 974,
+          "cat": "专门史",
+          "desc": "专门史"
+        },
+        {
+          "id": 704,
+          "cat": "投资学",
+          "desc": "投资学"
+        },
+        {
+          "id": 761,
+          "cat": "政治学、经济学与哲学",
+          "desc": "政治学、经济学与哲学"
+        },
+        {
+          "id": 969,
+          "cat": "外国语言学及应用语言学",
+          "desc": "外国语言学及应用语言学"
+        },
+        {
+          "id": 717,
+          "cat": "市场营销",
+          "desc": "市场营销"
+        }
+      ]
+    },
+    "torrents": {
+      "list": {
+        "selector": "table.torrents > tbody > tr:has(\"table.torrentname\")"
+      },
+      "fields": {
+        "id": {
+          "selector": "a[href*=\"details.php?id=\"]",
+          "attribute": "href",
+          "filters": [
+            {
+              "name": "re_search",
+              "args": [
+                "\\d+",
+                0
+              ]
+            }
+          ]
+        },
+        "category": {
+          "selector": "a[href*=\"?cat=\"]",
+          "attribute": "href",
+          "filters": [
+            {
+              "name": "querystring",
+              "args": "cat"
+            }
+          ]
+        },
+        "title_default": {
+          "selector": "a[href*=\"details.php?id=\"]"
+        },
+        "title_optional": {
+          "optional": true,
+          "selector": "a[title][href*=\"details.php?id=\"]",
+          "attribute": "title"
+        },
+        "title": {
+          "text": "{% if fields['title_optional'] %}{{ fields['title_optional'] }}{% else %}{{ fields['title_default'] }}{% endif %}"
+        },
+        "details": {
+          "selector": "a[href*=\"details.php?id=\"]",
+          "attribute": "href"
+        },
+        "poster": {
+          "text": ""
+        },
+        "download": {
+          "selector": "a[href*=\"download.php?id=\"]",
+          "attribute": "href"
+        },
+        "size": {
+          "selector": "td.rowfollow:nth-child(5)"
+        },
+        "grabs": {
+          "selector": "td.rowfollow:nth-child(8)"
+        },
+        "seeders": {
+          "selector": "td.rowfollow:nth-child(6)"
+        },
+        "leechers": {
+          "selector": "td.rowfollow:nth-child(7)"
+        },
+        "date_elapsed": {
+          "selector": "td.rowfollow:nth-child(4) > span",
+          "optional": true
+        },
+        "date_added": {
+          "selector": "td.rowfollow:nth-child(4) > span",
+          "attribute": "title",
+          "optional": true
+        },
+        "date": {
+          "text": "{% if fields['date_elapsed'] or fields['date_added'] %}{{ fields['date_elapsed'] if fields['date_elapsed'] else fields['date_added'] }}{% else %}now{% endif %}",
+          "filters": [
+            {
+              "name": "dateparse",
+              "args": "%Y-%m-%d %H:%M:%S"
+            }
+          ]
+        },
+        "downloadvolumefactor": {
+          "case": {
+            "img.pro_free": 0,
+            "img.pro_free2up": 0,
+            "img.pro_50pctdown": 0.5,
+            "img.pro_50pctdown2up": 0.5,
+            "img.pro_30pctdown": 0.3,
+            "*": 1
+          }
+        },
+        "uploadvolumefactor": {
+          "case": {
+            "img.pro_50pctdown2up": 2,
+            "img.pro_free2up": 2,
+            "img.pro_2up": 2,
+            "*": 1
+          }
+        },
+        "free_deadline": {
+          "default_value": "{% if fields['downloadvolumefactor']==0 %}{{max_time}}{% endif%}",
+          "default_value_format": "%Y-%m-%d %H:%M:%S.%f",
+          "selector": "td[class] > span[title]",
+          "attribute": "title",
+          "filters": [
+            {
+              "name": "dateparse",
+              "args": "%Y-%m-%d %H:%M:%S"
+            }
+          ]
+        },
+        "description": {
+          "selector": "td.rowfollow:nth-child(2) > table.torrentname > tbody > tr > td:nth-child(1)",
+          "remove": "img,a,b,span,font"
+        },
+        "labels": {
+          "selector": "td.rowfollow:nth-child(2) > table.torrentname > tbody > tr > td:nth-child(1) > span"
+        }
+      }
+    },
+    "conf": {
+      "FREE": [
+        "//h1[@id='top']/b/font[@class='free']"
+      ],
+      "2XFREE": [
+        "//h1[@id='top']/b/font[@class='twoupfree']"
+      ],
+      "HR": [
+        "//h1[@id='top']/img[@class='hitandrun']"
+      ],
+      "PEER_COUNT": [
+        "//div[@id='peercount']/b[1]"
+      ]
+    }
+  },
+  "detail_page_url": "/details.php?id={tid}"
+}

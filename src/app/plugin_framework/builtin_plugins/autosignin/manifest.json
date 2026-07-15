@@ -76,7 +76,7 @@
           "label": "重试关键词",
           "default": "",
           "placeholder": "失败|错误",
-          "help": "重新签到关键词，支持正则表达式"
+          "help": "可选。不填时插件会自动重试所有失败站点；填写后只重试结果中包含该正则关键词的站点"
         },
         {
           "key": "sign_sites",
@@ -95,12 +95,12 @@
           "help": "需要强制签到的站点，不受已签到状态影响"
         },
         {
-          "key": "emulate_sites",
+          "key": "browser_sites",
           "type": "multi_select",
-          "label": "仿真站点",
+          "label": "浏览器站点",
           "source": "sites",
           "default": [],
-          "help": "需要使用浏览器仿真签到的站点"
+          "help": "需要使用浏览器自动化签到的站点"
         }
       ]
     },

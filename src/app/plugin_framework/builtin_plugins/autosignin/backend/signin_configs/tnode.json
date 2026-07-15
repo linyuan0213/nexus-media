@@ -1,0 +1,9 @@
+{
+  "site_id": "tnode",
+  "type": "http",
+  "method": "get",
+  "path": "",
+  "auth": "cookie_raw",
+  "success_markers": [],
+  "already_markers": []
+}

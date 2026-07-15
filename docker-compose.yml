@@ -208,11 +208,11 @@ services:
       redis:
         condition: service_started
 
-  # OCR / Chrome（仅完整模式）
-  ocr:
+  # OCR / Verify（仅完整模式）
+  nexus-verify:
     profiles: ["full-mysql", "full-postgresql"]
-    image: linyuan0213/nexus-media-ocr:latest
-    container_name: nexus-media-ocr
+    image: linyuan0213/nexus-verify:latest
+    container_name: nexus-verify
     logging: *logging
     ports:
       - 9300:9300
@@ -220,10 +220,10 @@ services:
     networks:
       - nexus-media-network
 
-  chrome:
+  nexus-chrome:
     profiles: ["full-mysql", "full-postgresql"]
-    image: linyuan0213/nexus-media-chrome:latest
-    container_name: nexus-media-chrome
+    image: linyuan0213/nexus-chrome:latest
+    container_name: nexus-chrome
     logging: *logging
     shm_size: 2g
     environment:

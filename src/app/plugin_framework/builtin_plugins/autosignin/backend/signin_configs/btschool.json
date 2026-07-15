@@ -1,0 +1,10 @@
+{
+  "site_id": "btschool",
+  "type": "http",
+  "method": "get",
+  "path": "index.php?action=addbonus",
+  "auth": "cookie_raw",
+  "success_markers": [],
+  "already_markers": [],
+  "success_absent_markers": ["每日签到"]
+}

@@ -659,24 +659,24 @@ class ConfigRepository(BaseRepository):
             if ruleid:
                 db.query(CONFIGFILTERRULES).filter(int(ruleid) == CONFIGFILTERRULES.ID).update(
                     {
-                        "ROLE_NAME": item.get("name"),
-                        "PRIORITY": item.get("pri"),
-                        "INCLUDE": item.get("include"),
-                        "EXCLUDE": item.get("exclude"),
-                        "SIZE_LIMIT": item.get("size"),
-                        "NOTE": item.get("free"),
+                        "ROLE_NAME": item.get("name") or "",
+                        "PRIORITY": item.get("pri") or "",
+                        "INCLUDE": item.get("include") or "",
+                        "EXCLUDE": item.get("exclude") or "",
+                        "SIZE_LIMIT": item.get("size") or "",
+                        "NOTE": item.get("free") or "",
                     }
                 )
             else:
                 db.add(
                     CONFIGFILTERRULES(
                         GROUP_ID=item.get("group"),
-                        ROLE_NAME=item.get("name"),
-                        PRIORITY=item.get("pri"),
-                        INCLUDE=item.get("include"),
-                        EXCLUDE=item.get("exclude"),
-                        SIZE_LIMIT=item.get("size"),
-                        NOTE=item.get("free"),
+                        ROLE_NAME=item.get("name") or "",
+                        PRIORITY=item.get("pri") or "",
+                        INCLUDE=item.get("include") or "",
+                        EXCLUDE=item.get("exclude") or "",
+                        SIZE_LIMIT=item.get("size") or "",
+                        NOTE=item.get("free") or "",
                     )
                 )
 

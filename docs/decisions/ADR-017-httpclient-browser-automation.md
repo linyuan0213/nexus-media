@@ -14,7 +14,7 @@ Proposed
 
 1. **纯 HTTP 路径**：`HttpClient` / `AsyncHttpClient`（`src/app/infrastructure/http/`）是统一 Facade，内置 tenacity 重试、`HttpCacheConfig` 缓存、`RateLimitEngine` 限流、中间件链路、`register_global_host_mapping` DNS 映射。全项目约 **196 处** `HttpClient(...)` 调用点。
 
-2. **浏览器路径**：`ChromeClient`（`src/app/infrastructure/chrome/client.py`）独立于 `HttpClient` 之外，调用远端 Chrome 服务器（nexus-media-chrome）。
+2. **浏览器路径**：`ChromeClient`（`src/app/infrastructure/chrome/client.py`）独立于 `HttpClient` 之外，调用远端 Chrome 服务器（nexus-chrome）。
 
 存在的问题：
 
@@ -429,7 +429,7 @@ def signin(self, site_info: dict, plugin_ctx) -> str:
 - **Chrome 服务器**：`/tabs` 路由已随 Session 重构移除，仅需清理 `README` / `PKG-INFO` 文档残留。
 - **迁移策略**：按模块逐步替换，**同一模块内不保留新旧并存**；跨模块可分批提交，但每个模块内必须完整切换。如因依赖关系必须分步，可短暂保留 shim，但应在后续 PR 立即清理。
 
-## Chrome 服务器侧改动（nexus-media-chrome）
+## Chrome 服务器侧改动（nexus-chrome）
 
 现有 Session API 基本满足，需补齐 transport 诉求：
 

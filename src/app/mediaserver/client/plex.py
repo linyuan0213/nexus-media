@@ -161,6 +161,8 @@ class Plex(_IMediaClient):
             # 根据最后播放时间倒序获取数据
             historys = self._plex.library.search(sort="lastViewedAt:desc", limit=num, type="1,4")
             for his in historys:
+                if not his:
+                    continue
                 # 过滤掉最后播放时间为空的
                 if his.lastViewedAt:
                     if his.type == "episode":
@@ -228,6 +230,8 @@ class Plex(_IMediaClient):
         else:
             movies = self._plex.library.search(title=title, libtype="movie")
         for movie in movies:
+            if not movie:
+                continue
             ret_movies.append({"title": movie.title, "year": movie.year})
         return ret_movies
 
@@ -247,9 +251,10 @@ class Plex(_IMediaClient):
             return []
         if not item_id:
             videos = self._plex.library.search(title=title, year=year, libtype="show")
-            if not videos or not videos[0]:
+            first_video = videos[0] if videos else None
+            if not first_video:
                 return []
-            episodes = videos[0].episodes()
+            episodes = first_video.episodes()
         else:
             item = self._plex.fetchItem(item_id)
             if item is None:
@@ -341,7 +346,8 @@ class Plex(_IMediaClient):
         """
         if not self._plex:
             return False
-        return self._plex.library.update()
+        self._plex.library.update()
+        return True
 
     def refresh_library_by_items(self, items: list) -> None:
         """

@@ -1,0 +1,161 @@
+"""RSS 生成处理器基类与上下文。"""
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
+from app.plugin_framework.context import PluginContext
+from app.utils.browser_mode import build_browser_mode
+from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
+from app.utils.string_utils import StringUtils
+
+
+@dataclass
+class SiteRssGenContext:
+    """从 site_info 提取的标准化 RSS 生成上下文。"""
+
+    site: str
+    site_id: str
+    site_url: str
+    cookie: str | None
+    api_key: str | None
+    bearer_token: str | None
+    api_key_header: str | None
+    ua: str | None
+    proxy_url: str | None
+    headers: dict | None = None
+    raw: dict = field(default_factory=dict)
+
+    @classmethod
+    def from_site_info(cls, site_info: dict, site_engine=None) -> "SiteRssGenContext":
+        proxy = get_proxies() if site_info.get("proxy") else None
+        proxy_url = proxy.get("http") if isinstance(proxy, dict) else (proxy if isinstance(proxy, str) else None)
+
+        raw_site_id = str(site_info.get("id", ""))
+        site_id = raw_site_id
+        site = site_info.get("name", "")
+        site_url = site_info.get("signurl") or site_info.get("strict_url") or site_info.get("rssurl") or ""
+
+        if site_engine:
+            site_def = None
+            for url in (
+                site_info.get("strict_url"),
+                site_info.get("signurl"),
+                site_info.get("rssurl"),
+            ):
+                if url:
+                    site_def = site_engine.get_by_url(url)
+                    if site_def:
+                        break
+            if not site_def and site:
+                site_def = site_engine.get_by_name(site)
+            if site_def:
+                site_id = site_def.id
+                site_url = site_url or site_def.domain
+                site = site or site_def.name
+
+        headers = site_info.get("headers")
+        if isinstance(headers, str):
+            if JsonUtils.is_valid_json(headers):
+                headers = JsonUtils.loads(headers)
+            else:
+                headers = None
+        if not isinstance(headers, dict):
+            headers = None
+
+        return cls(
+            site=site,
+            site_id=site_id,
+            site_url=site_url,
+            cookie=site_info.get("cookie"),
+            api_key=site_info.get("api_key"),
+            bearer_token=site_info.get("bearer_token"),
+            api_key_header=site_info.get("api_key_header"),
+            ua=site_info.get("ua"),
+            proxy_url=proxy_url,
+            headers=headers,
+            raw=site_info,
+        )
+
+
+class SiteRssGenResult:
+    """RSS 生成结果。"""
+
+    SUCCESS = "生成RSS成功"
+    FAILED = "生成RSS失败"
+    COOKIE_EXPIRED = "cookie失效"
+    SITE_UNREACHABLE = "请检查站点连通性"
+    NEED_2FA = "需要两步验证"
+    CLOUDFLARE = "站点被Cloudflare防护，请开启浏览器仿真"
+
+    def __init__(self, ok: bool, msg: str):
+        self.ok = ok
+        self.msg = msg
+
+    @classmethod
+    def success(cls, site: str, reason: str = "") -> "SiteRssGenResult":
+        msg = f"[{site}]{cls.SUCCESS}"
+        if reason:
+            msg = f"{msg}，{reason}"
+        return cls(True, msg)
+
+    @classmethod
+    def fail(cls, site: str, reason: str) -> "SiteRssGenResult":
+        return cls(False, f"[{site}]{cls.FAILED}，{reason}！")
+
+    @classmethod
+    def custom(cls, ok: bool, msg: str) -> "SiteRssGenResult":
+        return cls(ok, msg)
+
+
+class SiteRssGenHandler(ABC):
+    """站点 RSS 生成处理器基类。"""
+
+    site_id: str = ""
+    site_url: str = ""
+
+    def __init__(self, plugin_ctx: PluginContext, rate_limiter=None, site_repo=None):
+        self._plugin_ctx = plugin_ctx
+        self._rate_limiter = rate_limiter
+        self._site_repo = site_repo
+
+    @abstractmethod
+    def generate(self, ctx: SiteRssGenContext) -> SiteRssGenResult: ...
+
+    def _http_client(self, ctx: SiteRssGenContext, **kwargs) -> HttpClient:
+        config = HttpClientConfig(proxy_url=ctx.proxy_url, **kwargs)
+        if ctx.raw.get("chrome"):
+            browser = build_browser_mode(
+                ctx.raw,
+                site_key=ctx.site_id,
+                proxy_url=ctx.proxy_url,
+                render_html=False,
+            )
+            if browser:
+                config.browser = browser
+        return HttpClient(
+            config=config,
+            rate_limiter=self._rate_limiter,
+        )
+
+    def _resolve_base_url(self, site_def, ctx: SiteRssGenContext) -> str:
+        if site_def and site_def.domain:
+            domain = site_def.domain
+            if not domain.startswith(("http://", "https://")):
+                domain = f"https://{domain}"
+            return domain.rstrip("/")
+        return StringUtils.get_base_url(ctx.site_url).rstrip("/")
+
+    def _build_headers(self, ctx: SiteRssGenContext) -> dict:
+        headers: dict = {}
+        if ctx.headers and isinstance(ctx.headers, dict):
+            headers.update(ctx.headers)
+        if ctx.ua:
+            headers.setdefault("User-Agent", ctx.ua)
+        return headers
+
+    def _save_rss_url(self, site_id, rss_url: str) -> None:
+        if self._site_repo and site_id and rss_url:
+            self._site_repo.update_site_rssurl(site_id, rss_url)

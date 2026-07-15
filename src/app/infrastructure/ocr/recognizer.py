@@ -1,41 +1,56 @@
-import base64
+"""OCR 验证码识别 facade."""
 
-from app.core.settings import settings
-from app.infrastructure.http.auth import CookieAuth
-from app.infrastructure.http.client import HttpClient
-from app.infrastructure.http.config import HttpClientConfig
+from typing import Any
+
+from app.infrastructure.ocr.core import RecognitionResult, RecognitionTask, TaskType
+from app.infrastructure.ocr.core.exceptions import RecognitionError
+from app.infrastructure.ocr.engine import RecognitionEngine
+from app.infrastructure.ocr.utils import fetch_image_b64
 
 
 class OcrRecognizer:
-    ocr_server_host = settings.get("laboratory").get("ocr_server_host")
-    if ocr_server_host:
-        ocr_server_host = ocr_server_host.removesuffix("/")
-        _ocr_b64_url = ocr_server_host + "/ocr/base64"
-    else:
-        _ocr_b64_url = None
+    """High-level recognizer backed by the nexus-verify remote engine."""
 
-    def get_captcha_text(self, image_url=None, image_b64=None, cookie=None, ua=None):
+    def __init__(self, engine: RecognitionEngine | None = None) -> None:
+        self._engine = engine or RecognitionEngine()
+
+    def get_captcha_text(
+        self,
+        image_url: str | None = None,
+        image_b64: str | None = None,
+        cookie: str | None = None,
+        ua: str | None = None,
+    ) -> str:
         """
-        根据图片地址，获取验证码图片，并识别内容
+        根据图片地址或 base64，识别验证码内容。
+
         :param image_url: 图片地址
-        :param image_b64: 图片base64，跳过图片地址下载
-        :param cookie: 下载图片使用的cookie
-        :param ua: 下载图片使用的ua
+        :param image_b64: 图片 base64，若提供则跳过下载
+        :param cookie: 下载图片使用的 cookie
+        :param ua: 下载图片使用的 User-Agent
         """
+        if not image_b64 and image_url:
+            image_b64 = fetch_image_b64(image_url, cookie=cookie, ua=ua)
 
-        if not self._ocr_b64_url:
-            return ""
-
-        if image_url:
-            headers = {"User-Agent": ua} if ua else {}
-            ret = HttpClient().get(image_url, headers=headers, auth=CookieAuth(cookie))
-            image_bin = ret.content
-            if not image_bin:
-                return ""
-            image_b64 = base64.b64encode(image_bin).decode()
         if not image_b64:
             return ""
-        ret = HttpClient(config=HttpClientConfig(default_headers={"Content-Type": "application/json"})).post(
-            url=self._ocr_b64_url, json={"image_b64": image_b64}
-        )
-        return ret.json().get("res")
+
+        task = RecognitionTask(task_type=TaskType.CAPTCHA, image_b64=image_b64)
+        try:
+            result = self._engine.verify(task)
+        except RecognitionError:
+            return ""
+        return result.text or ""
+
+    def recognize(
+        self,
+        task: RecognitionTask | dict[str, Any],
+        cookie: str | None = None,
+        ua: str | None = None,
+    ) -> RecognitionResult:
+        """Execute an arbitrary recognition task."""
+        if isinstance(task, dict):
+            task = RecognitionTask.model_validate(task)
+        if not task.image_b64 and task.image_url:
+            task.image_b64 = fetch_image_b64(task.image_url, cookie=cookie, ua=ua)
+        return self._engine.verify(task)

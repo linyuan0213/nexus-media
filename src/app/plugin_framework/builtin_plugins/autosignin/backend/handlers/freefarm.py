@@ -11,7 +11,7 @@ from app.utils import StringUtils
 
 
 class FreeFarm(SiteSigninHandler):
-    site_url = "pt.0ff.cc"
+    site_id = "0ff"
 
     def signin(self, ctx: SiteSigninContext) -> SigninResult:
         site = ctx.site

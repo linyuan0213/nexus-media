@@ -16,13 +16,11 @@ class SiteCookie:
         site_engine: SiteEngine,
         progress=None,
         siteconf=None,
-        ocrhelper: OcrRecognizer | None = None,
     ):
         self.progress = progress
         self._site_engine = site_engine
         self.sites = sites
         self.siteconf = siteconf
-        self.ocrhelper = ocrhelper or OcrRecognizer()
         self.captcha_code = {}
 
     def set_code(self, code, value):
@@ -44,7 +42,11 @@ class SiteCookie:
         code_b64 = self.get_captcha_base64(chrome=chrome, image_url=code_url)
         if not code_b64:
             return ""
-        return self.ocrhelper.get_captcha_text(image_b64=code_b64) if self.ocrhelper else ""
+        try:
+            result = OcrRecognizer().recognize({"task_type": "captcha", "image_b64": code_b64})
+            return result.text or ""
+        except Exception:
+            return ""
 
     @staticmethod
     def __get_captcha_url(siteurl, imageurl):
