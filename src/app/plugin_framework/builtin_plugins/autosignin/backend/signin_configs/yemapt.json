@@ -1,0 +1,9 @@
+{
+  "site_id": "yemapt",
+  "type": "http",
+  "method": "get",
+  "path": "api/consumer/checkIn",
+  "auth": "cookie_raw",
+  "success_absent_markers": ["每日签到"],
+  "already_markers": ["已签到"]
+}

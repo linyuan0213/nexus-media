@@ -68,18 +68,18 @@ services:
     networks:
       - nexus-media-network
 
-  ocr:
-    image: linyuan0213/nexus-media-ocr:latest
-    container_name: nexus-media-ocr
+  nexus-verify:
+    image: linyuan0213/nexus-verify:latest
+    container_name: nexus-verify
     ports:
       - 9300:9300
     restart: always
     networks:
       - nexus-media-network
 
-  chrome:
-    image: linyuan0213/nexus-media-chrome:latest
-    container_name: nexus-media-chrome
+  nexus-chrome:
+    image: linyuan0213/nexus-chrome:latest
+    container_name: nexus-chrome
     shm_size: 2g
     environment:
       - VNC_PASSWORD=password

@@ -221,6 +221,28 @@ def refresh_site_statistics(
     return success(data={"message": "站点数据刷新已启动，请稍候"})
 
 
+@router.post("/sites/definitions", response_model=CommonResponse, summary="获取所有可添加的站点定义")
+def get_site_definitions(
+    user: str = Depends(require_any_permission("site:view", "site:manage")),
+    svc: SiteService = Depends(get_site_service),
+):
+    defs = svc.get_site_definitions()
+    data = [
+        {
+            "id": d.id,
+            "name": d.name,
+            "domain": d.domain,
+            "type": d.type,
+            "public": d.public,
+            "domain_aliases": d.domain_aliases,
+            "encoding": d.encoding,
+            "detail_page_url": d.detail_page_url,
+        }
+        for d in defs
+    ]
+    return success(data=data)
+
+
 @router.post("/sites", response_model=CommonResponse, summary="获取站点列表")
 def get_sites(
     req: SiteFilterRequest,

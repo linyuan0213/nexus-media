@@ -1,0 +1,23 @@
+{
+  "site_id": "__fallback_http__",
+  "type": "http",
+  "method": "get",
+  "path": "attendance.php",
+  "auth": "cookie_raw",
+  "success_markers": [
+    "签到成功",
+    "此次签到您获得",
+    "获得.*魔力值",
+    "获得.*积分",
+    "已获取"
+  ],
+  "already_markers": [
+    "今日已签到",
+    "今日已签",
+    "已经签到",
+    "请不要重复签到",
+    "签到已得",
+    "重复签到",
+    "今天已经签过到了"
+  ]
+}

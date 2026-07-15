@@ -14,6 +14,7 @@ from app.sites import engine_tools
 from app.sites.engine import SiteDefinition
 from app.utils.config_tools import get_proxies
 from app.utils.json_utils import JsonUtils
+from app.utils.string_utils import StringUtils
 
 
 class ConfigApiUserInfo:
@@ -301,6 +302,8 @@ class ConfigApiUserInfo:
         transform = field_cfg.get("transform")
         if transform == "map_value":
             return (field_cfg.get("map") or {}).get(str(val), str(val))
+        if transform == "timestamp_to_date":
+            return StringUtils.timestamp_to_date(val)
         return val
 
     @staticmethod

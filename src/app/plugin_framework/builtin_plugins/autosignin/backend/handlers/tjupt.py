@@ -26,7 +26,7 @@ from app.utils.path_utils import get_temp_path
 
 
 class Tjupt(SiteSigninHandler):
-    site_url = "tjupt.org"
+    site_id = "tjupt"
     _sign_regex = ['<a href="attendance.php">今日已签到</a>']
     _succeed_regex = [
         "这是您的首次签到，本次签到获得\\d+个魔力值。",

@@ -24,6 +24,57 @@ def site_service():
 
 
 class TestSiteServiceUpdate:
+    def test_update_site_rejects_new_site_without_definition(self, site_service):
+        site_service._site_engine = MagicMock()
+        site_service._site_engine.get_by_name.return_value = None
+        result = site_service.update_site(
+            {
+                "site_name": "UnknownSite",
+                "site_pri": "1",
+                "site_rssurl": "https://example.com/rss",
+                "site_signurl": "https://example.com",
+                "site_cookie": "c=1",
+                "site_note": "{}",
+            }
+        )
+        assert result.code == 400
+        assert "站点定义" in result.msg
+        site_service._site_entity_repo.insert.assert_not_called()
+
+    def test_update_site_allows_new_site_with_definition(self, site_service):
+        site_service._site_engine = MagicMock()
+        site_service._site_engine.get_by_name.return_value = MagicMock(name="DefinedSite")
+        result = site_service.update_site(
+            {
+                "site_name": "DefinedSite",
+                "site_pri": "1",
+                "site_rssurl": "https://example.com/rss",
+                "site_signurl": "https://example.com",
+                "site_cookie": "c=1",
+                "site_note": "{}",
+            }
+        )
+        assert result.code == 0
+        site_service._site_entity_repo.insert.assert_called_once()
+
+    def test_update_site_allows_existing_site_without_definition(self, site_service):
+        site_service._site_engine = MagicMock()
+        site_service._site_engine.get_by_name.return_value = None
+        site_service._site_entity_repo.get_by_id.return_value = MagicMock(name="OldSite")
+        result = site_service.update_site(
+            {
+                "site_id": "1",
+                "site_name": "UnknownSite",
+                "site_pri": "1",
+                "site_rssurl": "https://example.com/rss",
+                "site_signurl": "https://example.com",
+                "site_cookie": "c=1",
+                "site_note": "{}",
+            }
+        )
+        assert result.code == 0
+        site_service._site_entity_repo.update.assert_called_once()
+
     def test_update_site_computes_include_from_switches(self, site_service):
         site_service._site_entity_repo.get_by_id.return_value = MagicMock(name="OldSite")
         site_service.update_site(
@@ -138,6 +189,39 @@ class TestSiteServiceUpdate:
 
 
 class TestSiteServiceGet:
+    def test_get_site_definitions_returns_sorted_definitions(self, site_service):
+        api_site = MagicMock()
+        api_site.id = "api1"
+        api_site.name = "BApiSite"
+        api_site.domain = "https://api.example.com"
+        api_site.api = MagicMock()
+        api_site.html = None
+        api_site.public = False
+        api_site.domain_aliases = ["api.example.com"]
+        api_site.encoding = "UTF-8"
+        api_site.detail_page_url = "/detail/{tid}"
+
+        html_site = MagicMock()
+        html_site.id = "html1"
+        html_site.name = "AHtmlSite"
+        html_site.domain = "https://html.example.com"
+        html_site.api = None
+        html_site.html = MagicMock()
+        html_site.public = True
+        html_site.domain_aliases = []
+        html_site.encoding = "UTF-8"
+        html_site.detail_page_url = "/details.php?id={tid}"
+
+        site_service._site_engine = MagicMock()
+        site_service._site_engine.all_sites.return_value = [api_site, html_site]
+
+        defs = site_service.get_site_definitions()
+        assert len(defs) == 2
+        assert defs[0].name == "AHtmlSite"
+        assert defs[0].type == "html"
+        assert defs[1].name == "BApiSite"
+        assert defs[1].type == "api"
+
     def test_get_site_returns_cache_with_computed_switches(self, site_service):
         site_service._sites.get_sites.return_value = {
             "id": 1,

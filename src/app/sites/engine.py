@@ -284,6 +284,15 @@ class SiteEngine:
     def get_by_domain(self, domain: str) -> SiteDefinition | None:
         return self._domain_index.get(domain.lower()) if domain else None
 
+    def get_by_name(self, name: str) -> SiteDefinition | None:
+        if not name:
+            return None
+        name_lower = name.lower()
+        for site in self._sites.values():
+            if site.name.lower() == name_lower or site.id.lower() == name_lower:
+                return site
+        return None
+
     def all_sites(self) -> list[SiteDefinition]:
         return list(self._sites.values())
 

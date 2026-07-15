@@ -1,0 +1,9 @@
+{
+  "site_id": "haidan",
+  "type": "http",
+  "method": "get",
+  "path": "signin.php",
+  "auth": "cookie_raw",
+  "success_markers": ["已经打卡"],
+  "already_markers": []
+}

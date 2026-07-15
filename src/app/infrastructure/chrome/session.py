@@ -1,6 +1,6 @@
 """交互式浏览器会话客户端.
 
-用于签到、登录、验证码等多步交互流程, 直接调用 nexus-media-chrome 的 Session API.
+用于签到、登录、验证码等多步交互流程, 直接调用 nexus-chrome 的 Session API.
 与 ChromeTransport 共用同一个会话隔离键, 过盾产生的 Cookie 可被后续 HTTP 抓取复用.
 """
 
