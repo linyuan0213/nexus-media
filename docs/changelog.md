@@ -9,6 +9,7 @@
 ### 新增
 - 新增通用 HTTP 签到配置回退 `__fallback_http__.json`
 - 新增 `haidan`、`hares`、`hdarea`、`pterclubnet`、`yemapt` 等站点签到配置
+- 新增 `crabpt`、`railgunpt`、`xingtan` 站点定义配置
 - 新增 `hdchina`、`ttg`、`u2` 动态 token/表单处理 handler
 
 ### 优化
@@ -16,6 +17,7 @@
 - 优化自动签到日志输出，包含站点解析、handler 选择、失败详情和重试名称
 - Docker 构建优化：使用 `uv sync --frozen --no-cache --no-install-package nexus-media` 避免构建挂起
 - 容器服务命名规范化：`nexus-media-chrome` → `nexus-chrome`、`nexus-media-ocr` → `nexus-verify`
+- 实验室设置页布局优化：服务开关与地址输入成对展示，禁用态随开关联动
 
 ### 修复
 - 修复 M-Team `localStorage` 域名解析从硬编码 `m-team.io` 改为实际站点域名
@@ -25,11 +27,36 @@
 - 修复签到历史文件路径为 `history.json`
 - 修复失败站点自动进入重试列表逻辑，避免 `retry_keyword` 误过滤
 - 修复站点 ID 识别日志显示正确的定义 ID（`audiences`、`m-team`、`rousi`、`btschool`）
+- 修复 Plex 客户端若干 pyright 类型报错（空值访问、返回类型不一致）
 
 ### 测试
 - 新增 autosignin API/HTTP handler 测试、配置存储测试
 - 新增 autogenrss 插件测试
 - 新增 OCR 基础设施测试
+
+
+### 优化
+- 统一浏览器自动化传输：`HttpClient` 在 `is_browser` 模式下直接通过 `BrowserModeConfig` 访问浏览器，上层无需额外分支
+- 优化自动签到日志输出，包含站点解析、handler 选择、失败详情和重试名称
+- Docker 构建优化：使用 `uv sync --frozen --no-cache --no-install-package nexus-media` 避免构建挂起
+- 容器服务命名规范化：`nexus-media-chrome` → `nexus-chrome`、`nexus-media-ocr` → `nexus-verify`
+- 实验室设置页布局优化：服务开关与地址输入成对展示，禁用态随开关联动
+
+### 修复
+- 修复 M-Team `localStorage` 域名解析从硬编码 `m-team.io` 改为实际站点域名
+- 修复 CookieCloud `localStorage` 同步同时兼容 `dict` 和 `list` 格式
+- 修复 `btschool` 签到路径和成功判定（`index.php?action=addbonus` + 不存在 “每日签到” 按钮）
+- 修复 `rousi` 签到使用 `x-sign-token` 认证头
+- 修复签到历史文件路径为 `history.json`
+- 修复失败站点自动进入重试列表逻辑，避免 `retry_keyword` 误过滤
+- 修复站点 ID 识别日志显示正确的定义 ID（`audiences`、`m-team`、`rousi`、`btschool`）
+- 修复 Plex 客户端若干 pyright 类型报错（空值访问、返回类型不一致）
+
+### 测试
+- 新增 autosignin API/HTTP handler 测试、配置存储测试
+- 新增 autogenrss 插件测试
+- 新增 OCR 基础设施测试
+- 新增 `ocr_server_enabled` 远程 provider 测试
 
 ## v4.2.8 (2026-07-11)
 
