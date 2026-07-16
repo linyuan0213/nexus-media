@@ -95,7 +95,13 @@
             },
             "labels": {
               "source": "tagList",
-              "transform": "yemapt_labels"
+              "transform": "split_map",
+              "map": {
+                "5": "国语",
+                "6": "中字",
+                "7": "粤语",
+                "8": "英字"
+              }
             },
             "page_url": {
               "type": "template",

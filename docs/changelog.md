@@ -1,5 +1,23 @@
 # 版本历史
 
+## v4.3.1 (2026-07-16)
+
+### 新增
+- 探索页媒体卡片新增类型、国家/地区、语言元数据标签展示
+- 探索页支持类型、地区、语言筛选，Bangumi 数据补默认元数据以支持筛选
+- 刮削设置新增配置持久化：读取/保存到数据库 `system_dict`
+- 后端新增 `/system/config/scraper` 读取与 `/system/config/scraper/save` 写入端点
+
+### 优化
+- 推荐服务统一解析豆瓣 overview 和 TMDB 元数据并按白名单过滤
+- 完善 `media_metadata` 领域模块：统一类型、国家/地区、语言映射与聚合
+
+### 修复
+- 修复 Bangumi 推荐数据缺失 genres/countries/languages 导致筛选为空
+- 修复豆瓣 overview 解析演员名混入类型的问题
+- 修复 HDDolby API 分页请求 content-type 格式
+- 修复 btschool 站点配置 int 字段导致的 Jinja 渲染错误
+
 ## v4.3.0 (2026-07-15)
 
 ### 重构

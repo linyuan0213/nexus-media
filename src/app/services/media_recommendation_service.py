@@ -1,4 +1,11 @@
 import log
+from app.domain.media_metadata import (
+    _CHINESE_GENRES,
+    derive_language_from_country,
+    normalize_countries,
+    normalize_genres,
+    normalize_languages,
+)
 from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
@@ -30,6 +37,87 @@ class MediaRecommendationService:
         self._subscribe = subscribe
         self._media_info_service = media_info_service
         self._downloader_core = downloader_core
+        self._genre_cache: dict[str, dict[int, str]] = {}
+
+    def _get_genre_map(self, mtype: MediaType) -> dict[int, str]:
+        key = mtype.value
+        if key not in self._genre_cache:
+            try:
+                genres = self._media.get_tmdb_genres(mtype) or []
+                genre_map: dict[int, str] = {}
+                if isinstance(genres, list):
+                    for g in genres:
+                        if isinstance(g, dict):
+                            gid = g.get("id")
+                            gname = g.get("name")
+                            if gid is not None:
+                                genre_map[int(gid)] = str(gname or "")
+                self._genre_cache[key] = genre_map
+            except Exception as e:
+                log.debug(f"[media_recommendation_service]获取类型映射失败: {e}")
+                self._genre_cache[key] = {}
+        return self._genre_cache[key]
+
+    def _genre_ids_to_names(self, genre_ids: list, mtype: MediaType) -> list[str]:
+        if not genre_ids:
+            return []
+        genre_map = self._get_genre_map(mtype)
+        names = [name for gid in genre_ids if (name := genre_map.get(int(gid)))]
+        return normalize_genres(names)
+
+    def _parse_douban_overview(self, overview: str) -> tuple[list[str], list[str]]:
+        if not overview:
+            return [], []
+        parts = [p.strip() for p in overview.split("/")]
+        if len(parts) < 3:
+            return [], []
+        year_part = parts[0]
+        if not year_part.isdigit() or len(year_part) != 4:
+            return [], []
+        country = parts[1]
+        # 豆瓣 card_subtitle 中类型通常以空格分隔放在第 3 段
+        genre_part = parts[2]
+        genres = [g for g in genre_part.split() if g in _CHINESE_GENRES]
+        return normalize_genres(genres), normalize_countries(country)
+
+    def _enrich_recommend_items(self, items: list[dict], mtype: MediaType | None) -> list[dict]:
+        for item in items:
+            if not item:
+                continue
+            genre_ids = item.get("genre_ids")
+            origin_country = item.get("origin_country")
+            original_language = item.get("original_language")
+            overview = item.get("overview", "")
+            item_id = str(item.get("id") or "")
+            is_bangumi = item_id.startswith("BG:") or item_id.startswith("BGM:")
+
+            if is_bangumi:
+                item["genres"] = normalize_genres(["动画"])
+                item["countries"] = normalize_countries(["JP"])
+                item["languages"] = normalize_languages("ja")
+            elif genre_ids:
+                item_type = mtype or MediaType.from_string(item.get("type") or "movie")
+                item["genres"] = self._genre_ids_to_names(genre_ids, item_type)
+                item["countries"] = normalize_countries(origin_country)
+                item["languages"] = normalize_languages(original_language)
+                if not item["languages"] and item["countries"]:
+                    derived = derive_language_from_country(item["countries"])
+                    if derived:
+                        item["languages"] = [derived]
+            elif overview:
+                genres, countries = self._parse_douban_overview(overview)
+                item["genres"] = genres
+                item["countries"] = countries
+                item["languages"] = []
+                if countries:
+                    derived = derive_language_from_country(countries)
+                    if derived:
+                        item["languages"] = [derived]
+            else:
+                item["genres"] = []
+                item["countries"] = []
+                item["languages"] = []
+        return items
 
     def get_recommend_items(self, data: dict) -> list[dict]:
         """
@@ -114,6 +202,8 @@ class MediaRecommendationService:
             sort = params.get("sort") or "R"
             tags = params.get("tags") or ""
             res_list = self._douban.get_douban_disover(mtype=mtype, sort=sort, tags=tags, page=current_page)
+
+        res_list = self._enrich_recommend_items(res_list, None)
 
         for res in res_list:
             fav, rssid, _ = check_media_exists(

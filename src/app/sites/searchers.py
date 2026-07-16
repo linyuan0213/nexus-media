@@ -15,22 +15,16 @@ import pytz
 from app.utils.string_utils import StringUtils
 
 _TRANSFORMS: dict[str, Callable] = {
-    "mteam_labels": lambda val: _mteam_label(val),
-    "yemapt_labels": lambda val: "|".join(
-        [
-            {"5": "国语", "6": "中字", "7": "粤语", "8": "英字"}.get(str(v), "")
-            for v in (val if isinstance(val, list) else [])
-        ]
-    ),
-    "utc_to_local": lambda val: _utc_to_local(val),
-    "timestamp_to_date": lambda val: (
+    "utc_to_local": lambda val, cfg=None: _utc_to_local(val),
+    "timestamp_to_date": lambda val, cfg=None: (
         datetime.datetime.fromtimestamp(val, pytz.timezone(os.environ.get("TZ", "Asia/Shanghai"))).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
         if val
         else ""
     ),
-    "num_filesize_B": lambda val: StringUtils.num_filesize(f"{val}B") if val else "0",
+    "num_filesize_B": lambda val, cfg=None: StringUtils.num_filesize(f"{val}B") if val else "0",
+    "split_map": lambda val, cfg=None: _split_map(val, cfg),
 }
 
 
@@ -45,21 +39,25 @@ def _utc_to_local(val):
         return str(val)
 
 
-def _mteam_label(val):
+def _split_map(val, cfg):
     if not val:
         return ""
-    label_map = {
-        "1": "DIY",
-        "2": "国配",
-        "4": "中字",
-        "3": "DIY|国配",
-        "5": "DIY|中字",
-        "6": "国配|中字",
-        "7": "DIY|国配|中字",
-    }
+    cfg = cfg or {}
+    separator = cfg.get("separator", ";")
+    mapping = cfg.get("map", {})
+    keep_unknown = cfg.get("keep_unknown", True)
     if isinstance(val, list):
-        return "|".join(label_map.get(str(v), "") for v in val)
-    return label_map.get(str(val), "")
+        tags = [str(v).strip() for v in val if str(v).strip()]
+    else:
+        tags = [str(v).strip() for v in str(val).split(separator) if str(v).strip()]
+    result = []
+    for tag in tags:
+        mapped = mapping.get(tag)
+        if mapped:
+            result.append(mapped)
+        elif keep_unknown:
+            result.append(tag)
+    return "|".join(result)
 
 
 def _css_to_xpath(css: str) -> str:
@@ -115,6 +113,7 @@ def _css_to_xpath(css: str) -> str:
 
 
 def _resolve_jinja(text: str, fields: dict) -> str:
+    text = str(text) if not isinstance(text, str) else text
     if not text or "{%" not in text:
         text = re.sub(r"\{\{\s*fields\[[\"'](\w+)[\"']\]\s*\}\}", lambda m: str(fields.get(m.group(1), "")), text)
         return text

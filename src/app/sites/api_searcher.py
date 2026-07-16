@@ -101,12 +101,17 @@ class ApiSiteSearcher:
                 rate_limiter=rate_limiter_engine,
             )
             if method == "POST":
-                res = client.post(
-                    url=url,
-                    data=JsonUtils.dumps(body, separators=(",", ":")),
-                    headers=headers,
-                    **rl_kwargs,
-                )
+                content_type = search_config.get("content_type", "application/json;charset=utf-8")
+                post_headers = {**headers, "Content-Type": content_type}
+                if content_type == "application/x-www-form-urlencoded":
+                    res = client.post(url=url, data=body, headers=post_headers, **rl_kwargs)
+                else:
+                    res = client.post(
+                        url=url,
+                        data=JsonUtils.dumps(body, separators=(",", ":")),
+                        headers=post_headers,
+                        **rl_kwargs,
+                    )
             else:
                 params = dict(search_config.get("params") or {})
                 params = self._render_template(params, **template_vars)
@@ -149,7 +154,9 @@ class ApiSiteSearcher:
             self._user_config.get("domain") or self._site.domain or (self._site.api.base_url if self._site.api else "")
         )
         if domain:
-            self._auth_tokens["domain"] = domain.rstrip("/")
+            parsed = urlparse(domain)
+            domain_no_scheme = parsed.netloc if parsed.scheme else domain
+            self._auth_tokens["domain"] = domain_no_scheme.rstrip("/")
             self._auth_tokens["base_url"] = (
                 self._site.api.base_url or self._user_config.get("domain") or domain
             ).rstrip("/")
@@ -276,7 +283,7 @@ class ApiSiteSearcher:
                     val = self._apply_filters(val, filters)
                 transform = config.get("transform")
                 if transform and transform in _TRANSFORMS:
-                    val = _TRANSFORMS[transform](val)
+                    val = _TRANSFORMS[transform](val, config)
                 return val
             return config
         return str(config) if config else None

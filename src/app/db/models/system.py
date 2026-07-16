@@ -16,5 +16,5 @@ class SYSTEMDICT(Base):
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     TYPE: Mapped[str] = mapped_column(String(255))
     KEY: Mapped[str] = mapped_column(String(255))
-    VALUE: Mapped[str] = mapped_column(String(255))
+    VALUE: Mapped[str] = mapped_column(Text)
     NOTE: Mapped[str] = mapped_column(Text)

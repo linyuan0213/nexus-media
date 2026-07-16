@@ -509,11 +509,13 @@ class SiteEngine:
         rate_limiter = getattr(self, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
+        cookie = user_config.get("cookie", "")
         if site and site.api:
             auth_headers, auth = engine_tools._build_auth(self, site, user_config)
             headers.update(auth_headers)
+            if cookie:
+                auth = CookieAuth(cookie)
         else:
-            cookie = user_config.get("cookie", "")
             auth = CookieAuth(cookie) if cookie else None
         try:
             res = HttpClient(

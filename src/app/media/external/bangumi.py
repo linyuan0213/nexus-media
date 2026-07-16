@@ -2,6 +2,8 @@ import urllib.parse
 from datetime import datetime
 
 import log
+from app.core.settings import settings
+from app.domain import media_metadata
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.http.client import HttpClient
@@ -78,8 +80,6 @@ class Bangumi:
         # 转换为代理URL格式
         if image:
             try:
-                from app.core.settings import settings
-
                 if settings.get("app").get("enable_image_proxy", True):
                     image = f"/img/bgm/{urllib.parse.quote(image, safe='')}"
             except Exception as e:  # noqa: BLE001
@@ -97,6 +97,9 @@ class Bangumi:
             "overview": summary,
             "url": detail,
             "weekday": weekday,
+            "genres": media_metadata.normalize_genres(["动画"]),
+            "countries": media_metadata.normalize_countries(["jp"]),
+            "languages": media_metadata.normalize_languages(["ja"]),
         }
 
     def get_bangumi_calendar(self, page=1, week=None):
