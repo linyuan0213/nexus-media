@@ -1,0 +1,268 @@
+{
+  "id": "hddolby",
+  "name": "高清杜比",
+  "domain": "www.hddolby.com",
+  "domain_aliases": [
+    "www.hddolby.com",
+    "api.hddolby.com"
+  ],
+  "tid_pattern": "\\d+",
+  "detail_page_url": "/details.php?id={tid}",
+  "encoding": "UTF-8",
+  "public": false,
+  "language": "zh",
+  "api": {
+    "base_url": "https://www.hddolby.com/api/v1",
+    "auth": {
+      "type": "api_key",
+      "header_name": "x-api-key",
+      "user_agent": ""
+    },
+    "endpoints": {
+      "search": {
+        "method": "POST",
+        "path": "/torrent/search",
+        "content_type": "application/x-www-form-urlencoded",
+        "body": {
+          "keyword": "{keyword}",
+          "page_number": "{page}",
+          "page_size": 100,
+          "categories": [],
+          "visible": 1
+        },
+        "mode_mapping": {
+          "MOVIE": {
+            "categories": [
+              401
+            ]
+          },
+          "TV": {
+            "categories": [
+              402,
+              403,
+              404,
+              405
+            ]
+          },
+          "ANIME": {
+            "categories": [
+              405
+            ]
+          }
+        },
+        "response": {
+          "items_key": "data",
+          "item_mapping": {
+            "title": {
+              "source": "name"
+            },
+            "description": {
+              "source": "small_descr"
+            },
+            "size": {
+              "source": "size"
+            },
+            "seeders": {
+              "source": "seeders"
+            },
+            "leechers": {
+              "source": "leechers"
+            },
+            "grabs": {
+              "source": "times_completed"
+            },
+            "pubdate": {
+              "source": "added"
+            },
+            "imdbid": {
+              "source": "imdb_id"
+            },
+            "category": {
+              "source": "category"
+            },
+            "enclosure": {
+              "type": "template",
+              "value": "https://{domain}/download.php?id={id}&downhash={downhash}",
+              "fields": {
+                "domain": "domain",
+                "id": "id",
+                "downhash": "downhash"
+              }
+            },
+            "page_url": {
+              "type": "template",
+              "value": "https://{domain}/details.php?id={id}",
+              "fields": {
+                "domain": "domain",
+                "id": "id"
+              }
+            },
+            "downloadvolumefactor": {
+              "type": "mapping",
+              "source": "promotion_time_type",
+              "map": {
+                "0": 1.0,
+                "1": 0.0,
+                "2": 1.0,
+                "3": 0.0,
+                "4": 0.5,
+                "5": 0.5,
+                "6": 0.3
+              }
+            },
+            "uploadvolumefactor": {
+              "type": "mapping",
+              "source": "promotion_time_type",
+              "map": {
+                "0": 1.0,
+                "1": 1.0,
+                "2": 2.0,
+                "3": 2.0,
+                "4": 1.0,
+                "5": 2.0,
+                "6": 1.0
+              }
+            },
+            "minimumratio": {
+              "type": "mapping",
+              "source": "hr",
+              "map": {
+                "0": 0.0,
+                "1": 1.0
+              }
+            },
+            "minimumseedtime": {
+              "type": "mapping",
+              "source": "hr",
+              "map": {
+                "0": 0,
+                "1": 86400
+              }
+            },
+            "labels": {
+              "source": "tags",
+              "transform": "split_map",
+              "separator": ";",
+              "map": {
+                "gf": "官方",
+                "gy": "国语",
+                "yy": "英语",
+                "ja": "日语",
+                "ko": "韩语",
+                "zz": "中字",
+                "jz": "简体",
+                "xz": "繁体",
+                "diy": "DIY",
+                "sf": "首发",
+                "yq": "粤语",
+                "m0": "未知",
+                "yc": "原声",
+                "gz": "国语",
+                "db": "杜比",
+                "hdr10": "HDR10",
+                "hdrm": "杜比视界",
+                "tx": "特效",
+                "lz": "连载",
+                "wj": "完结",
+                "hdrv": "HDR",
+                "hlg": "HLG",
+                "hq": "高码率",
+                "hfr": "高帧率"
+              }
+            }
+          }
+        }
+      },
+      "test_connection": {
+        "method": "GET",
+        "path": "/user/data"
+      },
+      "user_info": {
+        "method": "GET",
+        "path": "/user/data"
+      }
+    }
+  },
+  "html": {
+    "conf": {
+      "FREE": [
+        "//h1[@id='top']/b/font[@class='free']"
+      ],
+      "2XFREE": [
+        "//h1[@id='top']/b/font[@class='twoupfree']"
+      ],
+      "HR": [
+        "//h1[@id='top']/img[@class='hitandrun']"
+      ],
+      "PEER_COUNT": [
+        "//div[@id='peercount']/b[1]"
+      ]
+    }
+  },
+  "user_info": {
+    "type": "api",
+    "profile": {
+      "method": "GET",
+      "path": "/user/data",
+      "response": {
+        "field_mapping": {
+          "username": {
+            "source": "data.0.username"
+          },
+          "userid": {
+            "source": "data.0.id",
+            "type": "int"
+          },
+          "upload": {
+            "source": "data.0.uploaded",
+            "type": "int"
+          },
+          "download": {
+            "source": "data.0.downloaded",
+            "type": "int"
+          },
+          "bonus": {
+            "source": "data.0.seedbonus",
+            "type": "float"
+          },
+          "join_at": {
+            "source": "data.0.added"
+          },
+          "message_unread": {
+            "source": "data.0.unread_messages",
+            "type": "int"
+          },
+          "user_level": {
+            "source": "data.0.class",
+            "transform": "map_value",
+            "map": {
+              "1": "User",
+              "2": "Power User",
+              "3": "Elite User",
+              "4": "Crazy User",
+              "5": "Insane User",
+              "6": "Veteran User",
+              "7": "Extreme User",
+              "8": "Ultimate User",
+              "9": "NexusMaster",
+              "10": "VIP",
+              "11": "Retiree",
+              "12": "Uploader",
+              "13": "Moderator",
+              "14": "Administrator"
+            }
+          }
+        }
+      }
+    },
+    "seeding": {
+      "method": "GET",
+      "path": "/user/peers",
+      "response": {
+        "items_key": "data",
+        "seeders_field": "seeders",
+        "size_field": "size"
+      }
+    }
+  }
+}

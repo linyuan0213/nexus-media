@@ -248,6 +248,7 @@ class ConfigApiUserInfo:
                 params = (
                     {k: v.format(page="1") if isinstance(v, str) else v for k, v in params.items()} if params else None
                 )
+                headers.pop("Content-Type", None)
                 res = client.get(url=url, params=params, headers=headers, auth=auth, **rl_kwargs)
             return res.json()
         except Exception:

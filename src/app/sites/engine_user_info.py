@@ -59,6 +59,7 @@ def prefetch_user_profile(
             res = client.post(url=req_url, data=post_data, headers=headers, auth=auth, **rl_kwargs)
         else:
             params = profile_cfg.get("params") or None
+            headers.pop("Content-Type", None)
             res = client.get(url=req_url, params=params, headers=headers, auth=auth, **rl_kwargs)
         parsed = res.json()
         log.warn(f"[prefetch]{site_def.name} status={res.status_code} keys={list(parsed.keys())[:5]}")

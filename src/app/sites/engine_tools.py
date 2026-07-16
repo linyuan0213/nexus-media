@@ -63,7 +63,11 @@ def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx.
             auth = CookieAuth(cookie)
 
     headers["Content-Type"] = headers.get("Content-Type", "application/json;charset=utf-8")
-    headers["User-Agent"] = user_config.get("ua", "")
+    ua_override = site.api.auth.get("user_agent") if site.api and site.api.auth else None
+    if ua_override is not None:
+        headers["User-Agent"] = ua_override
+    elif user_config.get("ua"):
+        headers["User-Agent"] = user_config.get("ua")
     return headers, auth
 
 
@@ -150,6 +154,7 @@ def _call_endpoint(
             params = cfg.get("params")
             if params:
                 params = {k: v.format(**template_vars) if isinstance(v, str) else v for k, v in params.items()}
+            headers.pop("Content-Type", None)
             res = client.get(url=url, params=params, headers=headers, auth=auth, **rl_kwargs)
         return res.json()
     except Exception as e:

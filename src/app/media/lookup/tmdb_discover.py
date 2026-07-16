@@ -212,6 +212,9 @@ class TmdbDiscover:
                     "vote": vote,
                     "image": image,
                     "overview": overview,
+                    "genre_ids": info.get("genre_ids") or [],
+                    "origin_country": info.get("origin_country") or [],
+                    "original_language": info.get("original_language") or "",
                 }
             )
         return ret_infos

@@ -131,6 +131,11 @@ class SystemConfigRequest(BaseModel):
     value: str | None = None
 
 
+class ScraperConfigRequest(BaseModel):
+    scraper_nfo: dict | None = None
+    scraper_pic: dict | None = None
+
+
 class TestMessageClientRequest(BaseModel):
     type: str | None = None
     config: str | None = None
@@ -591,6 +596,31 @@ def get_all_config(
     if http_proxy:
         flat["app.proxies"] = http_proxy.removeprefix("http://")
     return success(data=flat)
+
+
+@router.post("/config/scraper", response_model=CommonResponse, summary="获取刮削配置")
+def get_scraper_config(
+    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+    svc=Depends(get_system_config_service),
+):
+    cfg = svc.get(SystemConfigKey.UserScraperConf)
+    if isinstance(cfg, str):
+        try:
+            cfg = json.loads(cfg)
+        except Exception:
+            cfg = None
+    return success(data=cfg or {})
+
+
+@router.post("/config/scraper/save", response_model=CommonResponse, summary="设置刮削配置")
+def set_scraper_config(
+    req: ScraperConfigRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_system_config_service),
+):
+    value = json.dumps(req.dict(exclude_none=True), ensure_ascii=False)
+    svc.set(SystemConfigKey.UserScraperConf, value)
+    return success()
 
 
 @router.post("/message_clients/test", response_model=CommonResponse, summary="测试消息客户端连接")

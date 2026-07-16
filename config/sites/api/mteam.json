@@ -112,7 +112,12 @@
             },
             "labels": {
               "source": "labels",
-              "transform": "mteam_labels"
+              "transform": "split_map",
+              "map": {
+                "1": "DIY",
+                "2": "国配",
+                "4": "中字"
+              }
             },
             "page_url": {
               "type": "template",
