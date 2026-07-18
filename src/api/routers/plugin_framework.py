@@ -8,7 +8,7 @@ import os
 import tempfile
 import threading
 
-from fastapi import APIRouter, Depends, File, Response, UploadFile
+from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -16,6 +16,7 @@ import log
 from api.deps import get_hook_system, get_plugin_framework_service, require_any_permission, require_permission
 from app.core.exceptions import DomainError, ServiceError
 from app.core.settings import settings
+from app.plugin_framework import api_registry
 from app.plugin_framework.hook_system import HookSystem
 from app.schemas.common import CommonResponse
 from app.services.plugin_framework_service import PluginFrameworkService
@@ -216,6 +217,52 @@ def run_plugin(
     except Exception as e:
         log.error(f"[PluginAPI] 运行插件失败 {plugin_id}: {e}")
         return fail(msg=f"运行失败: {e!s}")
+
+
+def _dispatch_plugin_api(plugin_id: str, api_path: str, params: dict):
+    """分发插件自定义 API 请求"""
+    handler = api_registry.get_api_handler(plugin_id, api_path)
+    if not handler:
+        return fail(msg=f"插件接口不存在: {api_path}")
+    try:
+        result = handler(params)
+        if isinstance(result, dict) and "success" in result:
+            if result.get("success"):
+                return success(data=result.get("data"), msg=result.get("message") or "success")
+            return fail(msg=result.get("message") or "插件接口调用失败")
+        return success(data=result)
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
+    except Exception as e:
+        log.error(f"[PluginAPI] 插件接口异常 {plugin_id}/{api_path}: {e}")
+        return fail(msg=f"插件接口异常: {e!s}")
+
+
+@router.get("/plugins/{plugin_id}/api/{api_path:path}", response_model=CommonResponse, summary="插件自定义接口GET")
+def plugin_api_get(
+    plugin_id: str,
+    api_path: str,
+    request: Request,
+    user: str = Depends(require_permission("plugin:view")),
+):
+    return _dispatch_plugin_api(plugin_id, api_path, dict(request.query_params))
+
+
+@router.post("/plugins/{plugin_id}/api/{api_path:path}", response_model=CommonResponse, summary="插件自定义接口POST")
+async def plugin_api_post(
+    plugin_id: str,
+    api_path: str,
+    request: Request,
+    user: str = Depends(require_permission("plugin:manage")),
+):
+    params: dict = dict(request.query_params)
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
+            params.update(body)
+    except Exception as e:
+        log.debug(f"[PluginAPI] 请求体非 JSON，忽略: {e}")
+    return _dispatch_plugin_api(plugin_id, api_path, params)
 
 
 @router.get("/plugins/{plugin_id}/logs", response_model=CommonResponse, summary="获取插件日志")
