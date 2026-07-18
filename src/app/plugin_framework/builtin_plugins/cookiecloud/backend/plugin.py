@@ -624,7 +624,12 @@ class CookieCloudPlugin:
         ua = get_ua()
 
         site_def = self.ctx.site_engine.get_by_url(site_url)
+        auth_type = ""
         if site_def:
+            api_cfg = getattr(site_def, "api", None)
+            if api_cfg and getattr(api_cfg, "auth", None):
+                auth_type = api_cfg.auth.get("type", "") or ""
+        if site_def and auth_type in ("", "cookie", "csrf"):
             user_config = {
                 "cookie": cookie_str,
                 "api_key": "",
@@ -638,6 +643,8 @@ class CookieCloudPlugin:
                 self.ctx.warn(f"[CookieCloud]Cookie 失效 {domain_url}: {msg}")
             return success
 
+        # 无站点定义，或混合认证站点（api_key/bearer，cookie 仅用于 HTML 页面）：
+        # 引擎 test_connection 校验的是 API 凭证，无法验证 cookie，改为校验页面登录态
         try:
             res = HttpClient(
                 config=HttpClientConfig(default_headers={"User-Agent": ua}),

@@ -6,12 +6,14 @@ Plugin Context - 插件运行时上下文
 import contextlib
 import json
 import os
+from collections.abc import Callable
 from typing import Any
 
 import log
 from app.core.settings import settings
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter, PluginLogRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
+from app.plugin_framework import api_registry
 from app.utils.json_utils import JsonUtils
 
 
@@ -233,3 +235,13 @@ class PluginContext:
     def unregister_all_message_commands(self) -> None:
         """注销该插件的所有消息命令"""
         self._message.clear_plugin_commands(self._plugin_id)
+
+    def register_api(self, path: str, handler: Callable[[dict], object]) -> None:
+        """注册插件自定义 API，由通用调度路由分发：
+        GET/POST /api/plugin-framework/plugins/{plugin_id}/api/{path}
+        """
+        api_registry.register_api(self._plugin_id, path, handler)
+
+    def unregister_all_apis(self) -> None:
+        """注销该插件的所有自定义 API"""
+        api_registry.unregister_plugin_apis(self._plugin_id)
