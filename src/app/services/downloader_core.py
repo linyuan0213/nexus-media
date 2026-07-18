@@ -306,6 +306,9 @@ class DownloaderCore:
     def get_status(self, dtype=None, config=None):
         return self._client_factory.get_status(dtype=dtype, config=config)
 
+    def get_remote_dirs(self, dtype=None, config=None) -> list[str]:
+        return self._client_factory.get_remote_dirs(dtype=dtype, config=config)
+
     def get_free_space(self, downloader_id, path: str):
         return self._client_factory.get_free_space(downloader_id=downloader_id, path=path)
 

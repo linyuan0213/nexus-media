@@ -235,6 +235,21 @@ class _IDownloadClient(metaclass=ABCMeta):
     def get_download_dirs(self) -> list[str]:
         """获取下载目录清单"""
 
+    def list_remote_dirs(self) -> list[str]:
+        """获取下载器已知的目录候选列表（用于 UI 浏览选择保存目录）"""
+        dirs: list[str] = []
+        try:
+            dirs.extend(d for d in (self.get_download_dirs() or []) if d)
+        except Exception as e:
+            log.debug(f"[{self.client_name}]{self.name} 读取下载目录失败: {e}")
+        try:
+            torrents, error_flag = self.get_torrents()
+            if not error_flag:
+                dirs.extend(t.save_path for t in torrents if t.save_path)
+        except Exception as e:
+            log.debug(f"[{self.client_name}]{self.name} 读取种子保存路径失败: {e}")
+        return sorted(set(dirs))
+
     @staticmethod
     def get_replace_path(path: str, downloaddir: list | None) -> tuple[str, bool]:
         """对目录路径进行转换"""

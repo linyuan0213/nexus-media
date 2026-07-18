@@ -187,6 +187,20 @@ class Aria2(_IDownloadClient):
     def get_download_dirs(self) -> list[str]:
         return []
 
+    def list_remote_dirs(self) -> list[str]:
+        """Aria2 仅支持读取全局默认下载目录"""
+        if not self._client:
+            return []
+        try:
+            options = self._client.getGlobalOption()
+            if isinstance(options, dict) and options.get("dir"):
+                return [str(options["dir"])]
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            ExceptionUtils.exception_traceback(err)
+        return []
+
     def change_torrent(self, tid: str | None = None, **kwargs: Any) -> bool:
         return True
 
