@@ -348,6 +348,15 @@ class DownloadClientFactory:
             log.error("[Downloader]下载器连接测试失败")
         return state
 
+    def get_remote_dirs(self, dtype=None, config=None) -> list[str]:
+        """通过下载器 API 读取其已知目录候选列表（临时客户端）"""
+        if not dtype or not config:
+            return []
+        client = self._build_class(ctype=dtype, conf=config)
+        if not client:
+            return []
+        return client.list_remote_dirs()
+
     def get_free_space(self, downloader_id, path: str):
         """获取磁盘剩余空间"""
         if not downloader_id:

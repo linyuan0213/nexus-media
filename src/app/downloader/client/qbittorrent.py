@@ -749,6 +749,20 @@ class Qbittorrent(_IDownloadClient):
                 ret_dirs.append(str(category.get("savePath") or ""))
         return ret_dirs
 
+    def list_remote_dirs(self) -> list[str]:
+        """候选目录 = 默认保存路径 + 分类路径 + 已有种子保存路径"""
+        dirs = []
+        if self.qbc:
+            try:
+                default_path = self.qbc.app_default_save_path()
+                if default_path:
+                    dirs.append(str(default_path))
+            except (InfrastructureError, NetworkError):
+                raise
+            except Exception as err:
+                ExceptionUtils.exception_traceback(err)
+        return sorted({*dirs, *super().list_remote_dirs()})
+
     def set_uploadspeed_limit(self, ids: list[str] | str, limit: int) -> None:
         if not self.qbc:
             return

@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from api.deps import get_current_user
+from api.deps import get_current_user, get_downloader_service
 from api.routers import download as download_router
 from app.schemas.auth import UserContext
 
@@ -96,3 +96,75 @@ class TestDownloadEventsSSE:
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "text/event-stream; charset=utf-8"
         assert b"data: ok" in resp.content
+
+
+class TestBrowseDownloaderDirs:
+    @pytest.fixture
+    def mock_downloader_service(self):
+        svc = MagicMock()
+        svc.get_remote_dirs.return_value = ["/downloads", "/downloads/movies"]
+        return svc
+
+    @pytest.fixture
+    def dir_client(self, mock_downloader_service):
+        app = FastAPI()
+        app.include_router(download_router.router, prefix="/api/download")
+        user_ctx = UserContext(
+            user_id=1,
+            username="admin",
+            level=0,
+            permissions=["download:view", "download:manage"],
+        )
+        app.dependency_overrides[get_current_user] = lambda: user_ctx
+        app.dependency_overrides[get_downloader_service] = lambda: mock_downloader_service
+        with TestClient(app) as c:
+            yield c
+
+    def test_returns_dirs_with_dict_config(self, dir_client, mock_downloader_service):
+        resp = dir_client.post(
+            "/api/download/downloaders/browse_dirs",
+            json={"type": "qbittorrent", "config": {"host": "127.0.0.1"}},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["code"] == 0
+        assert body["data"] == {"count": 2, "items": ["/downloads", "/downloads/movies"]}
+        mock_downloader_service.get_remote_dirs.assert_called_once_with(
+            dtype="qbittorrent", config={"host": "127.0.0.1"}
+        )
+
+    def test_accepts_json_string_config(self, dir_client, mock_downloader_service):
+        resp = dir_client.post(
+            "/api/download/downloaders/browse_dirs",
+            json={"type": "qbittorrent", "config": '{"host": "127.0.0.1"}'},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 0
+        mock_downloader_service.get_remote_dirs.assert_called_once_with(
+            dtype="qbittorrent", config={"host": "127.0.0.1"}
+        )
+
+    def test_missing_type_fails(self, dir_client, mock_downloader_service):
+        resp = dir_client.post("/api/download/downloaders/browse_dirs", json={"config": {}})
+        assert resp.status_code == 200
+        assert resp.json()["code"] != 0
+        mock_downloader_service.get_remote_dirs.assert_not_called()
+
+    def test_invalid_config_json_fails(self, dir_client, mock_downloader_service):
+        resp = dir_client.post(
+            "/api/download/downloaders/browse_dirs",
+            json={"type": "qbittorrent", "config": "{invalid"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["code"] != 0
+        mock_downloader_service.get_remote_dirs.assert_not_called()
+
+    def test_service_error_returns_fail(self, dir_client, mock_downloader_service):
+        mock_downloader_service.get_remote_dirs.side_effect = RuntimeError("连接失败")
+        resp = dir_client.post(
+            "/api/download/downloaders/browse_dirs",
+            json={"type": "qbittorrent", "config": {}},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["code"] != 0
+        assert "连接失败" in resp.json()["message"]
