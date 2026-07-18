@@ -356,16 +356,20 @@ class BrushTaskHelper:
             )
             self._message.send_brushtask_added_message(title=msg_title, text=msg_text)
 
-        if self._repo.insert_brushtask_torrent(
-            brush_id=taskid,
-            title=title,
-            enclosure=enclosure,
-            downloader=downloader_id,
-            download_id=download_id,
-            size=size,
-            page_url=page_url or "",
-        ):
-            self._repo.add_brushtask_download_count(brush_id=taskid)
+        if download_id:
+            if self._repo.insert_brushtask_torrent(
+                brush_id=taskid,
+                title=title,
+                enclosure=enclosure,
+                downloader=downloader_id,
+                download_id=download_id,
+                size=size,
+                page_url=page_url or "",
+            ):
+                self._repo.add_brushtask_download_count(brush_id=taskid)
+            else:
+                log.info(f"[Brush]{title} 已下载过")
         else:
-            log.info(f"[Brush]{title} 已下载过")
+            # 种子已存在于下载器但未能获取种子ID（如 qb 重复添加），无法跟踪则不入库
+            log.warn(f"[Brush]{title} 已存在于下载器但未能获取种子ID，跳过记录")
         return True

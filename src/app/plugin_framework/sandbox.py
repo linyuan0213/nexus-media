@@ -14,6 +14,7 @@ from typing import Any
 import log
 from app.core.exceptions import PluginError
 from app.message import Message
+from app.plugin_framework import api_registry
 from app.plugin_framework.context import PluginContext
 from app.plugin_framework.registry import PluginRegistry
 
@@ -234,6 +235,9 @@ class PluginSandbox:
 
             # 注销该插件的所有事件钩子
             self._hook_system.unregister_all(plugin_id)
+
+            # 注销该插件的所有自定义 API
+            api_registry.unregister_plugin_apis(plugin_id)
 
             # 自动注销该插件的所有消息命令
             self._message.clear_plugin_commands(plugin_id)

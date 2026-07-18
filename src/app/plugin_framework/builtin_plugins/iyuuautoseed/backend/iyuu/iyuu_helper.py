@@ -11,12 +11,14 @@ _logger = logging.getLogger(__name__)
 
 class IyuuHelper:
     _version = "2.0.0"
-    _api_base = "http://2025.iyuu.cn%s"
+    _api_base = "https://2025.iyuu.cn%s"
+    _rate_limit_key = "plugin:iyuuautoseed:iyuu_api"
 
-    def __init__(self, token, site_engine=None):
+    def __init__(self, token, site_engine=None, rate_limit: str = ""):
         self._token = token
         self._sites = {}
         self._site_engine = site_engine
+        self._rate_limit = (rate_limit or "").strip()
 
     def __request_iyuu(self, url, method="get", params=None):
         """
@@ -25,18 +27,21 @@ class IyuuHelper:
         headers = {"token": self._token, "Accept": "application/json"}
         rate_limiter = getattr(self._site_engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
+        rl_kwargs = {}
+        if rate_limiter_engine and self._rate_limit:
+            rl_kwargs = {"rate_limit_key": self._rate_limit_key, "rate_limit_rate": self._rate_limit}
         # 开始请求
         try:
             if method == "get":
                 res = HttpClient(
                     config=HttpClientConfig(default_headers=headers),
                     rate_limiter=rate_limiter_engine,
-                ).get(f"{url}", params=params)
+                ).get(f"{url}", params=params, **rl_kwargs)
             else:
                 res = HttpClient(
                     config=HttpClientConfig(default_headers=headers),
                     rate_limiter=rate_limiter_engine,
-                ).post(f"{url}", data=params)
+                ).post(f"{url}", data=params, **rl_kwargs)
             result = res.json()
             if result.get("code") == 0:
                 return result.get("data"), ""
@@ -46,14 +51,15 @@ class IyuuHelper:
             return None, f"请求IYUU失败：{exc}"
 
     def get_torrent_url(self, sid):
+        """返回站点 (base_url, download_page, is_https)，is_https: 0=仅http，其他=https"""
         if not sid:
-            return None, None
+            return None, None, None
         if not self._sites:
             self._sites = self.__get_sites()
         site = self._sites.get(sid)
         if not site:
-            return None, None
-        return site.get("base_url"), site.get("download_page")
+            return None, None, None
+        return site.get("base_url"), site.get("download_page"), site.get("is_https")
 
     def __get_sites(self):
         """
@@ -144,21 +150,14 @@ class IyuuHelper:
 
     def get_auth_sites(self):
         """
-        返回支持鉴权的站点列表
-        [
-            {
-                "id": 2,
-                "site": "pthome",
-                "bind_check": "passkey,uid"
-            }
-        ]
+        返回支持鉴权的站点列表及错误信息
+        ([{"id": 2, "site": "pthome", "nickname": "铂金家"}], "")
         """
         result, msg = self.__request_iyuu(url=self._api_base % "/reseed/sites/recommend")
-        if result:
-            return result.get("list") or []
-        else:
+        if msg:
             _logger.error(msg)
-            return []
+            return [], msg
+        return (result or {}).get("list") or [], ""
 
     def bind_site(self, site, passkey, uid):
         """
@@ -168,7 +167,9 @@ class IyuuHelper:
         :param uid: 用户id
         :return: 状态码、错误信息
         """
-        sites = self.get_auth_sites()
+        sites, msg = self.get_auth_sites()
+        if msg:
+            return None, msg
         sid = ""
         for site_info in sites:
             if site_info.get("site") == site:

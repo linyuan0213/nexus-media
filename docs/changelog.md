@@ -1,5 +1,20 @@
 # 版本历史
 
+## v4.3.3 (2026-07-18)
+
+### 新增
+- 插件自定义 API 框架：`PluginContext.register_api(path, handler)` + 通用调度路由 `GET/POST /plugins/{id}/api/{path}`，支持插件声明式注册自定义接口，按 HTTP method 控制 view/manage 权限，sandbox 卸载时自动清理
+- IYUU 自动辅种插件绑定站点功能：前端鉴权页面（`frontend/index.mjs` DI render 组件，列表+行内输入+持久化徽章），后端 API（bindable_sites/bind_site）+ `bound_sites.json` 持久化记录；辅种任务 IYUU API 与站点级限流；manifest 补充 downloaders/sites 配置项
+- IYUU 自动辅种插件适配当前服务层架构：`add_torrent`/`exists_torrents` 改为通过下载器客户端实例调用；种子下载链接补全 host+schema、剥离凭证占位符；`_can_seeding` TorrentStatus 枚举判定；`_resolve_local_site` 支持 HTML 站点定义按名称匹配本地配置
+- Depth Studio（dstudio.me）与 Sunny（sunnypt.top）站点 HTML 配置（NexusPHP table 模板，分类 401-409）
+
+### 修复
+- CookieCloud 混合认证站点（api_key/bearer 类型）cookie 校验失败：改为按站点认证类型分流——纯 cookie/csrf 走引擎 test_connection，api_key/bearer 走 HTML 首页登录态校验
+- 刷流已存在于下载器的种子（qb EXISTS 分支 DOWNLOAD_ID 为 None）插入 `SITE_BRUSH_TORRENTS` 触发 NOT NULL 约束，改为跳过入库
+
+### 测试
+- 新增 CookieCloud 插件校验、IYUU 插件（辅种+绑定+解析）、插件 API 注册表与调度路由、刷流入库测试（4 个测试文件，全量 1187 通过）
+
 ## v4.3.2 (2026-07-18)
 
 ### 新增
