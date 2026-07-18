@@ -168,6 +168,11 @@ class TestDownloaderRequest(BaseModel):
     config: str | None = None
 
 
+class BrowseDownloaderDirsRequest(BaseModel):
+    type: str | None = None
+    config: str | dict | None = None
+
+
 class UpdateDownloadSettingRequest(BaseModel):
     sid: str | int | None = None
     name: str | None = None
@@ -640,6 +645,32 @@ def test_downloader(
         return success(data={"success": False, "message": e.message})
     except Exception as e:
         return success(data={"success": False, "message": f"连接异常：{e!s}"})
+
+
+@router.post("/downloaders/browse_dirs", response_model=CommonResponse, summary="浏览下载器目录")
+def browse_downloader_dirs(
+    req: BrowseDownloaderDirsRequest,
+    user: str = Depends(require_permission("download:manage")),
+    svc: Downloader = Depends(get_downloader_service),
+):
+    """通过下载器 API 读取其已知目录（默认保存路径、分类路径、已有种子路径）"""
+    if not req.type:
+        return fail(msg="下载器类型不能为空")
+    if isinstance(req.config, dict):
+        config = req.config
+    else:
+        try:
+            config = json.loads(req.config) if req.config else {}
+        except json.JSONDecodeError:
+            return fail(msg="下载器配置格式错误")
+    try:
+        dirs = svc.get_remote_dirs(dtype=req.type, config=config)
+        return success(data={"count": len(dirs), "items": dirs})
+    except (ServiceError, DomainError) as e:
+        return fail(msg=e.message)
+    except Exception as e:
+        ExceptionUtils.exception_traceback(e)
+        return fail(msg=f"读取下载器目录失败: {e!s}")
 
 
 @router.post("/settings/update", response_model=CommonResponse, summary="更新下载设置")
