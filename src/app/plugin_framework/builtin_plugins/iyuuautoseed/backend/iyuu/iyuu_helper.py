@@ -13,35 +13,43 @@ class IyuuHelper:
     _version = "2.0.0"
     _api_base = "https://2025.iyuu.cn%s"
     _rate_limit_key = "plugin:iyuuautoseed:iyuu_api"
+    _default_rate_limit = "1/2s"
 
     def __init__(self, token, site_engine=None, rate_limit: str = ""):
         self._token = token
         self._sites = {}
         self._site_engine = site_engine
-        self._rate_limit = (rate_limit or "").strip()
+        self._rate_limit = (rate_limit or self._default_rate_limit).strip()
 
-    def __request_iyuu(self, url, method="get", params=None):
+    def __request_iyuu(self, url, method="get", params=None, json_body=False):
         """
         向IYUUApi发送请求
         """
         headers = {"token": self._token, "Accept": "application/json"}
         rate_limiter = getattr(self._site_engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        rl_kwargs = {}
+        # 主动阻塞限流：等待直到获取令牌（HttpClient 的 timeout=None 是立即返回不等待）
         if rate_limiter_engine and self._rate_limit:
-            rl_kwargs = {"rate_limit_key": self._rate_limit_key, "rate_limit_rate": self._rate_limit}
+            rate_limiter_engine.acquire(
+                key=self._rate_limit_key,
+                rate=self._rate_limit,
+                timeout=120.0,
+            )
         # 开始请求
         try:
             if method == "get":
                 res = HttpClient(
                     config=HttpClientConfig(default_headers=headers),
-                    rate_limiter=rate_limiter_engine,
-                ).get(f"{url}", params=params, **rl_kwargs)
+                ).get(f"{url}", params=params)
             else:
-                res = HttpClient(
-                    config=HttpClientConfig(default_headers=headers),
-                    rate_limiter=rate_limiter_engine,
-                ).post(f"{url}", data=params, **rl_kwargs)
+                if json_body:
+                    res = HttpClient(
+                        config=HttpClientConfig(default_headers=headers),
+                    ).post(f"{url}", json=params)
+                else:
+                    res = HttpClient(
+                        config=HttpClientConfig(default_headers=headers),
+                    ).post(f"{url}", data=params)
             result = res.json()
             if result.get("code") == 0:
                 return result.get("data"), ""
@@ -119,10 +127,13 @@ class IyuuHelper:
         """
         sites = self.__get_sites()
         site_ids = list(sites.keys())
+        if not site_ids:
+            return None, "无法获取 IYUU 站点列表（可能被限流），请稍后重试"
         result, msg = self.__request_iyuu(
             url=self._api_base % "/reseed/sites/reportExisting",
             method="post",
-            params=JsonUtils.dumps({"sid_list": site_ids}),
+            params={"sid_list": site_ids},
+            json_body=True,
         )
         if not result:
             return result, msg
