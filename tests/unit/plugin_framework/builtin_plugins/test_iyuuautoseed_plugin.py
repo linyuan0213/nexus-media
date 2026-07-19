@@ -43,38 +43,6 @@ def _torrent(progress=100, status=TorrentStatus.Paused):
     return t
 
 
-class TestBuildDownloadUrl:
-    def test_nexusphp_strips_passkey_placeholder(self):
-        url = IYUUAutoSeedPlugin._build_download_url(2, "pt.example.com", "download.php?id={}&passkey={passkey}", 12345)
-        assert url == "https://pt.example.com/download.php?id=12345"
-
-    def test_strips_uid_and_hash_placeholders(self):
-        url = IYUUAutoSeedPlugin._build_download_url(
-            1, "www.hddolby.com", "download.php?id={}&uid={uid}&hash={hash}", 999
-        )
-        assert url == "https://www.hddolby.com/download.php?id=999"
-
-    def test_http_scheme_when_is_https_zero(self):
-        url = IYUUAutoSeedPlugin._build_download_url(
-            0, "www.hdroute.org", "download.php?id={}&passkey={passkey}&from=rss", 42
-        )
-        assert url == "http://www.hdroute.org/download.php?id=42&from=rss"
-
-    def test_path_placeholder_returns_none(self):
-        # ttg 的 dl/{}/{passkey} 路径占位符无法剥离
-        assert IYUUAutoSeedPlugin._build_download_url(2, "totheglory.im", "dl/{}/{passkey}", 123) is None
-
-    def test_no_credential_placeholder(self):
-        url = IYUUAutoSeedPlugin._build_download_url(1, "www.yemapt.org", "api/torrent/download?id={}", 77)
-        assert url == "https://www.yemapt.org/api/torrent/download?id=77"
-
-    def test_gazelle_strips_authkey_and_torrent_pass(self):
-        url = IYUUAutoSeedPlugin._build_download_url(
-            1, "dicmusic.com", "torrents.php?action=download&id={}&authkey={authkey}&torrent_pass={torrent_pass}", 5
-        )
-        assert url == "https://dicmusic.com/torrents.php?action=download&id=5"
-
-
 class TestCanSeeding:
     def test_paused_completed_can_seed(self):
         assert IYUUAutoSeedPlugin._can_seeding(_torrent()) is True
@@ -107,6 +75,7 @@ class TestDownloadTorrent:
             "ua": "UA",
             "proxy": False,
         }
+        plugin.ctx.site_engine.resolve_download_url.return_value = "https://pt.example.com/dl/123.torrent"
         plugin._downloader.get_torrents.return_value = []
         client = MagicMock()
         client.add_torrent.return_value = True
@@ -118,20 +87,20 @@ class TestDownloadTorrent:
     ):
         plugin = _make_plugin()
         client = self._setup_success_path(plugin)
-        with patch(f"{MODULE}.HttpClient") as mock_http:
-            mock_http.return_value.get.return_value = MagicMock(content=b"torrent-bytes")
+        with patch(f"{MODULE}.TorrentUtil") as mock_torrent:
+            mock_torrent.return_value.get_torrent_info.return_value = (
+                "/tmp/t.torrent",
+                b"torrent-bytes",
+                None,
+                None,
+                "",
+            )
             result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["10"])
         assert result is True
         assert plugin.success == 1
-        # 验证下载链接拼接正确
-        req_url = mock_http.return_value.get.call_args.args[0]
-        assert req_url == "https://pt.example.com/download.php?id=12345"
-        # 验证通过客户端实例添加
+        plugin.ctx.site_engine.resolve_download_url.assert_called_once()
         client.add_torrent.assert_called_once_with(
-            content=b"torrent-bytes",
-            is_paused=True,
-            download_dir="/downloads",
-            tag=["已整理", "辅种"],
+            content=b"torrent-bytes", is_paused=True, download_dir="/downloads", tag=["已整理", "辅种"]
         )
         assert plugin._recheck_torrents["d1"] == ["deadbeef"]
 
@@ -148,15 +117,19 @@ class TestDownloadTorrent:
         plugin = _make_plugin()
         _mock_helper(plugin).get_torrent_url.return_value = ("api.m-team.cc", "api/torrent/genDlToken", 2)
         plugin._sites.get_sites.return_value = {"id": 1}
-        result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["10"])
+        # genDlToken 走引擎 resolve_download_url → 返回 None → fail
+        plugin.ctx.site_engine.resolve_download_url.return_value = None
+        plugin._downloader.get_torrents.return_value = []
+        result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["1"])
         assert result is False
         assert plugin.fail == 1
 
-    def test_path_placeholder_fails(self):
+    def test_download_url_resolve_fails(self):
         plugin = _make_plugin()
         _mock_helper(plugin).get_torrent_url.return_value = ("totheglory.im", "dl/{}/{passkey}", 2)
         plugin._sites.get_sites.return_value = {"id": 1, "cookie": "c", "ua": "UA", "proxy": False}
         plugin._downloader.get_torrents.return_value = []
+        plugin.ctx.site_engine.resolve_download_url.return_value = None
         result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["1"])
         assert result is False
         assert plugin.fail == 1
@@ -178,8 +151,14 @@ class TestDownloadTorrent:
         plugin = _make_plugin()
         client = self._setup_success_path(plugin)
         client.add_torrent.return_value = False
-        with patch(f"{MODULE}.HttpClient") as mock_http:
-            mock_http.return_value.get.return_value = MagicMock(content=b"torrent-bytes")
+        with patch(f"{MODULE}.TorrentUtil") as mock_torrent:
+            mock_torrent.return_value.get_torrent_info.return_value = (
+                "/tmp/t.torrent",
+                b"torrent-bytes",
+                None,
+                None,
+                "",
+            )
             result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["10"])
         assert result is False
         assert plugin.fail == 1

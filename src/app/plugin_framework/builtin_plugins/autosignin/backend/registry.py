@@ -83,5 +83,8 @@ class HandlerRegistry:
     def get_generic(self) -> HandlerFactory:
         return lambda: HttpSigninHandler(self._plugin_ctx, self._rate_limiter, {})
 
+    def get_browser(self) -> HandlerFactory:
+        return lambda: BrowserSigninHandler(self._plugin_ctx, self._rate_limiter, {})
+
     def __len__(self) -> int:
         return len(self._handlers)

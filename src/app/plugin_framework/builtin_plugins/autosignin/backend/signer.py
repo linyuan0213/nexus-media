@@ -7,6 +7,21 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
 from app.plugin_framework.builtin_plugins.autosignin.backend.registry import HandlerRegistry
 
 
+def _should_browser_fallback(msg: str) -> bool:
+    """判断 HTTP 签到失败是否需要回退到浏览器模式（403/HTML响应/468）"""
+    if not msg:
+        return False
+    if "签到接口返回" in msg:
+        body = msg.split("签到接口返回 ", 1)[-1] if "签到接口返回" in msg else msg
+        if any(tag in body[:500] for tag in ["<!DOCTYPE", "<html", "<HTML"]):
+            return True
+    if "403 Forbidden" in msg or "Client error '403'" in msg:
+        return True
+    if "468" in msg:
+        return True
+    return False
+
+
 class SigninEngine:
     def __init__(self, ctx, registry: HandlerRegistry, site_cache=None, site_engine=None):
         self.ctx = ctx
@@ -108,9 +123,25 @@ class SigninEngine:
         try:
             result = handler.signin(site_ctx)
             self.ctx.debug(f"站点 {site_ctx.site} 结果: {result.msg}")
-            return result.msg
+            msg = result.msg or ""
+            if not site_ctx.is_browser and _should_browser_fallback(msg):
+                self.ctx.info(f"站点 {site_ctx.site} HTTP 签到疑似需要浏览器，自动回退")
+                br_ctx = SiteSigninContext.from_site_info(site_info, self._site_engine)
+                br_ctx.is_browser = True
+                return self._signin_with_browser_fallback(br_ctx)
+            return msg
         except Exception as e:
             self.ctx.warn(f"站点 {site_ctx.site} 签到异常: {e}")
+            return f"[{site_ctx.site}]签到失败：{str(e)}"
+
+    def _signin_with_browser_fallback(self, site_ctx: SiteSigninContext) -> str:
+        try:
+            br_handler = self._registry.get_browser()()
+            result = br_handler.signin(site_ctx)
+            self.ctx.debug(f"站点 {site_ctx.site} 浏览器回退结果: {result.msg}")
+            return result.msg
+        except Exception as e:
+            self.ctx.warn(f"站点 {site_ctx.site} 浏览器回退异常: {e}")
             return f"[{site_ctx.site}]签到失败：{str(e)}"
 
     def _process_results(

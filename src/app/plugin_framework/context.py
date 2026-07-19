@@ -115,6 +115,14 @@ class PluginContext:
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
 
+    def read_plugin_data(self, plugin_id: str, filename: str) -> str | None:
+        """读取其他插件的持久化数据（读文件，同 data 目录布局）"""
+        filepath = os.path.join(settings.data_path, "plugins_data", plugin_id, filename)
+        if not os.path.exists(filepath):
+            return None
+        with open(filepath, encoding="utf-8") as f:
+            return f.read()
+
     def _write_db_log(self, level: str, msg: str) -> None:
         """同时写入数据库日志"""
         with contextlib.suppress(Exception):
