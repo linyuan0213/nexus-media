@@ -20,7 +20,7 @@ class IyuuHelper:
         self._site_engine = site_engine
         self._rate_limit = (rate_limit or "").strip()
 
-    def __request_iyuu(self, url, method="get", params=None):
+    def __request_iyuu(self, url, method="get", params=None, json_body=False):
         """
         向IYUUApi发送请求
         """
@@ -38,10 +38,17 @@ class IyuuHelper:
                     rate_limiter=rate_limiter_engine,
                 ).get(f"{url}", params=params, **rl_kwargs)
             else:
-                res = HttpClient(
-                    config=HttpClientConfig(default_headers=headers),
-                    rate_limiter=rate_limiter_engine,
-                ).post(f"{url}", data=params, **rl_kwargs)
+                client_kwargs = {"rate_limiter": rate_limiter_engine, **rl_kwargs}
+                if json_body:
+                    res = HttpClient(
+                        config=HttpClientConfig(default_headers=headers),
+                        **client_kwargs,
+                    ).post(f"{url}", json=params)
+                else:
+                    res = HttpClient(
+                        config=HttpClientConfig(default_headers=headers),
+                        **client_kwargs,
+                    ).post(f"{url}", data=params)
             result = res.json()
             if result.get("code") == 0:
                 return result.get("data"), ""
@@ -122,7 +129,8 @@ class IyuuHelper:
         result, msg = self.__request_iyuu(
             url=self._api_base % "/reseed/sites/reportExisting",
             method="post",
-            params=JsonUtils.dumps({"sid_list": site_ids}),
+            params={"sid_list": site_ids},
+            json_body=True,
         )
         if not result:
             return result, msg
