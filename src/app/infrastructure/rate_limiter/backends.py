@@ -13,17 +13,17 @@ from app.infrastructure.redis import RedisStore
 
 
 def _parse_rate(rate: str) -> tuple[float, int]:
-    """解析速率字符串，如 '10/m' -> (10, 60), '2.5/s' -> (2.5, 1).
+    """解析速率字符串，如 '10/m' -> (10, 60), '2.5/s' -> (2.5, 1), '1/2s' -> (1, 2)."""
+    import re
 
-    :return: (count, window_seconds)
-    """
-    parts = rate.split("/")
-    if len(parts) != 2:
+    m = re.match(r"^(\d+\.?\d*)/(\d+\.?\d*)?([smhd])?$", rate.strip())
+    if not m:
         raise ValueError(f"Invalid rate format: {rate}")
-    count = float(parts[0])
-    unit = parts[1].lower()
-    multipliers = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-    window = multipliers.get(unit, 60)
+    count = float(m.group(1))
+    interval = float(m.group(2)) if m.group(2) else 1.0
+    unit = m.group(3) or "s"
+    multipliers: dict[str, int] = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    window = int(interval * multipliers.get(unit, 60))
     return count, window
 
 
@@ -255,8 +255,17 @@ class RateLimitEngine:
             if self._sliding_window_backend is None:
                 self._sliding_window_backend = MemorySlidingWindowBackend()
             return self._sliding_window_backend.acquire(key, rate_per_sec, burst, tokens, timeout)
-        # Redis 脚本将 rate 视为毫秒速率，内存后端使用秒速率
+        # Redis 后端无阻塞循环，引擎层统一补阻塞逻辑（仅 timeout>0 时生效）
+        # 引擎循环内按立即模式检查后端（避免与 Memory 后端自有阻塞重复等待）
         backend_rate = rate_per_sec * 1000 if isinstance(self._backend, RedisTokenBucketBackend) else rate_per_sec
+        if timeout is not None and timeout > 0:
+            deadline = time.time() + timeout
+            while True:
+                if self._backend.acquire(key, backend_rate, burst, tokens, 0):
+                    return True
+                if time.time() >= deadline:
+                    return False
+                time.sleep(0.05)
         return self._backend.acquire(key, backend_rate, burst, tokens, timeout)
 
     def try_acquire(self, key: str, rate: str = "10/m", tokens: int = 1) -> bool:
