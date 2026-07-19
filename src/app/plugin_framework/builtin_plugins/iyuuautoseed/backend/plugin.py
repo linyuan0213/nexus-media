@@ -418,7 +418,7 @@ class IYUUAutoSeedPlugin:
         site_info, _ = self._resolve_local_site(sid=seed.get("sid"))
         if not site_info:
             return False
-        if sites_cfg and str(site_info.get("id")) not in sites_cfg:
+        if not sites_cfg or str(site_info.get("id")) not in sites_cfg:
             return False
 
         self.realtotal += 1

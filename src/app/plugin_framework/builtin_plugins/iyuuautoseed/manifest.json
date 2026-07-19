@@ -70,7 +70,7 @@
           "label": "辅种站点",
           "source": "sites",
           "default": [],
-          "help": "仅对选中站点辅种，留空表示全部站点"
+          "help": "仅对选中站点辅种"
         },
         {
           "key": "nolabels",
