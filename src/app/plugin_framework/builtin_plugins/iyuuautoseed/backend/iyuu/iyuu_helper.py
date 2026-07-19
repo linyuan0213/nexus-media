@@ -13,7 +13,7 @@ class IyuuHelper:
     _version = "2.0.0"
     _api_base = "https://2025.iyuu.cn%s"
     _rate_limit_key = "plugin:iyuuautoseed:iyuu_api"
-    _default_rate_limit = "1/2s"
+    _default_rate_limit = "1/30s"
 
     def __init__(self, token, site_engine=None, rate_limit: str = ""):
         self._token = token
@@ -28,7 +28,7 @@ class IyuuHelper:
         headers = {"token": self._token, "Accept": "application/json"}
         rate_limiter = getattr(self._site_engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        # 主动阻塞限流：等待直到获取令牌（HttpClient 的 timeout=None 是立即返回不等待）
+        # 主动阻塞限流：等待直到获取令牌
         if rate_limiter_engine and self._rate_limit:
             rate_limiter_engine.acquire(
                 key=self._rate_limit_key,
