@@ -45,6 +45,14 @@
           "help": "媒体服务器有媒体播放时对下载器进行下载限速，0或留空不启用"
         },
         {
+          "key": "downloaders",
+          "type": "multi_select",
+          "label": "限速下载器",
+          "source": "downloaders",
+          "default": [],
+          "help": "选择需要限速的下载器，留空不生效"
+        },
+        {
           "key": "upload_unlimit",
           "type": "number",
           "label": "未播放限速-上传",

@@ -42,19 +42,19 @@
         },
         {
           "key": "fromdownloader",
-          "type": "input",
+          "type": "multi_select",
           "label": "源下载器",
-          "default": "",
-          "placeholder": "下载器ID",
-          "help": "源下载器ID"
+          "source": "downloaders",
+          "default": [],
+          "help": "选择源下载器"
         },
         {
           "key": "todownloader",
-          "type": "input",
+          "type": "multi_select",
           "label": "目的下载器",
-          "default": "",
-          "placeholder": "下载器ID",
-          "help": "目的下载器ID"
+          "source": "downloaders",
+          "default": [],
+          "help": "选择目的下载器"
         },
         {
           "key": "fromtorrentpath",

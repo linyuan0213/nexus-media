@@ -40,6 +40,14 @@
           "placeholder": "0 0 * * *",
           "help": "标记任务执行的时间周期，支持5位cron表达式"
         }
+        {
+          "key": "downloaders",
+          "type": "multi_select",
+          "label": "标记下载器",
+          "source": "downloaders",
+          "default": [],
+          "help": "选择需要标记的下载器"
+        }
       ]
     },
     "slots": []

@@ -10,7 +10,7 @@ from .base import SigninResult, SiteSigninContext, SiteSigninHandler
 
 
 class U2(SiteSigninHandler):
-    site_id = "u2"
+    site_id = "U2"
     _ALREADY_REGEXS = [
         r'<a href="showup.php">已签到</a>',
         r'<a href="showup.php">Show Up</a>',
