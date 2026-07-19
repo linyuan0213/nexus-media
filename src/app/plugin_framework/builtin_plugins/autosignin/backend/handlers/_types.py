@@ -60,10 +60,16 @@ class BakatestQaHandler(SiteSigninHandler):
         if not html:
             return SigninResult.fail(site, "签到失败")
 
-        questionid = str(cast(Any, html.xpath("//input[@name='questionid']/@value"))[0])
-        option_ids = [str(v) for v in cast(Any, html.xpath("//input[@name='choice[]']/@value"))]
-        option_values = [str(v) for v in cast(Any, html.xpath("//input[@name='choice[]']/following-sibling::text()"))]
-        question_str = str(cast(Any, html.xpath("//td[@class='text' and contains(text(),'请问：')]/text()"))[0])
+        qid_nodes = html.xpath("//input[@name='questionid']/@value")
+        opt_nodes = html.xpath("//input[@name='choice[]']/@value")
+        opt_texts = html.xpath("//input[@name='choice[]']/following-sibling::text()")
+        question_nodes = html.xpath("//td[@class='text' and contains(text(),'请问：')]/text()")
+        if not qid_nodes or not opt_nodes or not question_nodes:
+            return SigninResult.fail(site, "未获取到签问题目，可能已签到或页面变更")
+        questionid = str(cast(Any, qid_nodes[0]))
+        option_ids = [str(v) for v in cast(Any, opt_nodes)]
+        option_values = [str(v) for v in cast(Any, opt_texts)]
+        question_str = str(cast(Any, question_nodes[0]))
         answers = list(zip(option_ids, option_values, strict=False))
 
         match = re.search(r"请问：(.+)", str(question_str))

@@ -1,5 +1,16 @@
 # 版本历史
 
+## v4.3.6 (2026-07-19)
+
+### 修复
+- IYUU 辅种：站点引擎解析下载链接（genDlToken/api/HTML 统一）、`sites` 留空不辅种、`start_torrents` 补 `downloader_id`
+- 刷流 `DOWNLOAD_ID` 为空时跳过入库（修复 NOT NULL 约束）
+- CookieCloud 混合认证站点 cookie 校验改用 HTML 登录态
+- 自动转移做种：下载器选择改多选、`progress` 判准修正、路径容错
+- 下载联动删除：`PluginContext.read_plugin_data` 跨插件恢复转种/辅种完整清理
+- 自动签到：403/HTML/468 自动回退浏览器、U2 handler 大小写匹配、chdbits xpath 空结果守卫
+- `PluginContext.read_plugin_data` 跨插件数据读取 API
+- speedlimiter / torrentmark manifest 补 `downloaders` 字段
 
 ## v4.3.5 (2026-07-19)
 
