@@ -120,7 +120,7 @@ class TestDownloadTorrent:
         client = self._setup_success_path(plugin)
         with patch(f"{MODULE}.HttpClient") as mock_http:
             mock_http.return_value.get.return_value = MagicMock(content=b"torrent-bytes")
-            result = plugin._download_torrent(self._seed(), "d1", "/downloads", [])
+            result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["10"])
         assert result is True
         assert plugin.success == 1
         # 验证下载链接拼接正确
@@ -139,7 +139,7 @@ class TestDownloadTorrent:
         plugin = _make_plugin()
         self._setup_success_path(plugin)
         plugin._downloader.get_torrents.return_value = [_torrent()]
-        result = plugin._download_torrent(self._seed(), "d1", "/downloads", [])
+        result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["10"])
         assert result is False
         assert plugin.exist == 1
         plugin._downloader.get_downloader.assert_not_called()
@@ -148,7 +148,7 @@ class TestDownloadTorrent:
         plugin = _make_plugin()
         _mock_helper(plugin).get_torrent_url.return_value = ("api.m-team.cc", "api/torrent/genDlToken", 2)
         plugin._sites.get_sites.return_value = {"id": 1}
-        result = plugin._download_torrent(self._seed(), "d1", "/downloads", [])
+        result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["10"])
         assert result is False
         assert plugin.fail == 1
 
@@ -157,7 +157,7 @@ class TestDownloadTorrent:
         _mock_helper(plugin).get_torrent_url.return_value = ("totheglory.im", "dl/{}/{passkey}", 2)
         plugin._sites.get_sites.return_value = {"id": 1, "cookie": "c", "ua": "UA", "proxy": False}
         plugin._downloader.get_torrents.return_value = []
-        result = plugin._download_torrent(self._seed(), "d1", "/downloads", [])
+        result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["1"])
         assert result is False
         assert plugin.fail == 1
         plugin._downloader.get_downloader.assert_not_called()
@@ -180,10 +180,20 @@ class TestDownloadTorrent:
         client.add_torrent.return_value = False
         with patch(f"{MODULE}.HttpClient") as mock_http:
             mock_http.return_value.get.return_value = MagicMock(content=b"torrent-bytes")
-            result = plugin._download_torrent(self._seed(), "d1", "/downloads", [])
+            result = plugin._download_torrent(self._seed(), "d1", "/downloads", ["10"])
         assert result is False
         assert plugin.fail == 1
         assert "d1" not in plugin._recheck_torrents
+
+    def test_sites_cfg_empty_skips_all(self):
+        """留空 sites_cfg 时所有站点都不辅种"""
+        plugin = _make_plugin()
+        _mock_helper(plugin).get_torrent_url.return_value = ("pt.example.com", "download.php?id={}", 2)
+        plugin._sites.get_sites.return_value = {"id": 10}
+        plugin._downloader.get_torrents.return_value = []
+        result = plugin._download_torrent(self._seed(), "d1", "/downloads", [])
+        assert result is False
+        assert plugin.realtotal == 0
 
 
 class TestIyuuHelperGetTorrentUrl:
