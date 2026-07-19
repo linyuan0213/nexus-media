@@ -4,8 +4,11 @@
 ## v4.3.5 (2026-07-19)
 
 ### 修复
-- RateLimitEngine 限流解析支持 `1/2s` 等分数间隔格式
-- RateLimitEngine token_bucket 路径补 `timeout>0` 阻塞循环（Redis 后端之前等效不等待）
+- RateLimitEngine 限流解析支持 `1/2s`/`1/30s` 等分数间隔格式
+- RateLimitEngine token_bucket 路径补 `timeout>0` 阻塞循环（Redis/Memory 双后端统一）
+- Redis 限流后端 backend_rate 修正（不再乘 1000，Lua 脚本内部已处理 ms→s 转换）
+- Redis 后端 NOSCRIPT 异常重载脚本重试
+- IYUU 默认限流调整为 `1/30s`（匹配 reportExisting ~1 次/分钟的限制，避免触发冷却封禁）
 
 ## v4.3.4 (2026-07-19)
 

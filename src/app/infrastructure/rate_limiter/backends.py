@@ -191,19 +191,26 @@ class RedisTokenBucketBackend(RateLimitBackend):
         return self._redis.script_load(self._TOKEN_BUCKET_SCRIPT)
 
     def acquire(self, key, rate, burst, tokens, timeout) -> bool:
+        """原子化获取许可。NOSCRIPT 时自动重载脚本重试。"""
         if not self._redis.is_available():
             return True
         now_ms = int(time.time() * 1000)
-        try:
-            if self._script_sha is None:
-                self._script_sha = self._load_script()
-            if self._script_sha:
-                result = self._redis.evalsha(self._script_sha, 1, key, rate, burst, tokens, now_ms)
-                return bool(result)
-            return True
-        except Exception as e:
-            log.debug(f"RedisTokenBucketBackend 限流检查失败 {key}: {e}")
-            return True
+        for _ in range(2):
+            try:
+                if self._script_sha is None:
+                    self._script_sha = self._load_script()
+                if self._script_sha:
+                    result = self._redis.evalsha(self._script_sha, 1, key, rate, burst, tokens, now_ms)
+                    return bool(result)
+                return True
+            except Exception as e:
+                err = str(e)
+                if "NOSCRIPT" in err:
+                    self._script_sha = None
+                    continue
+                log.warn(f"RedisTokenBucketBackend 限流异常 {key}: {e}")
+                return True
+        return True
 
     def get_status(self, key=None) -> dict:
         return {}
@@ -255,9 +262,9 @@ class RateLimitEngine:
             if self._sliding_window_backend is None:
                 self._sliding_window_backend = MemorySlidingWindowBackend()
             return self._sliding_window_backend.acquire(key, rate_per_sec, burst, tokens, timeout)
-        # Redis 后端无阻塞循环，引擎层统一补阻塞逻辑（仅 timeout>0 时生效）
-        # 引擎循环内按立即模式检查后端（避免与 Memory 后端自有阻塞重复等待）
-        backend_rate = rate_per_sec * 1000 if isinstance(self._backend, RedisTokenBucketBackend) else rate_per_sec
+        # 引擎层统一补阻塞循环（仅 timeout>0 时生效，兼容 timeout=None 非阻塞语义）
+        # Lua 脚本内部已处理 ms→s 转换，rate 应为每秒令牌数
+        backend_rate = rate_per_sec
         if timeout is not None and timeout > 0:
             deadline = time.time() + timeout
             while True:
