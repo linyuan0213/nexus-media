@@ -1,5 +1,12 @@
 # 版本历史
 
+
+## v4.3.5 (2026-07-19)
+
+### 修复
+- RateLimitEngine 限流解析支持 `1/2s` 等分数间隔格式
+- RateLimitEngine token_bucket 路径补 `timeout>0` 阻塞循环（Redis 后端之前等效不等待）
+
 ## v4.3.4 (2026-07-19)
 
 ### 修复
