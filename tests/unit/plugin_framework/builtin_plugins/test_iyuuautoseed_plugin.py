@@ -71,12 +71,15 @@ class TestDownloadTorrent:
         )
         plugin._sites.get_sites.return_value = {
             "id": 10,
+            "name": "Example",
+            "note": {"tag": True},
             "cookie": "uid=1",
             "ua": "UA",
             "proxy": False,
         }
         plugin.ctx.site_engine.resolve_download_url.return_value = "https://pt.example.com/dl/123.torrent"
         plugin._downloader.get_torrents.return_value = []
+        plugin._downloader.get_downloader_conf.return_value = {"only_nexus_media": True}
         client = MagicMock()
         client.add_torrent.return_value = True
         plugin._downloader.get_downloader.return_value = client
@@ -100,7 +103,10 @@ class TestDownloadTorrent:
         assert plugin.success == 1
         plugin.ctx.site_engine.resolve_download_url.assert_called_once()
         client.add_torrent.assert_called_once_with(
-            content=b"torrent-bytes", is_paused=True, download_dir="/downloads", tag=["已整理", "辅种"]
+            content=b"torrent-bytes",
+            is_paused=True,
+            download_dir="/downloads",
+            tag=["NEXUS_MEDIA", "Example", "已整理", "辅种"],
         )
         assert plugin._recheck_torrents["d1"] == ["deadbeef"]
 

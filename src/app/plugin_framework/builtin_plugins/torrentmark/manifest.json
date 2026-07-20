@@ -39,7 +39,7 @@
           "default": "0 0 * * *",
           "placeholder": "0 0 * * *",
           "help": "标记任务执行的时间周期，支持5位cron表达式"
-        }
+        },
         {
           "key": "downloaders",
           "type": "multi_select",

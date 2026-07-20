@@ -798,7 +798,7 @@ def send_plugin_message(
 class LogsRequest(BaseModel):
     source: str | None = None
     level: str | None = None
-    limit: int | None = 200
+    limit: int | None = 1000
 
 
 @router.post("/logs", response_model=CommonResponse, summary="获取日志")
