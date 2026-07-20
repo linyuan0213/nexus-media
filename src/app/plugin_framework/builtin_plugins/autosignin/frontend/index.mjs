@@ -35,7 +35,7 @@ export default function(host) {
         if (!rc) return;
         loading.value = true;
         try {
-          const res = await rc.get('/plugin-framework/plugins/autosignin/data/signin_history.json');
+          const res = await rc.get('/plugin-framework/plugins/autosignin/data/history.json');
           historyData.value = res || {};
         } catch (e) {
           console.error('[AutoSignIn] 获取签到历史失败:', e);
