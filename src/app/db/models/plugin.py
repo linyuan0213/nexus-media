@@ -50,7 +50,7 @@ class TORRENTREMOVETASK(Base):
     ONLY_NEXUS_MEDIA: Mapped[int] = mapped_column(Integer)
     DOWNLOADER: Mapped[str] = mapped_column(String(255))
     CONFIG: Mapped[str] = mapped_column(Text)
-    NOTE: Mapped[str] = mapped_column(Text)
+    NOTE: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class USERRSSTASKHISTORY(Base):
