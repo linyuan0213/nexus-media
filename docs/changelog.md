@@ -1,5 +1,11 @@
 # 版本历史
 
+## v4.3.8 (2026-07-20)
+
+### 修复
+- 删除任务：`TORRENT_REMOVE_TASK.NOTE` 列改为 nullable，修复插入时 `NOT NULL constraint failed` 错误
+- 自动签到：前端历史记录请求文件路径从 `signin_history.json` 修正为 `history.json`，解决签到历史页面空白问题
+
 ## v4.3.7 (2026-07-20)
 
 ### 修复
