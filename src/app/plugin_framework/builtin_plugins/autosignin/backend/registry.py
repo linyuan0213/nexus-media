@@ -75,9 +75,6 @@ class HandlerRegistry:
     def get_fallback(self, site_id: str | None) -> HandlerFactory | None:
         if not site_id or not self._fallback_http_config:
             return None
-        site_def = self._site_engine.get_by_id(site_id)
-        if site_def and site_def.api:
-            return None
         return lambda: HttpSigninHandler(self._plugin_ctx, self._rate_limiter, self._fallback_http_config)
 
     def get_generic(self) -> HandlerFactory:
