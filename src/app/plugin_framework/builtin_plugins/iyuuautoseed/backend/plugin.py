@@ -8,6 +8,7 @@ from threading import Event
 from typing import Any
 
 import log
+from app.core.constants import PT_TAG
 from app.plugin_framework.builtin_plugins.iyuuautoseed.backend.iyuu.iyuu_helper import IyuuHelper
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent, TorrentStatus
@@ -124,6 +125,11 @@ class IYUUAutoSeedPlugin:
             self._stop_event.set()
         self._stop_event.clear()
         self._scheduler_thread = self.ctx.schedule_cron("iyuuautoseed", lambda: self._do_seed(manual=False), cron)
+
+    def run(self):
+        """手动触发立即执行（兼容调度任务/插件框架 run_plugin）"""
+        self.ctx.info("手动触发IYUU自动辅种")
+        self._do_seed(manual=True)
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -253,6 +259,21 @@ class IYUUAutoSeedPlugin:
             log.warn(f"[IYUU] 解析下载链接失败 {site_info.get('name')}: {e}")
             return None
 
+    def _build_tags(self, site_info, downloader_id):
+        tags = list(self._torrent_tags)
+        site_tag = None
+        note = site_info.get("note") or {}
+        if site_info and note.get("tag"):
+            site_tag = site_info.get("name", "")
+            if site_tag and site_tag not in tags:
+                tags.append(site_tag)
+        downloader_conf = self._downloader.get_downloader_conf(downloader_id) if downloader_id else None
+        if downloader_conf and downloader_conf.get("only_nexus_media") and PT_TAG not in tags:
+            tags.append(PT_TAG)
+        if tags:
+            tags.sort(key=lambda x: (0 if x == PT_TAG else 1 if x == site_tag else 2, x))
+        return tags
+
     def _download_torrent(self, seed, downloader_id, save_path, sites_cfg):
         if not self.iyuuhelper:
             self.fail += 1
@@ -305,7 +326,7 @@ class IYUUAutoSeedPlugin:
             content=content,
             is_paused=True,
             download_dir=save_path,
-            tag=self._torrent_tags,
+            tag=self._build_tags(site_info, downloader_id),
         )
         if ret:
             self.success += 1

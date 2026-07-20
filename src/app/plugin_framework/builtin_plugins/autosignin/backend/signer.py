@@ -8,16 +8,14 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.registry import Han
 
 
 def _should_browser_fallback(msg: str) -> bool:
-    """判断 HTTP 签到失败是否需要回退到浏览器模式（403/HTML响应/468）"""
+    """判断 HTTP 签到失败是否需要回退到浏览器模式（HTML/403/468）"""
     if not msg:
         return False
-    if "签到接口返回" in msg:
-        body = msg.split("签到接口返回 ", 1)[-1] if "签到接口返回" in msg else msg
-        if any(tag in body[:500] for tag in ["<!DOCTYPE", "<html", "<HTML"]):
-            return True
-    if "403 Forbidden" in msg or "Client error '403'" in msg:
+    if "403 Forbidden" in msg or "403" in msg and "Forbidden" in msg:
         return True
     if "468" in msg:
+        return True
+    if any(tag in msg for tag in ["<!DOCTYPE", "<html", "<HTML"]):
         return True
     return False
 
@@ -132,6 +130,12 @@ class SigninEngine:
             return msg
         except Exception as e:
             self.ctx.warn(f"站点 {site_ctx.site} 签到异常: {e}")
+            # 异常也可能是浏览器相关（403/Cloudflare），尝试回退
+            if not site_ctx.is_browser and _should_browser_fallback(str(e)):
+                self.ctx.info(f"站点 {site_ctx.site} 异常疑似需要浏览器，自动回退")
+                br_ctx = SiteSigninContext.from_site_info(site_info, self._site_engine)
+                br_ctx.is_browser = True
+                return self._signin_with_browser_fallback(br_ctx)
             return f"[{site_ctx.site}]签到失败：{str(e)}"
 
     def _signin_with_browser_fallback(self, site_ctx: SiteSigninContext) -> str:
