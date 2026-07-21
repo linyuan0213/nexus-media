@@ -10,6 +10,7 @@
 - 消息客户端：修复 `delete_message_client` 返回 `None` 导致 API 返回失败、前端无法删除消息客户端的问题
 - 消息客户端：修复 `upsert_client` 修改时删除旧记录再插入新记录导致 ID 变化、产生重复客户端的问题，改为存在 `cid` 时直接更新原记录
 - 消息客户端：修复 `ClientManager._ensure_loaded()` 只加载一次、不刷新已有客户端 `interactive`/`enabled` 状态的问题，导致开启交互后仍提示 `WeChat client not configured`
+- 消息客户端：修复 `active_interactive_clients` 用字符串 `search_type` 作为 key，但 Telegram / 微信 / Slack / Synology Chat 的 Webhook 与 `MessageDispatcher` 使用 `SearchType` 枚举查询，导致所有交互式客户端都匹配不到、提示未配置的问题
 
 ### 数据库迁移
 - 新增迁移：将 `RBAC_USER_LOGIN_LOGS.USER_ID` 改为 nullable

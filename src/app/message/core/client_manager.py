@@ -1,6 +1,7 @@
 """ClientManager - 消息客户端生命周期管理."""
 
 import json
+from enum import Enum
 from typing import Any, cast
 
 import log
@@ -182,9 +183,10 @@ class ClientManager:
 
     def get_interactive_client(self, client_type: Any = None) -> Any:
         self._ensure_loaded()
-        if client_type:
-            return self._active_interactive_clients.get(client_type)
-        return list(self._active_interactive_clients.values())
+        if not client_type:
+            return list(self._active_interactive_clients.values())
+        key = client_type.name if isinstance(client_type, Enum) else client_type
+        return self._active_interactive_clients.get(key)
 
     def delete_message_client(self, cid: Any) -> Any:
         self._ensure_loaded()
