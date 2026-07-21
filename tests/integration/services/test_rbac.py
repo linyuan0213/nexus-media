@@ -30,6 +30,7 @@ class TestRBACAuthService:
         assert result is False
         assert "用户名或密码错误" in msg
         log_repo.add_login_log.assert_called_once()
+        assert log_repo.add_login_log.call_args.kwargs.get("user_id") is None
 
     def test_authenticate_user_disabled(self):
         user_repo = MagicMock()

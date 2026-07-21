@@ -100,6 +100,13 @@ class WeChat(_IMessageClient):
         self._message = message
         super().__init__(config, apikey_service, message=message)
 
+    def _normalize_proxy_url(self, base: str) -> str:
+        """统一代理地址格式，缺少 scheme 时默认补 https://。"""
+        base = base.strip()
+        if not base.startswith(("http://", "https://")):
+            base = f"https://{base}"
+        return base.rstrip("/")
+
     def read_config(self):
         cfg = self._config or {}
         self.corpid = cfg.get("corpid")
@@ -109,6 +116,7 @@ class WeChat(_IMessageClient):
         self._use_proxy = cfg.get("default_proxy", False)
         if self._use_proxy:
             base = self._use_proxy if isinstance(self._use_proxy, str) else self._proxy_url
+            base = self._normalize_proxy_url(base)
             self._send_msg_url = f"{base}/cgi-bin/message/send?access_token=%s"
             self._token_url = f"{base}/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
             self._menu_url = f"{base}/cgi-bin/menu/create?access_token=%s&agentid=%s"
