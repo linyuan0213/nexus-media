@@ -116,7 +116,7 @@ class IRBACLogRepository(Protocol):
 
     def add_login_log(
         self,
-        user_id: int,
+        user_id: int | None,
         username: str,
         login_ip: str | None = None,
         login_location: str | None = None,

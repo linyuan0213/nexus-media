@@ -1,5 +1,20 @@
 # 版本历史
 
+## v4.3.10 (2026-07-21)
+
+### 修复
+- RBAC 登录日志：用户不存在时 `user_id` 由 `0` 改为 `NULL`，并允许 `RBAC_USER_LOGIN_LOGS.USER_ID` 为 nullable，修复外键约束失败导致登录异常报 `IntegrityError`
+- 企业微信消息：代理地址 `default_proxy` 缺少 scheme 时自动补全为 `https://`，修复 `unknown url type` 错误
+- 企业微信消息：新增 `GET /wechat` URL 验证与 `POST /wechat` 消息接收，支持 Token 签名校验和 AES 加密消息解密，返回 `success` 响应
+- Telegram：新增 `secret_token` 配置，支持 Telegram 官方 `X-Telegram-Bot-Api-Secret-Token` 头部验证；同时修复 webhook 模式下 `_webhook_url` 从未被赋值的 bug
+
+### 数据库迁移
+- 新增迁移：将 `RBAC_USER_LOGIN_LOGS.USER_ID` 改为 nullable
+
+### 测试
+- 新增 `WeChat` 代理地址规范化、URL 验证、消息解析/解密单元测试
+- 新增 `Telegram` Webhook URL 构造与 `secret_token` 单元测试
+
 ## v4.3.9 (2026-07-21)
 
 ### 修复

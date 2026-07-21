@@ -1,5 +1,12 @@
+import base64
+import hashlib
+import struct
 from datetime import datetime
 from threading import Lock
+
+import defusedxml.ElementTree as ET
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 import log
 from app.infrastructure.http.client import HttpClient
@@ -92,6 +99,8 @@ class WeChat(_IMessageClient):
         self.corpid = None
         self.corpsecret = None
         self.agent_id = None
+        self.token = None
+        self.encoding_aes_key = None
         self.interactive = False
         self._use_proxy = False
         self._access_token = None
@@ -100,18 +109,110 @@ class WeChat(_IMessageClient):
         self._message = message
         super().__init__(config, apikey_service, message=message)
 
+    def _normalize_proxy_url(self, base: str) -> str:
+        """统一代理地址格式，缺少 scheme 时默认补 https://。"""
+        base = base.strip()
+        if not base.startswith(("http://", "https://")):
+            base = f"https://{base}"
+        return base.rstrip("/")
+
     def read_config(self):
         cfg = self._config or {}
         self.corpid = cfg.get("corpid")
         self.corpsecret = cfg.get("corpsecret")
         self.agent_id = cfg.get("agentid")
+        self.token = cfg.get("token")
+        self.encoding_aes_key = cfg.get("encodingAESKey")
         self.interactive = cfg.get("interactive", False)
         self._use_proxy = cfg.get("default_proxy", False)
         if self._use_proxy:
             base = self._use_proxy if isinstance(self._use_proxy, str) else self._proxy_url
+            base = self._normalize_proxy_url(base)
             self._send_msg_url = f"{base}/cgi-bin/message/send?access_token=%s"
             self._token_url = f"{base}/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
             self._menu_url = f"{base}/cgi-bin/menu/create?access_token=%s&agentid=%s"
+
+    def _verify_signature(self, signature: str, timestamp: str, nonce: str, *extras: str) -> bool:
+        """验证企业微信签名（sha1(token, timestamp, nonce, *extras)）。"""
+        if not self.token:
+            return False
+        parts = [self.token, timestamp, nonce, *extras]
+        parts.sort()
+        expected = hashlib.sha1("".join(parts).encode("utf-8")).hexdigest()
+        return expected == signature
+
+    def _decrypt_aes(self, encrypted: str) -> bytes:
+        """使用 EncodingAESKey 解密企业微信 AES 消息。"""
+        if not self.encoding_aes_key:
+            return b""
+        try:
+            key = base64.b64decode(self.encoding_aes_key + "=")
+            if len(key) != 32:
+                return b""
+            iv = key[:16]
+            ciphertext = base64.b64decode(encrypted)
+            cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+            decryptor = cipher.decryptor()
+            unpadder = padding.PKCS7(128).unpadder()
+            padded = decryptor.update(ciphertext) + decryptor.finalize()
+            plaintext = unpadder.update(padded) + unpadder.finalize()
+            msg_len = struct.unpack(">I", plaintext[16:20])[0]
+            msg = plaintext[20 : 20 + msg_len]
+            appid = plaintext[20 + msg_len :].decode("utf-8")
+            if appid != self.corpid:
+                return b""
+            return msg
+        except Exception:
+            return b""
+
+    def verify_url(self, signature: str, timestamp: str, nonce: str, echostr: str) -> bytes | None:
+        """验证企业微信回调 URL，成功返回解密后的 echostr 字节，失败返回 None。"""
+        if not self._verify_signature(signature, timestamp, nonce, echostr):
+            return None
+        if self.encoding_aes_key:
+            return self._decrypt_aes(echostr)
+        return echostr.encode("utf-8")
+
+    def _verify_message_signature(self, signature: str, timestamp: str, nonce: str, encrypt: str | None = None) -> bool:
+        """验证企业微信消息签名（加密模式包含 Encrypt 字段）。"""
+        if not self.token:
+            return False
+        parts = [self.token, timestamp, nonce]
+        if encrypt:
+            parts.append(encrypt)
+        parts.sort()
+        expected = hashlib.sha1("".join(parts).encode("utf-8")).hexdigest()
+        return expected == signature
+
+    def parse_message(self, xml_text: str, signature: str = "", timestamp: str = "", nonce: str = "") -> dict | None:
+        """解析并验证企业微信消息 XML，支持加密/明文模式。"""
+        try:
+            root = ET.fromstring(xml_text)
+        except ET.ParseError:
+            return None
+
+        encrypt = root.findtext("Encrypt")
+        if encrypt and self.encoding_aes_key:
+            if signature and not self._verify_message_signature(signature, timestamp, nonce, encrypt):
+                return None
+            decrypted = self._decrypt_aes(encrypt)
+            if not decrypted:
+                return None
+            try:
+                root = ET.fromstring(decrypted)
+            except ET.ParseError:
+                return None
+        elif signature and not self._verify_message_signature(signature, timestamp, nonce):
+            return None
+
+        return {
+            "FromUserName": root.findtext("FromUserName", ""),
+            "ToUserName": root.findtext("ToUserName", ""),
+            "Content": root.findtext("Content", ""),
+            "MsgType": root.findtext("MsgType", ""),
+            "MsgId": root.findtext("MsgId", ""),
+            "AgentID": root.findtext("AgentID", ""),
+        }
 
     def setup(self):
         # 菜单不再在 setup() 中设置，避免后台线程延迟执行覆盖插件命令

@@ -336,8 +336,8 @@ class RBACUserLoginLog(Base):
     __tablename__ = "RBAC_USER_LOGIN_LOGS"
 
     ID: Mapped[int] = mapped_column(Integer, primary_key=True)
-    USER_ID: Mapped[int] = mapped_column(
-        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=False, index=True
+    USER_ID: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=True, index=True
     )
     USERNAME: Mapped[str] = mapped_column(String(255), nullable=False)
     LOGIN_IP: Mapped[str] = mapped_column(String(64), nullable=True)

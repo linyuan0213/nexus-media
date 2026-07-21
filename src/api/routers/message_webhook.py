@@ -5,7 +5,7 @@
 
 import asyncio
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 import log
 from api.deps import get_apikey_service, get_app_context, get_message
@@ -133,23 +133,86 @@ async def telegram_webhook(
     message: Message = Depends(get_message),
 ):
     """Telegram Bot Webhook"""
-    _verify_apikey(request, service)
+    _ensure_message_initialized(message)
     _verify_webhook_ip(SearchType.TG, request, message)
+
+    entry = message.active_interactive_clients.get(SearchType.TG)
+    client = entry.get("client") if entry else None
+    secret_token = getattr(client, "secret_token", None) if client else None
+
+    if secret_token:
+        header_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if header_token != secret_token:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Telegram secret token mismatch")
+    else:
+        _verify_apikey(request, service)
+
     data = await request.json()
     return await asyncio.to_thread(_handle_webhook, data, SearchType.TG, app_context, message)
+
+
+@router.get("/wechat", summary="微信 URL 验证")
+async def wechat_verify(
+    request: Request,
+    app_context: AppContext = Depends(get_app_context),
+    message: Message = Depends(get_message),
+):
+    """WeChat 企业微信/公众号回调 URL 验证"""
+    _ensure_message_initialized(message)
+
+    signature = request.query_params.get("signature", "")
+    timestamp = request.query_params.get("timestamp", "")
+    nonce = request.query_params.get("nonce", "")
+    echostr = request.query_params.get("echostr", "")
+
+    entry = message.active_interactive_clients.get(SearchType.WX)
+    if not entry or not entry.get("client"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="WeChat client not configured")
+
+    client = entry["client"]
+    if not hasattr(client, "verify_url"):
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="WeChat verify not supported")
+
+    result = client.verify_url(signature, timestamp, nonce, echostr)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="WeChat signature verification failed")
+
+    return Response(content=result, media_type="text/plain")
 
 
 @router.post("/wechat", summary="微信 Webhook")
 async def wechat_webhook(
     request: Request,
-    service: APIKeyService = Depends(get_apikey_service),
     app_context: AppContext = Depends(get_app_context),
     message: Message = Depends(get_message),
 ):
     """WeChat 企业微信/公众号 Webhook"""
-    _verify_apikey(request, service)
-    data = await request.json()
-    return await asyncio.to_thread(_handle_webhook, data, SearchType.WX, app_context, message)
+    _ensure_message_initialized(message)
+
+    signature = request.query_params.get("signature", "")
+    timestamp = request.query_params.get("timestamp", "")
+    nonce = request.query_params.get("nonce", "")
+
+    entry = message.active_interactive_clients.get(SearchType.WX)
+    if not entry or not entry.get("client"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="WeChat client not configured")
+
+    client = entry["client"]
+    if not hasattr(client, "parse_message"):
+        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="WeChat message parse not supported")
+
+    xml_text = (await request.body()).decode("utf-8")
+    msg = client.parse_message(xml_text, signature=signature, timestamp=timestamp, nonce=nonce)
+    if msg is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="WeChat message verification failed")
+
+    update = {
+        "FromUserName": msg.get("FromUserName", ""),
+        "Content": msg.get("Content", ""),
+    }
+    if update["Content"]:
+        await asyncio.to_thread(_handle_webhook, update, SearchType.WX, app_context, message)
+    return Response(content="success", media_type="text/plain")
 
 
 @router.post("/synologychat", summary="Synology Chat Webhook")
