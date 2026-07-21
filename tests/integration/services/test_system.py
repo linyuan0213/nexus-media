@@ -224,6 +224,43 @@ class TestSystemLifecycleService:
 class TestMessageClientService:
     """Test suite for MessageClientService."""
 
+    def test_upsert_client_update_when_cid_exists(self):
+        """存在 cid 时应调用 update_message_client，而不是删除后插入."""
+        message = MagicMock()
+        message.update_message_client.return_value = True
+        svc = MessageClientService(message)
+        svc.upsert_client(
+            name="tg",
+            cid=1,
+            ctype="telegram",
+            config='{"token": "x"}',
+            switches="[]",
+            interactive=1,
+            enabled=1,
+            templates="",
+        )
+        message.update_message_client.assert_called_once()
+        message.insert_message_client.assert_not_called()
+        message.delete_message_client.assert_not_called()
+
+    def test_upsert_client_insert_when_cid_is_zero(self):
+        """cid 为 0 时应调用 insert_message_client."""
+        message = MagicMock()
+        message.insert_message_client.return_value = True
+        svc = MessageClientService(message)
+        svc.upsert_client(
+            name="tg",
+            cid=0,
+            ctype="telegram",
+            config='{"token": "x"}',
+            switches="[]",
+            interactive=1,
+            enabled=1,
+            templates="",
+        )
+        message.insert_message_client.assert_called_once()
+        message.update_message_client.assert_not_called()
+
     def test_delete_client(self):
         message = MagicMock()
         message.delete_message_client.return_value = True
@@ -231,6 +268,14 @@ class TestMessageClientService:
         result = svc.delete_client(1)
         assert result is True
         message.delete_message_client.assert_called_once_with(cid=1)
+
+    def test_delete_client_returns_true_when_repo_returns_count(self):
+        """Repository 返回删除行数 1 时，服务层应返回 True."""
+        message = MagicMock()
+        message.delete_message_client.return_value = 1
+        svc = MessageClientService(message)
+        result = svc.delete_client(1)
+        assert result is True
 
     def test_get_client(self):
         message = MagicMock()

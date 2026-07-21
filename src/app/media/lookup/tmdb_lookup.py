@@ -505,6 +505,12 @@ class TmdbLookup(BaseLookup):
         target.tmdb_info = source.tmdb_info or target.tmdb_info
         target.type = source.type or target.type
         target.year = source.year or target.year
+        # 搜索结果的 media_info 通常只有文件名解析出的基础信息，缺少图片，
+        # 合并时把原始匹配媒体的图片字段也带过来，避免后续下载通知取不到图片
+        target.poster_path = target.poster_path or source.poster_path
+        target.backdrop_path = target.backdrop_path or source.backdrop_path
+        target.fanart_backdrop = target.fanart_backdrop or source.fanart_backdrop
+        target.fanart_poster = target.fanart_poster or source.fanart_poster
         return target
 
     @staticmethod

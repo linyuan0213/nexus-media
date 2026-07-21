@@ -577,6 +577,8 @@ class MediaService:
                     info.tmdb_id = looked_up.tmdb_id
                     info.title = looked_up.title
                     info.year = looked_up.year
+                    info.poster_path = looked_up.poster_path
+                    info.backdrop_path = looked_up.backdrop_path
                     info.tmdb_info = {
                         "id": looked_up.tmdb_id,
                         "title": looked_up.title,

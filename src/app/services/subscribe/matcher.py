@@ -94,7 +94,7 @@ class SubscribeMatcher:
                 break
 
         # ---------- 匹配电视剧 ----------
-        elif rss_tvs:
+        elif media_info.type != MediaType.MOVIE and rss_tvs:
             for _rid, rss_info in rss_tvs.items():
                 rss_sites = rss_info.get("rss_sites")
                 if rss_sites and media_info.site not in rss_sites:
