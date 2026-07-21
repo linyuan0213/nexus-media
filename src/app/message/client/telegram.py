@@ -86,6 +86,15 @@ class Telegram(_IMessageClient):
                 placeholder="::/0",
                 advanced=True,
             ),
+            ConfigField(
+                id="secret_token",
+                required=False,
+                title="Webhook Secret Token",
+                tooltip="Telegram 官方 Webhook 安全令牌，留空使用 API Key 校验",
+                type="text",
+                placeholder="随机字符串",
+                advanced=True,
+            ),
         ],
     )
     _setup_done = set()
@@ -95,6 +104,7 @@ class Telegram(_IMessageClient):
         self.chat_id = None
         self.webhook = False
         self.interactive = False
+        self.secret_token = None
         self._webhook_url = None
         self._admin_ids = []
         self._user_ids = []
@@ -112,10 +122,12 @@ class Telegram(_IMessageClient):
         self.chat_id = cfg.get("chat_id")
         self.webhook = cfg.get("webhook", False)
         self.interactive = cfg.get("interactive", False)
+        self.secret_token = cfg.get("secret_token")
         self._admin_ids = cfg.get("admin_ids") or []
         self._user_ids = cfg.get("user_ids") or []
         self._domain = get_domain()
         self._api_key = self._apikey_service.get_or_create_system_key("MessageWebhook")
+        self._webhook_url = f"{self._domain}/telegram?apikey={self._api_key}"
         admin_ids = cfg.get("admin_ids")
         if admin_ids and not isinstance(admin_ids, list):
             self._admin_ids = [admin_ids]
@@ -296,6 +308,8 @@ class Telegram(_IMessageClient):
             if status == 2:
                 self._del_webhook()
             values = {"url": self._webhook_url, "allowed_updates": ["message"]}
+            if self.secret_token:
+                values["secret_token"] = self.secret_token
             url = f"https://api.telegram.org/bot{self.token}/setWebhook?" + urlencode(values)
             try:
                 proxies = get_proxies()
