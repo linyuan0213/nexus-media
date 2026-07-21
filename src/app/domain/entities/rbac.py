@@ -308,7 +308,7 @@ class RBACUserLoginLogEntity:
     """RBAC登录日志实体"""
 
     id: int
-    user_id: int
+    user_id: int | None
     username: str
     login_ip: str | None
     login_location: str | None

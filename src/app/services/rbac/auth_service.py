@@ -19,7 +19,7 @@ class RBACAuthService:
 
         if not user:
             self.log_repo.add_login_log(
-                user_id=0,
+                user_id=None,
                 username=username,
                 login_ip=login_ip,
                 user_agent=user_agent,

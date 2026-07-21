@@ -1,5 +1,17 @@
 # 版本历史
 
+## v4.3.10 (2026-07-21)
+
+### 修复
+- RBAC 登录日志：用户不存在时 `user_id` 由 `0` 改为 `NULL`，并允许 `RBAC_USER_LOGIN_LOGS.USER_ID` 为 nullable，修复外键约束失败导致登录异常报 `IntegrityError`
+- 企业微信消息：代理地址 `default_proxy` 缺少 scheme 时自动补全为 `https://`，修复 `unknown url type` 错误
+
+### 数据库迁移
+- 新增迁移：将 `RBAC_USER_LOGIN_LOGS.USER_ID` 改为 nullable
+
+### 测试
+- 新增 `WeChat` 代理地址规范化单元测试
+
 ## v4.3.9 (2026-07-21)
 
 ### 修复
