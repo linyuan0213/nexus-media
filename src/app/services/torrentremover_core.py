@@ -9,6 +9,7 @@ from app.db.repositories.config_repo_adapter import TorrentRemoveTaskRepositoryA
 from app.domain.entities.config import TorrentRemoveTaskEntity
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.message import Message
+from app.schemas.download import TorrentStatus
 from app.services.downloader_core import DownloaderCore
 from app.services.scheduler.core import SchedulerCore
 from app.utils import ExceptionUtils
@@ -219,8 +220,7 @@ class TorrentRemoverService:
         savepath_key = data.get("savepath_key")
         tracker_key = data.get("tracker_key")
         downloader_id = data.get("downloader")
-        client = self._downloader.get_downloader(str(downloader_id))
-        valid_states = [s.name for s in client._supported_statuses] if client else []
+        valid_states = {s.name for s in TorrentStatus}
 
         filter_status = []
         if data.get("filter_status"):
