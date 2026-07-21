@@ -78,12 +78,27 @@ class ClientManager:
     def _ensure_loaded(self):
         if not self.config_repo:
             return
-        loaded_ids = set(self._client_configs.keys())
-        for client_config in self.config_repo.get_message_client() or []:
-            cid = str(client_config.ID)
-            if cid in loaded_ids:
+        db_clients = {str(c.ID): c for c in self.config_repo.get_message_client() or []}
+
+        # Remove clients that no longer exist in DB or are disabled/empty
+        for cid in list(self._client_configs.keys()):
+            if cid not in db_clients:
+                self._remove_client(cid)
                 continue
-            if cast(bool, client_config.ENABLED) and str(client_config.CONFIG):
+            client_config = db_clients[cid]
+            if not (cast(bool, client_config.ENABLED) and str(client_config.CONFIG)):
+                self._remove_client(cid)
+
+        # Add new clients or refresh existing ones when interactive/enabled changed
+        for cid, client_config in db_clients.items():
+            if not (cast(bool, client_config.ENABLED) and str(client_config.CONFIG)):
+                continue
+            old_config = self._client_configs.get(cid)
+            if old_config is None:
+                self._add_client_from_config(client_config)
+            elif old_config.get("interactive") != bool(client_config.INTERACTIVE) or old_config.get("enabled") != bool(
+                client_config.ENABLED
+            ):
                 self._add_client_from_config(client_config)
 
     def _add_client_from_config(self, client_config):
@@ -194,6 +209,17 @@ class ClientManager:
                     self.refresh_client(c.get("id"))
         return ret
 
+    def update_message_client(self, cid: int, **kwargs) -> bool:
+        """更新消息客户端并刷新内存缓存."""
+        self._ensure_loaded()
+        if not self.config_repo:
+            return False
+        updated_id = self.config_repo.update_message_client(cid=cid, **kwargs)
+        if updated_id:
+            self.refresh_client(cid)
+            return True
+        return False
+
     def insert_message_client(
         self,
         name: str,
@@ -205,6 +231,7 @@ class ClientManager:
         note: str = "",
         templates: Any = None,
     ) -> bool:
+        """新增消息客户端."""
         self._ensure_loaded()
         if not self.config_repo:
             return False

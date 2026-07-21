@@ -61,19 +61,29 @@ class MessageClientService:
                 parsed_switches = [s.strip() for s in switches.split(",") if s.strip()]
         if not isinstance(parsed_switches, list):
             parsed_switches = []
-        if cid:
-            self._message.delete_message_client(cid=cid)
         if int(interactive) == 1:
             self._message.check_message_client(interactive=0, ctype=ctype)
-        self._message.insert_message_client(
-            name=name,
-            ctype=ctype,
-            config=config,
-            switches=parsed_switches,
-            interactive=interactive,
-            enabled=enabled,
-            templates=templates,
-        )
+        if cid:
+            self._message.update_message_client(
+                cid=cid,
+                name=name,
+                ctype=ctype,
+                config=config,
+                switches=parsed_switches,
+                interactive=interactive,
+                enabled=enabled,
+                templates=templates,
+            )
+        else:
+            self._message.insert_message_client(
+                name=name,
+                ctype=ctype,
+                config=config,
+                switches=parsed_switches,
+                interactive=interactive,
+                enabled=enabled,
+                templates=templates,
+            )
 
 
 class MessageSenderService:

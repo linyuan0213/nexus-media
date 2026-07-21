@@ -34,7 +34,7 @@ class ConfigRepository(BaseRepository):
 
     # ==================== Message Client ====================
 
-    def delete_message_client(self, cid: int | None) -> None:
+    def delete_message_client(self, cid: int | None) -> int:
         """
         删除消息服务器
 
@@ -42,9 +42,9 @@ class ConfigRepository(BaseRepository):
             cid: 客户端ID
         """
         if not cid:
-            return
+            return 0
         with self.session() as db:
-            db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).delete()
+            return db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).delete()
 
     def get_message_client(self, cid: int | None = None) -> list[MESSAGECLIENT]:
         with self.session() as db:
@@ -75,6 +75,34 @@ class ConfigRepository(BaseRepository):
         )
         with self.session() as db:
             db.add(client)
+            db.flush()
+            return int(client.ID)
+
+    def update_message_client(
+        self,
+        cid: int,
+        name: str,
+        ctype: str,
+        config: str,
+        switches: list,
+        interactive: int,
+        enabled: int,
+        note: str = "",
+        templates: str | None = None,
+    ) -> int:
+        """更新消息客户端配置，返回客户端 ID."""
+        with self.session() as db:
+            client = db.query(MESSAGECLIENT).filter(int(cid) == MESSAGECLIENT.ID).first()
+            if not client:
+                return 0
+            client.NAME = name
+            client.TYPE = ctype
+            client.CONFIG = config
+            client.SWITCHES = JsonUtils.dumps(switches)
+            client.INTERACTIVE = int(interactive)
+            client.ENABLED = int(enabled)
+            client.NOTE = note
+            client.TEMPLATES = JsonUtils.dumps(templates) if templates else None
             db.flush()
             return int(client.ID)
 
