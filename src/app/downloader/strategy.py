@@ -28,9 +28,19 @@ class RemoveStrategy:
         if isinstance(filter_tags, str):
             filter_tags = [filter_tags]
 
-        filter_status = config.get("filter_status") or []
-        if filter_status and not isinstance(filter_status, list):
-            filter_status = [filter_status]
+        filter_status_raw = config.get("filter_status") or []
+        if filter_status_raw and not isinstance(filter_status_raw, list):
+            filter_status_raw = [filter_status_raw]
+
+        filter_status: list[TorrentStatus] = []
+        for s in filter_status_raw:
+            if isinstance(s, str):
+                try:
+                    filter_status.append(TorrentStatus[s])
+                except KeyError:
+                    pass
+            elif isinstance(s, TorrentStatus):
+                filter_status.append(s)
 
         return cls(
             filter_tags=filter_tags,

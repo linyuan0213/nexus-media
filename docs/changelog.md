@@ -1,5 +1,14 @@
 # 版本历史
 
+## v4.3.9 (2026-07-21)
+
+### 修复
+- 自动删种：修复 `filter_status` 按下载器支持状态校验导致 `Stopped` 等全局状态保存失败的问题
+- 自动删种：修复 `RemoveStrategy.from_dict` 未将字符串状态转换为 `TorrentStatus` 枚举，导致状态过滤不生效的问题
+
+### 测试
+- 新增 `TorrentRemoverService` 与 `RemoveStrategy` 状态校验/转换单元测试
+
 ## v4.3.8 (2026-07-20)
 
 ### 修复
