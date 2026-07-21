@@ -22,7 +22,7 @@ router = APIRouter()
 
 def _verify_webhook_ip(channel: SearchType, request: Request, message: Message) -> None:
     """从对应消息客户端配置读取 IP 白名单并进行校验。"""
-    entry = message.active_interactive_clients.get(channel)
+    entry = message.get_interactive_client(channel)
     if entry and entry.get("client"):
         allow_ips = entry["client"].get_webhook_allow_ip()
     else:
@@ -136,7 +136,7 @@ async def telegram_webhook(
     _ensure_message_initialized(message)
     _verify_webhook_ip(SearchType.TG, request, message)
 
-    entry = message.active_interactive_clients.get(SearchType.TG)
+    entry = message.get_interactive_client(SearchType.TG)
     client = entry.get("client") if entry else None
     secret_token = getattr(client, "secret_token", None) if client else None
 
@@ -160,12 +160,12 @@ async def wechat_verify(
     """WeChat 企业微信/公众号回调 URL 验证"""
     _ensure_message_initialized(message)
 
-    signature = request.query_params.get("signature", "")
+    signature = request.query_params.get("msg_signature", "") or request.query_params.get("signature", "")
     timestamp = request.query_params.get("timestamp", "")
     nonce = request.query_params.get("nonce", "")
     echostr = request.query_params.get("echostr", "")
 
-    entry = message.active_interactive_clients.get(SearchType.WX)
+    entry = message.get_interactive_client(SearchType.WX)
     if not entry or not entry.get("client"):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="WeChat client not configured")
 
@@ -189,11 +189,11 @@ async def wechat_webhook(
     """WeChat 企业微信/公众号 Webhook"""
     _ensure_message_initialized(message)
 
-    signature = request.query_params.get("signature", "")
+    signature = request.query_params.get("msg_signature", "") or request.query_params.get("signature", "")
     timestamp = request.query_params.get("timestamp", "")
     nonce = request.query_params.get("nonce", "")
 
-    entry = message.active_interactive_clients.get(SearchType.WX)
+    entry = message.get_interactive_client(SearchType.WX)
     if not entry or not entry.get("client"):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="WeChat client not configured")
 

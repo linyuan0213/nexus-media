@@ -7,6 +7,11 @@
 - 企业微信消息：代理地址 `default_proxy` 缺少 scheme 时自动补全为 `https://`，修复 `unknown url type` 错误
 - 企业微信消息：新增 `GET /wechat` URL 验证与 `POST /wechat` 消息接收，支持 Token 签名校验和 AES 加密消息解密，返回 `success` 响应
 - Telegram：新增 `secret_token` 配置，支持 Telegram 官方 `X-Telegram-Bot-Api-Secret-Token` 头部验证；同时修复 webhook 模式下 `_webhook_url` 从未被赋值的 bug
+- 消息客户端：修复 `delete_message_client` 返回 `None` 导致 API 返回失败、前端无法删除消息客户端的问题
+- 消息客户端：修复 `upsert_client` 修改时删除旧记录再插入新记录导致 ID 变化、产生重复客户端的问题，改为存在 `cid` 时直接更新原记录
+- 消息客户端：修复 `ClientManager._ensure_loaded()` 只加载一次、不刷新已有客户端 `interactive`/`enabled` 状态的问题，导致开启交互后仍提示 `WeChat client not configured`
+- 消息客户端：修复 `active_interactive_clients` 用字符串 `search_type` 作为 key，但 Telegram / 微信 / Slack / Synology Chat 的 Webhook 与 `MessageDispatcher` 使用 `SearchType` 枚举查询，导致所有交互式客户端都匹配不到、提示未配置的问题
+- 企业微信消息：修复 `GET /wechat` 与 `POST /wechat` 只读取 `signature` 参数，而加密模式下企业微信实际发送 `msg_signature`，导致 URL 验证/消息接收签名验证失败的问题
 
 ### 数据库迁移
 - 新增迁移：将 `RBAC_USER_LOGIN_LOGS.USER_ID` 改为 nullable
@@ -14,6 +19,7 @@
 ### 测试
 - 新增 `WeChat` 代理地址规范化、URL 验证、消息解析/解密单元测试
 - 新增 `Telegram` Webhook URL 构造与 `secret_token` 单元测试
+- 新增 `message_webhook` 路由企业微信 `msg_signature` / `signature` 参数兼容的单元测试
 
 ## v4.3.9 (2026-07-21)
 

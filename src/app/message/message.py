@@ -56,6 +56,9 @@ class Message:
     def delete_message_client(self, cid: Any) -> Any:
         return self._client_manager.delete_message_client(cid)
 
+    def update_message_client(self, cid: int, **kwargs) -> bool:
+        return self._client_manager.update_message_client(cid=cid, **kwargs)
+
     def check_message_client(
         self, cid: Any = None, interactive: Any = None, enabled: Any = None, ctype: Any = None
     ) -> Any:

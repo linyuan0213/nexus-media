@@ -99,7 +99,7 @@ class MessageDispatcher:
             if self._messagecenter:
                 self._messagecenter.insert_system_message(title=title, content=text)
             return True
-        client = self._client_manager.active_interactive_clients.get(channel)
+        client = self._client_manager.get_interactive_client(channel)
         if client:
             return self.sendmsg(client=client, title=title, text=text, image=image, url=url, user_id=user_id)
         return False
@@ -138,7 +138,7 @@ class MessageDispatcher:
             if self._messagecenter:
                 self._messagecenter.insert_system_message(title=title, content="\n".join(texts))
             return True
-        client = self._client_manager.active_interactive_clients.get(channel)
+        client = self._client_manager.get_interactive_client(channel)
         if client:
             return self.send_list_msg(client=client, title=title, medias=medias, user_id=user_id)
         return False
