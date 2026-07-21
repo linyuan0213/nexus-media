@@ -181,6 +181,52 @@ class TestClientManager:
             client_config.ENABLED = False
             assert SearchType.TG not in manager.active_interactive_clients
 
+    def test_get_interactive_client_by_enum(self):
+        """使用 SearchType 枚举应能查到以字符串 search_type 为 key 的客户端."""
+        client_config = MagicMock()
+        client_config.ID = 1
+        client_config.NAME = "wechat"
+        client_config.TYPE = "wechat"
+        client_config.CONFIG = '{"corpid": "x"}'
+        client_config.TEMPLATES = ""
+        client_config.SWITCHES = ""
+        client_config.INTERACTIVE = True
+        client_config.ENABLED = True
+
+        mock_repo = MagicMock()
+        mock_repo.get_message_client.return_value = [client_config]
+        with (
+            patch("app.message.core.client_manager.ClientManager._get_search_type", return_value="WX"),
+            patch("app.message.core.client_manager.ClientRegistry.build", return_value=MagicMock()),
+        ):
+            manager = ClientManager(config_repo=mock_repo)
+            entry = manager.get_interactive_client(SearchType.WX)
+            assert entry is not None
+            assert entry["name"] == "wechat"
+
+    def test_get_interactive_client_by_string(self):
+        """使用字符串 search_type 也应正常查询."""
+        client_config = MagicMock()
+        client_config.ID = 1
+        client_config.NAME = "wechat"
+        client_config.TYPE = "wechat"
+        client_config.CONFIG = '{"corpid": "x"}'
+        client_config.TEMPLATES = ""
+        client_config.SWITCHES = ""
+        client_config.INTERACTIVE = True
+        client_config.ENABLED = True
+
+        mock_repo = MagicMock()
+        mock_repo.get_message_client.return_value = [client_config]
+        with (
+            patch("app.message.core.client_manager.ClientManager._get_search_type", return_value="WX"),
+            patch("app.message.core.client_manager.ClientRegistry.build", return_value=MagicMock()),
+        ):
+            manager = ClientManager(config_repo=mock_repo)
+            entry = manager.get_interactive_client("WX")
+            assert entry is not None
+            assert entry["name"] == "wechat"
+
 
 class TestCommandManager:
     """Test suite for CommandManager."""
@@ -226,11 +272,12 @@ class TestMessageDispatcher:
 
     def test_send_channel_msg_no_client(self):
         client_mgr = MagicMock()
-        client_mgr.active_interactive_clients = {}
+        client_mgr.get_interactive_client.return_value = None
         msg_center = MagicMock()
         dispatcher = MessageDispatcher(client_mgr, msg_center)
         result = dispatcher.send_channel_msg(SearchType.TG, "title", "text")
         assert result is False
+        client_mgr.get_interactive_client.assert_called_once_with(SearchType.TG)
 
     def test_get_search_types(self):
         dispatcher = MessageDispatcher(MagicMock(), MagicMock())
