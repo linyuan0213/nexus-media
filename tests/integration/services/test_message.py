@@ -131,6 +131,56 @@ class TestClientManager:
         with patch("app.message.core.client_manager.ClientRegistry.build", return_value=mock_client):
             assert manager.get_status(ctype="telegram", config={}) is False
 
+    def test_ensure_loaded_refreshes_when_interactive_changed(self):
+        """数据库中 interactive 标志变更后应重新加载客户端."""
+        client_config = MagicMock()
+        client_config.ID = 1
+        client_config.NAME = "test"
+        client_config.TYPE = "test"
+        client_config.CONFIG = '{"token": "x"}'
+        client_config.TEMPLATES = ""
+        client_config.SWITCHES = ""
+        client_config.INTERACTIVE = False
+        client_config.ENABLED = True
+
+        mock_repo = MagicMock()
+        mock_repo.get_message_client.return_value = [client_config]
+        with (
+            patch("app.message.core.client_manager.ClientManager._get_search_type", return_value=SearchType.TG),
+            patch("app.message.core.client_manager.ClientRegistry.build"),
+        ):
+            manager = ClientManager(config_repo=mock_repo)
+            assert SearchType.TG not in manager.active_interactive_clients
+
+            # 模拟数据库中开启交互
+            client_config.INTERACTIVE = True
+            assert SearchType.TG in manager.active_interactive_clients
+
+    def test_ensure_loaded_removes_disabled_clients(self):
+        """数据库中禁用的客户端应从内存中移除."""
+        client_config = MagicMock()
+        client_config.ID = 1
+        client_config.NAME = "test"
+        client_config.TYPE = "test"
+        client_config.CONFIG = '{"token": "x"}'
+        client_config.TEMPLATES = ""
+        client_config.SWITCHES = ""
+        client_config.INTERACTIVE = True
+        client_config.ENABLED = True
+
+        mock_repo = MagicMock()
+        mock_repo.get_message_client.return_value = [client_config]
+        with (
+            patch("app.message.core.client_manager.ClientManager._get_search_type", return_value=SearchType.TG),
+            patch("app.message.core.client_manager.ClientRegistry.build"),
+        ):
+            manager = ClientManager(config_repo=mock_repo)
+            assert SearchType.TG in manager.active_interactive_clients
+
+            # 模拟数据库中禁用
+            client_config.ENABLED = False
+            assert SearchType.TG not in manager.active_interactive_clients
+
 
 class TestCommandManager:
     """Test suite for CommandManager."""
