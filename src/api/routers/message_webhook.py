@@ -160,7 +160,7 @@ async def wechat_verify(
     """WeChat 企业微信/公众号回调 URL 验证"""
     _ensure_message_initialized(message)
 
-    signature = request.query_params.get("signature", "")
+    signature = request.query_params.get("msg_signature", "") or request.query_params.get("signature", "")
     timestamp = request.query_params.get("timestamp", "")
     nonce = request.query_params.get("nonce", "")
     echostr = request.query_params.get("echostr", "")
@@ -189,7 +189,7 @@ async def wechat_webhook(
     """WeChat 企业微信/公众号 Webhook"""
     _ensure_message_initialized(message)
 
-    signature = request.query_params.get("signature", "")
+    signature = request.query_params.get("msg_signature", "") or request.query_params.get("signature", "")
     timestamp = request.query_params.get("timestamp", "")
     nonce = request.query_params.get("nonce", "")
 
