@@ -1,5 +1,6 @@
 """FastAPI 主应用."""
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -91,23 +92,35 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             log.error(f"[FastAPI]{name}注册失败: {e}")
 
-    try:
-        message: Message = app_context.message
-        plugin_sandbox = app_context.plugin_sandbox
-        plugin_sandbox.load_all()
-        log.info("[FastAPI]插件加载完成")
-        app_context.plugin_framework_service.refresh_plugin_menus_at_startup()
-        log.info("[FastAPI]插件菜单同步完成")
-        _ = message.active_clients
-        log.info("[FastAPI]消息客户端初始化完成")
-        message.refresh_menus()
-        log.info("[FastAPI]消息菜单刷新完成")
-    except Exception as e:
-        log.error(f"[FastAPI]插件或消息初始化失败: {e}")
-
     app.state.ready = True
-    log.info("[FastAPI]所有服务就绪")
+    log.info("[FastAPI]核心服务已就绪，后台加载插件...")
+
+    async def _load_plugins_and_refresh_menus():
+        """后台加载插件、同步菜单、初始化消息客户端，避免阻塞核心服务就绪."""
+        try:
+            message: Message = app_context.message
+            plugin_sandbox = app_context.plugin_sandbox
+            await asyncio.to_thread(plugin_sandbox.load_all)
+            log.info("[FastAPI]插件加载完成")
+            await asyncio.to_thread(app_context.plugin_framework_service.refresh_plugin_menus_at_startup)
+            log.info("[FastAPI]插件菜单同步完成")
+            await asyncio.to_thread(lambda: message.active_clients)
+            log.info("[FastAPI]消息客户端初始化完成")
+            await asyncio.to_thread(message.refresh_menus)
+            log.info("[FastAPI]消息菜单刷新完成")
+        except Exception as e:
+            log.error(f"[FastAPI]后台插件或消息初始化失败: {e}")
+
+    startup_task = asyncio.create_task(_load_plugins_and_refresh_menus())
+
     yield
+
+    if startup_task and not startup_task.done():
+        startup_task.cancel()
+        try:
+            await startup_task
+        except asyncio.CancelledError:
+            pass
 
     log.info("[FastAPI]关闭后台服务...")
     try:

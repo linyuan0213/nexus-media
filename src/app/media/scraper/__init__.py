@@ -63,6 +63,9 @@ class Scraper:
         if isinstance(scraper_conf, str):
             try:
                 scraper_conf = JsonUtils.loads(scraper_conf)
+                # 兼容旧版双重 JSON 编码（set_scraper_config 曾用 json.dumps 预编码）
+                if isinstance(scraper_conf, str):
+                    scraper_conf = JsonUtils.loads(scraper_conf)
             except Exception:
                 scraper_conf = None
         if isinstance(scraper_conf, dict):
@@ -190,6 +193,8 @@ class Scraper:
         self, media, dir_path, file_name, file_ext, force=False, force_nfo=False, force_pic=False, dst_backend=None
     ):
         """刮削元数据入口"""
+        # 单例在启动时只加载一次配置，这里每次刮削前重新读取，保证运行期配置变更生效
+        self._init_config()
         if not force and not self._scraper_flag:
             log.warn("[Scraper]刮削标志未启用，跳过")
             return
@@ -202,7 +207,8 @@ class Scraper:
         self._downloader.set_dst_backend(dst_backend)
         log.info(
             f"[Scraper]开始生成刮削文件：dir={dir_path}, file={file_name}, "
-            f"type={media.type}, backend={dst_backend is not None}"
+            f"type={media.type}, backend={dst_backend is not None}, "
+            f"nfo_keys={list(self._scraper_nfo.keys())}, pic_keys={list(self._scraper_pic.keys())}"
         )
 
         try:
@@ -216,7 +222,7 @@ class Scraper:
             ExceptionUtils.exception_traceback(e)
 
     def _scrape_movie(self, media, dir_path, file_name, force_nfo, force_pic):
-        """刮削电影元数据"""
+        """刮削电影元数据 — 各步骤独立容错，单步失败不影响其他刮削输出."""
         scraper_movie_nfo = self._scraper_nfo.get("movie", {})
         scraper_movie_pic = self._scraper_pic.get("movie", {})
 
@@ -225,26 +231,43 @@ class Scraper:
                 os.path.join(dir_path, f"{file_name}.nfo")
             )
             if force_nfo or not nfo_exists:
-                doubaninfo = self._fetch_douban(media, scraper_movie_nfo)
-                directors, actors = self._fetch_credits(media.tmdb_info, scraper_movie_nfo, doubaninfo)
-                self._nfo_gen.gen_movie_nfo(media.tmdb_info, directors, actors, scraper_movie_nfo, dir_path, file_name)
+                try:
+                    doubaninfo = self._fetch_douban(media, scraper_movie_nfo)
+                    directors, actors = self._fetch_credits(media.tmdb_info, scraper_movie_nfo, doubaninfo)
+                    self._nfo_gen.gen_movie_nfo(
+                        media.tmdb_info, directors, actors, scraper_movie_nfo, dir_path, file_name
+                    )
+                except Exception as e:
+                    log.error(f"[Scraper]生成 movie.nfo 失败：{e}")
 
-        self._download_images(media, dir_path, scraper_movie_pic, force_pic)
+        try:
+            self._download_images(media, dir_path, scraper_movie_pic, force_pic)
+        except Exception as e:
+            log.error(f"[Scraper]下载电影图片失败：{e}")
 
     def _scrape_tv(self, media, dir_path, file_name, file_ext, force_nfo, force_pic):
-        """刮削电视剧元数据"""
+        """刮削电视剧元数据 — 各步骤独立容错，单步失败不影响其他刮削输出."""
         scraper_tv_nfo = self._scraper_nfo.get("tv", {})
         scraper_tv_pic = self._scraper_pic.get("tv", {})
         tv_root = os.path.dirname(dir_path)
 
+        # ---- tvshow.nfo ----
         if force_nfo or not os.path.exists(os.path.join(tv_root, "tvshow.nfo")):
             if scraper_tv_nfo.get("basic") or scraper_tv_nfo.get("credits"):
-                doubaninfo = self._fetch_douban(media, scraper_tv_nfo)
-                directors, actors = self._fetch_credits(media.tmdb_info, scraper_tv_nfo, doubaninfo)
-                self._nfo_gen.gen_tv_nfo(media.tmdb_info, directors, actors, scraper_tv_nfo, tv_root)
+                try:
+                    doubaninfo = self._fetch_douban(media, scraper_tv_nfo)
+                    directors, actors = self._fetch_credits(media.tmdb_info, scraper_tv_nfo, doubaninfo)
+                    self._nfo_gen.gen_tv_nfo(media.tmdb_info, directors, actors, scraper_tv_nfo, tv_root)
+                except Exception as e:
+                    log.error(f"[Scraper]生成 tvshow.nfo 失败：{e}")
 
-        self._download_tv_images(media, tv_root, scraper_tv_pic, force_pic)
+        # ---- tv 图片 ----
+        try:
+            self._download_tv_images(media, tv_root, scraper_tv_pic, force_pic)
+        except Exception as e:
+            log.error(f"[Scraper]下载 TV 图片失败：{e}")
 
+        # ---- 季/集详情 ----
         need_season_detail = (
             scraper_tv_nfo.get("season_basic")
             or scraper_tv_nfo.get("episode_basic")
@@ -253,80 +276,109 @@ class Scraper:
         )
         seasoninfo = None
         if need_season_detail:
-            seasoninfo = self.media.get_tmdb_tv_season_detail(tmdbid=media.tmdb_id, season=int(media.get_season_seq()))
+            try:
+                seasoninfo = self.media.get_tmdb_tv_season_detail(
+                    tmdbid=media.tmdb_id, season=int(media.get_season_seq())
+                )
+            except Exception as e:
+                log.error(f"[Scraper]获取季详情失败：{e}")
 
-        # season nfo
+        # ---- season.nfo ----
         if scraper_tv_nfo.get("season_basic"):
             if force_nfo or not os.path.exists(os.path.join(dir_path, "season.nfo")):
                 if seasoninfo:
-                    self._nfo_gen.gen_season_nfo(seasoninfo, int(media.get_season_seq()), dir_path)
+                    try:
+                        self._nfo_gen.gen_season_nfo(seasoninfo, int(media.get_season_seq()), dir_path)
+                    except Exception as e:
+                        log.error(f"[Scraper]生成 season.nfo 失败：{e}")
 
-        # episode nfo
+        # ---- episode.nfo ----
         if scraper_tv_nfo.get("episode_basic") or scraper_tv_nfo.get("episode_credits"):
             if force_nfo or not os.path.exists(os.path.join(dir_path, f"{file_name}.nfo")):
                 if seasoninfo:
-                    self._nfo_gen.gen_episode_nfo(
-                        seasoninfo,
-                        scraper_tv_nfo,
-                        int(media.get_season_seq()),
-                        int(media.get_episode_seq()),
-                        dir_path,
-                        file_name,
-                    )
+                    try:
+                        self._nfo_gen.gen_episode_nfo(
+                            seasoninfo,
+                            scraper_tv_nfo,
+                            int(media.get_season_seq()),
+                            int(media.get_episode_seq()),
+                            dir_path,
+                            file_name,
+                        )
+                    except Exception as e:
+                        log.error(f"[Scraper]生成 episode nfo 失败：{e}")
 
-        # season poster
+        # ---- season poster ----
         if scraper_tv_pic.get("season_poster"):
-            season_poster = "season{}-poster".format(media.get_season_seq().rjust(2, "0"))
-            seasonposter = self.fanart.get_seasonposter(
-                media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
-            )
-            if seasonposter:
-                self._downloader.download(seasonposter, tv_root, season_poster, force_pic)
-            elif seasoninfo:
-                self._downloader.download(
-                    ImageProxy.get_tmdbimage_url(seasoninfo.get("poster_path"), prefix="original", use_proxy=False),
-                    tv_root,
-                    season_poster,
-                    force_pic,
+            try:
+                season_poster = "season{}-poster".format(media.get_season_seq().rjust(2, "0"))
+                seasonposter = self.fanart.get_seasonposter(
+                    media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
                 )
+                if seasonposter:
+                    self._downloader.download(seasonposter, tv_root, season_poster, force_pic)
+                elif seasoninfo:
+                    self._downloader.download(
+                        ImageProxy.get_tmdbimage_url(seasoninfo.get("poster_path"), prefix="original", use_proxy=False),
+                        tv_root,
+                        season_poster,
+                        force_pic,
+                    )
+            except Exception as e:
+                log.error(f"[Scraper]下载 season poster 失败：{e}")
 
-        # season banner
+        # ---- season banner ----
         if scraper_tv_pic.get("season_banner"):
-            seasonbanner = self.fanart.get_seasonbanner(
-                media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
-            )
-            if seasonbanner:
-                self._downloader.download(
-                    seasonbanner, tv_root, "season{}-banner".format(media.get_season_seq().rjust(2, "0")), force_pic
+            try:
+                seasonbanner = self.fanart.get_seasonbanner(
+                    media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
                 )
+                if seasonbanner:
+                    self._downloader.download(
+                        seasonbanner,
+                        tv_root,
+                        "season{}-banner".format(media.get_season_seq().rjust(2, "0")),
+                        force_pic,
+                    )
+            except Exception as e:
+                log.error(f"[Scraper]下载 season banner 失败：{e}")
 
-        # season thumb
+        # ---- season thumb ----
         if scraper_tv_pic.get("season_thumb"):
-            seasonthumb = self.fanart.get_seasonthumb(
-                media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
-            )
-            if seasonthumb:
-                self._downloader.download(
-                    seasonthumb, tv_root, "season{}-landscape".format(media.get_season_seq().rjust(2, "0")), force_pic
+            try:
+                seasonthumb = self.fanart.get_seasonthumb(
+                    media_type=media.type, queryid=media.tvdb_id, season=media.get_season_seq()
                 )
+                if seasonthumb:
+                    self._downloader.download(
+                        seasonthumb,
+                        tv_root,
+                        "season{}-landscape".format(media.get_season_seq().rjust(2, "0")),
+                        force_pic,
+                    )
+            except Exception as e:
+                log.error(f"[Scraper]下载 season thumb 失败：{e}")
 
-        # episode thumb
+        # ---- episode thumb ----
         if scraper_tv_pic.get("episode_thumb"):
-            episode_thumb = os.path.join(dir_path, file_name + "-thumb.jpg")
-            if force_pic or not os.path.exists(episode_thumb):
-                episode_image = self.media.get_episode_images(
-                    tv_id=media.tmdb_id,
-                    season_id=media.get_season_seq(),
-                    episode_id=media.get_episode_seq(),
-                    orginal=True,
-                )
-                if episode_image:
-                    self._downloader.download(episode_image, episode_thumb, "", force_pic)
-                elif scraper_tv_pic.get("episode_thumb_ffmpeg"):
-                    video_path = os.path.join(dir_path, file_name + file_ext)
-                    log.info(f"[Scraper]正在生成缩略图：{video_path} ...")
-                    FfmpegProcessor().get_thumb_image_from_video(video_path=video_path, image_path=episode_thumb)
-                    log.info(f"[Scraper]缩略图生成完成：{episode_thumb}")
+            try:
+                episode_thumb = os.path.join(dir_path, file_name + "-thumb.jpg")
+                if force_pic or not os.path.exists(episode_thumb):
+                    episode_image = self.media.get_episode_images(
+                        tv_id=media.tmdb_id,
+                        season_id=media.get_season_seq(),
+                        episode_id=media.get_episode_seq(),
+                        orginal=True,
+                    )
+                    if episode_image:
+                        self._downloader.download(episode_image, episode_thumb, "", force_pic)
+                    elif scraper_tv_pic.get("episode_thumb_ffmpeg"):
+                        video_path = os.path.join(dir_path, file_name + file_ext)
+                        log.info(f"[Scraper]正在生成缩略图：{video_path} ...")
+                        FfmpegProcessor().get_thumb_image_from_video(video_path=video_path, image_path=episode_thumb)
+                        log.info(f"[Scraper]缩略图生成完成：{episode_thumb}")
+            except Exception as e:
+                log.error(f"[Scraper]下载 episode thumb 失败：{e}")
 
     def _fetch_douban(self, media, scraper_nfo):
         """获取豆瓣信息（用于中文演职人员）"""

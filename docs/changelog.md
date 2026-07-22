@@ -1,5 +1,19 @@
 # 版本历史
 
+## v4.3.12 (2026-07-22)
+
+### 修复
+- 插件中心：修复 `PluginRegistry.scan()` 每次请求都扫描内置插件并写入数据库，导致"已安装插件"页面加载慢/超时的问题；改为 60 秒节流，且 manifest 未变化时跳过数据库写入，保留热更新能力
+- 启动速度：将 `plugin_sandbox.load_all()`、插件菜单同步、消息客户端初始化/菜单刷新从 lifespan 同步执行改为后台异步任务，缩短 `app.state.ready` 为 `true` 前的 503 窗口，减少前后端连接不上的情况
+- 消息交互：修复 `MessageCommandHandler` 只识别 `/ptr` `/ptt` 等精确斜杠命令，中文"订阅""搜索""下载"及 `/rss` `/ssa` 等订阅类命令被当作插件命令或漏到无响应分支的问题；现在统一路由到 `MessageSearchService` 并立即回复"正在搜索/订阅"
+- 刮削：修复 `Scraper._scrape_tv` / `_scrape_movie` 所有步骤共用一个 try/except，任意一步（douban API、TMDB 季详情、fanart 图片下载等）抛异常即终止整条刮削，导致 TV/动漫即使元数据配置已全开，下载完成转移后仍没有任何 NFO/图片生成；现在每个步骤独立 try/except 容错，单步失败只记日志不影响其他刮削输出
+- HTTP 图片下载：修复 `HttpClient.request` 中用 `or` 短路表达式 pop `raise_exception`，`raise_for_status` 的默认 `True` 使 `or` 右侧永远不执行，导致 `raise_exception` 参数泄露到 `httpx.Client.request()` 引发 `TypeError`；改为分别 pop 后逻辑或
+
+### 测试
+- 新增 `PluginRegistry.scan` 节流与 manifest 未变化跳过写入的单元测试
+- 新增 `message_webhook` 企业微信文本消息与 click 菜单事件路由的单元测试
+- 新增 `Scraper` 配置热加载回归测试
+
 ## v4.3.11 (2026-07-22)
 
 ### 修复

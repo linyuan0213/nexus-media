@@ -210,9 +210,18 @@ async def wechat_webhook(
 
     update = {
         "FromUserName": msg.get("FromUserName", ""),
+        "ToUserName": msg.get("ToUserName", ""),
         "Content": msg.get("Content", ""),
+        "MsgType": msg.get("MsgType", ""),
+        "Event": msg.get("Event", ""),
+        "EventKey": msg.get("EventKey", ""),
     }
-    if update["Content"]:
+    # 企业微信 click 菜单事件：EventKey 为命令去掉斜杠后的 key，如 rss、ptt
+    text = update["Content"]
+    if update["MsgType"] == "event" and update["Event"] == "click" and update["EventKey"]:
+        text = f"/{update['EventKey'].replace('_', '/')}"
+        update["Content"] = text
+    if text:
         await asyncio.to_thread(_handle_webhook, update, SearchType.WX, app_context, message)
     return Response(content="success", media_type="text/plain")
 

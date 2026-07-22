@@ -212,6 +212,8 @@ class WeChat(_IMessageClient):
             "MsgType": root.findtext("MsgType", ""),
             "MsgId": root.findtext("MsgId", ""),
             "AgentID": root.findtext("AgentID", ""),
+            "Event": root.findtext("Event", ""),
+            "EventKey": root.findtext("EventKey", ""),
         }
 
     def setup(self):

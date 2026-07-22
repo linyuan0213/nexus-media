@@ -96,6 +96,63 @@ class TestWeChatWebhookRouter:
         assert resp.status_code == 403
         assert resp.json()["detail"] == "WeChat signature verification failed"
 
+    def test_wechat_text_subscribe_command(self):
+        """企业微信文本消息'订阅 尼古猫猫'原样传给命令处理器."""
+        mock_message, mock_client = _build_mock_message(
+            parse_message_return={
+                "FromUserName": "from_user",
+                "ToUserName": "to_user",
+                "Content": "订阅 尼古猫猫",
+                "MsgType": "text",
+            }
+        )
+        app_context = MagicMock()
+        app = self._make_app(mock_message, app_context)
+
+        with (
+            patch("api.routers.message_webhook.MessageSearchService"),
+            patch("api.routers.message_webhook.MessageCommandHandler") as mock_handler_cls,
+        ):
+            with TestClient(app) as tc:
+                resp = tc.post(
+                    "/wechat?msg_signature=msg_sig&timestamp=123&nonce=abc",
+                    content="<xml></xml>",
+                )
+        assert resp.status_code == 200
+        mock_handler_cls.return_value.handle_message_job.assert_called_once()
+        _, kwargs = mock_handler_cls.return_value.handle_message_job.call_args
+        assert kwargs.get("msg") == "订阅 尼古猫猫"
+        assert kwargs.get("in_from").value == "微信"
+
+    def test_wechat_click_menu_event_to_command(self):
+        """企业微信 click 菜单事件将 EventKey 转换为斜杠命令."""
+        mock_message, mock_client = _build_mock_message(
+            parse_message_return={
+                "FromUserName": "from_user",
+                "ToUserName": "to_user",
+                "Content": "",
+                "MsgType": "event",
+                "Event": "click",
+                "EventKey": "rss",
+            }
+        )
+        app_context = MagicMock()
+        app = self._make_app(mock_message, app_context)
+
+        with (
+            patch("api.routers.message_webhook.MessageSearchService"),
+            patch("api.routers.message_webhook.MessageCommandHandler") as mock_handler_cls,
+        ):
+            with TestClient(app) as tc:
+                resp = tc.post(
+                    "/wechat?msg_signature=msg_sig&timestamp=123&nonce=abc",
+                    content="<xml></xml>",
+                )
+        assert resp.status_code == 200
+        mock_handler_cls.return_value.handle_message_job.assert_called_once()
+        _, kwargs = mock_handler_cls.return_value.handle_message_job.call_args
+        assert kwargs.get("msg") == "/rss"
+
     def test_wechat_client_not_configured(self):
         """未配置交互式微信客户端返回 404."""
         mock_message = MagicMock(spec=Message)

@@ -607,6 +607,9 @@ def get_scraper_config(
     if isinstance(cfg, str):
         try:
             cfg = json.loads(cfg)
+            # 兼容旧版双重 JSON 编码
+            if isinstance(cfg, str):
+                cfg = json.loads(cfg)
         except Exception:
             cfg = None
     return success(data=cfg or {})
@@ -618,7 +621,7 @@ def set_scraper_config(
     current_user: UserContext = Depends(require_permission("setting:update")),
     svc=Depends(get_system_config_service),
 ):
-    value = json.dumps(req.dict(exclude_none=True), ensure_ascii=False)
+    value = req.dict(exclude_none=True)
     svc.set(SystemConfigKey.UserScraperConf, value)
     return success()
 

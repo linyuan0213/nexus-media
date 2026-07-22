@@ -180,7 +180,9 @@ class HttpClient:
         """执行 HTTP 请求，tenacity 自动重试 + 异常转换."""
         rate_limit_key = kwargs.pop("rate_limit_key", None)
         rate_limit_rate = kwargs.pop("rate_limit_rate", None)
-        raise_on_error = kwargs.pop("raise_for_status", True)
+        raise_for_status = kwargs.pop("raise_for_status", True)
+        raise_exception = kwargs.pop("raise_exception", False)
+        raise_on_error = raise_for_status or raise_exception
         cache_ttl = kwargs.pop("cache_ttl", None)
         cache_bypass = kwargs.pop("cache_bypass", False)
 

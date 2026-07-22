@@ -5,7 +5,9 @@ Plugin Registry - 插件注册表
 
 import os
 import shutil
+import time
 import zipfile
+from typing import Any
 
 import log
 from app.core.settings import settings
@@ -30,6 +32,7 @@ class PluginRegistry:
         self._builtin_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "builtin_plugins")
         self._manifest_cache: dict[str, PluginManifest] = {}
         self._state_cache: dict[str, PluginState] = {}
+        self._last_builtin_scan: float = 0.0
         self._load_all()
         self._scan_builtin_plugins()
 
@@ -59,8 +62,11 @@ class PluginRegistry:
         """扫描 plugins 目录，返回所有已安装插件的清单"""
         if not self._manifest_cache:
             self._load_all()
-        # 重新扫描内置插件（支持热新增）
-        self._scan_builtin_plugins()
+        # 重新扫描内置插件（支持热新增），但限制频率避免每次 API 调用都读写数据库
+        now = time.time()
+        if now - self._last_builtin_scan > 60:
+            self._scan_builtin_plugins()
+            self._last_builtin_scan = now
         return list(self._manifest_cache.values())
 
     def get(self, plugin_id: str) -> PluginManifest | None:
@@ -203,6 +209,15 @@ class PluginRegistry:
         )
         self._repo.insert_manifest(entity)
 
+    @staticmethod
+    def _normalize_manifest_dict(value: Any) -> Any:
+        """递归移除 dict/list 中的 None 值，用于 manifest 比较."""
+        if isinstance(value, dict):
+            return {k: PluginRegistry._normalize_manifest_dict(v) for k, v in value.items() if v is not None}
+        if isinstance(value, list):
+            return [PluginRegistry._normalize_manifest_dict(v) for v in value if v is not None]
+        return value
+
     def _scan_builtin_plugins(self):
         """扫描内置插件目录，自动注册或更新内置插件"""
         if not os.path.exists(self._builtin_dir):
@@ -233,6 +248,18 @@ class PluginRegistry:
                         if existing_orm
                         else (existing_state.installed if existing_state else True)
                     )
+                    new_manifest_dict = manifest.to_dict()
+                    stored_manifest_dict = JsonUtils.loads(existing_orm.MANIFEST_JSON or "{}")
+                    normalized_stored = self._normalize_manifest_dict(stored_manifest_dict)
+                    normalized_new = self._normalize_manifest_dict(new_manifest_dict)
+                    if existing_orm and normalized_stored == normalized_new:
+                        # manifest 未变化，跳过数据库写入，仅更新内存缓存
+                        if existing_state:
+                            existing_state.manifest = manifest
+                            existing_state.enabled = existing_enabled
+                            existing_state.installed = existing_installed
+                        self._manifest_cache[manifest.id] = manifest
+                        continue
                     if existing_state:
                         existing_state.manifest = manifest
                         existing_state.enabled = existing_enabled
@@ -249,7 +276,7 @@ class PluginRegistry:
                             tags=manifest.tags,
                             icon=manifest.icon,
                             color=manifest.color,
-                            manifest_json=JsonUtils.dumps(manifest.to_dict(), ensure_ascii=False),
+                            manifest_json=JsonUtils.dumps(new_manifest_dict, ensure_ascii=False),
                             enabled=existing_enabled,
                             installed=existing_installed,
                             path=plugin_dir,

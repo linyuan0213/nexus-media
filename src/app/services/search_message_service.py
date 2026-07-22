@@ -157,9 +157,22 @@ class MessageSearchService:
             self._chat(input_str, in_from, user_id)
         elif intent == "SUBSCRIBE":
             content = re.sub(r"订阅[:：\s]*", "", input_str)
+            if not content.strip():
+                self._message.send_channel_msg(
+                    channel=in_from, title="请输入要订阅的关键词，例如：订阅 进击的巨人", user_id=user_id
+                )
+                return
             self._search_media(in_from, content, user_id, user_name, "SUBSCRIBE")
         else:
-            content = re.sub(r"(搜索|下载)[:：\s]*", "", input_str)
+            content = re.sub(r"/(rss|ssa)[\s:：]*", "", input_str)
+            content = re.sub(r"(搜索|下载)[:：\s]*", "", content)
+            if not content.strip():
+                self._message.send_channel_msg(
+                    channel=in_from,
+                    title="请输入要搜索/订阅的关键词，例如：搜索 进击的巨人 或 订阅 进击的巨人",
+                    user_id=user_id,
+                )
+                return
             self._search_media(in_from, content, user_id, user_name, "SEARCH")
 
     def _parse_intent(self, input_str: str) -> str:

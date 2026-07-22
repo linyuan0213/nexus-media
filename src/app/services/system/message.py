@@ -168,6 +168,12 @@ class MessageCommandHandler:
             }
         return self._commands
 
+    _SEARCH_COMMAND_PREFIXES = ("/rss", "/ssa", "订阅", "搜索", "下载")
+
+    def _is_search_command(self, msg: str) -> bool:
+        """判断是否为搜索/订阅类命令前缀（支持斜杠命令和中文命令）."""
+        return any(msg.startswith(prefix) for prefix in self._SEARCH_COMMAND_PREFIXES)
+
     def handle_message_job(self, msg, in_from=SearchType.OT, user_id=None, user_name=None):
         """处理消息事件"""
         if not msg:
@@ -182,6 +188,15 @@ class MessageCommandHandler:
                     ),
                 )
             )
+
+        # 搜索/订阅类命令（含中文"订阅"、"搜索"、"下载"及 /rss、/ssa）直接交给搜索服务
+        if self._is_search_command(msg):
+            if self._message:
+                self._message.send_channel_msg(channel=in_from, title="正在搜索/订阅，请稍候...", user_id=user_id or "")
+            TokenCache.delete("search")
+            if self._search_handler and self._thread_executor:
+                self._thread_executor.submit(self._search_handler.handle, msg, in_from, user_id, user_name)
+            return
 
         command = self._command_map.get(msg)
         if command:
@@ -212,6 +227,8 @@ class MessageCommandHandler:
         TokenCache.delete("search")
         if self._search_handler and self._thread_executor:
             self._thread_executor.submit(self._search_handler.handle, msg, in_from, user_id, user_name)
+            if self._message:
+                self._message.send_channel_msg(channel=in_from, title="正在处理，请稍候...", user_id=user_id or "")
 
     def _truncate_rsshistory(self):
         if self._rss_helper:
