@@ -83,13 +83,6 @@ class SubscribeMatcher:
 
                 match_flag = True
                 match_rss_info = rss_info
-                # 只覆盖已有 TMDB ID 且与订阅一致的种子；未识别的保留原始状态
-                if rss_info.get("tmdbid") and media_info.tmdb_id and int(rss_info["tmdbid"]) == media_info.tmdb_id:
-                    media_info.tmdb_id = int(rss_info["tmdbid"])
-                if rss_info.get("type"):
-                    media_info.type = MediaType(rss_info["type"])
-                if rss_info.get("year") and not media_info.year:
-                    media_info.year = rss_info["year"]
                 break
 
         # ---------- 匹配电视剧 ----------

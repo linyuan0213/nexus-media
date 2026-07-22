@@ -7,6 +7,8 @@ import re
 from app.domain.mediatypes import MediaType
 from app.media.parser.video.constants import _episode_re, _season_re
 
+_ORDINAL_S = re.compile(r"\b(\d+)(?:st|nd|rd|th)\b", re.IGNORECASE)
+
 
 def init_year(info, token):
     """解析年份 token"""
@@ -31,6 +33,17 @@ def init_year(info, token):
 
 def init_season(info, token):
     """解析季号 token"""
+    ordinal_match = _ORDINAL_S.search(token)
+    if ordinal_match:
+        season_num = int(ordinal_match.group(1))
+        if info.begin_season is None and 0 < season_num < 100:
+            info.begin_season = season_num
+            info._last_token_type = "season"
+            info.type = MediaType.TV
+            info._stop_name_flag = True
+            info._continue_flag = True
+            return
+
     re_res = re.findall(rf"{_season_re}", token, re.IGNORECASE)
     if re_res:
         info._last_token_type = "season"

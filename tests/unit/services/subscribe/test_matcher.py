@@ -166,3 +166,19 @@ class TestSubscribeMatcher:
             site_proxy=False,
         )
         assert match_flag is False
+
+    def test_year_mismatch_blocks_fuzzy_match(self, matcher):
+        media_info = _make_media_info(MediaType.MOVIE, "Ghost in the Shell", "1995")
+        rss_movies = {1: {"name": "Ghost in the Shell", "year": "2026", "tmdbid": "255358", "fuzzy_match": True}}
+        match_flag, _, _ = matcher.match(media_info, rss_movies, {}, "test_site", None, "", False, "", {}, False)
+        assert match_flag is False
+
+    def test_torrent_metadata_not_mutated_after_match(self, matcher):
+        media_info = _make_media_info(MediaType.TV, "Ghost In The Shell", "2026", tmdb_id=0)
+        rss_tvs = {1: {"name": "攻壳机动队", "year": "2026", "season": "S01", "tmdbid": "255358", "fuzzy_match": False}}
+        o_title, o_year, o_type, o_tmdb = media_info.title, media_info.year, media_info.type, media_info.tmdb_id
+        matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
+        assert media_info.title == o_title
+        assert media_info.year == o_year
+        assert media_info.type == o_type
+        assert media_info.tmdb_id == o_tmdb
