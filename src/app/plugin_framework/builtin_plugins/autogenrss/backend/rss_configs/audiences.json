@@ -1,0 +1,16 @@
+{
+  "site_id": "audiences",
+  "type": "form",
+  "path": "getrss.php",
+  "method": "post",
+  "data": {
+    "inclbookmarked": "0",
+    "itemcategory": "1",
+    "itemsmalldescr": "1",
+    "itemsize": "1",
+    "itemtags": "1",
+    "torrent_type": "1",
+    "showrows": "50"
+  },
+  "rss_link_selector": "//input[contains(@value, \"linktype=dl\")]/@value"
+}

@@ -2,6 +2,7 @@
 
 import re
 from typing import cast
+from urllib.parse import parse_qs, unquote, urlparse
 
 from lxml import etree
 
@@ -87,7 +88,20 @@ class FormRssGenHandler(SiteRssGenHandler):
         html = etree.HTML(html_text)
         if html is None:
             return ""
-        return next(
-            (href for href in cast(list, html.xpath(selector)) if isinstance(href, str)),
+        href = next(
+            (h for h in cast(list, html.xpath(selector)) if isinstance(h, str)),
             "",
         )
+        if not href:
+            return ""
+        return self._unwrap_link_url(href)
+
+    @staticmethod
+    def _unwrap_link_url(href: str) -> str:
+        if "/link.php?" in href and "target=" in href:
+            parsed = urlparse(href)
+            params = parse_qs(parsed.query)
+            target = params.get("target", [""])[0]
+            if target:
+                return unquote(target)
+        return href
