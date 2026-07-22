@@ -15,6 +15,7 @@ from app.events.payloads import (
     SubtitleDownloadPayload,
     TransferFailPayload,
 )
+from app.media.parser import RegexParser
 from app.services.transfer_pipeline import TransferPipeline
 
 
@@ -66,6 +67,7 @@ def handle_download_completed(
         # 从下载历史中读取订阅时记录的 TMDB 信息，供转移/刮削直接使用
         tmdb_info = None
         media_type = ""
+        season = None
         try:
             if download_history_repo:
                 history = download_history_repo.get_by_downloader(payload.downloader_id, payload.task_id)
@@ -76,8 +78,17 @@ def handle_download_completed(
                 media_type = history.media_type or ""
                 if media_cache:
                     tmdb_info = media_cache.get_tmdb_info(mtype=media_type, tmdbid=tmdb_id)
+                if history.season_episode:
+                    parsed = RegexParser().parse(str(history.season_episode))
+                    if parsed and parsed.season:
+                        season = parsed.season
         except Exception as e:  # noqa: BLE001
             log.debug(f"[Event]读取下载历史TMDB信息失败: {e}")
+
+        if season is None and payload.name:
+            parsed = RegexParser().parse(str(payload.name))
+            if parsed and parsed.season:
+                season = parsed.season
 
         name = downloader_conf.get("name", "")
         operation = str(downloader_conf.get("rmt_mode") or "")
@@ -106,6 +117,7 @@ def handle_download_completed(
             operation=operation,
             tmdb_info=tmdb_info,
             media_type=media_type,
+            season=season,
             post_process=_post_process,
         )
         success, message = transfer_pipeline.process(task)
