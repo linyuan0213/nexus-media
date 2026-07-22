@@ -30,7 +30,7 @@ class TestBrowserRssGenHandler:
         plugin_ctx = MagicMock()
         plugin_ctx.site_engine = MagicMock()
         plugin_ctx.site_engine.get_by_id.return_value = None
-        return BrowserRssGenHandler(plugin_ctx, None, None, config or {})
+        return BrowserRssGenHandler(plugin_ctx, None, None, None, config or {})
 
     @patch("app.plugin_framework.builtin_plugins.autogenrss.backend.handlers._browser.get_chrome_server_url")
     def test_no_chrome_server(self, mock_get_server):

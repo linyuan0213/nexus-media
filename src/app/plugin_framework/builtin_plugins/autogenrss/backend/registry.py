@@ -15,11 +15,12 @@ class RssHandlerRegistry:
     _FALLBACK_FORM_KEY = "__fallback_form__"
     _GENERIC_KEYS = {"__form__", "__api__", "__browser__"}
 
-    def __init__(self, plugin_ctx, rate_limiter, site_engine, rss_configs: list[dict], site_repo=None):
+    def __init__(self, plugin_ctx, rate_limiter, site_engine, rss_configs: list[dict], site_repo=None, site_cache=None):
         self._plugin_ctx = plugin_ctx
         self._rate_limiter = rate_limiter
         self._site_engine = site_engine
         self._site_repo = site_repo
+        self._site_cache = site_cache
         self._rss_configs = {cfg["site_id"]: cfg for cfg in rss_configs}
         self._fallback_form_config = self._rss_configs.pop(self._FALLBACK_FORM_KEY, {})
         self._handlers: dict[str, HandlerFactory] = {}
@@ -41,6 +42,7 @@ class RssHandlerRegistry:
                 self._plugin_ctx,
                 self._rate_limiter,
                 self._site_repo,
+                self._site_cache,
                 **self._filter_kwargs(c, {}),
             )
 
@@ -50,15 +52,15 @@ class RssHandlerRegistry:
             strategy_type = cfg.get("type", "form")
             if strategy_type == "api":
                 self._handlers[site_id] = lambda c=cfg: ApiRssGenHandler(
-                    self._plugin_ctx, self._rate_limiter, self._site_repo, c
+                    self._plugin_ctx, self._rate_limiter, self._site_repo, self._site_cache, c
                 )
             elif strategy_type == "browser":
                 self._handlers[site_id] = lambda c=cfg: BrowserRssGenHandler(
-                    self._plugin_ctx, self._rate_limiter, self._site_repo, c
+                    self._plugin_ctx, self._rate_limiter, self._site_repo, self._site_cache, c
                 )
             else:
                 self._handlers[site_id] = lambda c=cfg: FormRssGenHandler(
-                    self._plugin_ctx, self._rate_limiter, self._site_repo, c
+                    self._plugin_ctx, self._rate_limiter, self._site_repo, self._site_cache, c
                 )
 
     @staticmethod
@@ -78,11 +80,11 @@ class RssHandlerRegistry:
         if not site_id or not self._fallback_form_config:
             return None
         return lambda: FormRssGenHandler(
-            self._plugin_ctx, self._rate_limiter, self._site_repo, self._fallback_form_config
+            self._plugin_ctx, self._rate_limiter, self._site_repo, self._site_cache, self._fallback_form_config
         )
 
     def get_generic(self) -> HandlerFactory:
-        return lambda: FormRssGenHandler(self._plugin_ctx, self._rate_limiter, self._site_repo, {})
+        return lambda: FormRssGenHandler(self._plugin_ctx, self._rate_limiter, self._site_repo, self._site_cache, {})
 
     def __len__(self) -> int:
         return len(self._handlers)

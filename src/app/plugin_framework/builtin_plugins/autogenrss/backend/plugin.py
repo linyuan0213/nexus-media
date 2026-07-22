@@ -81,6 +81,7 @@ class AutoGenRssPlugin:
             self.ctx.site_engine,
             rss_configs,
             self._site_repo,
+            self._site_cache,
         )
         self._registry.load()
         self._engine = RssGenEngine(

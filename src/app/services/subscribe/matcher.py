@@ -85,11 +85,14 @@ class SubscribeMatcher:
                 match_rss_info = rss_info
                 # 将订阅中已确认的 TMDB 信息写入 media_info，
                 # 使下载/转移/刮削环节可直接复用而非依赖文件名解析
+                # 但如果种子已经有 TMDB ID 且与订阅不同（如《攻壳机动队 Arise》vs S.A.C.），
+                # 保留种子自己的 ID，避免张冠李戴
                 if rss_info.get("tmdbid"):
-                    media_info.tmdb_id = int(rss_info["tmdbid"])
+                    if not media_info.tmdb_id or int(rss_info["tmdbid"]) == media_info.tmdb_id:
+                        media_info.tmdb_id = int(rss_info["tmdbid"])
                 if rss_info.get("type"):
                     media_info.type = MediaType(rss_info["type"])
-                if rss_info.get("year"):
+                if rss_info.get("year") and not media_info.year:
                     media_info.year = rss_info["year"]
                 break
 
@@ -128,12 +131,13 @@ class SubscribeMatcher:
 
                 match_flag = True
                 match_rss_info = rss_info
-                # 将订阅中已确认的 TMDB 信息写入 media_info
+                # 保留种子自己的 TMDB ID，如果已有且与订阅不同则不覆盖
                 if rss_info.get("tmdbid"):
-                    media_info.tmdb_id = int(rss_info["tmdbid"])
+                    if not media_info.tmdb_id or int(rss_info["tmdbid"]) == media_info.tmdb_id:
+                        media_info.tmdb_id = int(rss_info["tmdbid"])
                 if rss_info.get("type"):
                     media_info.type = MediaType(rss_info["type"])
-                if rss_info.get("year"):
+                if rss_info.get("year") and not media_info.year:
                     media_info.year = rss_info["year"]
                 break
 

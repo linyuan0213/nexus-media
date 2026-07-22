@@ -39,7 +39,7 @@ class TestZhuQueHandler:
     def test_cookie_expired(self, mock_is_logged_in):
         mock_is_logged_in.return_value = False
         plugin_ctx = self._make_plugin_ctx()
-        handler = ZhuQue(plugin_ctx, None, None)
+        handler = ZhuQue(plugin_ctx, None, None, None)
 
         mock_client = MagicMock()
         mock_res = MagicMock()
@@ -55,7 +55,7 @@ class TestZhuQueHandler:
 
     def test_missing_csrf(self):
         plugin_ctx = self._make_plugin_ctx()
-        handler = ZhuQue(plugin_ctx, None, None)
+        handler = ZhuQue(plugin_ctx, None, None, None)
 
         mock_client = MagicMock()
         mock_res = MagicMock()
@@ -71,7 +71,7 @@ class TestZhuQueHandler:
 
     def test_rss_link_generated(self):
         plugin_ctx = self._make_plugin_ctx()
-        handler = ZhuQue(plugin_ctx, None, None)
+        handler = ZhuQue(plugin_ctx, None, None, None)
         mock_repo = MagicMock()
         handler._site_repo = mock_repo
 
@@ -101,7 +101,7 @@ class TestZhuQueHandler:
 
     def test_security_info_failure(self):
         plugin_ctx = self._make_plugin_ctx()
-        handler = ZhuQue(plugin_ctx, None, None)
+        handler = ZhuQue(plugin_ctx, None, None, None)
 
         home_res = MagicMock()
         home_res.text = '<html><meta name="x-csrf-token" content="token123"></html>'

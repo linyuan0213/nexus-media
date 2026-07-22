@@ -18,8 +18,8 @@ class Ourbits(SiteRssGenHandler):
 
     site_id = "ourbits"
 
-    def __init__(self, plugin_ctx: PluginContext, rate_limiter, site_repo, config: dict | None = None):
-        super().__init__(plugin_ctx, rate_limiter, site_repo)
+    def __init__(self, plugin_ctx: PluginContext, rate_limiter, site_repo, site_cache, config: dict | None = None):
+        super().__init__(plugin_ctx, rate_limiter, site_repo, site_cache)
 
     def generate(self, ctx: SiteRssGenContext) -> SiteRssGenResult:
         site = ctx.site

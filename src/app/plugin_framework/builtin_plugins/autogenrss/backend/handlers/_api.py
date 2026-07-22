@@ -13,8 +13,8 @@ class ApiRssGenHandler(SiteRssGenHandler):
 
     site_id = "__api__"
 
-    def __init__(self, plugin_ctx: PluginContext, rate_limiter, site_repo, config: dict):
-        super().__init__(plugin_ctx, rate_limiter, site_repo)
+    def __init__(self, plugin_ctx: PluginContext, rate_limiter, site_repo, site_cache, config: dict):
+        super().__init__(plugin_ctx, rate_limiter, site_repo, site_cache)
         self._config = config
 
     def generate(self, ctx: SiteRssGenContext) -> SiteRssGenResult:

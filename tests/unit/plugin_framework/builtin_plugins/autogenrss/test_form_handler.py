@@ -30,7 +30,7 @@ class TestFormRssGenHandler:
         plugin_ctx = MagicMock()
         plugin_ctx.site_engine = MagicMock()
         plugin_ctx.site_engine.get_by_id.return_value = None
-        return FormRssGenHandler(plugin_ctx, None, None, config or {})
+        return FormRssGenHandler(plugin_ctx, None, None, None, config or {})
 
     def test_no_site_url(self):
         handler = self._make_handler()

@@ -116,10 +116,11 @@ class SiteRssGenHandler(ABC):
     site_id: str = ""
     site_url: str = ""
 
-    def __init__(self, plugin_ctx: PluginContext, rate_limiter=None, site_repo=None):
+    def __init__(self, plugin_ctx: PluginContext, rate_limiter=None, site_repo=None, site_cache=None):
         self._plugin_ctx = plugin_ctx
         self._rate_limiter = rate_limiter
         self._site_repo = site_repo
+        self._site_cache = site_cache
 
     @abstractmethod
     def generate(self, ctx: SiteRssGenContext) -> SiteRssGenResult: ...
@@ -161,3 +162,5 @@ class SiteRssGenHandler(ABC):
     def _save_rss_url(self, site_id, rss_url: str) -> None:
         if self._site_repo and site_id and rss_url:
             self._site_repo.update_site_rssurl(site_id, rss_url)
+            if self._site_cache:
+                self._site_cache.refresh()

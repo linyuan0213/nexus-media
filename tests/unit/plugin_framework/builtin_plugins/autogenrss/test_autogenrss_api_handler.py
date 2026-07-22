@@ -33,7 +33,7 @@ class TestApiRssGenHandler:
             "endpoint": {"path": "/api/rss/genlink", "method": "post"},
             "json_rss_link_path": "data.dlUrl",
         }
-        handler = ApiRssGenHandler(MagicMock(), None, None, config)
+        handler = ApiRssGenHandler(MagicMock(), None, None, None, config)
         ctx = self._make_ctx()
 
         mock_client = MagicMock()
@@ -58,7 +58,7 @@ class TestApiRssGenHandler:
             "json_success_path": "code",
             "json_success_value": 0,
         }
-        handler = ApiRssGenHandler(MagicMock(), None, None, config)
+        handler = ApiRssGenHandler(MagicMock(), None, None, None, config)
         ctx = self._make_ctx()
 
         mock_client = MagicMock()
@@ -82,7 +82,7 @@ class TestApiRssGenHandler:
             "json_success_path": "code",
             "json_success_value": 0,
         }
-        handler = ApiRssGenHandler(MagicMock(), None, None, config)
+        handler = ApiRssGenHandler(MagicMock(), None, None, None, config)
         ctx = self._make_ctx(api_key="mykey", api_key_header="x-api-key")
 
         mock_client = MagicMock()
@@ -106,7 +106,7 @@ class TestApiRssGenHandler:
             "type": "api",
             "auth": "bearer",
         }
-        handler = ApiRssGenHandler(MagicMock(), None, None, config)
+        handler = ApiRssGenHandler(MagicMock(), None, None, None, config)
         ctx = self._make_ctx(bearer_token=None)
 
         result = handler.generate(ctx)
@@ -121,7 +121,7 @@ class TestApiRssGenHandler:
             "json_success_path": "code",
             "json_success_value": 0,
         }
-        handler = ApiRssGenHandler(MagicMock(), None, None, config)
+        handler = ApiRssGenHandler(MagicMock(), None, None, None, config)
         ctx = self._make_ctx(cookie="uid=1;pass=abc")
 
         mock_client = MagicMock()
@@ -142,7 +142,7 @@ class TestApiRssGenHandler:
             "type": "api",
             "endpoint": {"path": "/api/rss", "method": "post"},
         }
-        handler = ApiRssGenHandler(MagicMock(), None, None, config)
+        handler = ApiRssGenHandler(MagicMock(), None, None, None, config)
         ctx = self._make_ctx()
 
         mock_client = MagicMock()
@@ -161,7 +161,7 @@ class TestApiRssGenHandler:
             "endpoint": {"path": "/api/rss", "method": "post"},
             "json_success_path": "code",
         }
-        handler = ApiRssGenHandler(MagicMock(), None, None, config)
+        handler = ApiRssGenHandler(MagicMock(), None, None, None, config)
         ctx = self._make_ctx()
 
         mock_client = MagicMock()
