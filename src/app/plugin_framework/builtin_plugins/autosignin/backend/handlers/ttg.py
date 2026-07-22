@@ -1,6 +1,7 @@
 import re
 
 from app.infrastructure.http.auth import CookieAuth
+from app.utils import StringUtils
 
 from .base import SigninResult, SiteSigninContext, SiteSigninHandler
 
@@ -16,12 +17,13 @@ class TTG(SiteSigninHandler):
         if not ctx.cookie:
             return SigninResult.fail(site, SigninResult.COOKIE_EXPIRED)
 
+        base_url = StringUtils.get_base_url(ctx.site_url)
         base_headers = {"User-Agent": ctx.ua} if ctx.ua else {}
 
         with self._http_client(ctx) as client:
             try:
                 index_res = client.get(
-                    url="https://totheglory.im",
+                    url=base_url,
                     headers=base_headers,
                     auth=CookieAuth(ctx.cookie),
                 )
@@ -46,7 +48,7 @@ class TTG(SiteSigninHandler):
         with self._http_client(ctx) as client:
             try:
                 sign_res = client.post(
-                    url="https://totheglory.im/signed.php",
+                    url=base_url + "/signed.php",
                     data={
                         "signed_timestamp": signed_timestamp,
                         "signed_token": signed_token,

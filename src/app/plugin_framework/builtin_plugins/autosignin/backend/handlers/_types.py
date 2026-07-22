@@ -13,6 +13,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninContext,
     SiteSigninHandler,
 )
+from app.utils import StringUtils
 from app.utils.json_utils import JsonUtils
 from app.utils.path_utils import get_temp_path
 
@@ -33,9 +34,9 @@ class BakatestQaHandler(SiteSigninHandler):
 
     def signin(self, ctx: SiteSigninContext) -> SigninResult:
         site = ctx.site
-        signurl = ctx.site_url
         cookie = ctx.cookie
         ua = ctx.ua
+        bakatest_url = StringUtils.get_base_url(ctx.site_url) + "/bakatest.php"
 
         if not os.path.exists(os.path.dirname(self._answer_file)):
             os.makedirs(os.path.dirname(self._answer_file), exist_ok=True)
@@ -43,9 +44,9 @@ class BakatestQaHandler(SiteSigninHandler):
         client = self._http_client(ctx)
         try:
             index_res = client.get(
-                url=signurl,
+                url=bakatest_url,
                 headers={"User-Agent": ua} if ua else None,
-                cookies=CookieAuth._parse_cookies(cookie),
+                auth=CookieAuth(cookie) if cookie else None,
             )
         except Exception:
             return SigninResult.fail(site, SigninResult.SITE_UNREACHABLE)
@@ -133,7 +134,7 @@ class BakatestQaHandler(SiteSigninHandler):
         site = ctx.site
         cookie = ctx.cookie
         ua = ctx.ua
-        signurl = ctx.site_url
+        bakatest_url = StringUtils.get_base_url(ctx.site_url) + "/bakatest.php"
 
         data = {
             "questionid": questionid,
@@ -145,10 +146,10 @@ class BakatestQaHandler(SiteSigninHandler):
         client = self._http_client(ctx)
         try:
             sign_res = client.post(
-                url=signurl,
+                url=bakatest_url,
                 data=data,
                 headers={"User-Agent": ua} if ua else None,
-                cookies=CookieAuth._parse_cookies(cookie),
+                auth=CookieAuth(cookie) if cookie else None,
             )
         except Exception:
             return SigninResult.fail(site, SigninResult.REQUEST_FAILED)

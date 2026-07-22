@@ -1,5 +1,32 @@
 # 版本历史
 
+## v4.3.13 (2026-07-22)
+
+### 修复
+- 签到：修复 API 响应中 `\uXXXX` Unicode 转义导致 `already_markers`/`success_markers` 匹配失败的问题（如 pterclub 猫站签到成功却被判定为失败）
+- 签到：修复 `_http.py` 中 `config.get("success_markers") or DEFAULT` 把显式空列表 `[]` 当作 falsy 回退到默认标记的问题，导致 homepage-only 站点（ssd/春天、tnode/ZhuQue）永远无法匹配
+- 签到：修复 HDSky/FreeFarm/Opencd/Tjupt 等 handler 签到 URL 使用 `signurl`（仅有域名），缺少各自的签到页路径（`/showup.php`、`/attendance.php` 等），导致签到请求发送到错误的 URL
+- 签到：修复 HDSky handler 签到失败时错误提示为 "未获取到验证码"（实际已获取），改为显示服务器实际返回消息
+- 签到：修复 FreeFarm handler `_check_cookie("login.php")` 误判 cookie 失效（页面正常也包含该字样），改为检查登录表单特征（`type="password"` 等）
+- 签到：修复 Browser signin handler 固定 `time.sleep(10/15)` 等待 Cloudflare 五秒盾不可靠的问题，改为动态轮询等页面稳定（最长 120s）
+- 签到：修复 U2/Tnode handler 硬编码域名（`u2.dmhy.org`、`zhuque.in`），改为从 `ctx.site_url` 动态推导
+- 签到：修复 `_api.py` / `_wrap_auth` 使用 api_key 时手动拼接 `{header_name: api_key}` header 而非使用 `ApiKeyAuth` 认证类
+- 签到：修复 `_types.py`（BakatestQaHandler）和 `hdsky.py` 中 `cookies=CookieAuth._parse_cookies(cookie)` 裸传 cookies，改为 `auth=CookieAuth(cookie)`
+- 签到：新增 HDUpt 签到 handler、新增 hhanclub/ssd 签到配置、删除已停运的 hdchina handler 及站点配置
+
+- RSS：修复 TTG/Ourbits/Zhuque/Starspace 等 handler 将 `cookies=ctx.cookie` raw string 传 `httpx.Client.request()` 导致 cookie 未生效、请求被拒绝（报 "请检查站点连通性"）
+- RSS：修复 MTeam handler 误用 `ctx.headers` 取 API key（实际在 `ctx.api_key` 独立字段），改为 `ApiKeyAuth`
+- RSS：修复 YemaPT handler 站点定义配置为 cookie 认证但不传 `CookieAuth`、只读 `ctx.headers` 的问题
+- RSS：修复 `_api.py` marker 匹配同样存在 Unicode 转义失败的问题
+- RSS：修复 `_api.py` api_key 认证手动拼接 header 而非使用 `ApiKeyAuth`，且未从站点定义 `api.auth.header_name` 回退获取 header 名
+- RSS：MTeam/TTG/YemaPT/HDHome 从专用 handler 改为纯配置驱动的泛型 handler
+- RSS：新增 rousi RSS 配置（Bearer 认证 + API endpoint）
+- RSS：修复 `_api.py` `_resolve_auth` 未从站点定义获取 auth header_name 回退的问题
+
+### 清理
+- 删除已停运站点 hdchina（handler + 站点配置）
+- nexus-chrome：修复 `Session.close_tab()` 吞掉 `tab.close()` 异常导致孤儿 tab 累积；添加 CDP `Target.CloseTarget` 回退关闭
+
 ## v4.3.12 (2026-07-22)
 
 ### 修复

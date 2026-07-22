@@ -1,0 +1,23 @@
+{
+  "site_id": "rousi",
+  "type": "api",
+  "endpoint": {
+    "method": "POST",
+    "path": "/api/rss/generate",
+    "body": {
+      "categories": [],
+      "promotion_types": [],
+      "sticky_types": [0],
+      "paid_filter": 2,
+      "include_bookmark": false,
+      "rows": 50,
+      "link_type": "dl",
+      "include_category": true,
+      "include_subtitle": true,
+      "include_size": true,
+      "include_uploader": false
+    }
+  },
+  "auth": "bearer",
+  "json_rss_link_path": "data.url"
+}

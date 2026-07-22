@@ -27,7 +27,7 @@ class HDSky(SiteSigninHandler):
             index_res = client.get(
                 url=base_url,
                 headers={"User-Agent": ua} if ua else None,
-                cookies=CookieAuth._parse_cookies(cookie),
+                auth=CookieAuth(cookie) if cookie else None,
             )
         except Exception:
             return SigninResult.fail(site, SigninResult.SITE_UNREACHABLE)
@@ -49,7 +49,7 @@ class HDSky(SiteSigninHandler):
                     url=captcha_url,
                     data={"action": "new"},
                     headers=image_headers,
-                    cookies=CookieAuth._parse_cookies(cookie),
+                    auth=CookieAuth(cookie) if cookie else None,
                 )
                 image_json = JsonUtils.loads(image_res.text)
                 if image_json["success"]:
@@ -95,21 +95,24 @@ class HDSky(SiteSigninHandler):
             return SigninResult.fail(site, "未获取到验证码")
 
         data = {"action": "showup", "imagehash": img_hash, "imagestring": ocr_result}
+        signin_url = base_url + "/showup.php"
         try:
             res = client.post(
-                url=signurl,
+                url=signin_url,
                 data=data,
                 headers=image_headers,
-                cookies=CookieAuth._parse_cookies(cookie),
+                auth=CookieAuth(cookie) if cookie else None,
             )
             res_json = JsonUtils.loads(res.text)
             if res_json["success"]:
                 return SigninResult.success(site)
-            elif str(res_json["message"]) == "date_unmatch":
+            if str(res_json.get("message", "")) == "date_unmatch":
                 return SigninResult.already(site)
-            elif str(res_json["message"]) == "invalid_imagehash":
+            if str(res_json.get("message", "")) == "invalid_imagehash":
                 return SigninResult.fail(site, "验证码错误")
+            fail_msg = str(res_json.get("message", "")) or res.text[:200]
+            self._plugin_ctx.warn(f"{site} 签到响应未知: {res.text[:200]}")
+            return SigninResult.fail(site, f"签到结果 {fail_msg}")
         except Exception as e:  # noqa: BLE001
-            log.debug(f"[hdsky]忽略异常: {e}")
-
-        return SigninResult.fail(site, "未获取到验证码")
+            self._plugin_ctx.warn(f"{site} 签到请求异常: {e}")
+            return SigninResult.fail(site, f"签到请求失败: {e}")

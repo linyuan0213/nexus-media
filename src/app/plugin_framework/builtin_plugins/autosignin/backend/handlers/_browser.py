@@ -13,6 +13,13 @@ from app.utils.browser_mode import get_chrome_server_url
 
 from .base import SigninResult, SiteSigninContext, SiteSigninHandler
 
+_CLOUDFLARE_INDICATORS = re.compile(
+    r"challenge|cf-browser|Checking your browser|DDoS|正在检查|请等待|验证您不是机器人",
+    re.IGNORECASE,
+)
+_PAGE_WAIT_TIMEOUT = 120
+_PAGE_POLL_INTERVAL = 3
+
 
 class BrowserSigninHandler(SiteSigninHandler):
     """浏览器自动化通用处理器。"""
@@ -37,10 +44,10 @@ class BrowserSigninHandler(SiteSigninHandler):
             with BrowserSession(site_key=site, server_url=server_url) as session:
                 result = session.navigate(home_url, cookie=ctx.cookie)
                 html_text = result.get("html", "")
-                time.sleep(10)
-
                 if not html_text:
                     return SigninResult.fail(site, "无法打开网站")
+
+                html_text = self._wait_cloudflare(session, post_navigate=html_text)
 
                 if self._already_signed(html_text):
                     return SigninResult.already(site)
@@ -57,8 +64,7 @@ class BrowserSigninHandler(SiteSigninHandler):
 
                 self._plugin_ctx.debug(f"{site} 点击签到按钮: {xpath}")
                 session.click(f"xpath:{xpath}")
-                time.sleep(15)
-                html_text = session.html()
+                html_text = self._wait_page_stable(session)
 
                 if self._success(html_text):
                     return SigninResult.custom(True, f"[{site}]浏览器签到成功")
@@ -72,6 +78,30 @@ class BrowserSigninHandler(SiteSigninHandler):
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return SigninResult.fail(site, str(e))
+
+    @staticmethod
+    def _wait_cloudflare(session: BrowserSession, post_navigate: str) -> str:
+        html_text = post_navigate
+        deadline = time.monotonic() + _PAGE_WAIT_TIMEOUT
+        while time.monotonic() < deadline:
+            if _CLOUDFLARE_INDICATORS.search(html_text):
+                time.sleep(_PAGE_POLL_INTERVAL)
+                html_text = session.html()
+                continue
+            return html_text
+        return html_text
+
+    @staticmethod
+    def _wait_page_stable(session: BrowserSession) -> str:
+        prev = ""
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            html_text = session.html()
+            if html_text and html_text == prev:
+                return html_text
+            prev = html_text
+            time.sleep(_PAGE_POLL_INTERVAL)
+        return session.html()
 
     def _resolve_home_url(self, site_def, ctx: SiteSigninContext) -> str:
         if site_def and site_def.domain:

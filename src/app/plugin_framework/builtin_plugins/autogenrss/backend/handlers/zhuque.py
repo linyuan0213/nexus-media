@@ -4,6 +4,7 @@ from typing import cast
 
 from lxml import etree
 
+from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.context import PluginContext
@@ -23,13 +24,14 @@ class ZhuQue(SiteRssGenHandler):
         site = ctx.site
         site_def = self._plugin_ctx.site_engine.get_by_id(ctx.site_id)
         base_url = self._resolve_base_url(site_def, ctx)
+        auth = CookieAuth(ctx.cookie) if ctx.cookie else None
 
         self._plugin_ctx.info(f"开始生成RSS站点：{site}")
         try:
             html_res = HttpClient(
                 config=HttpClientConfig(proxy_url=ctx.proxy_url),
                 rate_limiter=self._rate_limiter,
-            ).get(url=base_url, headers={"User-Agent": ctx.ua}, cookies=ctx.cookie)
+            ).get(url=base_url, headers={"User-Agent": ctx.ua}, auth=auth)
             html_text = html_res.text
         except Exception as e:
             self._plugin_ctx.warn(f"{site} RSS请求异常: {e}")
@@ -56,7 +58,7 @@ class ZhuQue(SiteRssGenHandler):
             security_res = HttpClient(
                 config=HttpClientConfig(proxy_url=ctx.proxy_url),
                 rate_limiter=self._rate_limiter,
-            ).get(url=f"{base_url}/api/user/getSecurityInfo", headers=headers, cookies=ctx.cookie)
+            ).get(url=f"{base_url}/api/user/getSecurityInfo", headers=headers, auth=auth)
             json_data = security_res.json()
         except Exception as e:
             self._plugin_ctx.warn(f"{site} 安全信息请求异常: {e}")

@@ -1,6 +1,6 @@
 """API 站点通用签到处理器。"""
 
-from app.infrastructure.http.auth import BearerAuth, CookieAuth
+from app.infrastructure.http.auth import ApiKeyAuth, BearerAuth, CookieAuth
 from app.utils import StringUtils
 from app.utils.json_utils import JsonUtils
 
@@ -79,7 +79,7 @@ class ApiSigninHandler(SiteSigninHandler):
             if not ctx.api_key:
                 return SigninResult.fail(ctx.site, "未配置 api_key"), {}
             header_name = ctx.api_key_header or "X-Api-Key"
-            return None, {header_name: ctx.api_key}
+            return ApiKeyAuth(header_name, ctx.api_key), {}
 
         if auth_type == "bearer" or (auth_type is None and ctx.bearer_token):
             if not ctx.bearer_token:
@@ -104,7 +104,7 @@ class ApiSigninHandler(SiteSigninHandler):
             if not token:
                 return SigninResult.fail(ctx.site, "未配置 api_key"), {}
             header_name = ctx.api_key_header or "X-Api-Key"
-            return None, {header_name: token}
+            return ApiKeyAuth(header_name, token), {}
         if auth_type in ("cookie_parsed", "cookie_raw"):
             if not token:
                 return SigninResult.fail(ctx.site, SigninResult.COOKIE_EXPIRED), {}
@@ -129,12 +129,15 @@ class ApiSigninHandler(SiteSigninHandler):
                 return SigninResult.success(ctx.site)
             if already_path and data.get(already_path) == already_value:
                 return SigninResult.already(ctx.site)
+            decoded_text = JsonUtils.dumps(data, ensure_ascii=False)
+        else:
+            decoded_text = text
 
         for marker in self._config.get("success_markers", []):
-            if marker in text:
+            if marker in decoded_text:
                 return SigninResult.success(ctx.site)
         for marker in self._config.get("already_markers", []):
-            if marker in text:
+            if marker in decoded_text:
                 return SigninResult.already(ctx.site)
 
-        return SigninResult.fail(ctx.site, f"接口返回 {text[:200]}")
+        return SigninResult.fail(ctx.site, f"接口返回 {decoded_text[:200]}")

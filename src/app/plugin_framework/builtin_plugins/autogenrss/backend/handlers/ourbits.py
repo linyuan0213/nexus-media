@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 
 from lxml import etree
 
+from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.context import PluginContext
@@ -32,8 +33,8 @@ class Ourbits(SiteRssGenHandler):
                 rate_limiter=self._rate_limiter,
             ).get(
                 url=f"{base_url}/getrss.php",
-                headers={"User-Agent": ctx.ua},
-                cookies=ctx.cookie,
+                headers={"User-Agent": ctx.ua} if ctx.ua else None,
+                auth=CookieAuth(ctx.cookie) if ctx.cookie else None,
             )
             html_text = html_res.text
         except Exception as e:

@@ -1,6 +1,6 @@
 """API 站点通用 RSS 生成处理器。"""
 
-from app.infrastructure.http.auth import BearerAuth, CookieAuth
+from app.infrastructure.http.auth import ApiKeyAuth, BearerAuth, CookieAuth
 from app.plugin_framework.context import PluginContext
 from app.utils import StringUtils
 from app.utils.json_utils import JsonUtils
@@ -27,7 +27,7 @@ class ApiRssGenHandler(SiteRssGenHandler):
         body = endpoint.get("body")
         headers = self._build_headers(ctx)
 
-        auth, extra_headers = self._resolve_auth(ctx)
+        auth, extra_headers = self._resolve_auth(ctx, site_def)
         if isinstance(auth, SiteRssGenResult):
             return auth
         headers.update(extra_headers)
@@ -50,13 +50,15 @@ class ApiRssGenHandler(SiteRssGenHandler):
             return site_def.api.base_url.rstrip("/")
         return StringUtils.get_base_url(ctx.site_url).rstrip("/")
 
-    def _resolve_auth(self, ctx: SiteRssGenContext):
+    def _resolve_auth(self, ctx: SiteRssGenContext, site_def=None):
         auth_type = self._config.get("auth")
         if auth_type == "api_key" or (auth_type is None and ctx.api_key):
             if not ctx.api_key:
                 return SiteRssGenResult.fail(ctx.site, "未配置api_key"), {}
-            header_name = ctx.api_key_header or "X-Api-Key"
-            return None, {header_name: ctx.api_key}
+            header_name = ctx.api_key_header or "x-api-key"
+            if not ctx.api_key_header and site_def and site_def.api and site_def.api.auth:
+                header_name = site_def.api.auth.get("header_name", header_name)
+            return ApiKeyAuth(header_name, ctx.api_key), {}
         if auth_type == "bearer" or (auth_type is None and ctx.bearer_token):
             if not ctx.bearer_token:
                 return SiteRssGenResult.fail(ctx.site, "未配置bearer_token"), {}
@@ -81,6 +83,9 @@ class ApiRssGenHandler(SiteRssGenHandler):
             if success_path or already_path or rss_link_path:
                 return SiteRssGenResult.fail(ctx.site, "解析JSON响应失败")
             data = {}
+            decoded_text = text
+        else:
+            decoded_text = JsonUtils.dumps(data, ensure_ascii=False) if data else text
 
         if success_path and data.get(success_path) == success_value:
             return SiteRssGenResult.success(ctx.site)
@@ -93,13 +98,13 @@ class ApiRssGenHandler(SiteRssGenHandler):
             return SiteRssGenResult.success(ctx.site)
 
         for marker in self._config.get("success_markers", []):
-            if marker in text:
+            if marker in decoded_text:
                 return SiteRssGenResult.success(ctx.site)
         for marker in self._config.get("already_markers", []):
-            if marker in text:
+            if marker in decoded_text:
                 return SiteRssGenResult.success(ctx.site, "已生成")
 
-        return SiteRssGenResult.fail(ctx.site, f"接口返回 {text[:200]}")
+        return SiteRssGenResult.fail(ctx.site, f"接口返回 {decoded_text[:200]}")
 
     def _extract_rss_link(self, data: dict, path: str) -> str:
         value = data

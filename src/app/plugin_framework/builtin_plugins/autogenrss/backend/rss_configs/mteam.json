@@ -1,0 +1,15 @@
+{
+  "site_id": "mteam",
+  "type": "api",
+  "endpoint": {
+    "method": "POST",
+    "path": "/api/rss/genlink",
+    "body": {
+      "labels": 0,
+      "tkeys": ["ttitle", "tcat", "tsmalldescr", "tsize"],
+      "pageSize": 50
+    }
+  },
+  "auth": "api_key",
+  "json_rss_link_path": "data.dlUrl"
+}

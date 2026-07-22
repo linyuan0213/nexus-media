@@ -1,9 +1,10 @@
 {
-  "site_id": "tnode",
+  "site_id": "ssd",
   "type": "http",
   "method": "get",
   "path": "",
   "auth": "cookie_raw",
   "success_markers": [],
-  "already_markers": []
+  "already_markers": [],
+  "success_absent_markers": ["login.php"]
 }

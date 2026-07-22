@@ -94,9 +94,10 @@ class Opencd(SiteSigninHandler):
 
         if ocr_result:
             data = {"imagehash": img_hash, "imagestring": ocr_result}
+            signin_url = base_url + "/plugin_sign-in.php?cmd=signin"
             try:
                 sign_res = client.post(
-                    url=signurl,
+                    url=signin_url,
                     data=data,
                     headers={"User-Agent": ua} if ua else None,
                     auth=CookieAuth(cookie) if cookie else None,

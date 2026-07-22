@@ -1,0 +1,9 @@
+{
+  "site_id": "hhanclub",
+  "type": "http",
+  "method": "get",
+  "path": "/attendance.php",
+  "auth": "cookie_raw",
+  "success_markers": ["本次签到获得", "签到成功", "获得.*憨豆"],
+  "already_markers": ["已领取", "已经签到", "今日已签到"]
+}

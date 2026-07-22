@@ -217,3 +217,31 @@ class TestApiSigninHandler:
         assert result.ok is True
         call_kwargs = mock_client.post.call_args[1]
         assert isinstance(call_kwargs["auth"], CookieAuth)
+
+    def test_unicode_escape_marker_match(self):
+        """JSON 响应中包含 \\uXXXX Unicode 转义时，marker 应能正确匹配到解码后的中文。"""
+        config = {
+            "site_id": "test",
+            "type": "api",
+            "json_success_path": "status",
+            "json_success_value": "1",
+            "already_markers": ["已经签到", "请勿重复刷新"],
+        }
+        handler = ApiSigninHandler(MagicMock(), None, config)
+        ctx = self._make_ctx()
+
+        mock_client = MagicMock()
+        mock_res = MagicMock()
+        mock_res.text = (
+            '{"status":"0","data":"\\u62b1\\u6b49",'
+            '"message":"\\u60a8\\u4eca\\u5929\\u5df2\\u7ecf'
+            "\\u7b7e\\u5230\\u8fc7\\u4e86\\uff0c\\u8bf7\\u52ff"
+            '\\u91cd\\u590d\\u5237\\u65b0\\u3002"}'
+        )
+        mock_client.post.return_value = mock_res
+
+        with patch.object(handler, "_http_client", return_value=mock_client):
+            result = handler.signin(ctx)
+
+        assert result.ok is True
+        assert "已签到" in result.msg

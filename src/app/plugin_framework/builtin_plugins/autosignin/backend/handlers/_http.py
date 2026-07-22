@@ -34,8 +34,8 @@ class HttpSigninHandler(SiteSigninHandler):
     def __init__(self, plugin_ctx, rate_limiter, config: dict):
         super().__init__(plugin_ctx, rate_limiter)
         self._config = config
-        self._success_markers = config.get("success_markers") or DEFAULT_SUCCESS_MARKERS
-        self._already_markers = config.get("already_markers") or DEFAULT_ALREADY_MARKERS
+        self._success_markers = config.get("success_markers", DEFAULT_SUCCESS_MARKERS)
+        self._already_markers = config.get("already_markers", DEFAULT_ALREADY_MARKERS)
         self._success_absent_markers = config.get("success_absent_markers", [])
         self._already_absent_markers = config.get("already_absent_markers", [])
 

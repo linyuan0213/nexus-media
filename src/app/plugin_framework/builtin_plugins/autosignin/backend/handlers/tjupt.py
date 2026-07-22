@@ -48,13 +48,14 @@ class Tjupt(SiteSigninHandler):
         cookie = ctx.cookie
         ua = ctx.ua
         base_url = StringUtils.get_base_url(signurl)
+        attendance_url = base_url + "/attendance.php"
 
         if not os.path.exists(os.path.dirname(self._answer_file)):
             os.makedirs(os.path.dirname(self._answer_file), exist_ok=True)
 
         try:
             html_res = HttpClient(config=HttpClientConfig()).get(
-                url=signurl,
+                url=attendance_url,
                 headers={"User-Agent": ua} if ua else None,
                 auth=CookieAuth(cookie) if cookie else None,
                 raise_for_status=False,
@@ -103,7 +104,7 @@ class Tjupt(SiteSigninHandler):
             if captcha_answer and captcha_img_hash:
                 for value, answer in answers:
                     if str(captcha_answer) == str(answer):
-                        return self._do_signin(answer=value, ctx=ctx, signurl=signurl)
+                        return self._do_signin(answer=value, ctx=ctx, attendance_url=attendance_url)
         except (FileNotFoundError, OSError):
             self._plugin_ctx.debug("查询本地已知答案失败，继续请求豆瓣查询")
 
@@ -149,7 +150,7 @@ class Tjupt(SiteSigninHandler):
                         return self._do_signin(
                             answer=value,
                             ctx=ctx,
-                            signurl=signurl,
+                            attendance_url=attendance_url,
                             existing_answers=existing_answers,
                             captcha_img_hash=captcha_img_hash,
                         )
@@ -190,7 +191,7 @@ class Tjupt(SiteSigninHandler):
                 return self._do_signin(
                     answer=count_results[0][1],
                     ctx=ctx,
-                    signurl=signurl,
+                    attendance_url=attendance_url,
                     existing_answers=existing_answers,
                     captcha_img_hash=captcha_img_hash,
                 )
@@ -199,7 +200,9 @@ class Tjupt(SiteSigninHandler):
 
         return SigninResult.fail(site, "未获取到匹配答案")
 
-    def _do_signin(self, answer, ctx: SiteSigninContext, signurl: str, existing_answers=None, captcha_img_hash=None):
+    def _do_signin(
+        self, answer, ctx: SiteSigninContext, attendance_url: str, existing_answers=None, captcha_img_hash=None
+    ):
         site = ctx.site
         cookie = ctx.cookie
         ua = ctx.ua
@@ -208,7 +211,7 @@ class Tjupt(SiteSigninHandler):
 
         try:
             sign_in_res = HttpClient(config=HttpClientConfig()).post(
-                url=signurl,
+                url=attendance_url,
                 data=data,
                 headers={"User-Agent": ua} if ua else None,
                 auth=CookieAuth(cookie) if cookie else None,
