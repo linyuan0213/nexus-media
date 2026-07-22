@@ -175,10 +175,10 @@ class DownloadRepository(BaseRepository):
             if hid:
                 return db.query(DOWNLOADHISTORY).filter(int(hid) == DOWNLOADHISTORY.ID).all()
 
-            # 使用子查询获取每个 TITLE 的最大日期
+            # 使用子查询获取每个 TMDBID + SE 组合的最大日期，而非仅按 TITLE 聚合
             sub_query = (
-                db.query(DOWNLOADHISTORY.TITLE, func.max(DOWNLOADHISTORY.DATE).label("max_date"))
-                .group_by(DOWNLOADHISTORY.TITLE)
+                db.query(DOWNLOADHISTORY.TMDBID, DOWNLOADHISTORY.SE, func.max(DOWNLOADHISTORY.DATE).label("max_date"))
+                .group_by(DOWNLOADHISTORY.TMDBID, DOWNLOADHISTORY.SE)
                 .subquery()
             )
 
@@ -188,7 +188,11 @@ class DownloadRepository(BaseRepository):
                     .filter(date < DOWNLOADHISTORY.DATE)
                     .join(
                         sub_query,
-                        and_(sub_query.c.TITLE == DOWNLOADHISTORY.TITLE, sub_query.c.max_date == DOWNLOADHISTORY.DATE),
+                        and_(
+                            sub_query.c.TMDBID == DOWNLOADHISTORY.TMDBID,
+                            sub_query.c.SE == DOWNLOADHISTORY.SE,
+                            sub_query.c.max_date == DOWNLOADHISTORY.DATE,
+                        ),
                     )
                     .order_by(DOWNLOADHISTORY.DATE.desc())
                     .all()
@@ -199,7 +203,11 @@ class DownloadRepository(BaseRepository):
                     db.query(DOWNLOADHISTORY)
                     .join(
                         sub_query,
-                        and_(sub_query.c.TITLE == DOWNLOADHISTORY.TITLE, sub_query.c.max_date == DOWNLOADHISTORY.DATE),
+                        and_(
+                            sub_query.c.TMDBID == DOWNLOADHISTORY.TMDBID,
+                            sub_query.c.SE == DOWNLOADHISTORY.SE,
+                            sub_query.c.max_date == DOWNLOADHISTORY.DATE,
+                        ),
                     )
                     .order_by(DOWNLOADHISTORY.DATE.desc())
                     .limit(num)
