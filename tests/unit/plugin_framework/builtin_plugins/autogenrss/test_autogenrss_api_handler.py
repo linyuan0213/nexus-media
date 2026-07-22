@@ -72,6 +72,8 @@ class TestApiRssGenHandler:
         assert result.ok is True
 
     def test_api_key_auth(self):
+        from app.infrastructure.http.auth import ApiKeyAuth
+
         config = {
             "site_id": "test",
             "type": "api",
@@ -93,7 +95,10 @@ class TestApiRssGenHandler:
 
         assert result.ok is True
         call_kwargs = mock_client.post.call_args[1]
-        assert call_kwargs["headers"]["x-api-key"] == "mykey"
+        auth = call_kwargs["auth"]
+        assert isinstance(auth, ApiKeyAuth)
+        assert auth._key == "x-api-key"
+        assert auth._value == "mykey"
 
     def test_bearer_auth_missing(self):
         config = {

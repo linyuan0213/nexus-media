@@ -14,3 +14,11 @@ repos:
         language: system
         types: [python]
         pass_filenames: true
+
+      - id: pytest
+        name: pytest
+        entry: uv run pytest tests/ -v --no-header -q
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true

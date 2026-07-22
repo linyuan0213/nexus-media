@@ -63,6 +63,8 @@ class TestApiSigninHandler:
         assert "bearer_token" in result.msg
 
     def test_apikey_auth_default_header(self):
+        from app.infrastructure.http.auth import ApiKeyAuth
+
         config = {
             "site_id": "test",
             "type": "api",
@@ -82,9 +84,14 @@ class TestApiSigninHandler:
 
         assert result.ok is True
         call_kwargs = mock_client.post.call_args[1]
-        assert call_kwargs["headers"]["X-Api-Key"] == "mykey"
+        auth = call_kwargs["auth"]
+        assert isinstance(auth, ApiKeyAuth)
+        assert auth._key == "X-Api-Key"
+        assert auth._value == "mykey"
 
     def test_apikey_auth_custom_header(self):
+        from app.infrastructure.http.auth import ApiKeyAuth
+
         config = {
             "site_id": "test",
             "type": "api",
@@ -102,7 +109,10 @@ class TestApiSigninHandler:
             _ = handler.signin(ctx)
 
         call_kwargs = mock_client.post.call_args[1]
-        assert call_kwargs["headers"]["x-api-key"] == "mykey"
+        auth = call_kwargs["auth"]
+        assert isinstance(auth, ApiKeyAuth)
+        assert auth._key == "x-api-key"
+        assert auth._value == "mykey"
 
     def test_json_response_success(self):
         config = {
