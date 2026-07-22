@@ -37,6 +37,9 @@ class RssGenEngine:
 
         if isinstance(rss_sites, str):
             rss_sites = [s for s in rss_sites.split("\n") if s]
+        if not rss_sites:
+            self.ctx.info("没有选择RSS生成站点，停止运行")
+            return
 
         rss_sites = copy.deepcopy(self._site_cache.get_sites(siteids=rss_sites))  # type: ignore
         if not rss_sites:

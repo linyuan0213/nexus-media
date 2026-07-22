@@ -141,12 +141,14 @@ class SiteRssGenHandler(ABC):
         )
 
     def _resolve_base_url(self, site_def, ctx: SiteRssGenContext) -> str:
+        if ctx.site_url:
+            return StringUtils.get_base_url(ctx.site_url).rstrip("/")
         if site_def and site_def.domain:
             domain = site_def.domain
             if not domain.startswith(("http://", "https://")):
                 domain = f"https://{domain}"
             return domain.rstrip("/")
-        return StringUtils.get_base_url(ctx.site_url).rstrip("/")
+        return ""
 
     def _build_headers(self, ctx: SiteRssGenContext) -> dict:
         headers: dict = {}

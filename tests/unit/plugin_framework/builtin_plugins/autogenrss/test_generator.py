@@ -25,7 +25,7 @@ class TestRssGenEngine:
     def test_no_sites(self):
         engine = self._make_engine()
         engine.run({"rss_sites": []})
-        engine.ctx.info.assert_called_with("没有需要生成的站点，停止运行")
+        engine.ctx.info.assert_called_with("没有选择RSS生成站点，停止运行")
 
     def test_success_and_failure(self):
         registry = MagicMock()

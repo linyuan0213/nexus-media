@@ -87,9 +87,20 @@ class TestSiteRssGenHandler:
 
         site_def = MagicMock()
         site_def.domain = "https://example.com"
-        ctx = SiteRssGenContext.from_site_info({"id": 1, "name": "test", "signurl": "http://old.com"})
+        ctx = SiteRssGenContext.from_site_info({"id": 1, "name": "test", "signurl": ""})
         handler = DummyHandler(MagicMock())
         assert handler._resolve_base_url(site_def, ctx) == "https://example.com"
+
+    def test_check_base_url_from_ctx_first(self):
+        class DummyHandler(SiteRssGenHandler):
+            def generate(self, ctx):
+                return SiteRssGenResult.custom(True, "")
+
+        site_def = MagicMock()
+        site_def.domain = "https://example.com"
+        ctx = SiteRssGenContext.from_site_info({"id": 1, "name": "test", "signurl": "http://user-conf.com"})
+        handler = DummyHandler(MagicMock())
+        assert handler._resolve_base_url(site_def, ctx) == "http://user-conf.com"
 
     def test_check_base_url_from_ctx(self):
         class DummyHandler(SiteRssGenHandler):

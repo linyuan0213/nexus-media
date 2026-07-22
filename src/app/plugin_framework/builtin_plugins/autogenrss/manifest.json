@@ -33,6 +33,14 @@
           "help": "开启后会根据周期定时生成指定站点RSS"
         },
         {
+          "key": "rss_sites",
+          "type": "multi_select",
+          "label": "生成RSS站点",
+          "source": "sites",
+          "default": [],
+          "help": "选择需要生成RSS的站点"
+        },
+        {
           "key": "notify",
           "type": "switch",
           "label": "运行时通知",

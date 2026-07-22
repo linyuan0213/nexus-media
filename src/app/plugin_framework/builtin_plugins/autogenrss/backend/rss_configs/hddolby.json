@@ -9,8 +9,10 @@
     "itemsmalldescr": "1",
     "itemsize": "1",
     "showrows": "50",
+    "exp": "180",
     "search": "",
-    "search_mode": "1"
+    "search_mode": "1",
+    "rsstype": "0"
   },
   "rss_link_selector": "//a[contains(@href, \"linktype=dl\")]/@href"
 }
