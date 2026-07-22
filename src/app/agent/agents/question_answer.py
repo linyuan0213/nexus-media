@@ -12,7 +12,7 @@ class QuestionAnswerAgent:
 
     @property
     def ready(self) -> bool:
-        return self._svc.ready
+        return self._svc is not None and self._svc.ready
 
     def answer(self, question: str) -> str:
         """回答问题，返回最简洁的答案"""
