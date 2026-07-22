@@ -1,5 +1,12 @@
 # 版本历史
 
+## v4.3.14 (2026-07-22)
+
+### 修复
+- 签到：修复浏览器回退逻辑对已有专用 handler 的站点（如 FreeFarm）仍然触发 Chrome 回退的问题，增加 `is_dedicated` 判断和 `get_chrome_server_url()` 可用性检查
+- 签到：浏览器挑战等待检测加入雷池 WAF 特征（`slg-bg`、`slg-box`、`雷池`、`安全拦截`），避免误判为页面已加载
+- 签到：修复 `QuestionAnswerAgent.ready` 在 AI 服务未配置时 `None.ready` 空指针崩溃
+
 ## v4.3.13 (2026-07-22)
 
 ### 修复
