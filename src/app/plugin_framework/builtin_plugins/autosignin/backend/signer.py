@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import SiteSigninContext
 from app.plugin_framework.builtin_plugins.autosignin.backend.registry import HandlerRegistry
+from app.utils.browser_mode import get_chrome_server_url
 
 
 def _should_browser_fallback(msg: str) -> bool:
@@ -100,6 +101,7 @@ class SigninEngine:
             f"browser={site_ctx.is_browser})"
         )
         factory = self._registry.get(site_ctx.site_id)
+        is_dedicated = factory is not None
         handler_name = factory.__name__ if factory else "无"
         self.ctx.debug(f"站点 {site_ctx.site} 命中 handler: {handler_name}")
         if not factory:
@@ -122,7 +124,12 @@ class SigninEngine:
             result = handler.signin(site_ctx)
             self.ctx.debug(f"站点 {site_ctx.site} 结果: {result.msg}")
             msg = result.msg or ""
-            if not site_ctx.is_browser and _should_browser_fallback(msg):
+            if (
+                not is_dedicated
+                and not site_ctx.is_browser
+                and _should_browser_fallback(msg)
+                and get_chrome_server_url()
+            ):
                 self.ctx.info(f"站点 {site_ctx.site} HTTP 签到疑似需要浏览器，自动回退")
                 br_ctx = SiteSigninContext.from_site_info(site_info, self._site_engine)
                 br_ctx.is_browser = True
@@ -131,7 +138,12 @@ class SigninEngine:
         except Exception as e:
             self.ctx.warn(f"站点 {site_ctx.site} 签到异常: {e}")
             # 异常也可能是浏览器相关（403/Cloudflare），尝试回退
-            if not site_ctx.is_browser and _should_browser_fallback(str(e)):
+            if (
+                not is_dedicated
+                and not site_ctx.is_browser
+                and _should_browser_fallback(str(e))
+                and get_chrome_server_url()
+            ):
                 self.ctx.info(f"站点 {site_ctx.site} 异常疑似需要浏览器，自动回退")
                 br_ctx = SiteSigninContext.from_site_info(site_info, self._site_engine)
                 br_ctx.is_browser = True

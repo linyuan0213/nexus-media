@@ -13,8 +13,8 @@ from app.utils.browser_mode import get_chrome_server_url
 
 from .base import SigninResult, SiteSigninContext, SiteSigninHandler
 
-_CLOUDFLARE_INDICATORS = re.compile(
-    r"challenge|cf-browser|Checking your browser|DDoS|正在检查|请等待|验证您不是机器人",
+_CHALLENGE_INDICATORS = re.compile(
+    r"challenge|cf-browser|Checking your browser|DDoS|正在检查|请等待|验证您不是机器人|slg-bg|slg-box|雷池|安全拦截",
     re.IGNORECASE,
 )
 _PAGE_WAIT_TIMEOUT = 120
@@ -84,7 +84,7 @@ class BrowserSigninHandler(SiteSigninHandler):
         html_text = post_navigate
         deadline = time.monotonic() + _PAGE_WAIT_TIMEOUT
         while time.monotonic() < deadline:
-            if _CLOUDFLARE_INDICATORS.search(html_text):
+            if _CHALLENGE_INDICATORS.search(html_text):
                 time.sleep(_PAGE_POLL_INTERVAL)
                 html_text = session.html()
                 continue
