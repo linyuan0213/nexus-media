@@ -225,6 +225,8 @@ class SubscribeAddService:
             media_info = meta_info(title=name, mtype=mtype)
             media_info.title = name
             media_info.type = mtype
+            if year:
+                media_info.year = str(year)
             if season:
                 media_info.begin_season = int(season)
             if mtype == MediaType.MOVIE:

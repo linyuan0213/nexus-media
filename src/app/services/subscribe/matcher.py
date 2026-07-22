@@ -78,7 +78,7 @@ class SubscribeMatcher:
                     if year and str(year) != str(media_info.year):
                         continue
                     search_title = f"{media_info.rev_string} {media_info.title} {media_info.year}"
-                    if not re.search(name, search_title, re.I) and name not in search_title:
+                    if name and not re.search(name, search_title, re.I) and name not in search_title:
                         continue
 
                 match_flag = True

@@ -48,6 +48,8 @@ class BrowserSigninHandler(SiteSigninHandler):
                     return SigninResult.fail(site, "无法打开网站")
 
                 html_text = self._wait_cloudflare(session, post_navigate=html_text)
+                if _CHALLENGE_INDICATORS.search(html_text):
+                    return SigninResult.fail(site, f"挑战未通过: {html_text[:100]}")
 
                 if self._already_signed(html_text):
                     return SigninResult.already(site)
