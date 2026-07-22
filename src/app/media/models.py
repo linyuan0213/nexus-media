@@ -4,6 +4,7 @@ import cn2an
 import regex as re
 from pydantic import BaseModel, Field
 
+import log
 from app.core.constants import ANIME_GENREIDS
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.domain.mediatypes import MediaType
@@ -459,6 +460,10 @@ class MediaInfo(BaseModel):
         self.original_language = info.get("original_language")
         self.networks = [network.get("name") for network in info.get("networks") or []]
         if self.type == MediaType.MOVIE:
+            tmdb_year = info.get("release_date", "")[:4] if info.get("release_date") else ""
+            if self.year and tmdb_year and str(self.year) != str(tmdb_year):
+                log.debug(f"[MediaInfo]TMDB年份不匹配: 种子={self.year}, TMDB={tmdb_year}, 保留种子元数据")
+                return
             self.title = info.get("title")
             self.original_title = info.get("original_title")
             self.runtime = info.get("runtime")
@@ -474,6 +479,10 @@ class MediaInfo(BaseModel):
                 ImageProxy.get_tmdbimage_url(info.get("backdrop_path")) if info.get("backdrop_path") else ""
             )
         else:
+            tmdb_year = info.get("first_air_date", "")[:4] if info.get("first_air_date") else ""
+            if self.year and tmdb_year and str(self.year) != str(tmdb_year):
+                log.debug(f"[MediaInfo]TMDB年份不匹配: 种子={self.year}, TMDB={tmdb_year}, 保留种子元数据")
+                return
             self.title = info.get("name")
             self.original_title = info.get("original_name")
             runtime_val = info.get("episode_run_time")
