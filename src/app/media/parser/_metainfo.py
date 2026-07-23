@@ -74,6 +74,9 @@ def _is_anime(rev_name: str, org_name: str) -> bool:
         return False
     if re.search(r"\[(?:[+XVPI-]+\d*|\d*[+XVPI-]+)]\s*\[", rev_name, re.IGNORECASE):
         return True
+    # 多括号 + 含中文 = 动漫（如 U2 的 [组][中文名][BDMV][1080p]）
+    if rev_name.count("[") >= 3 and re.search(r"[\u4e00-\u9fff]", rev_name):
+        return True
     if re.search(r"\s+-\s+[\dv]{1,4}\b", rev_name, re.IGNORECASE):
         return True
     if re.search(

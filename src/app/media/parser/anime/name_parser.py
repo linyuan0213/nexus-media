@@ -77,7 +77,7 @@ def _supplement_bracket_content(name, anitopy_info, title):
         r"|^movie([+&]?\w+)?$|^tv[+&]?\w*$|^ova([+&]?\w+)?$|^sp\w*$"
     )
 
-    _CHINESE_META_CHARS = set("粤日英简繁国台港双多单语字幕音轨频内嵌封挂压效硬软中外体")
+    _CHINESE_META_CHARS = set("粤日英简繁国台港双多单语字幕音轨频内嵌封挂压效硬软中外体转载自搬运")
 
     bracket_contents = re.findall(r"\[([^\]]+)\]", title)
     remaining = []

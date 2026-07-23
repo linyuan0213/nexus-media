@@ -2,7 +2,7 @@ import re
 
 from app.utils import StringUtils
 
-_META_CHARS = set("粤日英简繁国台港双多单语字幕音轨频内嵌封挂压效硬软中外体")
+_META_CHARS = set("粤日英简繁国台港双多单语字幕音轨频内嵌封挂压效硬软中外体转载自搬运")
 
 _RE_SITE_TAG = re.compile(
     r"^[【\[]?(?:[动漫画纪录片电影视连续剧集日美韩中港台海外华语综艺原盘高清]{2,}|TV|Animation|Movie|Documentar|Anime|完结][】\]]?|★\d+月新番★)",
@@ -55,6 +55,8 @@ def prepare_title(title):
                         continue
                     if all(c in _META_CHARS for c in name):
                         continue
+                elif StringUtils.is_all_chinese(name) and all(c in _META_CHARS for c in name):
+                    continue
                 if _RE_BRACKET_GROUP.match(name):
                     titles.append(name.strip())
                 else:
