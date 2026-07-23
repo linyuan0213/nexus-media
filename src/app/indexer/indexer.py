@@ -10,6 +10,7 @@
 import datetime
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import TimeoutError as FutureTimeoutError
 
 import log
 from app.core.system_config import SystemConfig
@@ -295,21 +296,24 @@ class Indexer:
                 for client, indexer, order_seq in work_items
             }
             completed = 0
-            for future in as_completed(futures, timeout=120):
-                client, indexer = futures[future]
-                completed += 1
-                pct = 10 + round(50 * (completed / len(futures)))
-                self.progress.update(
-                    ptype=progress_key,
-                    value=pct,
-                    text=f"站点搜索 {completed}/{len(futures)} 完成 ({pct}%)",
-                )
-                try:
-                    result = future.result()
-                    if result:
-                        all_raw_results.extend(result)
-                except Exception:
-                    log.error(f"[Indexer]{client.client_id} 搜索 {indexer.name} 失败")
+            try:
+                for future in as_completed(futures, timeout=120):
+                    client, indexer = futures[future]
+                    completed += 1
+                    pct = 10 + round(50 * (completed / len(futures)))
+                    self.progress.update(
+                        ptype=progress_key,
+                        value=pct,
+                        text=f"站点搜索 {completed}/{len(futures)} 完成 ({pct}%)",
+                    )
+                    try:
+                        result = future.result()
+                        if result:
+                            all_raw_results.extend(result)
+                    except Exception:
+                        log.error(f"[Indexer]{client.client_id} 搜索 {indexer.name} 失败")
+            except FutureTimeoutError:
+                log.warn(f"[Indexer]站点搜索超时，已完成 {completed}/{len(futures)} 个，进入过滤阶段")
         finally:
             executor.shutdown(wait=False)
 

@@ -1,6 +1,7 @@
 """FastAPI 速率限制中间件."""
 
-from fastapi import Request, Response
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import log
@@ -24,7 +25,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     # 特定路径自定义限流规则：{path: rate}
     _PATH_LIMITS: dict[str, str] = {
-        "/api/system/refresh": "10/m",
+        "/api/system/refresh": "30/m",
         "/api/auth/login": "5/m",
     }
 
@@ -49,10 +50,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if not self._engine.try_acquire(key, rate=rate):
             log.warn(f"[RateLimit]IP {client_ip} 请求 {path} 触发限流")
-            return Response(
-                content='{"detail":"请求过于频繁，请稍后再试"}',
+            return JSONResponse(
+                content={"detail": "请求过于频繁，请稍后再试"},
                 status_code=429,
-                media_type="application/json",
             )
 
         return await call_next(request)
