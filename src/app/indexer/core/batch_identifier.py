@@ -23,7 +23,7 @@ class BatchIdentifier:
 
     @staticmethod
     def build_cache_key(meta_info, fallback_title=None):
-        """构建与 identify 阶段一致的缓存 key"""
+        """构建与 identify 阶段一致的缓存 key (v2)"""
         name = meta_info.get_name() or fallback_title
         if not name:
             return None
@@ -32,7 +32,7 @@ class BatchIdentifier:
             season_ep += f"_S{'-'.join(str(s) for s in meta_info.get_season_list())}"
         if meta_info.get_episode_list():
             season_ep += f"_E{'-'.join(str(e) for e in meta_info.get_episode_list())}"
-        return f"{name}{season_ep}"
+        return f"v2_{name}{season_ep}"
 
     def identify(self, candidates, progress_key=ProgressKey.Search):
         """

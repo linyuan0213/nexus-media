@@ -19,8 +19,14 @@ from app.services.search_service import Searcher
 from app.services.web.utils import get_mediainfo_from_id
 from app.utils import StringUtils
 
-# 媒体识别结果缓存，避免重复识别
+# 媒体识别结果缓存
 _MEDIA_IDENT_CACHE: dict = {}
+_MEDIA_IDENT_CACHE_VERSION = "2"
+
+
+def _clear_media_ident_cache():
+    """清除媒体识别缓存"""
+    _MEDIA_IDENT_CACHE.clear()
 
 
 @contextmanager
@@ -104,7 +110,8 @@ def search_medias_for_web(
         if tmdbid:
             media_info = get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)
         else:
-            cache_key = hashlib.md5(f"{content}_{mtype}".encode(), usedforsecurity=False).hexdigest()
+            raw = f"{content}_{mtype}_{_MEDIA_IDENT_CACHE_VERSION}".encode()
+            cache_key = hashlib.md5(raw, usedforsecurity=False).hexdigest()
             if cache_key in _MEDIA_IDENT_CACHE:
                 media_info = _MEDIA_IDENT_CACHE[cache_key]
                 log.info(f"[Web]从缓存获取媒体信息: {content}")
