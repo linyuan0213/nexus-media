@@ -52,6 +52,12 @@ def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None =
             media_info.end_episode = None
             media_info.total_episodes = 0
 
+    # 解析器未从标题提取到年份时，从 subtitle/description 提取
+    if not media_info.year and subtitle:
+        year_match = re.search(r"(?<!\d)(19\d{2}|20[0-2]\d|2030)(?!\d)", str(subtitle))
+        if year_match:
+            media_info.year = year_match.group(1)
+
     return media_info
 
 
