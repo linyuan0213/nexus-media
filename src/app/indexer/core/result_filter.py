@@ -126,6 +126,13 @@ class ResultFilter:
         if not meta_info or not match_media:
             return False
 
+        # 年份冲突拒绝：种子有年份且与订阅年份偏差超过1年 → 不匹配
+        meta_year = str(meta_info.year or "").strip()
+        match_year = str(match_media.year or "").strip()
+        if meta_year and match_year and meta_year.isdigit() and match_year.isdigit():
+            if abs(int(meta_year) - int(match_year)) > 1:
+                return False
+
         def _norm(name):
             if not name:
                 return ""
@@ -171,22 +178,25 @@ class ResultFilter:
                     continue
                 if mn == mmn:
                     return True
-                # 子串匹配：要求公共子串占较长字符串的比例 >= 50%，且不跨语言
-                # 例："GHOSTINTHESHELL" in "攻殻機動隊THEGHOSTINTHESHELL" → 跨语言，不匹配
+                # 子串匹配：两个方向用不同阈值
+                # 订阅名 in 种子名（如 "GHOSTINTHESHELL" in "GHOSTINTHESHELLSAC2045S02"）→ 高阈值防误匹配
+                # 种子名 in 订阅名 → 低阈值（订阅更具体）
                 if _has_cjk(mn) == _has_cjk(mmn):
-                    if mn in mmn:
-                        if len(mn) / len(mmn) >= 0.5:
+                    if mmn in mn:
+                        if len(mmn) / len(mn) >= 0.85:
                             return True
-                    elif mmn in mn:
-                        if len(mmn) / len(mn) >= 0.5:
+                    elif mn in mmn:
+                        if len(mn) / len(mmn) >= 0.6:
                             return True
                 # 中文虚词归一化后二次匹配
                 mn_simp = _cn_simplify(mn)
                 mmn_simp = _cn_simplify(mmn)
                 if mn_simp and mmn_simp and (mn_simp == mmn_simp or mn_simp in mmn_simp or mmn_simp in mn_simp):
                     return True
-                # SequenceMatcher 兜底：比例 >= 0.8（避免过宽松），且不跨语言
-                if difflib.SequenceMatcher(None, mn, mmn).ratio() >= 0.8:
+                # SequenceMatcher 兜底：比例 >= 0.8 且长度比 >= 0.7（防同名前缀），且不跨语言
+                shorter_len = min(len(mn), len(mmn))
+                longer_len = max(len(mn), len(mmn))
+                if shorter_len / longer_len >= 0.7 and difflib.SequenceMatcher(None, mn, mmn).ratio() >= 0.8:
                     if _has_cjk(mn) == _has_cjk(mmn):
                         return True
 
