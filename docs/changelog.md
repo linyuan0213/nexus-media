@@ -6,6 +6,7 @@
 - TMDB：`search_tv`/`_fuzzy_match` 多候选匹配从「取第一个 anime」改为综合评分（名称相似度 + 关键词重叠 + 季号匹配 + 已完结加权），解决同名衍生作品被新版覆盖的问题
 - TMDB：无集号标记时自动交叉搜索 TV/Movie，用 `_fetch_allnames` + 综合评分比较选出最优类型
 - TMDB：`search_multi_infos` 降级路径增加 `compare_tmdb_names` 名称校验，不再盲取第一个类型匹配的条目
+- 解析：动漫名清洗增加年份（1900-2030）和批量关键词（Complete/全集/合集/Season N）剥离，解决搜索名过长导致 TMDb 返回 0 结果的问题
 - 下载：`add_torrent_and_get_id` 种子已在 qBittorrent 时返回真实 hash 而非 `"EXISTS"`，不再跳过历史写入导致下载页不可见
 - 订阅：`is_exists_download_history_by_tmdb`（不限 STATE）改为 `is_completed_by_tmdb`（仅 STATE=completed），已删除/失败的种子允许重新下载
 
