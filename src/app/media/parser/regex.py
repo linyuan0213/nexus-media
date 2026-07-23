@@ -33,4 +33,5 @@ class RegexParser(BaseParser):
             resource_team=meta.resource_team,
             type=meta.type,
             confidence=0.7,
+            org_string=meta.org_string,
         )

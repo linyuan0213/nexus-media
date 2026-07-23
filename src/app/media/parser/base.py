@@ -20,6 +20,7 @@ class ParserResult(BaseModel):
     resource_team: str | None = None
     type: MediaType | None = None
     confidence: float = 0.0
+    org_string: str | None = None
 
 
 class BaseParser:
