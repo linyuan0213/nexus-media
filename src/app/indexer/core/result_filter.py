@@ -139,6 +139,9 @@ class ResultFilter:
                 return name
             return re.sub(r"[\u7684\u4e4b\u4e0e\u548c\u4e4e\u4e4b]", "", name)
 
+        def _has_cjk(s):
+            return any("\u3000" <= c <= "\u9fff" for c in s)
+
         match_names = {
             _norm(match_media.title),
             _norm(match_media.cn_name),
@@ -168,22 +171,24 @@ class ResultFilter:
                     continue
                 if mn == mmn:
                     return True
-                # 子串匹配：要求公共子串占较长字符串的比例 >= 50%
-                # 避免 "The Boys" 被 "Miracle The Boys Of" 误匹配
-                if mn in mmn:
-                    if len(mn) / len(mmn) >= 0.5:
-                        return True
-                elif mmn in mn:
-                    if len(mmn) / len(mn) >= 0.5:
-                        return True
+                # 子串匹配：要求公共子串占较长字符串的比例 >= 50%，且不跨语言
+                # 例："GHOSTINTHESHELL" in "攻殻機動隊THEGHOSTINTHESHELL" → 跨语言，不匹配
+                if _has_cjk(mn) == _has_cjk(mmn):
+                    if mn in mmn:
+                        if len(mn) / len(mmn) >= 0.5:
+                            return True
+                    elif mmn in mn:
+                        if len(mmn) / len(mn) >= 0.5:
+                            return True
                 # 中文虚词归一化后二次匹配
                 mn_simp = _cn_simplify(mn)
                 mmn_simp = _cn_simplify(mmn)
                 if mn_simp and mmn_simp and (mn_simp == mmn_simp or mn_simp in mmn_simp or mmn_simp in mn_simp):
                     return True
-                # SequenceMatcher 兜底：比例 >= 0.8（避免过宽松）
+                # SequenceMatcher 兜底：比例 >= 0.8（避免过宽松），且不跨语言
                 if difflib.SequenceMatcher(None, mn, mmn).ratio() >= 0.8:
-                    return True
+                    if _has_cjk(mn) == _has_cjk(mmn):
+                        return True
 
         return False
 
