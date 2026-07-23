@@ -48,6 +48,8 @@ class TMDBCache(TypedCache):
     TTL_TRENDING = 2 * 3600  # 2 小时
     TTL_DEFAULT = 3600  # 1 小时（默认）
 
+    MEDIA_CACHE_VERSION = "2"  # 匹配逻辑变更时递增，自动作废旧缓存
+
     def __init__(self, adapter: CacheAdapter | None = None):
         if adapter is None:
             # 默认使用Redis适配器
@@ -83,7 +85,7 @@ class TMDBCache(TypedCache):
 
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV
-        key = self._make_key("media", title, year or "", mtype.value if mtype else "")
+        key = self._make_key("media", self.MEDIA_CACHE_VERSION, title, year or "", mtype.value if mtype else "")
         return self.get(key)
 
     def set_media_info(
@@ -93,7 +95,7 @@ class TMDBCache(TypedCache):
 
         if mtype == MediaType.ANIME:
             mtype = MediaType.TV
-        key = self._make_key("media", title, year or "", mtype.value if mtype else "")
+        key = self._make_key("media", self.MEDIA_CACHE_VERSION, title, year or "", mtype.value if mtype else "")
         ttl = ttl or self.TTL_MEDIA_INFO
         return self.set(key, info, ttl)
 
