@@ -62,7 +62,10 @@ def _supplement_bracket_content(name, anitopy_info, title):
         r"|^dvd(rip)?$|^remux$|^complete$|^fin$|^batch$|^v\d$|^rev\d*$|^jav$"
         r"|^x\.?\d{2,4}$|^h\.?\d{2,4}$|^h26[345]$|^aac$|^eac3$|^opus$|^dts$|^truehd$"
         r"|^hdr\d*$|^dv$|^sdr$"
+        r"|^movie([+&]?\w+)?$|^tv[+&]?\w*$|^ova([+&]?\w+)?$|^sp\w*$"
     )
+
+    _CHINESE_META_CHARS = set("粤日英简繁国台港双多单语字幕音轨频内嵌封挂压效硬软中外体")
 
     bracket_contents = re.findall(r"\[([^\]]+)\]", title)
     remaining = []
@@ -75,8 +78,15 @@ def _supplement_bracket_content(name, anitopy_info, title):
             continue
         if len(bc_clean) < 2 or "," in bc_clean:
             continue
+        if _META_TOKEN_RE.match(bc_clean):
+            continue
+        if all(c in _CHINESE_META_CHARS for c in bc_clean):
+            continue
         tokens = bc_clean.split()
-        if len(tokens) >= 2 and all(_META_TOKEN_RE.match(tk) for tk in tokens):
+        if len(tokens) >= 2 and (
+            all(_META_TOKEN_RE.match(tk) for tk in tokens)
+            or all(all(c in _CHINESE_META_CHARS for c in tk) for tk in tokens)
+        ):
             continue
         remaining.append(bc.replace("_", " "))
 
