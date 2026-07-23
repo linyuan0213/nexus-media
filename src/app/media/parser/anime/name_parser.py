@@ -45,6 +45,10 @@ def extract_name(info, anitopy_info, title):
         supp = _supplement_bracket_content(name, anitopy_info, title)
         if supp != name:
             name = supp
+        # anitopy 把区分词拆到 episode_title 时补回
+        ep_title = anitopy_info.get("episode_title") if anitopy_info else None
+        if ep_title and ep_title not in name:
+            name = f"{name} {ep_title}"
     return name
 
 

@@ -50,7 +50,7 @@ def prepare_title(title):
             elif name:
                 if StringUtils.is_chinese(name) and not StringUtils.is_all_chinese(name):
                     if not re.search(r"\[\d+", name, re.IGNORECASE):
-                        name = re.sub(r"[\d|#:：\-()（）]", "", name).strip()
+                        name = re.sub(r"[|#:：\-()（）]", "", name).strip()
                     if not name or name.strip().isdigit():
                         continue
                     if all(c in _META_CHARS for c in name):
