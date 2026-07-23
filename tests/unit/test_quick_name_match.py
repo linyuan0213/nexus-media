@@ -87,6 +87,11 @@ REJECT_CASES = [
         "[攻壳机动队ARISE Alternative Architecture 09-10话][Ghost in the Shell Arise - 05 - Pyrophoric Cult][BDRip]",
         "ARISE Alternative Architecture",
     ),
+    # 英文名匹配 + 中文名含英文后缀 → 拒绝
+    (
+        "Ghost in the shell 攻殼機動隊GIG 1080P BDRIP 第1~26話 全 外挂字幕 收藏版！",
+        "攻殼機動隊GIG (SAC 2nd GIG, 含英文后缀)",
+    ),
     # 全中文衍生标识词 → 应拒绝
     (
         "[攻壳机动队 新剧场版][攻殻機動隊 新劇場版]",

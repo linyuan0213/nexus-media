@@ -224,6 +224,8 @@ class ResultFilter:
                             return True
                     elif mn in mmn:
                         if len(mn) / len(mmn) >= 0.6:
+                            if not _has_cjk(mn) and meta_info.cn_name and re.search(r"[A-Za-z]", meta_info.cn_name):
+                                continue
                             return True
                 # 中文虚词归一化后二次匹配（全中文后缀=元数据标签，宽松；含英文/数字=衍生，严格）
                 mn_simp = _cn_simplify(mn)
@@ -499,6 +501,11 @@ class ResultFilter:
                     continue
 
                 if not media_info.tmdb_info:
+                    # 低置信（仅有中文名）且 TMDB 未识别 → 拒绝，不用回退
+                    if not meta_info.en_name and meta_info.cn_name:
+                        log.info(f"[ResultFilter]{torrent_name} ({cache_key}) 仅中文名低置信匹配 + TMDB 未识别，拒绝")
+                        stats.index_match_fail += 1
+                        continue
                     if (
                         match_media
                         and self._type_compatible(meta_info.type, match_media.type)
