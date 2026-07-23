@@ -408,14 +408,19 @@ class ResultFilter:
                 f"meta_name={mi.get_name()}, match_name={match_media.get_name()}"
             )
             if qnm_result:
-                log.info(f"[ResultFilter]{torrent_name} 快速名称匹配成功，跳过TMDB查询")
+                # 仅单中文名匹配视为低置信，仍需 TMDB 识别兜底防同名衍生
+                low_confidence = bool(not mi.en_name and mi.cn_name)
+                log.info(
+                    f"[ResultFilter]{torrent_name} 快速名称匹配成功"
+                    f"{'（低置信，仍走 TMDB）' if low_confidence else '，跳过TMDB查询'}"
+                )
                 candidates.append(
                     SearchCandidate(
                         item=item,
                         meta_info=mi,
                         res_order=res_order,
-                        skip_tmdb=True,
-                        media_info=self._media.merge_media_info(mi, match_media),
+                        skip_tmdb=not low_confidence,
+                        media_info=self._media.merge_media_info(mi, match_media) if not low_confidence else mi,
                         indexer_name=indexer_name,
                         indexer_order=indexer_order,
                         indexer_public=indexer_public,
