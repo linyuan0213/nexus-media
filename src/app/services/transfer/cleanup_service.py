@@ -153,11 +153,11 @@ class TransferCleanupService:
             source_path = transinfo.SOURCE_PATH
             source_filename = transinfo.SOURCE_FILENAME
             media_info_dict = {
-                "type": transinfo.TYPE,
+                "type": transinfo.media_type,
                 "category": transinfo.CATEGORY,
                 "title": transinfo.TITLE,
                 "year": transinfo.YEAR,
-                "tmdbid": transinfo.TMDBID,
+                "tmdbid": transinfo.tmdb_id,
                 "season_episode": transinfo.SEASON_EPISODE,
             }
             self._history.delete_transfer_blacklist(f"{source_path}/{source_filename}")
@@ -202,7 +202,7 @@ class TransferCleanupService:
                         season_match = re.search(r"S(\d+)", season_str)
                         if season_match:
                             mi.begin_season = int(season_match.group(1))
-                    if MediaType.from_string(transinfo.TYPE) == MediaType.MOVIE:
+                    if MediaType.from_string(transinfo.media_type) == MediaType.MOVIE:
                         mi.type = MediaType.MOVIE
                     else:
                         mi.type = MediaType.TV

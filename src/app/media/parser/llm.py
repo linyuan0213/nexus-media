@@ -17,13 +17,13 @@ class LLMParser(BaseParser):
         result = self._recognizer.recognize(title)
         if not result:
             return None
-        return self._convert(result)
+        return self._convert(result, title)
 
     def parse_batch(self, titles: list[str]) -> list[ParserResult | None]:
         results = self._recognizer.recognize_batch(titles)
-        return [self._convert(r) for r in results]
+        return [self._convert(r, t) for r, t in zip(results, titles, strict=False)]
 
-    def _convert(self, result) -> ParserResult | None:
+    def _convert(self, result, org_title: str = "") -> ParserResult | None:
         if not result:
             return None
         return ParserResult(
@@ -40,6 +40,7 @@ class LLMParser(BaseParser):
             resource_team=result.release_group,
             type=self._map_type(result.type),
             confidence=0.9,
+            org_string=org_title or None,
         )
 
     @staticmethod
