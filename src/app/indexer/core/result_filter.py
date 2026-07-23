@@ -21,6 +21,10 @@ from app.infrastructure.cache_system import get_cache_manager
 from app.media import meta_info
 from app.utils import StringUtils
 
+_EDITION_MARKERS: frozenset[str] = frozenset(
+    {"剧场版", "特别篇", "总集篇", "特别版", "OVA", "OAD", "oad", "OVA版", "OAD版"}
+)
+
 
 class ResultFilter:
     """
@@ -133,6 +137,18 @@ class ResultFilter:
             if abs(int(meta_year) - int(match_year)) > 1:
                 return False
 
+        # 类型冲突拒绝：电影 ≠ 剧集/动漫（互斥），动漫和剧集双向兼容
+        _anime_tv = {MediaType.TV, MediaType.ANIME}
+        if (
+            meta_info.type
+            and meta_info.type != MediaType.UNKNOWN
+            and match_media.type
+            and match_media.type != MediaType.UNKNOWN
+        ):
+            if not ({meta_info.type, match_media.type} <= _anime_tv):
+                if meta_info.type != match_media.type:
+                    return False
+
         def _norm(name):
             if not name:
                 return ""
@@ -147,7 +163,18 @@ class ResultFilter:
             return re.sub(r"[\u7684\u4e4b\u4e0e\u548c\u4e4e\u4e4b]", "", name)
 
         def _has_cjk(s):
-            return any("\u3000" <= c <= "\u9fff" for c in s)
+            return bool(re.search(r"[\u3000-\u9fff]", s))
+
+        def _extract_conflicting_year(mi, expected_year):
+            source = mi.org_string or mi.rev_string or ""
+            found = re.findall(r"(?<!\d)(19\d{2}|20[0-4]\d)(?!\d)", str(source))
+            for y in found:
+                if y.isdigit() and expected_year.isdigit():
+                    if abs(int(y) - int(expected_year)) > 1:
+                        return y
+            return None
+
+        _EDITION_SET = _EDITION_MARKERS  # 局部引用，略快
 
         match_names = {
             _norm(match_media.title),
@@ -193,15 +220,46 @@ class ResultFilter:
                     elif mn in mmn:
                         if len(mn) / len(mmn) >= 0.6:
                             return True
-                # 中文虚词归一化后二次匹配
+                # 中文虚词归一化后二次匹配（全中文后缀=元数据标签，宽松；含英文/数字=衍生，严格）
                 mn_simp = _cn_simplify(mn)
                 mmn_simp = _cn_simplify(mmn)
-                if mn_simp and mmn_simp and (mn_simp == mmn_simp or mn_simp in mmn_simp or mmn_simp in mn_simp):
-                    return True
-                # SequenceMatcher 兜底：比例 >= 0.8 且长度比 >= 0.7（防同名前缀），且不跨语言
+                if mn_simp and mmn_simp:
+                    if mn_simp == mmn_simp:
+                        return True
+                    if _has_cjk(mn_simp) and _has_cjk(mmn_simp):
+                        if mmn_simp in mn_simp:
+                            extra = mn_simp[len(mmn_simp) :]
+                            if extra and all("\u4e00" <= c <= "\u9fff" for c in extra):
+                                threshold = 0.65 if any(m in extra for m in _EDITION_SET) else 0.4
+                            else:
+                                threshold = 0.65
+                            if len(mmn_simp) / len(mn_simp) >= threshold:
+                                if threshold < 0.5:
+                                    _conflict = _extract_conflicting_year(meta_info, match_year)
+                                    if _conflict:
+                                        continue
+                                return True
+                        if mn_simp in mmn_simp:
+                            extra = mmn_simp[len(mn_simp) :]
+                            if extra and all("\u4e00" <= c <= "\u9fff" for c in extra):
+                                threshold = 0.65 if any(m in extra for m in _EDITION_SET) else 0.4
+                            else:
+                                threshold = 0.65
+                            if len(mn_simp) / len(mmn_simp) >= threshold:
+                                if threshold < 0.5:
+                                    _conflict = _extract_conflicting_year(meta_info, match_year)
+                                    if _conflict:
+                                        continue
+                                return True
+                    elif mmn_simp in mn_simp or mn_simp in mmn_simp:
+                        shorter = min(len(mn_simp), len(mmn_simp))
+                        longer = max(len(mn_simp), len(mmn_simp))
+                        if shorter / longer >= 0.5:
+                            return True
+                # SequenceMatcher 兜底：比例 >= 0.86 且长度比 >= 0.75（防同名前缀/同名衍生），且不跨语言
                 shorter_len = min(len(mn), len(mmn))
                 longer_len = max(len(mn), len(mmn))
-                if shorter_len / longer_len >= 0.7 and difflib.SequenceMatcher(None, mn, mmn).ratio() >= 0.8:
+                if shorter_len / longer_len >= 0.75 and difflib.SequenceMatcher(None, mn, mmn).ratio() >= 0.86:
                     if _has_cjk(mn) == _has_cjk(mmn):
                         return True
 

@@ -91,6 +91,8 @@ def init_season(info, token):
 
 def init_episode(info, token):
     """解析集号 token"""
+    if re.search(r"^\d+bit$", token, re.IGNORECASE):
+        return
     re_res = re.findall(rf"{_episode_re}", token, re.IGNORECASE)
     if re_res:
         info._last_token_type = "episode"
