@@ -139,14 +139,19 @@ class ResultFilter:
 
         # 类型冲突拒绝：电影 ≠ 剧集/动漫（互斥），动漫和剧集双向兼容
         _anime_tv = {MediaType.TV, MediaType.ANIME}
+        _torrent_type = meta_info.type
+        if not _torrent_type or _torrent_type == MediaType.TV:
+            _source = str(meta_info.rev_string or meta_info.org_string or "")
+            if re.search(r"(?i)\[movie[^\[\]]*\]", _source):
+                _torrent_type = MediaType.MOVIE
         if (
-            meta_info.type
-            and meta_info.type != MediaType.UNKNOWN
+            _torrent_type
+            and _torrent_type != MediaType.UNKNOWN
             and match_media.type
             and match_media.type != MediaType.UNKNOWN
         ):
-            if not ({meta_info.type, match_media.type} <= _anime_tv):
-                if meta_info.type != match_media.type:
+            if not ({_torrent_type, match_media.type} <= _anime_tv):
+                if _torrent_type != match_media.type:
                     return False
 
         def _norm(name):
