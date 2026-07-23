@@ -619,7 +619,7 @@ class Qbittorrent(_IDownloadClient):
             return None
         exists, _ = self.check_torrent_exists(content)
         if exists:
-            return "EXISTS"
+            return torrent_hash
         ret = self.add_torrent(
             content,
             is_paused=is_paused,

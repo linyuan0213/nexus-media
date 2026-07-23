@@ -12,6 +12,7 @@
 
 import contextlib
 import os
+import re
 from typing import Any
 
 import log
@@ -177,9 +178,6 @@ class DownloadPipeline:
                 ),
             )
         )
-
-        if downloader.client_id == "qbittorrent" and download_id == "EXISTS":
-            return downloader_id, None, ""
 
         # ---------- 阶段4：后续处理 ----------
         self._stage_post(
@@ -448,6 +446,9 @@ class DownloadPipeline:
         except Exception as e:
             log.warn(f"[Pipeline]写入下载历史失败（任务已提交至下载器）: {e}")
 
+        if dl_files:
+            self._check_file_type_mismatch(media_info, dl_files)
+
         if page_url and subtitle_dir and site_info and site_info.get("subtitle"):
 
             def _download_subtitle():
@@ -475,6 +476,46 @@ class DownloadPipeline:
             )
 
     # ---------- 辅助 ----------
+
+    @staticmethod
+    def _infer_type_from_files(file_names: list[str]) -> str | None:
+        """从文件列表推断媒体类型：>=3 个递进编号文件 → tv，1 个文件 → movie，其他 → None"""
+        if not file_names:
+            return None
+        if len(file_names) == 1:
+            return "movie"
+        false_positives = {"720", "1080", "2160", "480", "264", "265", "444", "420", "10"}
+        nums: list[list[int]] = []
+        for f in file_names:
+            found = re.findall(r"(?<!\d)(\d{2,4})(?!\d)", os.path.basename(f))
+            filtered = [int(n) for n in found if n not in false_positives]
+            if filtered:
+                nums.append(filtered)
+        if len(nums) < 3:
+            return None
+        # 取每组的最后一个数字作为标识（通常是集号）
+        last_nums = [group[-1] for group in nums]
+        for i in range(1, len(last_nums)):
+            if last_nums[i] <= last_nums[i - 1]:
+                return None
+        return "tv"
+
+    @staticmethod
+    def _check_file_type_mismatch(media_info, file_names: list[str]) -> None:
+        """当文件列表类型推断与 matched type 不一致时输出警告"""
+        inferred = DownloadPipeline._infer_type_from_files(file_names)
+        if not inferred:
+            return
+        matched = str(media_info.type.value) if media_info.type else ""
+        if inferred != matched:
+            log.warn(
+                "[Pipeline] 类型推断不一致: 匹配类型={} 文件推断={} name={} files={}".format(
+                    matched,
+                    inferred,
+                    media_info.org_string or media_info.title or "?",
+                    file_names[:5],
+                )
+            )
 
     def _fail(self, media_info, in_from, reason):
         self._event_bus.publish(

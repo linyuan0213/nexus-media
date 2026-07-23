@@ -1,3 +1,5 @@
+import difflib
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, cast
 
@@ -13,6 +15,49 @@ from app.media.lookup.tmdb_client import TmdbClient, compare_tmdb_names
 from app.media.lookup.tmdb_detail import TmdbDetail
 from app.utils import StringUtils
 from app.utils.config_tools import get_proxies
+
+_STOP_TOKENS = {"THE", "AN", "IN", "OF", "AND", "TO", "FOR", "ON", "WITH", "S", "E", "EP"}
+
+
+def _tokenize(name: str) -> set[str]:
+    clean = re.sub(r"[^A-Za-z0-9]+", " ", str(name)).upper()
+    return {w for w in clean.split() if len(w) >= 2}
+
+
+def _score_fuzzy_match(query_name: str, info: dict, alt_names: list[str], season_number=None) -> float:
+    query_norm = cast(str, StringUtils.handler_special_chars(str(query_name))).upper()
+
+    name_score = 0.0
+    for name in alt_names:
+        tn = cast(str, StringUtils.handler_special_chars(str(name))).upper()
+        if query_norm == tn:
+            name_score = 1.0
+            break
+        ratio = difflib.SequenceMatcher(None, query_norm, tn).ratio()
+        if ratio > name_score:
+            name_score = ratio
+
+    keyword_bonus = 0.0
+    query_tokens = _tokenize(query_name) - _STOP_TOKENS
+    if query_tokens:
+        all_text = " ".join(str(n) for n in alt_names)
+        alt_tokens = _tokenize(all_text)
+        overlap = len(query_tokens & alt_tokens)
+        keyword_bonus = min(0.15, overlap * 0.05)
+
+    season_bonus = 0.0
+    if season_number and info:
+        seasons = info.get("seasons") or []
+        if any(s.get("season_number") == int(season_number) and s.get("episode_count", 0) > 0 for s in seasons):
+            season_bonus = 0.05
+        else:
+            season_bonus = -0.05
+
+    ep_count = info.get("number_of_episodes", 0) or 0
+    season_count = info.get("number_of_seasons", 0) or 0
+    established_bonus = 0.05 if (ep_count >= 24 or season_count >= 2) else 0.0
+
+    return name_score + keyword_bonus + season_bonus + established_bonus
 
 
 class TmdbSearch:
@@ -77,12 +122,26 @@ class TmdbSearch:
                     results[movie.get("id")] = future.result()
                 except Exception as err:
                     log.error(f"[Meta]获取电影详情出错: {err}")
+        fuzzy_matches = []
         for movie in candidates:
             res = results.get(movie.get("id"))
             if res:
                 _, (info, names) = res
                 if compare_tmdb_names(name, names):
-                    return info
+                    fuzzy_matches.append((info, names))
+        if fuzzy_matches:
+            if len(fuzzy_matches) == 1:
+                return fuzzy_matches[0][0]
+            scored = []
+            for info, names in fuzzy_matches:
+                score = _score_fuzzy_match(name, info, names)
+                scored.append((score, info))
+            scored.sort(key=lambda x: -x[0])
+            log.debug(
+                f"[Meta]_fuzzy_match_movie 多匹配评分: "
+                f"{len(scored)} 候选, 最佳={scored[0][1].get('title')} score={scored[0][0]:.3f}"
+            )
+            return scored[0][1]
         return {}
 
     def search_tv(self, name: str, year: Any = None, season_number: Any = None, episode: Any = None) -> Any:
@@ -135,11 +194,19 @@ class TmdbSearch:
                 if _episode_valid(tv):
                     exact_matches.append(tv)
         if exact_matches:
-            # 优先返回 anime（genre_ids 包含 16 = Animation）
+            if len(exact_matches) == 1:
+                return exact_matches[0]
+            scored = []
             for tv in exact_matches:
-                if 16 in (tv.get("genre_ids") or []):
-                    return tv
-            return exact_matches[0]
+                names = [n for n in (tv.get("name"), tv.get("original_name")) if n]
+                score = _score_fuzzy_match(name, tv, names, season_number)
+                scored.append((score, tv))
+            scored.sort(key=lambda x: -x[0])
+            best = scored[0][1]
+            log.debug(
+                f"[Meta]search_tv 多匹配评分: {len(scored)} 候选, 最佳={best.get('name')} score={scored[0][0]:.3f}"
+            )
+            return best
         return self._fuzzy_match_tv(name, year, tvs, season_number, episode)
 
     def _fuzzy_match_tv(self, name, year, tvs, season_number=None, episode=None):
@@ -171,12 +238,20 @@ class TmdbSearch:
                         if ep_count < episode:
                             log.debug(f"[Meta]{info.get('name')} 集数({ep_count})不足({episode})，跳过")
                             continue
-                    fuzzy_matches.append(info)
+                    fuzzy_matches.append((info, names))
         if fuzzy_matches:
-            for info in fuzzy_matches:
-                if 16 in (info.get("genre_ids") or []):
-                    return info
-            return fuzzy_matches[0]
+            if len(fuzzy_matches) == 1:
+                return fuzzy_matches[0][0]
+            scored = []
+            for info, names in fuzzy_matches:
+                score = _score_fuzzy_match(name, info, names, season_number)
+                scored.append((score, info))
+            scored.sort(key=lambda x: -x[0])
+            log.debug(
+                f"[Meta]_fuzzy_match_tv 多匹配评分: "
+                f"{len(scored)} 候选, 最佳={scored[0][1].get('name')} score={scored[0][0]:.3f}"
+            )
+            return scored[0][1]
         return {}
 
     def _tv_has_season(self, tmdb_id, season_number):
@@ -283,10 +358,17 @@ class TmdbSearch:
                 if compare_tmdb_names(name, multi.get("name")) or compare_tmdb_names(name, multi.get("original_name")):
                     tv_matches.append(multi)
         if tv_matches:
+            if len(tv_matches) == 1:
+                return tv_matches[0]
+            scored = []
             for tv in tv_matches:
-                if 16 in (tv.get("genre_ids") or []):
-                    return tv
-            return tv_matches[0]
+                names = [n for n in (tv.get("name"), tv.get("original_name")) if n]
+                score = _score_fuzzy_match(name, tv, names)
+                scored.append((score, tv))
+            scored.sort(key=lambda x: -x[0])
+            log.debug(f"[Meta]search_multi TV 多匹配评分完成: {len(scored)} 个候选, 最佳={scored[0][1].get('name')}")
+            return scored[0][1]
+        tv_matches = []
         for multi in multis[:5]:
             if multi.get("media_type") == "movie":
                 movie_info, names = self._fetch_allnames(MediaType.MOVIE, multi.get("id"))
@@ -295,12 +377,17 @@ class TmdbSearch:
             elif multi.get("media_type") == "tv":
                 tv_info, names = self._fetch_allnames(MediaType.TV, multi.get("id"))
                 if compare_tmdb_names(name, names):
-                    tv_matches.append(tv_info)
+                    tv_matches.append((tv_info, names))
         if tv_matches:
-            for tv in tv_matches:
-                if 16 in (tv.get("genre_ids") or []):
-                    return tv
-            return tv_matches[0]
+            if len(tv_matches) == 1:
+                return tv_matches[0][0]
+            scored = []
+            for info, names in tv_matches:
+                score = _score_fuzzy_match(name, info, names)
+                scored.append((score, info))
+            scored.sort(key=lambda x: -x[0])
+            log.debug(f"[Meta]search_multi TV 二次评分完成: {len(scored)} 个候选, 最佳={scored[0][1].get('name')}")
+            return scored[0][1]
         return {}
 
     def search_multi_infos(self, name: str) -> list:

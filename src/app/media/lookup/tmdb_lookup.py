@@ -1,15 +1,19 @@
+import re
+
 import log
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.base import BaseLookup, LookupResult
-from app.media.lookup.tmdb_client import TmdbClient
+from app.media.lookup.tmdb_client import TmdbClient, compare_tmdb_names
 from app.media.lookup.tmdb_detail import TmdbDetail
 from app.media.lookup.tmdb_discover import TmdbDiscover
 from app.media.lookup.tmdb_person import TmdbPerson
-from app.media.lookup.tmdb_search import TmdbSearch
+from app.media.lookup.tmdb_search import TmdbSearch, _score_fuzzy_match
 from app.media.lookup.tmdb_season import TmdbSeason
 from app.utils import StringUtils
+
+_BATCH_KEYWORDS_RE = re.compile(r"(?i)\b(COMPLETE|全集|合集|全季|BATCH|PACK|COLLECTION|SEASON)\b")
 
 
 class TmdbLookup(BaseLookup):
@@ -34,6 +38,7 @@ class TmdbLookup(BaseLookup):
 
         # 优先使用中文名搜索（中文搜索结果通常更精确，避免外传/主系列混淆）
         result = None
+        org_title = parsed.org_string or ""
         if parsed.title_cn:
             result = self._lookup_tmdb(
                 name=parsed.title_cn,
@@ -43,6 +48,7 @@ class TmdbLookup(BaseLookup):
                 season_number=parsed.season,
                 episode=parsed.episode,
                 strict=strict,
+                original_title=org_title,
             )
         # 中文名搜索失败时，使用英文名搜索
         if not result and parsed.title_en:
@@ -54,6 +60,7 @@ class TmdbLookup(BaseLookup):
                 season_number=parsed.season,
                 episode=parsed.episode,
                 strict=strict,
+                original_title=org_title,
             )
         if not result:
             if language:
@@ -74,6 +81,7 @@ class TmdbLookup(BaseLookup):
         season_number=None,
         episode=None,
         strict: bool | None = None,
+        original_title: str = "",
     ):
         info = None
         # 1. 按指定类型搜索
@@ -86,12 +94,28 @@ class TmdbLookup(BaseLookup):
                 log.debug(f"[Meta]正在识别{search_type.value}：{name}, 年份={year} ...")
                 info = self.search.search_movie(name, year)
                 if info:
-                    info["media_type"] = MediaType.MOVIE
+                    media_type = MediaType.MOVIE
+                    info["media_type"] = media_type
                     log.info(
                         "[Meta]{} 识别到 电影：TMDBID={}, 名称={}, 上映日期={}".format(
                             name, info.get("id"), info.get("title"), info.get("release_date")
                         )
                     )
+                    if not strict:
+                        cross_info = self.search.search_tv(name, first_year, season_number, episode)
+                        if cross_info and cross_info.get("id"):
+                            cross_info["media_type"] = MediaType.TV
+                            _, mv_names = self.search._fetch_allnames(MediaType.MOVIE, info.get("id"))
+                            _, tv_names = self.search._fetch_allnames(MediaType.TV, cross_info.get("id"))
+                            mv_score = _score_fuzzy_match(name, info, mv_names)
+                            tv_score = _score_fuzzy_match(name, cross_info, tv_names, season_number)
+                            if tv_score > mv_score:
+                                log.info(
+                                    "[Meta]{} 电视剧评分更高 (MV={:.3f}, TV={:.3f})，切换为电视剧：TMDBID={}".format(
+                                        name, mv_score, tv_score, cross_info.get("id")
+                                    )
+                                )
+                                return cross_info
                     return info
             # 电影无年份 fallback（类似 TV 的逻辑）
             if not info and first_year and not strict:
@@ -119,12 +143,37 @@ class TmdbLookup(BaseLookup):
                 log.debug(f"[Meta]正在识别{search_type.value}：{name}, 年份={StringUtils.xstr(year)} ...")
                 info = self.search.search_tv(name, year, season_number, episode)
                 if info:
-                    info["media_type"] = MediaType.TV
+                    media_type = MediaType.TV
+                    info["media_type"] = media_type
                     log.info(
                         "[Meta]{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(
                             name, info.get("id"), info.get("name"), info.get("first_air_date")
                         )
                     )
+                    if episode is None and not strict:
+                        has_batch = bool(original_title and _BATCH_KEYWORDS_RE.search(original_title))
+                        if has_batch:
+                            log.debug(f"[Meta]{name} 原始标题含批量关键词，跳过跨类型电影搜索")
+                        else:
+                            cross_info = self.search.search_movie(name, first_year)
+                            if cross_info and cross_info.get("id"):
+                                cross_info["media_type"] = MediaType.MOVIE
+                                _, tv_names = self.search._fetch_allnames(MediaType.TV, info.get("id"))
+                                _, mv_names = self.search._fetch_allnames(MediaType.MOVIE, cross_info.get("id"))
+                                tv_score = _score_fuzzy_match(name, info, tv_names, season_number)
+                                mv_score = _score_fuzzy_match(name, cross_info, mv_names)
+                                if mv_score > tv_score:
+                                    log.info(
+                                        "[Meta]{} 电影评分更高 (TV={:.3f}, MV={:.3f})，切换为电影：TMDBID={}".format(
+                                            name, tv_score, mv_score, cross_info.get("id")
+                                        )
+                                    )
+                                    return cross_info
+                                log.debug(
+                                    "[Meta]{} TV 评分更高 (TV={:.3f}, MV={:.3f})，保持电视剧：TMDBID={}".format(
+                                        name, tv_score, mv_score, info.get("id")
+                                    )
+                                )
                     return info
             # TV 查不到时，去掉年份再查（仅非严格模式）
             if not info and first_year and not strict:
@@ -145,6 +194,11 @@ class TmdbLookup(BaseLookup):
                 if multi_results:
                     for item in multi_results:
                         if item.get("media_type") == search_type:
+                            item_name = item.get("name") or item.get("title", "")
+                            if not compare_tmdb_names(name, item_name) and not compare_tmdb_names(
+                                name, item.get("original_name") or item.get("original_title", "")
+                            ):
+                                continue
                             detail = self.search._get_detail(item.get("id"), search_type)
                             if detail:
                                 detail["media_type"] = search_type

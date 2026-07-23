@@ -236,8 +236,8 @@ class RssFeedStrategy:
 
                 if media_info.tmdb_id:
                     season_episode = media_info.get_season_episode_string()
-                    if self.download_repo.is_exists_download_history_by_tmdb(media_info.tmdb_id, season_episode):
-                        log.info(f"[RssFeedStrategy] {title} 已在下载历史中存在，跳过下载")
+                    if self.download_repo.is_completed_by_tmdb(str(media_info.tmdb_id), season_episode):
+                        log.info(f"[RssFeedStrategy] {title} 已完成下载，跳过")
                         continue
 
                 match_flag, match_msg, match_info = self.matcher.match(

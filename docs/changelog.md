@@ -1,5 +1,23 @@
 # 版本历史
 
+## v4.3.15 (2026-07-23)
+
+### 修复
+- TMDB：`search_tv`/`_fuzzy_match` 多候选匹配从「取第一个 anime」改为综合评分（名称相似度 + 关键词重叠 + 季号匹配 + 已完结加权），解决同名衍生作品被新版覆盖的问题
+- TMDB：无集号标记时自动交叉搜索 TV/Movie，用 `_fetch_allnames` + 综合评分比较选出最优类型
+- TMDB：`search_multi_infos` 降级路径增加 `compare_tmdb_names` 名称校验，不再盲取第一个类型匹配的条目
+- 下载：`add_torrent_and_get_id` 种子已在 qBittorrent 时返回真实 hash 而非 `"EXISTS"`，不再跳过历史写入导致下载页不可见
+- 订阅：`is_exists_download_history_by_tmdb`（不限 STATE）改为 `is_completed_by_tmdb`（仅 STATE=completed），已删除/失败的种子允许重新下载
+
+### 优化
+- 解析：原始标题含批量关键词（`COMPLETE/全集/合集/BATCH/PACK/SEASON`）时跳过跨类型 Movie 搜索，减少不必要的 API 调用
+- 下载：文件列表 ≥3 个递进编号文件判定为 TV，1 个文件判定为 Movie，类型不一致时输出 warn
+
+### 测试
+- 新增 `TestScoreFuzzyMatch`：综合评分 6 个维度（精确匹配、模糊区分、季号加分/惩罚、已完结、关键词重叠）
+- 新增 `TestBatchKeywordsRE`：12 种批量关键词模式匹配
+- 新增 `TestInferTypeFromFiles`：文件列表类型推断 13 种模式
+
 ## v4.3.14 (2026-07-22)
 
 ### 修复
