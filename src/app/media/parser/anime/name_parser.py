@@ -32,8 +32,16 @@ def extract_name(info, anitopy_info, title):
         if name_match and name_match.group(1):
             name = name_match.group(1).strip()
     if name and not StringUtils.is_chinese(name):
-        name = _supplement_bracket_content(name, anitopy_info, title)
-    elif name and len(name) < 4 and StringUtils.is_chinese(name):
+        _supp_name = _supplement_bracket_content(name, anitopy_info, title)
+        bracket_contents = re.findall(r"\[([^\]]+)\]", title)
+        cn_found = None
+        for bc in bracket_contents:
+            bc_clean = bc.strip().replace("_", " ").strip()
+            if StringUtils.is_chinese(bc_clean) and len(bc_clean) >= 4:
+                cn_found = bc_clean
+                break
+        name = cn_found or _supp_name
+    elif name and len(name) <= 6 and StringUtils.is_chinese(name):
         supp = _supplement_bracket_content(name, anitopy_info, title)
         if supp != name:
             name = supp
