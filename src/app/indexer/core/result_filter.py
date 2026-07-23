@@ -168,7 +168,12 @@ class ResultFilter:
             return False
 
         if meta_names & match_names:
-            return True
+            # 所有 meta 名都在 match 中才算可靠；否则另一半名包含区分信息
+            if meta_names.issubset(match_names):
+                return True
+            # 有多个名称但未全部匹配 → 存在区分信息，不走快速匹配
+            if len(meta_names) > 1:
+                return False
 
         for mn in meta_names:
             if len(mn) < 3:
