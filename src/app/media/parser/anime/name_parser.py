@@ -33,6 +33,10 @@ def extract_name(info, anitopy_info, title):
             name = name_match.group(1).strip()
     if name and not StringUtils.is_chinese(name):
         name = _supplement_bracket_content(name, anitopy_info, title)
+    elif name and len(name) < 4 and StringUtils.is_chinese(name):
+        supp = _supplement_bracket_content(name, anitopy_info, title)
+        if supp != name:
+            name = supp
     return name
 
 
