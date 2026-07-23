@@ -19,7 +19,7 @@ class BatchIdentifier:
     ):
         self.media = media_service
         self.progress = progress or ProgressTracker()
-        self._media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=3600)
+        self._media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=300)
 
     @staticmethod
     def build_cache_key(meta_info, fallback_title=None):

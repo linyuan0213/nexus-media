@@ -375,7 +375,7 @@ class ResultFilter:
         """
         ret_array = []
         stats = FilterStats()
-        media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=3600)
+        media_ident_cache = get_cache_manager().get_or_create("media_ident", "memory", maxsize=2000, ttl=300)
 
         for cand in candidates:
             item = cand.item
