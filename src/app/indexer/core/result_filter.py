@@ -247,7 +247,15 @@ class ResultFilter:
                                         continue
                                     if meta_info.en_name:
                                         _en = _norm(meta_info.en_name)
-                                        if not any(not _has_cjk(mn) and (_en in mn or mn in _en) for mn in match_names):
+                                        _found = False
+                                        for mn in match_names:
+                                            if _has_cjk(mn):
+                                                continue
+                                            if _en == mn or mn in _en:
+                                                if len(mn) / len(_en) >= 0.7:
+                                                    _found = True
+                                                    break
+                                        if not _found:
                                             continue
                                 return True
                         if mn_simp in mmn_simp:
@@ -263,12 +271,28 @@ class ResultFilter:
                                         continue
                                     if meta_info.en_name:
                                         _en = _norm(meta_info.en_name)
-                                        if not any(not _has_cjk(mn) and (_en in mn or mn in _en) for mn in match_names):
+                                        _found = False
+                                        for mn in match_names:
+                                            if _has_cjk(mn):
+                                                continue
+                                            if _en == mn or mn in _en:
+                                                if len(mn) / len(_en) >= 0.7:
+                                                    _found = True
+                                                    break
+                                        if not _found:
                                             continue
                                 return True
                     elif mmn_simp in mn_simp or mn_simp in mmn_simp:
-                        if not _has_cjk(mn_simp) and meta_info.cn_name and re.search(r"[A-Za-z]", meta_info.cn_name):
-                            continue
+                        if not _has_cjk(mn_simp) and meta_info.cn_name:
+                            cn_norm = _norm(meta_info.cn_name)
+                            _cn_match = False
+                            for _mmn in match_names:
+                                if _has_cjk(_mmn) and (cn_norm == _mmn or _mmn in cn_norm):
+                                    if cn_norm == _mmn or len(_mmn) / len(cn_norm) >= 0.75:
+                                        _cn_match = True
+                                        break
+                            if not _cn_match:
+                                continue
                         shorter = min(len(mn_simp), len(mmn_simp))
                         longer = max(len(mn_simp), len(mmn_simp))
                         if shorter / longer >= 0.5:
