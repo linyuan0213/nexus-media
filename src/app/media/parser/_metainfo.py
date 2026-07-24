@@ -14,7 +14,7 @@ from app.media.parser._video import parse_video_title
 def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None = None) -> Any:
     org_title = title
     if title:
-        title = re.sub(r"\|\d+\|\d+$", "", title)
+        title = re.sub(r"\|\d+(\|\d+)?$", "", title)
         cleaned = re.sub(
             r"(?i)\b(?:www\s+\w+|\w+\.(?:com|net|org|tv|cc|me|io)\b|pthdtv|qqhdtv|剧集网发布)\b",
             "",
