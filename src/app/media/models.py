@@ -463,7 +463,9 @@ class MediaInfo(BaseModel):
             tmdb_year = info.get("release_date", "")[:4] if info.get("release_date") else ""
             if self.year and tmdb_year and str(self.year) != str(tmdb_year):
                 log.debug(f"[MediaInfo]TMDB年份不匹配: 种子={self.year}, TMDB={tmdb_year}, 保留种子元数据")
-                return
+                tmdb_year = ""  # 年份冲突时不覆盖
+
+        if media_type == MediaType.MOVIE:
             self.title = info.get("title")
             self.original_title = info.get("original_title")
             self.runtime = info.get("runtime")
@@ -487,7 +489,7 @@ class MediaInfo(BaseModel):
             tmdb_year = info.get("first_air_date", "")[:4] if info.get("first_air_date") else ""
             if self.year and tmdb_year and str(self.year) != str(tmdb_year):
                 log.debug(f"[MediaInfo]TMDB年份不匹配: 种子={self.year}, TMDB={tmdb_year}, 保留种子元数据")
-                return
+                tmdb_year = ""  # 年份冲突时不覆盖
             self.title = info.get("name")
             self.original_title = info.get("original_name")
             runtime_val = info.get("episode_run_time")
