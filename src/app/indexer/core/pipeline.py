@@ -43,6 +43,7 @@ class SearchPipeline:
         match_media=None,
         in_from: SearchType | None = None,
         progress_key=ProgressKey.Search,
+        search_name="",
     ):
         """
         执行三阶段全局批量搜索过滤流水线
@@ -52,6 +53,7 @@ class SearchPipeline:
         :param match_media: 需要匹配的媒体信息
         :param in_from: 搜索渠道
         :param progress_key: 进度键
+        :param search_name: 搜索关键词（无 match_media 时做伪匹配）
         :return: PipelineResult
         """
         start_time = datetime.datetime.now()
@@ -67,6 +69,7 @@ class SearchPipeline:
             result_array=all_results,
             filter_args=filter_args,
             match_media=match_media,
+            search_name=search_name,
         )
 
         # ---------- 阶段2：批量识别（跨站点去重） ----------

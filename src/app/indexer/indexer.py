@@ -324,6 +324,7 @@ class Indexer:
             match_media=match_media,
             in_from=in_from,
             progress_key=progress_key,
+            search_name=key_word,
         )
 
         end_time = datetime.datetime.now()

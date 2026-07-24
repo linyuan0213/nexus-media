@@ -292,7 +292,7 @@ class ResultFilter:
             return True
         return bool(a in (MediaType.TV, MediaType.ANIME) and b in (MediaType.TV, MediaType.ANIME))
 
-    def local_filter(self, result_array, filter_args, match_media=None):
+    def local_filter(self, result_array, filter_args, match_media=None, search_name=""):
         """
         第一阶段：本地轻量级过滤
 
@@ -302,6 +302,13 @@ class ResultFilter:
         candidates = []
         direct_results = []
         stats = FilterStats()
+
+        def _norm(name):
+            if not name:
+                return ""
+            if isinstance(name, str):
+                return StringUtils.handler_special_chars(name).upper().strip()  # type: ignore[union-attr]
+            return ""
 
         for item in result_array:
             torrent_name = item.get("title")
@@ -387,6 +394,31 @@ class ResultFilter:
                 continue
 
             if not match_media:
+                # 无 TMDB 匹配时用 filter_args 年份 + search_name 做基础过滤
+                filter_year = str(filter_args.get("year", "") or "").strip()
+                if filter_year and mi.year:
+                    mi_year = str(mi.year).strip()
+                    if mi_year.isdigit() and filter_year.isdigit():
+                        if abs(int(mi_year) - int(filter_year)) > 1:
+                            log.info(
+                                f"[ResultFilter]{torrent_name} 年份冲突 (种子={mi_year}, 搜索={filter_year})，跳过"
+                            )
+                            stats.index_match_fail += 1
+                            continue
+                # search_name 伪匹配：种子名与搜索词差异大时跳过
+                if search_name and mi.get_name():
+                    _sn_norm = _norm(search_name)
+                    _mi_norm = _norm(mi.get_name())
+                    if _sn_norm and _mi_norm and len(_sn_norm) >= 3 and len(_mi_norm) >= 3:
+                        if _sn_norm not in _mi_norm and _mi_norm not in _sn_norm:
+                            sn_ratio = difflib.SequenceMatcher(None, _sn_norm, _mi_norm).ratio()
+                            if sn_ratio < 0.4:
+                                log.info(
+                                    f"[ResultFilter]{torrent_name} 名称不匹配搜索词"
+                                    f" (种子={_mi_norm}, 搜索={_sn_norm}, ratio={sn_ratio:.2f})，跳过"
+                                )
+                                stats.index_match_fail += 1
+                                continue
                 media_info = mi
                 media_info.set_torrent_info(
                     site=indexer_name,
