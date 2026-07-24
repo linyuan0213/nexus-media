@@ -298,6 +298,8 @@ class ResultFilter:
         for item in result_array:
             torrent_name = item.get("title")
             description = item.get("description")
+            if torrent_name:
+                torrent_name = re.sub(r"\|\d+\|\d+$", "", torrent_name)
             if not torrent_name:
                 stats.index_error += 1
                 continue
