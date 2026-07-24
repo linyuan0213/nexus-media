@@ -245,6 +245,10 @@ class ResultFilter:
                                     _conflict = _extract_conflicting_year(meta_info, match_year)
                                     if _conflict:
                                         continue
+                                    if meta_info.en_name:
+                                        _en = _norm(meta_info.en_name)
+                                        if not any(not _has_cjk(mn) and (_en in mn or mn in _en) for mn in match_names):
+                                            continue
                                 return True
                         if mn_simp in mmn_simp:
                             extra = mmn_simp[len(mn_simp) :]
@@ -257,6 +261,10 @@ class ResultFilter:
                                     _conflict = _extract_conflicting_year(meta_info, match_year)
                                     if _conflict:
                                         continue
+                                    if meta_info.en_name:
+                                        _en = _norm(meta_info.en_name)
+                                        if not any(not _has_cjk(mn) and (_en in mn or mn in _en) for mn in match_names):
+                                            continue
                                 return True
                     elif mmn_simp in mn_simp or mn_simp in mmn_simp:
                         if not _has_cjk(mn_simp) and meta_info.cn_name and re.search(r"[A-Za-z]", meta_info.cn_name):
