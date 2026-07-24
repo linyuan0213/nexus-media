@@ -239,7 +239,7 @@ class ResultFilter:
                             if extra and all("\u4e00" <= c <= "\u9fff" for c in extra):
                                 threshold = 0.65 if any(m in extra for m in _EDITION_SET) else 0.4
                             else:
-                                threshold = 0.65
+                                threshold = 0.85
                             if len(mmn_simp) / len(mn_simp) >= threshold:
                                 if threshold < 0.5:
                                     _conflict = _extract_conflicting_year(meta_info, match_year)
@@ -251,7 +251,7 @@ class ResultFilter:
                             if extra and all("\u4e00" <= c <= "\u9fff" for c in extra):
                                 threshold = 0.65 if any(m in extra for m in _EDITION_SET) else 0.4
                             else:
-                                threshold = 0.65
+                                threshold = 0.85
                             if len(mn_simp) / len(mmn_simp) >= threshold:
                                 if threshold < 0.5:
                                     _conflict = _extract_conflicting_year(meta_info, match_year)
@@ -259,16 +259,22 @@ class ResultFilter:
                                         continue
                                 return True
                     elif mmn_simp in mn_simp or mn_simp in mmn_simp:
+                        if not _has_cjk(mn_simp) and meta_info.cn_name and re.search(r"[A-Za-z]", meta_info.cn_name):
+                            continue
                         shorter = min(len(mn_simp), len(mmn_simp))
                         longer = max(len(mn_simp), len(mmn_simp))
                         if shorter / longer >= 0.5:
                             return True
-                # SequenceMatcher 兜底：比例 >= 0.86 且长度比 >= 0.75（防同名前缀/同名衍生），且不跨语言
+                # SequenceMatcher 兜底：CJK↔CJK 高阈值（防 "攻壳机动队2"→攻壳机动队），
+                # 其他语言保持 0.86
                 shorter_len = min(len(mn), len(mmn))
                 longer_len = max(len(mn), len(mmn))
-                if shorter_len / longer_len >= 0.75 and difflib.SequenceMatcher(None, mn, mmn).ratio() >= 0.86:
-                    if _has_cjk(mn) == _has_cjk(mmn):
-                        return True
+                if shorter_len / longer_len >= 0.75:
+                    _both_cjk = _has_cjk(mn) and _has_cjk(mmn)
+                    _seq_threshold = 0.92 if _both_cjk else 0.86
+                    if difflib.SequenceMatcher(None, mn, mmn).ratio() >= _seq_threshold:
+                        if _has_cjk(mn) == _has_cjk(mmn):
+                            return True
 
         return False
 

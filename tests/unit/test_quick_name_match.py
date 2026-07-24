@@ -109,6 +109,11 @@ REJECT_CASES = [
         "[VCB-Studio] 攻壳机动队 OVA [BDRip]",
         "攻壳机动队 OVA（含衍生词 OVA）",
     ),
+    # 非CJK _cn_simplify 子串匹配 + cn_name 含英文 → 拒绝
+    (
+        "[攻殼機動隊2 INNOCENCE][Ghost in the Shell 2: Innocence][MOVIE]",
+        "INNOCENCE 2004 电影（非CJK子串 + cn含英文）",
+    ),
 ]
 
 
