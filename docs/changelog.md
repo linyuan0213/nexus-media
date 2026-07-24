@@ -1,5 +1,26 @@
 # 版本历史
 
+## v4.3.16 (2026-07-24)
+
+### 修复
+- 匹配：`quick_name_match` 类型互斥 — MOVIE 种子不再匹配 TV/ANIME 订阅
+- 匹配：`SequenceMatcher` 收紧（0.8→0.86, 0.7→0.75）防同名衍生（如 SAC_2045 匹配 2026 剧集）
+- 匹配：CJK `_cn_simplify` 分级阈值 — 全中文后缀含衍生词（剧场版/特别篇/OVA）→高阈值 0.65，含英文字母（SAC/GIG/TV）→高阈值 0.65，纯元数据（简繁内封字幕）→低阈值 0.4
+- 匹配：英文名 `mn in mmn` 通过时检查 cn_name 是否含英文字母后缀，防止 SAC/ARISE/GIG 等绕过
+- 匹配：低置信（仅中文名）`quick_name_match` 通过后仍走 TMDB 识别，`match_filter` 中 TMDB 未识别时拒绝而非回调
+- 匹配：`org_string` 兜底检测 `[Movie]` 标签，补解析器遗漏的类型判定
+- 匹配：`_EDITION_MARKERS` 词表（剧场版/特别篇/总集篇/特别版/OVA/OAD）强制高阈值
+- 匹配：非 CJK `_cn_simplify` 子串加最小比率 ≥0.5，防极端短名误入长名
+- 解析：`init_episode` 排除 `^\d+bit$`，防止 `10bit`/`8bit` 被解析为 S01 E10/E08
+- TMDB：`cn_name`/`en_name` 按字符类型判定而非绑定 `original_language`，`en_name` 不再受 `ja`/`zh` 影响
+- TMDB：新增 `get_tmdb_zh_title(language="zh-CN")` 自动填充中文标题
+- 订阅：搜索时懒更新 TMDB 总集数 — 延迟更新的剧集自动同步到订阅，防止提前完成
+- 转移：`existence_checker` 文件扫码名称匹配改为多语言子串（cn_name/en_name/title）
+- 转移：已下载检测新增 `TRANSFER_HISTORY` DB 查询优先，按 tmdb_id+season 查已转移剧集，跳过文件名语言匹配
+
+### 测试
+- 新增 39 个 `TestQuickNameMatch` 用例覆盖攻壳机动队全系列（SAC/ARISE/INNOCENCE/GIG/剧场版/特别篇/2026全集）+ Chainsmoker Cat
+
 ## v4.3.15 (2026-07-23)
 
 ### 修复
