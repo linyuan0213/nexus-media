@@ -691,6 +691,23 @@ class SubscribeRepository(BaseRepository):
                     title == SubscribeTvs.NAME, str(year) == SubscribeTvs.YEAR, season == SubscribeTvs.SEASON
                 ).update({"LACK": lack})
 
+    def update_rss_tv_total(self, rssid: int, total_ep: int, lack_episodes: list | None = None) -> None:
+        """更新电视剧总集数（TMDB 集数增加时同步），同时可选更新缺失集"""
+        if not rssid:
+            return
+        lack = len(lack_episodes) if lack_episodes else 0
+        episodes_str = ",".join(str(e) for e in lack_episodes) if lack_episodes else ""
+        with self.session() as db:
+            db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID).update(
+                {"TOTAL_EP": total_ep, "TOTAL": total_ep, "LACK": lack}
+            )
+            if rssid:
+                existing = db.query(SubscribeTvEpisodes).filter(int(rssid) == SubscribeTvEpisodes.RSSID).first()
+                if existing:
+                    existing.EPISODES = episodes_str
+                else:
+                    db.add(SubscribeTvEpisodes(RSSID=str(rssid), EPISODES=episodes_str))
+
     def delete_rss_tv(
         self, title: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
     ) -> None:

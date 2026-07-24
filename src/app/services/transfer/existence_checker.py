@@ -157,7 +157,17 @@ class MediaExistenceChecker:
                     file_meta_info = meta_info_fn(title=os.path.basename(file))
                     if not file_meta_info.get_season_list() or not file_meta_info.get_episode_list():
                         continue
-                    if file_meta_info.get_name() != meta_info_obj.title:
+                    # 同时比对 cn_name / en_name / title（兼容多语言场景）
+                    target_names = {
+                        (meta_info_obj.cn_name or "").strip(),
+                        (meta_info_obj.en_name or "").strip(),
+                        (meta_info_obj.title or "").strip(),
+                    }
+                    target_names.discard("")
+                    file_name = (file_meta_info.get_name() or "").strip()
+                    if file_name and not any(
+                        fn == tn or fn in tn or tn in fn for tn in target_names for fn in [file_name]
+                    ):
                         continue
                     if not file_meta_info.is_in_season(season):
                         continue

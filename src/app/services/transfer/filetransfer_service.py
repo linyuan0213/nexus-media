@@ -110,6 +110,30 @@ class FileTransferService:
         return self._path_resolver.get_dest_path_by_info(dest, meta_info, self.media)
 
     def get_no_exists_medias(self, meta_info, season=None, total_num=None):
+        # 先查转移历史 DB：已转移过的剧集视为已存在
+        if meta_info.type != MediaType.MOVIE and meta_info.tmdb_id and season and total_num:
+            try:
+                season_str = f"S{season:02d}" if isinstance(season, int) else str(season)
+                history = self._history.get_transfer_info_by(tmdbid=meta_info.tmdb_id, season=season_str)
+                transferred: set[int] = set()
+                if history:
+                    for h in history:
+                        se = h.season_episode or ""
+                        parts = se.replace("S", "").split("E")
+                        if len(parts) >= 2 and parts[0].isdigit() and int(parts[0]) == int(season):
+                            ep = parts[1]
+                            if "-" in ep:
+                                a, b = ep.split("-")
+                                transferred.update(range(int(a), int(b) + 1))
+                            elif ep.isdigit():
+                                transferred.add(int(ep))
+                if transferred:
+                    all_episodes = set(range(1, total_num + 1))
+                    return list(all_episodes - transferred)
+            except Exception:
+                log.debug("[FileTransfer]历史查询失败，回退文件扫码")
+
+        # 回退：文件系统扫码
         return self._existence.get_no_exists_medias(meta_info, meta_info_fn, season, total_num)
 
     def get_best_target_path(self, mtype, in_path=None, size=0):

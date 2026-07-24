@@ -131,6 +131,10 @@ class ISubscribeTvRepository(Protocol):
         """更新缺失集数"""
         ...
 
+    def update_total(self, rssid: int, total_ep: int, lack_episodes: list[int] | None = None) -> None:
+        """TMDB 集数增加时更新总集数 + 缺失集"""
+        ...
+
     def update(self, rssid: int, **kwargs) -> int:
         """更新订阅剧集字段（支持 current_ep, lack, state 等）"""
         ...

@@ -281,6 +281,21 @@ class BaseSearchStrategy:
                 media_info.rssid = rid
                 total_ep = rss_info.get("total")
                 current_ep = rss_info.get("current_ep")
+
+                # 懒更新：TMDB 总集数增加时自动同步
+                if media_info.tmdb_info and rid:
+                    try:
+                        new_total = self._media_service.get_tmdb_season_episodes_num(
+                            tv_info=media_info.tmdb_info, season=season
+                        )
+                        if new_total > 0 and (total_ep is None or new_total > total_ep):
+                            log.info(f"[Subscribe]{name_val} S{season} TMDB 总集数更新: {total_ep or 0} -> {new_total}")
+                            old_total = total_ep or 0
+                            total_ep = new_total
+                            new_missing = list(range(old_total + 1, new_total + 1))
+                            self._tv_repo.update_total(rssid=rid, total_ep=new_total, lack_episodes=new_missing)
+                    except Exception as e:  # noqa: BLE001
+                        log.debug(f"[Subscribe]{name_val} TMDB 集数检查异常: {e}")
                 media_info.keyword = keyword
 
                 episodes = self._tv_episode_repo.get(rid) if rid is not None else None
