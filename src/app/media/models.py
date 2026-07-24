@@ -468,9 +468,14 @@ class MediaInfo(BaseModel):
             self.original_title = info.get("original_title")
             self.runtime = info.get("runtime")
             self.release_date = info.get("release_date")
-            if info.get("original_language") == "en":
-                self.en_name = info.get("original_title")
-            self.cn_name = info.get("title")
+            title_val = info.get("title") or ""
+            self.cn_name = title_val if StringUtils.is_chinese(title_val) else None
+            en_val = info.get("original_title") or ""
+            self.en_name = (
+                en_val
+                if StringUtils.is_chinese(en_val)
+                else (title_val if not StringUtils.is_chinese(title_val) else None)
+            )
             if self.release_date:
                 self.year = self.release_date[0:4]
             self.category = get_category(rule_map.get("movie"), info)
@@ -488,9 +493,14 @@ class MediaInfo(BaseModel):
             runtime_val = info.get("episode_run_time")
             self.runtime = int(runtime_val[0]) if runtime_val else None  # type: ignore[assignment]
             self.release_date = info.get("first_air_date")
-            self.cn_name = info.get("name")
-            if info.get("original_language") == "en":
-                self.en_name = info.get("original_name")
+            name_val = info.get("name") or ""
+            self.cn_name = name_val if StringUtils.is_chinese(name_val) else None
+            en_val = info.get("original_name") or ""
+            self.en_name = (
+                en_val
+                if StringUtils.is_chinese(en_val)
+                else (name_val if not StringUtils.is_chinese(name_val) else None)
+            )
             if self.release_date:
                 self.year = self.release_date[0:4]
             if self.type == MediaType.TV:

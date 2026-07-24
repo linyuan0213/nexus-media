@@ -320,6 +320,12 @@ class TmdbLookup(BaseLookup):
             return en_info.get("title") if media_info.type == MediaType.MOVIE else en_info.get("name")
         return None
 
+    def get_tmdb_zh_title(self, media_info):
+        zh_info = self.detail.get_detail(media_info.tmdb_id, media_info.type, language="zh-CN")
+        if zh_info:
+            return zh_info.get("title") if media_info.type == MediaType.MOVIE else zh_info.get("name")
+        return None
+
     def get_tmdb_zhtw_title(self, media_info):
         zhtw_info = self.detail.get_detail(media_info.tmdb_id, media_info.type)
         if zhtw_info:

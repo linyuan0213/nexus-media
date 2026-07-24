@@ -17,7 +17,7 @@ from app.media.parser.episode_mapper import EpisodeMapper
 from app.media.parser.llm import LLMParser
 from app.media.parser.regex import RegexParser
 from app.storage.backends.base import StorageBackend
-from app.utils import EpisodeFormat, PathUtils
+from app.utils import EpisodeFormat, PathUtils, StringUtils
 
 
 class MediaService:
@@ -221,12 +221,17 @@ class MediaService:
                 # 根据 genre_ids 更新类型（动漫 vs 电视剧）
                 info.set_tmdb_info(full_info)
 
-        # 6.1 获取英文标题用于匹配
-        if info.tmdb_id and not info.en_name:
+        # 6.1 获取英文 / 中文标题用于匹配
+        if info.tmdb_id:
             try:
-                en_title = self._lookup.get_tmdb_en_title(info)
-                if en_title and en_title != info.title and en_title != info.original_title:
-                    info.en_name = en_title
+                if not info.en_name:
+                    en_title = self._lookup.get_tmdb_en_title(info)
+                    if en_title and en_title != info.title and en_title != info.original_title:
+                        info.en_name = en_title
+                if not info.cn_name:
+                    cn_title = self._lookup.get_tmdb_zh_title(info)
+                    if cn_title and StringUtils.is_chinese(cn_title):
+                        info.cn_name = cn_title
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[service]忽略异常: {e}")
 
