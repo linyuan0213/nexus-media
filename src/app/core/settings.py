@@ -488,20 +488,6 @@ def _init_config_file() -> str:
     return config_path
 
 
-def _apply_env_database_config(settings: AppSettings) -> None:
-    env_db_keys = [k for k in os.environ if k.upper().startswith("DATABASE__")]
-    if not env_db_keys:
-        return
-    env_db = settings.database.model_dump()
-    full = settings.get()
-    full["database"] = env_db
-    try:
-        settings.save(full)
-        print("[Config]已从环境变量更新数据库配置到配置文件")
-    except Exception as e:
-        print(f"[Config]保存数据库配置到文件失败：{e!s}")
-
-
 _load_dotenv()
 
 _config_path = _init_config_file()
@@ -513,4 +499,5 @@ if not os.environ.get("TZ"):
 settings = AppSettings()
 
 print(f"正在加载配置：{_config_path}")
-_apply_env_database_config(settings)
+# 注意：DATABASE__* 等环境变量是运行时覆盖（pydantic-settings 已处理，优先级 env > .env > yaml），
+# 禁止写回配置文件——否则一次性命令/测试的临时配置会污染真实 data/config.yaml。
