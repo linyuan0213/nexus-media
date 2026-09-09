@@ -1,5 +1,11 @@
 # 版本历史
 
+## v4.19.7 (2026-09-09)
+
+### 修复
+
+- 站点配置 `CONFIG_SITE.RSSURL` 由 `varchar(512)` 改为 `TEXT`：长参数 RSS 链接不再触发 MySQL 1406 Data too long（含 Alembic 迁移）
+
 ## v4.19.6 (2026-09-09)
 
 ### 修复

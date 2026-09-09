@@ -49,7 +49,7 @@ class CONFIGSITE(Base):
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     NAME: Mapped[str] = mapped_column(String(255))
     PRI: Mapped[str] = mapped_column(String(255))
-    RSSURL: Mapped[str] = mapped_column(String(512))
+    RSSURL: Mapped[str] = mapped_column(Text)
     SIGNURL: Mapped[str] = mapped_column(String(512))
     COOKIE: Mapped[str | None] = mapped_column(Text, nullable=True)
     API_KEY: Mapped[str | None] = mapped_column(Text, nullable=True)
