@@ -63,8 +63,10 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
         return DownloadHistoryEntity.from_orm(row)
 
     # 兼容旧Repository方法名
-    def insert_download_history(self, media_info, downloader: str, download_id: str, save_dir: str) -> None:
-        self._repo.insert_download_history(media_info, downloader, download_id, save_dir)
+    def insert_download_history(
+        self, media_info, downloader: str, download_id: str, save_dir: str, user_id: int | None = None
+    ) -> None:
+        self._repo.insert_download_history(media_info, downloader, download_id, save_dir, user_id=user_id)
 
     # 兼容旧Repository方法名
     def get_download_history(self, date=None, hid=None, num=30, page=1):

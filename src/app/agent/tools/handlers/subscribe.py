@@ -12,6 +12,7 @@ def subscribe_add(
     media_type: str = "movie",
     year: int | None = None,
     season: int | None = None,
+    user_id: str | None = None,
 ) -> ToolResult:
     mtype = MediaType.MOVIE if media_type == "movie" else MediaType.TV
     code, msg, _ = ctx.subscribe_service.add_rss_subscribe(
@@ -22,31 +23,37 @@ def subscribe_add(
         season=season,
         state="R",
         in_from=SearchType.API,
+        user_id=int(user_id) if user_id and str(user_id).isdigit() else None,
     )
     if code == 0:
         return ToolResult(success=True, data={"title": title, "message": msg or "订阅成功"})
     return ToolResult(success=False, error=msg or "订阅失败")
 
 
-def subscribe_list(ctx: ToolContext, media_type: str | None = None) -> ToolResult:
+def subscribe_list(ctx: ToolContext, media_type: str | None = None, user_id: str | None = None) -> ToolResult:
+    user = ctx.user_context(user_id)
     data: dict = {}
     if media_type in (None, "movie"):
-        data["movies"] = ctx.subscribe_service.get_subscribe_movies() or []
+        data["movies"] = ctx.subscribe_service.get_subscribe_movies(user=user) or []
     if media_type in (None, "tv"):
-        data["tvs"] = ctx.subscribe_service.get_subscribe_tvs() or []
+        data["tvs"] = ctx.subscribe_service.get_subscribe_tvs(user=user) or []
     return ToolResult(success=True, data=data)
 
 
-def subscribe_delete(ctx: ToolContext, sub_id: int, media_type: str = "movie") -> ToolResult:
+def subscribe_delete(
+    ctx: ToolContext, sub_id: int, media_type: str = "movie", user_id: str | None = None
+) -> ToolResult:
     mtype = MediaType.MOVIE if media_type == "movie" else MediaType.TV
-    ctx.subscribe_service.delete_subscribe(mtype=mtype, rssid=sub_id)
+    ctx.subscribe_service.delete_subscribe(mtype=mtype, rssid=sub_id, user=ctx.user_context(user_id))
     return ToolResult(success=True, data={"sub_id": sub_id, "deleted": True})
 
 
-def subscribe_detail(ctx: ToolContext, title: str, tmdb_id: int | None = None) -> ToolResult:
+def subscribe_detail(
+    ctx: ToolContext, title: str, tmdb_id: int | None = None, user_id: str | None = None
+) -> ToolResult:
     """查询单个订阅详情（进度/缺集/站点等）"""
     try:
-        tvs = ctx.subscribe_service.get_subscribe_tvs() or {}
+        tvs = ctx.subscribe_service.get_subscribe_tvs(user=ctx.user_context(user_id)) or {}
     except Exception as e:  # noqa: BLE001
         return ToolResult(success=False, error=f"查询订阅详情失败: {e}")
     keyword = (title or "").strip().lower()

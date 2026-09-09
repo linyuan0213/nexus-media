@@ -14,14 +14,19 @@ class SearchRepositoryAdapter(ISearchRepository):
         self._repo = repo or SearchRepository()
 
     def insert_search_results(
-        self, media_items: list, title=None, ident_flag=True, session_id: str | None = None, user_id: str | None = None
+        self,
+        media_items: list,
+        title=None,
+        ident_flag=True,
+        session_id: str | None = None,
+        user_id: str | int | None = None,
     ) -> None:
-        self._repo.insert_search_results(media_items, title, ident_flag, session_id)
+        self._repo.insert_search_results(media_items, title, ident_flag, session_id, user_id=user_id)
 
     def get_search_result_by_id(self, dl_id):
         return self._repo.get_search_result_by_id(dl_id)
 
-    def get_search_results(self, session_id: str | None = None, user_id: str | None = None):
+    def get_search_results(self, session_id: str | None = None, user_id: str | int | None = None):
         return self._repo.get_search_results(session_id, user_id)
 
     def delete_all_search_torrents(self) -> None:

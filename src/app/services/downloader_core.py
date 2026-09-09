@@ -118,6 +118,7 @@ class DownloaderCore:
         proxy=None,
         file_indices=None,
         file_names=None,
+        user_id: int | None = None,
     ):
         return self._download_core.download(
             media_info=media_info,
@@ -134,6 +135,7 @@ class DownloaderCore:
             proxy=proxy,
             file_indices=file_indices,
             file_names=file_names,
+            user_id=user_id,
         )
 
     def batch_download(self, in_from, media_list, need_tvs=None, user_name=None) -> Any:

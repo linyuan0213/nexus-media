@@ -6,7 +6,7 @@ Handles search result related database operations.
 import random
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import inspect
+from sqlalchemy import inspect, or_
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -23,7 +23,14 @@ class SearchRepository(BaseRepository):
     处理搜索结果的数据库操作
     """
 
-    def insert_search_results(self, media_items: list, title=None, ident_flag=True, session_id: str | None = None):
+    def insert_search_results(
+        self,
+        media_items: list,
+        title=None,
+        ident_flag=True,
+        session_id: str | None = None,
+        user_id: str | int | None = None,
+    ):
         """
         将返回信息插入数据库
         使用 UPSERT 语义：先删除同 session 冲突记录，再批量插入
@@ -33,6 +40,7 @@ class SearchRepository(BaseRepository):
             title: 标题（用于非识别模式）
             ident_flag: 是否已识别标识
             session_id: 搜索会话 ID（用于多用户隔离）
+            user_id: 发起搜索的用户 ID（数据归属）
         """
         if not media_items:
             return
@@ -109,6 +117,8 @@ class SearchRepository(BaseRepository):
                 }
                 if session_id:
                     mapping["SEARCH_SESSION_ID"] = session_id
+                if user_id:
+                    mapping["USER_ID"] = int(user_id)
                 mapping["CREATED_AT"] = datetime.now(timezone.utc).replace(tzinfo=None)
                 mappings.append(mapping)
 
@@ -182,13 +192,21 @@ class SearchRepository(BaseRepository):
         with self.session() as db:
             return db.query(SEARCHRESULTINFO).filter(dl_id == SEARCHRESULTINFO.ID).all()
 
-    def get_search_results(self, session_id: str | None = None, user_id: str | None = None):
+    def get_search_results(self, session_id: str | None = None, user_id: str | int | None = None):
         with self.session() as db:
             query = db.query(SEARCHRESULTINFO)
             if session_id:
                 query = query.filter(SEARCHRESULTINFO.SEARCH_SESSION_ID == session_id)
             else:
                 return []
+            if user_id:
+                # 归属过滤：本人行 + NULL（系统/后台）行
+                query = query.filter(
+                    or_(
+                        SEARCHRESULTINFO.USER_ID == int(user_id),
+                        SEARCHRESULTINFO.USER_ID.is_(None),
+                    )
+                )
             return query.all()
 
     def delete_all_search_torrents(self):

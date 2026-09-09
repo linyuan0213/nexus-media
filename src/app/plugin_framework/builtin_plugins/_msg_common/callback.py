@@ -5,7 +5,6 @@ _on_callback / _verify_apikey / _verify_client_ip 实现，
 避免重复并保证安全校验策略一致。
 """
 
-
 from typing import Any
 
 import log
@@ -48,8 +47,34 @@ class InteractiveCallbackMixin:
             return {"code": 0, "msg": "success"}
         log.info(f"[{self.channel_type}]收到消息: user={user_id}, text={text[:60]}...")
         try:
+            # 渠道身份绑定解析：未绑定拒绝交互
+            binding_service = getattr(self._app_context, "channel_binding_service", None)
+            channel_key = getattr(self.channel_search_type, "value", str(self.channel_search_type))
+            bound_user = binding_service.resolve_user(channel_key, user_id) if binding_service else None
+            if text.startswith("/bind"):
+                code = text[5:].strip()
+                if binding_service and code:
+                    ok, msg_text = binding_service.bind_by_code(code, channel_key, user_id)
+                    self._message.send_channel_msg(
+                        channel=self.channel_search_type, title=msg_text, user_id=user_id or ""
+                    )
+                return {"code": 0, "msg": "success"}
+            if bound_user is None:
+                self._message.send_channel_msg(
+                    channel=self.channel_search_type,
+                    title="该账号未绑定系统用户，请在 Web 端「个人设置」生成绑定码后发送 /bind <绑定码>",
+                    user_id=user_id or "",
+                )
+                return {"code": 0, "msg": "success"}
             handler = get_message_command_handler(self._app_context, self._message)
-            handler.handle_message_job(msg=text, in_from=self.channel_search_type, user_id=user_id)
+            handler.handle_message_job(
+                msg=text,
+                in_from=self.channel_search_type,
+                user_id=user_id,
+                user_name=bound_user.nickname or bound_user.username,
+                user_permissions=bound_user.permissions,
+                bound_user_id=bound_user.user_id,
+            )
         except Exception as e:  # noqa: BLE001
             log.error(f"[{self.channel_type}]消息处理失败: {e}")
             return {"code": -1, "msg": f"处理失败: {e!s}"}

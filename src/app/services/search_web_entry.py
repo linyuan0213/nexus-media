@@ -24,6 +24,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
         tmdbid: str | None = None,
         media_type: MediaType | None = None,
         session_id: str | None = None,
+        user_id: int | None = None,
     ) -> tuple[int, str]:
         match_media = None
         if tmdbid:
@@ -45,6 +46,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
             filter_args=filter_args,
             auto_download=False,
             persist=True,
+            user_id=str(user_id) if user_id else None,
         )
         _, _, total, _ = orchestrator.orchestrate(ctx)
         if total:

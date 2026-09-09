@@ -331,6 +331,7 @@ class Searcher:
         sites: list | None = None,
         filters: dict | None = None,
         user_name=None,
+        user_id: int | str | None = None,
     ) -> tuple[Any, dict, int, int]:
         """
         只搜索和下载一个资源
@@ -358,6 +359,8 @@ class Searcher:
         }
         if filters:
             filter_args.update(filters)
+        if user_id:
+            filter_args["user_id"] = user_id
 
         # 1. 构建搜索词（含关键词 + 多语言名，build_search_names 内已去重）
         search_name_list, max_workers = SearchQueryBuilder.build_search_names(media_info, self.media)
@@ -435,10 +438,11 @@ class Searcher:
             return None
         return self.search_repo.get_search_result_by_id(dl_id)
 
-    def get_search_results(self, session_id: str | None = None):
+    def get_search_results(self, session_id: str | None = None, user_id: int | None = None):
+        """获取搜索结果（user_id 非空时按数据归属过滤）"""
         if self.search_repo is None:
             return []
-        return self.search_repo.get_search_results(session_id)
+        return self.search_repo.get_search_results(session_id, user_id=user_id)
 
     def delete_all_search_torrents(self):
         if self.search_repo is None:
@@ -484,6 +488,7 @@ class SearchService:
         sites: list | None = None,
         filters: dict | None = None,
         user_name: str | None = None,
+        user_id: int | str | None = None,
     ) -> SearchOneMediaResultDTO:
         result = self._searcher.search_one_media(
             media_info=media_info,
@@ -492,6 +497,7 @@ class SearchService:
             sites=sites or [],
             filters=filters or {},
             user_name=user_name,
+            user_id=user_id,
         )
         if not result:
             return SearchOneMediaResultDTO()
@@ -506,8 +512,8 @@ class SearchService:
     def get_search_result_by_id(self, dl_id) -> Any:
         return self._searcher.get_search_result_by_id(dl_id)
 
-    def get_search_results(self, session_id: str | None = None) -> Any:
-        return self._searcher.get_search_results(session_id)
+    def get_search_results(self, session_id: str | None = None, user_id: int | None = None) -> Any:
+        return self._searcher.get_search_results(session_id, user_id=user_id)
 
     def delete_all_search_torrents(self) -> None:
         self._searcher.delete_all_search_torrents()

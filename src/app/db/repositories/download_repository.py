@@ -113,9 +113,16 @@ class DownloadRepository(BaseRepository):
             db.commit()
             return count
 
-    def insert_download_history(self, media_info: Any, downloader: str, download_id: str, save_dir: str) -> None:
+    def insert_download_history(
+        self,
+        media_info: Any,
+        downloader: str,
+        download_id: str,
+        save_dir: str,
+        user_id: int | None = None,
+    ) -> None:
         """
-        新增下载历史
+        新增下载历史（user_id 为发起人；None 为订阅/系统触发的全局下载）
         """
         if not media_info:
             return
@@ -160,11 +167,13 @@ class DownloadRepository(BaseRepository):
                         "SE": media_info.get_season_episode_string() or "",
                         "STATE": "downloading",
                         "DATE": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                        **({"USER_ID": user_id} if user_id is not None else {}),
                     }
                 )
             else:
                 db.add(
                     DOWNLOADHISTORY(
+                        USER_ID=user_id,
                         TITLE=media_info.title,
                         YEAR=media_info.year or "",
                         TYPE=media_info.type.value if media_info.type else "",

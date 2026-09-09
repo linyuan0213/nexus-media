@@ -1,3 +1,4 @@
+import json
 import os
 
 import log
@@ -5,7 +6,9 @@ from app.core.root_path import get_script_path
 from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
+from app.db.repositories.channel_binding_repository import ChannelBindingRepository
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter
+from app.db.repositories.config_repository import ConfigRepository
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.db.repositories.subscribe_repository import SubscribeRepository
@@ -15,6 +18,7 @@ from app.infrastructure.cache_system.events import init_event_bridge
 from app.infrastructure.redis import RedisStore
 from app.services.apikey_service import APIKeyService
 from app.services.category_init import CategoryInitializer
+from app.services.rbac.service import RBACService
 from app.services.rbac_init import init_admin_user
 from app.services.rbac_init import init_rbac_system as rbac_init
 from app.utils import ExceptionUtils
@@ -182,6 +186,43 @@ def check_redis():
             log.info("Redis 未启用，使用内存缓存...")
     except Exception as e:
         log.info(f"Redis 未启用，使用内存缓存: {e}")
+
+
+def init_channel_bindings():
+    """初始化渠道身份绑定：将存量 Telegram admin_ids 迁移绑定到第一个 superadmin（ADR-021 5.8）."""
+    try:
+        rbac_service = RBACService()
+        # 找第一个启用状态的 superadmin 用户
+        admin = None
+        users, _ = rbac_service.get_users(page=1, page_size=1000)
+        for user in users:
+            snapshot = rbac_service.get_user_snapshot(user.ID)
+            if "superadmin" in snapshot.role_codes and user.STATUS == 1:
+                admin = user
+                break
+        if admin is None:
+            return
+
+        repo = ChannelBindingRepository()
+        config_repo = ConfigRepository()
+        for client in config_repo.get_message_client() or []:
+            if (client.TYPE or "").lower() != "telegram":
+                continue
+            try:
+                cfg = json.loads(client.CONFIG or "{}")
+            except (ValueError, TypeError):
+                continue
+            admin_ids = cfg.get("admin_ids") or []
+            if not isinstance(admin_ids, list):
+                admin_ids = [admin_ids]
+            for chat_id in admin_ids:
+                chat_id = str(chat_id).strip()
+                if chat_id and not repo.get_binding("telegram", chat_id):
+                    repo.bind(admin.ID, "telegram", chat_id)
+                    log.info(f"[Initialize]Telegram admin_id {chat_id} 已绑定到管理员 {admin.USERNAME}")
+    except Exception as e:
+        log.error(f"[Initialize]渠道身份绑定迁移失败：{e!s}")
+        ExceptionUtils.exception_traceback(e)
 
 
 def init_message_webhook_apikey(apikey_service=None):

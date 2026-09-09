@@ -284,7 +284,7 @@ def delete_torrent_remove_task(
 @router.post("/tasks/add", response_model=CommonResponse, summary="添加下载任务")
 def download(
     req: DownloadRequest,
-    user: UserContext = Depends(require_permission("download:manage")),
+    user: UserContext = Depends(require_any_permission("download:create", "download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     if req.id is None:
@@ -297,6 +297,7 @@ def download(
                 dl_dir=req.dir or "",
                 dl_setting=req.setting or "",
                 user_name=user.nickname or user.username,
+                user_id=user.user_id,
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -311,7 +312,7 @@ def download(
 @router.post("/tasks/add_link", response_model=CommonResponse, summary="添加链接下载任务")
 def download_link(
     req: DownloadLinkRequest,
-    user: UserContext = Depends(require_permission("download:manage")),
+    user: UserContext = Depends(require_any_permission("download:create", "download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     def _do_download():
@@ -329,6 +330,7 @@ def download_link(
                 dl_dir=req.dl_dir or "",
                 dl_setting=req.dl_setting or "",
                 user_name=user.nickname or user.username,
+                user_id=user.user_id,
             )
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
@@ -353,7 +355,7 @@ def resolve_download_url(
 @router.post("/tasks/add_torrent", response_model=CommonResponse, summary="添加种子下载任务")
 def download_torrent(
     req: DownloadTorrentRequest,
-    user: UserContext = Depends(require_permission("download:manage")),
+    user: UserContext = Depends(require_any_permission("download:create", "download:manage")),
     svc: DownloadService = Depends(get_download_service),
 ):
     # 快速校验
@@ -369,6 +371,7 @@ def download_torrent(
                 dl_dir=req.dl_dir or "",
                 dl_setting=req.dl_setting or "",
                 user_name=user.nickname or user.username,
+                user_id=user.user_id,
                 page_url=req.page_url or "",
                 upload_volume_factor=req.upload_volume_factor,
                 download_volume_factor=req.download_volume_factor,

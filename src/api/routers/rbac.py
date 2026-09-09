@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from api.deps import get_current_user, get_rbac_service, require_any_permission, require_permission
+from api.deps import (
+    get_app_context,
+    get_current_user,
+    get_rbac_service,
+    get_site_grant_service,
+    require_any_permission,
+    require_permission,
+)
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import NexusError, ResourceAlreadyExistsError, ResourceNotFoundError, ServiceError
 from app.core.settings import settings
@@ -744,3 +751,122 @@ def get_user_codes(
         return success(data=codes)
     except Exception as e:
         return fail(success=False, message=str(e))
+
+
+# ---------- 站点授权（L3 资源访问控制） ----------
+
+
+class SiteGrantItem(BaseModel):
+    site_name: str
+    permissions: list[str] = ["search"]
+
+
+class SiteGrantSaveRequest(BaseModel):
+    grants: list[SiteGrantItem]
+
+
+@router.get("/roles/{role_id}/sites", response_model=CommonResponse, summary="获取角色站点授权")
+def get_role_site_grants(
+    role_id: int,
+    current_user: UserContext = Depends(require_permission("site:assign")),
+    svc=Depends(get_site_grant_service),
+):
+    return success(data=svc.get_role_grants(role_id))
+
+
+@router.put("/roles/{role_id}/sites", response_model=CommonResponse, summary="设置角色站点授权")
+def set_role_site_grants(
+    role_id: int,
+    req: SiteGrantSaveRequest,
+    current_user: UserContext = Depends(require_permission("site:assign")),
+    svc=Depends(get_site_grant_service),
+):
+    svc.set_role_grants(
+        role_id,
+        [g.model_dump() for g in req.grants],
+        granted_by=current_user.user_id,
+    )
+    return success()
+
+
+@router.get("/users/{user_id}/sites", response_model=CommonResponse, summary="获取用户站点授权")
+def get_user_site_grants(
+    user_id: int,
+    current_user: UserContext = Depends(require_permission("site:assign")),
+    svc=Depends(get_site_grant_service),
+):
+    return success(data=svc.get_user_grants(user_id))
+
+
+@router.put("/users/{user_id}/sites", response_model=CommonResponse, summary="设置用户站点授权")
+def set_user_site_grants(
+    user_id: int,
+    req: SiteGrantSaveRequest,
+    current_user: UserContext = Depends(require_permission("site:assign")),
+    svc=Depends(get_site_grant_service),
+):
+    svc.set_user_grants(
+        user_id,
+        [g.model_dump() for g in req.grants],
+        granted_by=current_user.user_id,
+    )
+    return success()
+
+
+# ---------- 渠道身份绑定（用户自助 + 管理） ----------
+
+
+class ChannelBindRequest(BaseModel):
+    channel: str
+    channel_user_id: str
+
+
+@router.post("/users/channel-bindings/code", response_model=CommonResponse, summary="生成渠道绑定码")
+def create_channel_bind_code(
+    current_user: UserContext = Depends(get_current_user),
+    app_context=Depends(get_app_context),
+):
+    """生成一次性绑定码（10 分钟有效），在 IM 中发送 /bind <code> 完成绑定"""
+    code = app_context.channel_binding_service.create_bind_code(current_user.user_id)
+    return success(data={"code": code, "ttl": 600})
+
+
+@router.post("/users/channel-bindings", response_model=CommonResponse, summary="登记推送渠道绑定")
+def create_channel_binding(
+    req: ChannelBindRequest,
+    current_user: UserContext = Depends(get_current_user),
+    app_context=Depends(get_app_context),
+):
+    """纯推送渠道（Bark/Ntfy 等）Web 端直接登记推送 Key"""
+    ok, msg = app_context.channel_binding_service.bind_direct(current_user.user_id, req.channel, req.channel_user_id)
+    if not ok:
+        return fail(success=False, message=msg)
+    return success(message=msg)
+
+
+@router.get("/users/channel-bindings", response_model=CommonResponse, summary="获取我的渠道绑定")
+def list_channel_bindings(
+    current_user: UserContext = Depends(get_current_user),
+    app_context=Depends(get_app_context),
+):
+    return success(data=app_context.channel_binding_service.list_bindings(current_user.user_id))
+
+
+@router.delete("/users/channel-bindings", response_model=CommonResponse, summary="解绑渠道身份")
+def delete_channel_binding(
+    req: ChannelBindRequest,
+    current_user: UserContext = Depends(get_current_user),
+    app_context=Depends(get_app_context),
+):
+    app_context.channel_binding_service.unbind(current_user.user_id, req.channel, req.channel_user_id)
+    return success()
+
+
+@router.delete("/users/channel-bindings/{binding_id}", response_model=CommonResponse, summary="管理员强制解绑")
+def admin_delete_channel_binding(
+    binding_id: int,
+    current_user: UserContext = Depends(require_permission("user:update")),
+    app_context=Depends(get_app_context),
+):
+    app_context.channel_binding_service.unbind_by_id(binding_id)
+    return success()

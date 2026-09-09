@@ -80,6 +80,7 @@ class DownloadPipeline:
         proxy=None,
         file_indices=None,
         file_names=None,
+        user_id: int | None = None,
     ) -> tuple[str | None, str | None, str]:
         """
         执行完整下载流水线
@@ -201,6 +202,7 @@ class DownloadPipeline:
             torrent_attr=torrent_attr,
             in_from=in_from,
             user_name=user_name,
+            user_id=user_id,
         )
 
         if not media_info.enclosure and file_path:
@@ -422,6 +424,7 @@ class DownloadPipeline:
         torrent_attr,
         in_from,
         user_name,
+        user_id=None,
     ):
         if not self._client_factory:
             return
@@ -449,7 +452,11 @@ class DownloadPipeline:
 
         try:
             self._download_history_repo.insert_download_history(
-                media_info=media_info, downloader=downloader_id, download_id=download_id, save_dir=save_dir or ""
+                media_info=media_info,
+                downloader=downloader_id,
+                download_id=download_id,
+                save_dir=save_dir or "",
+                user_id=user_id,
             )
         except Exception as e:
             log.warn(f"[Pipeline]写入下载历史失败（任务已提交至下载器）: {e}")

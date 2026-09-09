@@ -41,7 +41,7 @@ class _SubscribeService:
     def __init__(self, tvs):
         self.tvs = tvs
 
-    def get_subscribe_tvs(self, rid=None, state=None):
+    def get_subscribe_tvs(self, rid=None, state=None, user=None):
         return self.tvs
 
 

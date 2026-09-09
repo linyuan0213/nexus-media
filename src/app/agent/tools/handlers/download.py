@@ -5,7 +5,9 @@ from app.agent.tools.context import ToolContext
 from app.domain.enums import SearchType
 
 
-def download_add_link(ctx: ToolContext, link: str, title: str = "", save_path: str = "") -> ToolResult:
+def download_add_link(
+    ctx: ToolContext, link: str, title: str = "", save_path: str = "", user_id: str | None = None
+) -> ToolResult:
     result = ctx.download_service.download_from_link(
         site="",
         enclosure=link,
@@ -19,17 +21,21 @@ def download_add_link(ctx: ToolContext, link: str, title: str = "", save_path: s
         dl_dir=save_path,
         dl_setting="",
         user_name="agent",
+        user_id=int(user_id) if user_id and str(user_id).isdigit() else None,
     )
     if getattr(result, "success", False):
         return ToolResult(success=True, data={"message": getattr(result, "message", "已添加下载")})
     return ToolResult(success=False, error=getattr(result, "message", "添加下载失败"))
 
 
-def media_download(ctx: ToolContext, title: str, media_format: str = "") -> ToolResult:
+def media_download(ctx: ToolContext, title: str, media_format: str = "", user_id: str | None = None) -> ToolResult:
     meta = ctx.media_service.get_media_info(title=title)
     if not meta or not meta.tmdb_info:
         return ToolResult(success=False, error=f"无法识别《{title}》的媒体信息")
     filters = {"media_format": media_format} if media_format else None
+    if user_id:
+        filters = dict(filters or {})
+        filters["user_id"] = user_id
     _, no_exists, total, download_count = ctx.searcher.search_one_media(
         media_info=meta,
         in_from=SearchType.API,

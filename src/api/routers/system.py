@@ -549,7 +549,7 @@ def sch(
 @router.post("/search", response_model=CommonResponse, summary="WEB资源搜索")
 def search(
     req: SearchRequest,
-    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+    current_user: UserContext = Depends(require_permission("search:execute")),
     svc=Depends(get_web_search_service),
     executor=Depends(get_thread_executor),
 ):
@@ -569,6 +569,7 @@ def search(
         tmdbid=req.tmdbid,
         media_type=req.media_type,
         session_id=session_id,
+        user_id=current_user.user_id,
     )
     return success(data={"session_id": session_id})
 

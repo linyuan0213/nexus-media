@@ -108,8 +108,37 @@ def _handle_webhook(update: dict, channel: SearchType, app_context: AppContext, 
 
     log.info(f"[Webhook]{channel.value} 收到消息: user={user_id}, text={text[:60]}...")
 
+    # 渠道身份绑定解析（ADR-021 5.8）：IM 入站必须绑定系统用户
+    binding_service = getattr(app_context, "channel_binding_service", None)
+    bound_user = binding_service.resolve_user(channel.value, user_id) if binding_service else None
+
+    # /bind <code> 命令：完成渠道绑定
+    if text.startswith("/bind"):
+        code = text[5:].strip()
+        if binding_service is None or not code:
+            return {"ok": True}
+        ok, msg_text = binding_service.bind_by_code(code, channel.value, user_id)
+        message.send_channel_msg(channel=channel, title=msg_text, user_id=user_id or "")
+        return {"ok": True}
+
+    if bound_user is None:
+        # 未绑定：拒绝交互并引导绑定（渠道级全权信任已退役）
+        message.send_channel_msg(
+            channel=channel,
+            title="该账号未绑定系统用户，请在 Web 端「个人设置」生成绑定码后发送 /bind <绑定码>",
+            user_id=user_id or "",
+        )
+        return {"ok": True}
+
     handler = _get_handlers(app_context, message)
-    handler.handle_message_job(msg=text, in_from=channel, user_id=user_id)
+    handler.handle_message_job(
+        msg=text,
+        in_from=channel,
+        user_id=user_id,
+        user_name=bound_user.nickname or bound_user.username,
+        user_permissions=bound_user.permissions,
+        bound_user_id=bound_user.user_id,
+    )
     return {"ok": True}
 
 

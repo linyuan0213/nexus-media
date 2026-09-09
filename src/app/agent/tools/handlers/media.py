@@ -30,7 +30,9 @@ def _pick_result(row) -> dict:
     return item
 
 
-def media_search(ctx: ToolContext, query: str, site: list | None = None, seeders: int | None = None) -> ToolResult:
+def media_search(
+    ctx: ToolContext, query: str, site: list | None = None, seeders: int | None = None, user_id: str | None = None
+) -> ToolResult:
     """统一搜索入口：意图识别 → TMDB → 并发搜索 → 去重排序入库（SearchOrchestrator）"""
     filter_args: dict = {}
     if site:
@@ -45,11 +47,12 @@ def media_search(ctx: ToolContext, query: str, site: list | None = None, seeders
         filter_args=filter_args or None,
         persist=True,
         auto_download=False,
+        user_id=user_id,
     )
     _, _, total, _ = ctx.search_orchestrator.orchestrate(sctx)
     if not total:
         return ToolResult(success=True, data={"total": 0, "results": []})
-    rows = ctx.search_orchestrator.get_results(session_id)
+    rows = ctx.search_orchestrator.get_results(session_id, user_id)
     return ToolResult(success=True, data={"total": total, "results": [_pick_result(r) for r in rows[:10]]})
 
 

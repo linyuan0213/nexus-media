@@ -135,6 +135,7 @@ class DownloadCore:
         proxy=None,
         file_indices=None,
         file_names=None,
+        user_id: int | None = None,
     ):
         """
         添加下载任务，委托给 DownloadPipeline 执行
@@ -156,6 +157,7 @@ class DownloadCore:
             proxy=proxy,
             file_indices=file_indices,
             file_names=file_names,
+            user_id=user_id,
         )
 
     def batch_download(

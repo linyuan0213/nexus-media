@@ -23,6 +23,7 @@ from app.services.torrentremover_core import TorrentRemoverService
 from initializer import (
     check_config,
     check_redis,
+    init_channel_bindings,
     init_default_categories,
     init_default_filters,
     init_event_handlers,
@@ -161,6 +162,7 @@ class SystemLifecycleService:
         init_default_categories()
         init_default_filters()
         init_rbac_system()
+        init_channel_bindings()
         init_event_handlers(event_bus=self._event_bus, hook_system=self._hook_system)
         init_message_webhook_apikey(apikey_service=self._apikey_service)
         # 1. 先启动调度器，确保所有后台服务的定时任务可以正常注册

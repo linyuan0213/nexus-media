@@ -231,9 +231,19 @@ class MessageCommandHandler:
         return True
 
     def handle_message_job(
-        self, msg, in_from: SearchType | str = SearchType.OT, user_id=None, user_name=None, user_permissions=None
+        self,
+        msg,
+        in_from: SearchType | str = SearchType.OT,
+        user_id=None,
+        user_name=None,
+        user_permissions=None,
+        bound_user_id: int | None = None,
     ):
-        """处理消息事件（user_permissions: Web 用户权限列表，None=webhook/IM 渠道）"""
+        """处理消息事件.
+
+        user_id: 渠道侧身份（用于回复路由）；bound_user_id: 绑定解析出的系统用户 ID（数据归属）。
+        user_permissions: Web 用户权限列表；IM 渠道由 webhook 经绑定解析后显式传入。
+        """
         if not msg:
             return
 
@@ -262,7 +272,9 @@ class MessageCommandHandler:
                 self._message.send_channel_msg(channel=in_from, title="正在搜索/订阅，请稍候...", user_id=user_id or "")
             TokenCache.delete("search")
             if self._search_handler and self._thread_executor:
-                self._thread_executor.submit(self._search_handler.handle, msg, in_from, user_id, user_name, permissions)
+                self._thread_executor.submit(
+                    self._search_handler.handle, msg, in_from, user_id, user_name, permissions, bound_user_id
+                )
             return
 
         command = self._command_map.get(msg)

@@ -573,7 +573,7 @@ def get_search_result(
 ):
     req = req or {}
     session_id = req.get("session_id") or TokenCache.get(f"search_session:{current_user.user_id}")
-    search_results = svc.get_search_results(session_id)
+    search_results = svc.get_search_results(session_id, user_id=current_user.user_id)
     result = result_svc.group_search_results(search_results)
     return success(data={"total": result.total, "result": result.result})
 

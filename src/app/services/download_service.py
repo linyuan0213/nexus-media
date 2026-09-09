@@ -69,7 +69,7 @@ class DownloadService:
         return self._resolve_download_url(page_url, enclosure)
 
     def download_from_search_results(
-        self, dl_id: int, dl_dir: str, dl_setting: str, user_name: str
+        self, dl_id: int, dl_dir: str, dl_setting: str, user_name: str, user_id: int | None = None
     ) -> DownloadResultDTO:
         """从搜索结果批量下载，收集所有结果后返回批量状态."""
         results = self._searcher.get_search_result_by_id(dl_id)
@@ -115,6 +115,7 @@ class DownloadService:
                 download_setting=dl_setting,
                 in_from=SearchType.WEB,
                 user_name=user_name,
+                user_id=user_id,
             )
             if ret:
                 success_count += 1
@@ -142,6 +143,7 @@ class DownloadService:
         dl_dir: str,
         dl_setting: str,
         user_name: str,
+        user_id: int | None = None,
     ) -> DownloadResultDTO:
         """从下载链接添加下载"""
         enclosure = self._resolve_download_url(page_url, enclosure)
@@ -172,6 +174,7 @@ class DownloadService:
             download_setting=dl_setting,
             in_from=SearchType.WEB,
             user_name=user_name,
+            user_id=user_id,
         )
         if not ret:
             return DownloadResultDTO(success=False, message=ret_msg or "如连接正常，请检查下载任务是否存在")
@@ -191,6 +194,7 @@ class DownloadService:
         description: str | None = None,
         site: str | None = None,
         size: int | None = None,
+        user_id: int | None = None,
     ) -> DownloadResultDTO:
         """从种子文件或 URL 链接添加下载"""
         if not files and not urls:
@@ -224,6 +228,7 @@ class DownloadService:
                     torrent_file=file_path,
                     in_from=SearchType.WEB,
                     user_name=user_name,
+                    user_id=user_id,
                 )
                 if errmsg:
                     log.warn(f"[Download]推送下载器失败(文件): {errmsg}")
@@ -287,6 +292,7 @@ class DownloadService:
                     torrent_file=file_path,
                     in_from=SearchType.WEB,
                     user_name=user_name,
+                    user_id=user_id,
                 )
                 if errmsg:
                     log.warn(f"[Download]推送下载器失败: {errmsg}")

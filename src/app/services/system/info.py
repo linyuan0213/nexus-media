@@ -205,6 +205,7 @@ class WebSearchService:
         tmdbid=None,
         media_type=None,
         session_id: str | None = None,
+        user_id: int | None = None,
     ) -> WebSearchResultDTO:
         """执行WEB搜索"""
         if not search_word:
@@ -221,6 +222,7 @@ class WebSearchService:
             tmdbid=tmdbid,
             media_type=media_type,
             session_id=session_id,
+            user_id=user_id,
         )
         return WebSearchResultDTO(code=ret, msg=ret_msg or "")
 
