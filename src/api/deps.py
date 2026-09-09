@@ -12,7 +12,7 @@ from app.core.exceptions import AuthError, PermissionDenied
 from app.di.context import AppContext
 from app.infrastructure.cache_system import TokenCache
 from app.infrastructure.security import identify
-from app.schemas.auth import UserContext
+from app.schemas.auth import UserContext, system_user_context
 from app.services.apikey_service import APIKeyService
 from app.services.auth_service import AuthService
 from app.services.config_reloader import ConfigReloader
@@ -67,8 +67,9 @@ def _extract_user_from_api_key(
     except Exception as e:  # noqa: BLE001
         log.debug(f"[API]忽略异常: {e}")
 
-    # 查询创建用户的权限，API Key 继承创建者权限
+    # 查询创建用户的权限快照（服务端缓存，授权变更即时生效），API Key 继承创建者权限与角色
     permissions = []
+    role_codes: list[str] = []
     level = 0
     username: str = "api_key"
     nickname = cast(str, api_key.name)
@@ -82,8 +83,9 @@ def _extract_user_from_api_key(
                 nickname = cast(str, api_key.name)
                 level = getattr(user, "LEVEL", 0) or 0
                 try:
-                    perms = rbac_service.get_user_permissions(created_by)
-                    permissions = list(perms) if perms else []
+                    snapshot = rbac_service.get_user_snapshot(created_by)
+                    permissions = sorted(snapshot.permissions)
+                    role_codes = sorted(snapshot.role_codes)
                 except Exception as e:  # noqa: BLE001
                     log.debug(f"[API]忽略异常: {e}")
         except Exception as e:  # noqa: BLE001
@@ -95,6 +97,7 @@ def _extract_user_from_api_key(
         nickname=nickname,
         level=level,
         permissions=permissions,
+        role_codes=role_codes,
     )
 
 
@@ -117,12 +120,12 @@ def get_current_user(
     # 1) JWT 认证（新标准）
     user_ctx = _extract_user_from_jwt(auth_header)
     if user_ctx:
-        return user_ctx
+        return _overlay_fresh_snapshot(user_ctx, app_context.rbac_service)
 
-    # 2) 旧 Token 认证（APIv1 兼容）
+    # 2) 旧 Token 认证（APIv1 兼容）：映射为系统上下文（旧 API 本就是管理员粒度）
     username = _extract_user_from_token(auth_header)
     if username:
-        return UserContext(user_id=0, username=username, level=0, permissions=[])
+        return system_user_context().model_copy(update={"username": username})
 
     # 3) API Key 认证
     query_key = request.query_params.get("apikey")
@@ -404,6 +407,11 @@ def get_rbac_service(app_context: AppContext = Depends(get_app_context)):
     return app_context.rbac_service
 
 
+def get_site_grant_service(app_context: AppContext = Depends(get_app_context)):
+    """获取站点授权服务实例（L3 资源访问控制）"""
+    return app_context.site_grant_service
+
+
 def get_subscription_monitor(app_context: AppContext = Depends(get_app_context)):
     """获取订阅监控实例"""
     return app_context.subscription_monitor
@@ -493,6 +501,28 @@ def _extract_user_from_jwt(auth_header: str | None) -> UserContext | None:
     # 支持 "Bearer xxx" 或直接 "xxx"
     token = auth_header.split()[-1] if " " in auth_header else auth_header
     return AuthService.verify_token(token)
+
+
+def _overlay_fresh_snapshot(user_ctx: UserContext, rbac_service) -> UserContext:
+    """
+    用服务端权限快照覆盖 JWT 内嵌的 permissions/role_codes。
+
+    JWT 内嵌副本仅供前端展示；后端判定必须以服务端快照为准，
+    确保角色/权限回收即时生效（快照缓存 TTL 60s，变更主动失效）。
+    """
+    if not user_ctx.user_id:
+        return user_ctx
+    try:
+        snapshot = rbac_service.get_user_snapshot(user_ctx.user_id)
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"[Auth]权限快照读取失败，回退 JWT 副本: {e}")
+        return user_ctx
+    return user_ctx.model_copy(
+        update={
+            "permissions": sorted(snapshot.permissions),
+            "role_codes": sorted(snapshot.role_codes),
+        }
+    )
 
 
 def get_retriever(app_context: AppContext = Depends(get_app_context)):

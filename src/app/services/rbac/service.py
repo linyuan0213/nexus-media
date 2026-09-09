@@ -66,10 +66,12 @@ class RBACService:
         return self._user.create_user(username, password, email, nickname, role_ids)
 
     def update_user(self, user_id: int, **kwargs) -> None:
-        return self._user.update_user(user_id, **kwargs)
+        self._user.update_user(user_id, **kwargs)
+        self._check.invalidate_user(user_id)
 
     def delete_user(self, user_id: int, current_user_id: int | None = None) -> None:
-        return self._user.delete_user(user_id, current_user_id=current_user_id)
+        self._user.delete_user(user_id, current_user_id=current_user_id)
+        self._check.invalidate_user(user_id)
 
     def get_user_by_id(self, user_id: int):
         return self._user.get_user_by_id(user_id)
@@ -81,7 +83,8 @@ class RBACService:
         return self._user.get_users(page, page_size)
 
     def assign_roles_to_user(self, user_id: int, role_ids: list[int]) -> None:
-        return self._user.assign_roles_to_user(user_id, role_ids)
+        self._user.assign_roles_to_user(user_id, role_ids)
+        self._check.invalidate_user(user_id)
 
     def get_user_roles(self, user_id: int):
         return self._user.get_user_roles(user_id)
@@ -89,13 +92,17 @@ class RBACService:
     # ==================== 角色管理（委托） ====================
 
     def create_role(self, role_name, role_code, description=None, role_level=100, permission_ids=None, menu_ids=None):
-        return self._role.create_role(role_name, role_code, description, role_level, permission_ids, menu_ids)
+        result = self._role.create_role(role_name, role_code, description, role_level, permission_ids, menu_ids)
+        self._check.invalidate_all()
+        return result
 
     def update_role(self, role_id: int, **kwargs) -> None:
-        return self._role.update_role(role_id, **kwargs)
+        self._role.update_role(role_id, **kwargs)
+        self._check.invalidate_all()
 
     def delete_role(self, role_id: int) -> None:
-        return self._role.delete_role(role_id)
+        self._role.delete_role(role_id)
+        self._check.invalidate_all()
 
     def get_role_by_id(self, role_id: int):
         return self._role.get_role_by_id(role_id)
@@ -104,10 +111,11 @@ class RBACService:
         return self._role.get_all_roles()
 
     def assign_permissions_to_role(self, role_id: int, permission_ids: list[int]) -> None:
-        return self._role.assign_permissions_to_role(role_id, permission_ids)
+        self._role.assign_permissions_to_role(role_id, permission_ids)
+        self._check.invalidate_all()
 
     def assign_menus_to_role(self, role_id: int, menu_ids: list[int]) -> None:
-        return self._role.assign_menus_to_role(role_id, menu_ids)
+        self._role.assign_menus_to_role(role_id, menu_ids)
 
     # ==================== 权限管理（委托） ====================
 
@@ -170,6 +178,13 @@ class RBACService:
 
     def get_user_permissions(self, user_id: int) -> set[str]:
         return self._check.get_user_permissions(user_id)
+
+    def get_user_role_codes(self, user_id: int) -> set[str]:
+        return self._check.get_user_role_codes(user_id)
+
+    def get_user_snapshot(self, user_id: int):
+        """获取用户权限快照（权限码 + 角色码，带缓存即时失效）"""
+        return self._check.get_user_snapshot(user_id)
 
     def check_permission(self, user_id: int, permission_code: str) -> bool:
         return self._check.check_permission(user_id, permission_code)

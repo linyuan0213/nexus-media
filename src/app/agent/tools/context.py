@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Any
 
+from app.schemas.auth import UserContext
+
 
 @dataclass(frozen=True)
 class ToolContext:
@@ -39,3 +41,25 @@ class ToolContext:
     retriever: Any = None
     conversation_store: Any = None
     semantic_memory: Any = None
+    rbac_service: Any = None
+    site_grant_service: Any = None
+
+    def user_context(self, user_id: str | int | None):
+        """按调用方 user_id 构建 UserContext（含权限与角色码快照）.
+
+        user_id 为空/0 时返回 None（系统上下文语义：不过滤）。
+        """
+        if not user_id or not str(user_id).isdigit() or int(user_id) == 0:
+            return None
+        uid = int(user_id)
+        if self.rbac_service is None:
+            return UserContext(user_id=uid, username=str(uid), level=0, permissions=[], role_codes=[])
+        snapshot = self.rbac_service.get_user_snapshot(uid)
+        user = self.rbac_service.get_user_by_id(uid)
+        return UserContext(
+            user_id=uid,
+            username=getattr(user, "USERNAME", str(uid)) if user else str(uid),
+            level=getattr(user, "LEVEL", 0) or 0 if user else 0,
+            permissions=sorted(snapshot.permissions),
+            role_codes=sorted(snapshot.role_codes),
+        )

@@ -93,8 +93,11 @@ from app.db.models.rbac import (
     RBACOperationLog,
     RBACPermission,
     RBACRole,
+    RBACRoleSite,
     RBACUser,
+    RBACUserChannel,
     RBACUserLoginLog,
+    RBACUserSite,
 )
 
 # 搜索结果模型

@@ -54,6 +54,8 @@ def rebuild_agent_rag(context: AppContext) -> dict[str, bool]:
         retriever=rag.retriever,
         conversation_store=rag.conversation_store,
         semantic_memory=rag.semantic_memory,
+        rbac_service=context.rbac_service,
+        site_grant_service=context.site_grant_service,
     )
     plugin_svc = context.plugin_framework_service
     object.__setattr__(

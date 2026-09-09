@@ -6,6 +6,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+SUPERADMIN_ROLE_CODE = "superadmin"
+
 
 class TokenPayload(BaseModel):
     """JWT Payload 结构"""
@@ -15,6 +17,7 @@ class TokenPayload(BaseModel):
     username: str  # 用户名
     level: int  # 用户等级
     permissions: list[str]  # 权限列表
+    role_codes: list[str] = []  # 角色码列表（前端展示用，后端判定不依赖）
     iat: datetime  # 签发时间
     exp: datetime  # 过期时间
     jti: str  # Token 唯一标识
@@ -37,13 +40,25 @@ class UserContext(BaseModel):
     nickname: str | None = None
     level: int
     permissions: list[str]
+    role_codes: list[str] = []
 
     @property
-    def is_admin(self) -> bool:
-        return False
+    def is_superadmin(self) -> bool:
+        return SUPERADMIN_ROLE_CODE in self.role_codes
 
     def has_permission(self, permission_code: str) -> bool:
         return "*" in self.permissions or permission_code in self.permissions
+
+
+def system_user_context() -> UserContext:
+    """系统上下文：后台任务/事件 handler 等无用户路径使用，具全部数据可见性。"""
+    return UserContext(
+        user_id=0,
+        username="system",
+        level=0,
+        permissions=[],
+        role_codes=[SUPERADMIN_ROLE_CODE],
+    )
 
 
 class LoginRequest(BaseModel):

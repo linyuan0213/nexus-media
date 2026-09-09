@@ -327,6 +327,13 @@ class TestRBACMenuService:
 class TestRBACCheckService:
     """Test suite for RBACCheckService."""
 
+    @pytest.fixture(autouse=True)
+    def _clear_snapshot_cache(self):
+        """权限快照缓存跨用例污染防护：每个用例前清空。"""
+        from app.infrastructure.cache_system import RBACSnapshotCache
+
+        RBACSnapshotCache.clear()
+
     @staticmethod
     def _mock_user_with_perms(user_repo, role_repo, user_id=1, permission_codes=None) -> RBACCheckService:
         """创建模拟的 RBACCheckService，user 拥有指定权限（通过角色驱动）。"""

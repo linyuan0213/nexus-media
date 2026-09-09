@@ -6,8 +6,7 @@ import log
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError, ServiceError
 from app.db.models.rbac import RBACUser
 from app.infrastructure.security import generate_password_hash
-
-SUPERADMIN_ROLE_CODE = "superadmin"
+from app.schemas.auth import SUPERADMIN_ROLE_CODE
 
 
 class RBACUserService:

@@ -3,6 +3,7 @@
 from app import utils as string_utils_module
 from app.core.system_config import SystemConfig
 from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter, BrushTaskRepositoryAdapter
+from app.db.repositories.channel_binding_repository import ChannelBindingRepository
 from app.db.repositories.config_repo_adapter import (
     DownloaderRepositoryAdapter,
     FilterGroupRepositoryAdapter,
@@ -21,6 +22,7 @@ from app.db.repositories.plugin_framework_repository import PluginFrameworkRepos
 from app.db.repositories.plugin_market_repository import PluginMarketRepository
 from app.db.repositories.rbac_repo_adapter import RBACMenuRepositoryAdapter, RBACRoleRepositoryAdapter
 from app.db.repositories.search_repo_adapter import SearchRepositoryAdapter
+from app.db.repositories.site_grant_repository import SiteGrantRepository
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.db.repositories.site_repository import SiteRepository
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
@@ -48,6 +50,7 @@ from app.media.scraper import Scraper
 from app.services.brush.scheduler import BrushTaskScheduler
 from app.services.brush.task_service import BrushTaskService
 from app.services.brush_service import BrushService
+from app.services.channel_binding_service import ChannelBindingService
 from app.services.config_service import ConfigService
 from app.services.download_core import DownloadCore
 from app.services.download_service import DownloadService
@@ -73,6 +76,7 @@ from app.services.search_orchestrator import SearchOrchestrator
 from app.services.search_result_service import SearchResultService
 from app.services.search_service import Searcher
 from app.services.search_web_entry import make_web_search_fn
+from app.services.site_grant_service import SiteGrantService
 from app.services.site_service import SiteService
 from app.services.storage_backend_service import StorageBackendService
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
@@ -320,6 +324,17 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     )
     backup_restore_service = BackupRestoreService()
     rbac_service = RBACService()
+    site_grant_service = SiteGrantService(
+        grant_repo=SiteGrantRepository(),
+        rbac_service=rbac_service,
+        system_config=SystemConfig(),
+    )
+    channel_binding_service = ChannelBindingService(
+        repo=ChannelBindingRepository(),
+        rbac_service=rbac_service,
+    )
+    # 索引器层站点授权过滤（L3）
+    indexer.site_grant_service = site_grant_service
     user_rss_service = UserRssService(rss_checker=rss_task_service)
 
     douban = DouBan()
@@ -569,4 +584,6 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         subscribe_history_service=subscribe_history_service,
         words_service=words_service,
         user_rss_service=user_rss_service,
+        site_grant_service=site_grant_service,
+        channel_binding_service=channel_binding_service,
     )

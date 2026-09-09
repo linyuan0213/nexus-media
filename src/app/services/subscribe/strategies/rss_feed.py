@@ -45,6 +45,7 @@ class RssFeedStrategy:
         message: Message,
         coordinator=None,
         system_config=None,
+        site_grant_service=None,
     ):
         self.media = media
         self.sites = sites
@@ -58,6 +59,31 @@ class RssFeedStrategy:
         self.message = message
         self._coordinator = coordinator
         self._system_config = system_config
+        self._site_grant_service = site_grant_service
+        # 站点授权缓存：一轮轮询内按归属用户复用，避免逐订阅查库
+        self._grant_cache: dict[int, dict | None] = {}
+
+    def _filter_subscriptions_by_site_grant(self, subs: dict, site_name: str) -> dict:
+        """执行时站点授权兜底（ADR-021 4.3）：剔除归属用户未获该站点 rss 用途授权的订阅.
+
+        user_id 为 None（系统/插件创建）或授权服务未启用时不过滤。
+        """
+        if self._site_grant_service is None or not site_name:
+            return subs
+        filtered = {}
+        for key, info in subs.items():
+            owner = info.get("user_id")
+            if owner is None:
+                filtered[key] = info
+                continue
+            if owner not in self._grant_cache:
+                self._grant_cache[owner] = self._site_grant_service.get_visible_sites_by_id(owner)
+            visible = self._grant_cache[owner]
+            if visible is None or self._site_grant_service.is_site_allowed(visible, site_name, "builtin", "rss"):
+                filtered[key] = info
+            else:
+                log.info(f"[RssFeedStrategy] 订阅 {info.get('name')}(用户{owner}) 未授权站点 {site_name}，本轮跳过")
+        return filtered
 
     def set_coordinator(self, coordinator) -> None:
         """设置下载协调器（用于 SubscriptionMonitor 注入）."""
@@ -88,6 +114,7 @@ class RssFeedStrategy:
         return []
 
     def _do_rss_poll(self) -> None:
+        self._grant_cache = {}
         if self.sites is None:
             return
         if self.subscribe is None:
@@ -267,8 +294,8 @@ class RssFeedStrategy:
 
                 match_flag, match_msg, match_info = self.matcher.match(
                     media_info=media_info,
-                    rss_movies=rss_movies,
-                    rss_tvs=rss_tvs,
+                    rss_movies=self._filter_subscriptions_by_site_grant(rss_movies, site_name),
+                    rss_tvs=self._filter_subscriptions_by_site_grant(rss_tvs, site_name),
                     site_id=site_id,
                     site_filter_rule=item["site_filter_rule"],
                     site_cookie=item["site_cookie"],

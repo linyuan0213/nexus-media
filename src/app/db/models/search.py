@@ -5,7 +5,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Float, Index, Integer, Sequence, String, Text
+from sqlalchemy import BigInteger, DateTime, Float, ForeignKey, Index, Integer, Sequence, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -26,6 +26,7 @@ class SEARCHRESULTINFO(Base):
     )
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
     TORRENT_NAME: Mapped[str] = mapped_column(String(255))
     ENCLOSURE: Mapped[str] = mapped_column(String(8192), default="", server_default="")
     DESCRIPTION: Mapped[str] = mapped_column(Text, default="")

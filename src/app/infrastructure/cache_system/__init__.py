@@ -11,6 +11,7 @@ from .caches import (
     ConfigLoadCache,
     MediaInfoCache,
     OpenAISessionCache,
+    RBACSnapshotCache,
     SearchResultCache,
     SiteInfoCache,
     TMDBCache,
@@ -47,6 +48,7 @@ __all__ = [
     "CategoryLoadCache",
     "OpenAISessionCache",
     "SiteInfoCache",
+    "RBACSnapshotCache",
     # 专用缓存实例
     "MediaInfoCache",
     "SearchResultCache",
@@ -77,6 +79,7 @@ _cache_manager.create_memory_cache("token", maxsize=512)
 _cache_manager.create_memory_cache("config_load", maxsize=1)
 _cache_manager.create_memory_cache("category_load", maxsize=2)
 _cache_manager.create_memory_cache("site_info", maxsize=100)
+_cache_manager.create_memory_cache("rbac_auth_snapshot", maxsize=1024, ttl=60)
 # 下载器种子平均上传速度缓存：up_speed_avg 为长期平均值，避免 completed 种子多时逐种拉取 properties
 _cache_manager.create_memory_cache("downloader_up_avg", maxsize=10000, ttl=600)
 _cache_manager.create_redis_cache("tmdb")
@@ -92,4 +95,5 @@ SiteInfoCache = SiteInfoCache(_cache_manager.get("site_info"))
 TokenCache = TokenCache(_cache_manager.get("token"))
 ConfigLoadCache = ConfigLoadCache(_cache_manager.get("config_load"))
 CategoryLoadCache = CategoryLoadCache(_cache_manager.get("category_load"))
+RBACSnapshotCache = RBACSnapshotCache(_cache_manager.get("rbac_auth_snapshot"))
 OpenAISessionCache = OpenAISessionCache(_openai_session_adapter)

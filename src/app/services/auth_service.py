@@ -53,12 +53,13 @@ class AuthService:
 
         user = result
 
-        # 获取用户权限
+        # 获取用户权限与角色码
         try:
-            permissions = self._rbac_service.get_user_permissions(user.ID)
-            permissions = list(permissions) if permissions else []
+            permissions = list(self._rbac_service.get_user_permissions(user.ID) or [])
+            role_codes = list(self._rbac_service.get_user_role_codes(user.ID) or [])
         except (ServiceError, RepositoryError):
             permissions = []
+            role_codes = []
 
         return UserContext(
             user_id=user.ID,
@@ -66,6 +67,7 @@ class AuthService:
             nickname=getattr(user, "NICKNAME", None),
             level=getattr(user, "LEVEL", 0) or 0,
             permissions=permissions,
+            role_codes=role_codes,
         )
 
     @staticmethod
@@ -83,6 +85,7 @@ class AuthService:
             "nickname": user_ctx.nickname,
             "level": user_ctx.level,
             "permissions": user_ctx.permissions,
+            "role_codes": user_ctx.role_codes,
             "iat": now,
             "exp": now + timedelta(minutes=_ACCESS_TOKEN_EXPIRE_MINUTES),
             "jti": str(uuid.uuid4()),
@@ -124,10 +127,11 @@ class AuthService:
 
             # 构建用户上下文
             try:
-                permissions = self._rbac_service.get_user_permissions(user_id)
-                permissions = list(permissions) if permissions else []
+                permissions = list(self._rbac_service.get_user_permissions(user_id) or [])
+                role_codes = list(self._rbac_service.get_user_role_codes(user_id) or [])
             except (ServiceError, RepositoryError):
                 permissions = []
+                role_codes = []
 
             level = getattr(user, "LEVEL", 0) or 0
 
@@ -137,6 +141,7 @@ class AuthService:
                 nickname=getattr(user, "NICKNAME", None) or None,
                 level=level,
                 permissions=permissions,
+                role_codes=role_codes,
             )
             return AuthService.create_token_pair(ctx)
 
@@ -159,6 +164,7 @@ class AuthService:
                 nickname=payload.get("nickname", None),
                 level=payload.get("level", 0),
                 permissions=payload.get("permissions", []),
+                role_codes=payload.get("role_codes", []),
             )
         except (jwt.InvalidTokenError, ValueError):
             return None

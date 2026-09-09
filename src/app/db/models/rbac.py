@@ -5,7 +5,7 @@ RBAC (Role-Based Access Control) 权限管理模型
 
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column, object_session, relationship
 
 from app.db.models.base import Base
@@ -321,6 +321,66 @@ class RBACMenu(Base):
         # 避免递归过深，children不再展开
         data["children"] = None
         return data
+
+
+class RBACRoleSite(Base):
+    """角色站点授权表（L3 资源访问控制，角色级）"""
+
+    __tablename__ = "RBAC_ROLE_SITES"
+    __table_args__ = (Index("UQ_RBAC_ROLE_SITES", "ROLE_ID", "SITE_NAME", unique=True),)
+
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ROLE_ID: Mapped[int] = mapped_column(
+        Integer, ForeignKey("RBAC_ROLES.ID", ondelete="CASCADE"), nullable=False, index=True
+    )
+    SITE_NAME: Mapped[str] = mapped_column(String(128), nullable=False)
+    PERMISSIONS: Mapped[str] = mapped_column(Text, nullable=False, default='["search"]')  # JSON: search/rss
+    GRANTED_BY: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+
+
+class RBACUserSite(Base):
+    """用户站点授权表（L3 资源访问控制，用户级例外补充）"""
+
+    __tablename__ = "RBAC_USER_SITES"
+    __table_args__ = (Index("UQ_RBAC_USER_SITES", "USER_ID", "SITE_NAME", unique=True),)
+
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    USER_ID: Mapped[int] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=False, index=True
+    )
+    SITE_NAME: Mapped[str] = mapped_column(String(128), nullable=False)
+    PERMISSIONS: Mapped[str] = mapped_column(Text, nullable=False, default='["search"]')  # JSON: search/rss
+    GRANTED_BY: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
+
+
+class RBACUserChannel(Base):
+    """用户消息渠道身份绑定表（chat_id/推送Key ↔ 系统用户）"""
+
+    __tablename__ = "RBAC_USER_CHANNELS"
+    __table_args__ = (Index("UQ_RBAC_USER_CHANNELS", "CHANNEL", "CHANNEL_USER_ID", unique=True),)
+
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True)
+    USER_ID: Mapped[int] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=False, index=True
+    )
+    CHANNEL: Mapped[str] = mapped_column(String(64), nullable=False)  # telegram/wechat/slack/bark/...
+    CHANNEL_USER_ID: Mapped[str] = mapped_column(String(255), nullable=False)  # 渠道侧身份或推送目标
+    STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 1=启用, 0=禁用
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+
+    def to_dict(self):
+        return {
+            "id": self.ID,
+            "user_id": self.USER_ID,
+            "channel": self.CHANNEL,
+            "channel_user_id": self.CHANNEL_USER_ID,
+            "status": self.STATUS,
+            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT is not None else None,
+        }
 
 
 class RBACUserLoginLog(Base):

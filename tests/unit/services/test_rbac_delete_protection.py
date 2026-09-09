@@ -6,8 +6,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.core.exceptions import ServiceError
+from app.schemas.auth import SUPERADMIN_ROLE_CODE
 from app.services.rbac.role_service import RBACRoleService
-from app.services.rbac.user_service import SUPERADMIN_ROLE_CODE, RBACUserService
+from app.services.rbac.user_service import RBACUserService
 
 SUPERADMIN_ROLE = SimpleNamespace(id=1, role_code=SUPERADMIN_ROLE_CODE, status=1)
 NORMAL_ROLE = SimpleNamespace(id=2, role_code="user", status=1)

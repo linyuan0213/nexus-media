@@ -5,8 +5,7 @@ from typing import cast
 import log
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError, ServiceError
 from app.db.models.rbac import RBACRole
-
-SUPERADMIN_ROLE_CODE = "superadmin"
+from app.schemas.auth import SUPERADMIN_ROLE_CODE
 
 
 class RBACRoleService:

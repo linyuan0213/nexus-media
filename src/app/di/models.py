@@ -127,6 +127,8 @@ class ServiceObjects:
     subscribe_history_service: Any
     words_service: Any
     user_rss_service: Any
+    site_grant_service: Any = None
+    channel_binding_service: Any = None
 
 
 @dataclass(frozen=True)

@@ -6,7 +6,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Integer, Sequence, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Sequence, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -57,6 +57,7 @@ class USERRSSTASKHISTORY(Base):
     __tablename__ = "USERRSS_TASK_HISTORY"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
     TASK_ID: Mapped[str] = mapped_column(String(255), index=True)
     TITLE: Mapped[str] = mapped_column(String(255))
     DOWNLOADER: Mapped[str] = mapped_column(String(255))

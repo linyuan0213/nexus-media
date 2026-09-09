@@ -12,6 +12,7 @@ import os
 import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from typing import TYPE_CHECKING
 
 import log
 from app.core.system_config import SystemConfig
@@ -28,6 +29,9 @@ from app.infrastructure.progress import ProgressTracker
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.utils import ExceptionUtils, StringUtils
+
+if TYPE_CHECKING:
+    from app.services.site_grant_service import SiteGrantService
 
 
 # 站点级搜索超时上下限（秒）：按历史延迟在区间内自适应。
@@ -182,6 +186,8 @@ class Indexer:
         self._site_engine = site_engine
         self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
         self._idx_config_repo = idx_config_repo or IndexerConfigRepositoryAdapter()
+        # 站点授权服务（L3 资源访问控制），由 DI 装配后注入；None 表示不过滤
+        self.site_grant_service: SiteGrantService | None = None
         self._client = None
         self._client_type = None
         self._clients: dict[str, _IIndexClient] = {}
@@ -270,6 +276,16 @@ class Indexer:
             indexers.extend(self._filter_indexers(client, check=check))
         return indexers
 
+    def get_indexers_with_source(self, check=True) -> list[dict]:
+        """获取全部站点及其来源客户端（builtin/jackett/prowlarr），供站点授权展示与过滤"""
+        self._ensure_clients()
+        result = []
+        for client in self._clients.values():
+            source = client.get_client_id()
+            for indexer in self._filter_indexers(client, check=check):
+                result.append({"name": indexer.name, "source": source, "builtin": source == "builtin"})
+        return result
+
     def _filter_indexers(self, client, check=True, filter_args=None):
         if not getattr(client, "is_enabled", lambda: True)():
             return []
@@ -283,6 +299,17 @@ class Indexer:
             # site 为空列表 → 订阅未配置站点，搜索零站点（不搜全站）
             site_filter = filter_args.get("site")
             indexers = [i for i in indexers if i.name in site_filter]
+        # 站点授权过滤（L3）：filter_args 携带 user_id 且授权服务已注入时按白名单过滤
+        user_id = filter_args.get("user_id") if filter_args else None
+        if user_id and self.site_grant_service is not None:
+            visible = self.site_grant_service.get_visible_sites_by_id(user_id)
+            if visible is not None:
+                source = client.get_client_id()
+                indexers = [
+                    i
+                    for i in indexers
+                    if self.site_grant_service.is_site_allowed(visible, i.name, source, usage="search")
+                ]
         return indexers
 
     def get_user_indexer_dict(self):

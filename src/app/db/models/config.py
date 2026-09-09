@@ -91,6 +91,7 @@ class CONFIGUSERRSS(Base):
     __tablename__ = "CONFIG_USER_RSS"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
     NAME: Mapped[str] = mapped_column(String(255), index=True)
     ADDRESS: Mapped[str] = mapped_column(String(255))
     PARSER: Mapped[str] = mapped_column(String(255))

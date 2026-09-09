@@ -200,6 +200,23 @@ class TokenCache(TypedCache):
         return super().set(key, value, ttl)
 
 
+class RBACSnapshotCache(TypedCache):
+    """RBAC 用户权限快照缓存（权限码 + 角色码），授权变更时主动失效"""
+
+    # 默认 TTL：60 秒（权限回收时效兜底，主动失效为主要路径）
+    DEFAULT_TTL = 60
+
+    def __init__(self, adapter: CacheAdapter | None = None):
+        if adapter is None:
+            adapter = MemoryCacheAdapter(maxsize=1024, name="rbac_auth_snapshot", default_ttl=self.DEFAULT_TTL)
+        super().__init__(adapter)
+
+    def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
+        """设置权限快照缓存，默认 TTL 60 秒."""
+        ttl = ttl or self.DEFAULT_TTL
+        return super().set(key, value, ttl)
+
+
 class ConfigLoadCache(TypedCache):
     """配置加载缓存"""
 
