@@ -40,11 +40,11 @@ class WordRepository(BaseRepository):
         with self.session() as db:
             db.add(
                 CUSTOMWORDS(
-                    REPLACED=replaced,
-                    REPLACE=replace,
-                    FRONT=front,
-                    BACK=back,
-                    OFFSET=offset,
+                    REPLACED=str(replaced or ""),
+                    REPLACE=str(replace or ""),
+                    FRONT=str(front or ""),
+                    BACK=str(back or ""),
+                    OFFSET=str(offset or ""),
                     TYPE=int(wtype),
                     GROUP_ID=int(gid),
                     SEASON=int(season),
@@ -169,11 +169,11 @@ class WordRepository(BaseRepository):
         with self.session() as db:
             db.add(
                 CUSTOMWORDGROUPS(
-                    TITLE=title,
-                    YEAR=year,
-                    TYPE=int(gtype),
-                    TMDBID=int(tmdbid),
-                    SEASON_COUNT=int(season_count),
+                    TITLE=str(title or ""),
+                    YEAR=str(year or ""),
+                    TYPE=int(gtype or 0),
+                    TMDBID=int(tmdbid or 0),
+                    SEASON_COUNT=int(season_count or 0),
                     NOTE=note,
                 )
             )

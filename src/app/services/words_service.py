@@ -82,12 +82,13 @@ class WordsService:
             tmdb_info = self._media_cache.get_tmdb_info(mtype=MediaType.TV, tmdbid=tmdb_id)
             if not tmdb_info:
                 raise ResourceNotFoundError("添加失败，无法查询到TMDB信息")
+            air_date = tmdb_info.get("first_air_date") or ""
             self.insert_custom_word_groups(
-                title=tmdb_info.get("name"),
-                year=tmdb_info.get("first_air_date", "")[0:4],
+                title=tmdb_info.get("name") or "",
+                year=air_date[:4],
                 gtype=2,
                 tmdbid=tmdb_id,
-                season_count=tmdb_info.get("number_of_seasons"),
+                season_count=tmdb_info.get("number_of_seasons") or 0,
             )
         elif tmdb_type == "movie":
             if self.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=1):
@@ -95,9 +96,10 @@ class WordsService:
             tmdb_info = self._media_cache.get_tmdb_info(mtype=MediaType.MOVIE, tmdbid=tmdb_id)
             if not tmdb_info:
                 raise ResourceNotFoundError("添加失败，无法查询到TMDB信息")
+            release_date = tmdb_info.get("release_date") or ""
             self.insert_custom_word_groups(
-                title=tmdb_info.get("title"),
-                year=tmdb_info.get("release_date", "")[0:4],
+                title=tmdb_info.get("title") or "",
+                year=release_date[:4],
                 gtype=1,
                 tmdbid=tmdb_id,
                 season_count=0,
