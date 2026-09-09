@@ -104,23 +104,23 @@ class SubscribeService:
     def finish_rss_subscribe(self, rssid, media):
         return self._finish_svc.finish_rss_subscribe(rssid, media, self.delete_subscribe)
 
-    def get_subscribe_movies(self, rid=None, state=None):
-        return self._query_svc.get_subscribe_movies(rid, state)
+    def get_subscribe_movies(self, rid=None, state=None, user=None):
+        return self._query_svc.get_subscribe_movies(rid, state, user=user)
 
-    def get_subscribe_tvs(self, rid=None, state=None):
-        return self._query_svc.get_subscribe_tvs(rid, state)
+    def get_subscribe_tvs(self, rid=None, state=None, user=None):
+        return self._query_svc.get_subscribe_tvs(rid, state, user=user)
 
     def get_subscribe_tv_episodes(self, rssid):
         return self._query_svc.get_subscribe_tv_episodes(rssid)
 
-    def get_subscribe_seasons(self, tmdbid=None, title=None, year=None):
-        return self._query_svc.get_subscribe_seasons(tmdbid, title, year)
+    def get_subscribe_seasons(self, tmdbid=None, title=None, year=None, user=None):
+        return self._query_svc.get_subscribe_seasons(tmdbid, title, year, user=user)
 
     def check_history(self, type_str, name, year=None, season=None):
         return self._query_svc.check_history(type_str, name, year, season)
 
-    def delete_subscribe(self, mtype, title=None, year=None, season=None, rssid=None, tmdbid=None):
-        return self._query_svc.delete_subscribe(mtype, title, year, season, rssid, tmdbid)
+    def delete_subscribe(self, mtype, title=None, year=None, season=None, rssid=None, tmdbid=None, user=None):
+        return self._query_svc.delete_subscribe(mtype, title, year, season, rssid, tmdbid, user=user)
 
     def get_subscribe_id(self, mtype, title, year=None, season=None, tmdbid=None):
         return self._query_svc.get_subscribe_id(mtype, title, year, season, tmdbid)

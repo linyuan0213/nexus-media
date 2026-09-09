@@ -1,12 +1,13 @@
 """Subscription API Router 单元测试."""
 
-from unittest.mock import MagicMock
+from unittest.mock import ANY, MagicMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.deps import (
+    get_app_context,
     get_current_user,
     get_subscribe_calendar_service,
     get_subscribe_history_service,
@@ -85,6 +86,9 @@ def client(
         permissions=["subscription:view", "subscription:manage"],
     )
     app.dependency_overrides[get_current_user] = lambda: admin_ctx
+    mock_app_context = MagicMock()
+    mock_app_context.site_grant_service = None
+    app.dependency_overrides[get_app_context] = lambda: mock_app_context
     app.dependency_overrides[get_subscribe_service] = lambda: mock_subscribe_service
     app.dependency_overrides[get_subscribe_history_service] = lambda: mock_history_service
     app.dependency_overrides[get_subscribe_calendar_service] = lambda: mock_calendar_service
@@ -121,7 +125,7 @@ class TestSubscriptionRouter:
     def test_delete_rss_history(self, client, mock_history_service):
         resp = client.post("/api/v1/subscription/history/delete", json={"rssid": "1"})
         assert resp.status_code == 200
-        mock_history_service.delete.assert_called_once_with(rssid=1)
+        mock_history_service.delete.assert_called_once_with(rssid=1, user=ANY)
 
     def test_re_rss_history(self, client, mock_history_service):
         resp = client.post("/api/v1/subscription/history/redo", json={"rssid": "1", "type": "movie"})

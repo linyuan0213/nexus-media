@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from app.domain.mediatypes import MediaType
+from app.schemas.auth import UserContext
 from app.services.subscribe.management.utils import parse_rss_desc
 from app.utils.json_utils import JsonUtils
 
@@ -19,10 +20,12 @@ class SubscribeQueryService:
         self._sites = sites
         self._indexer_service = indexer_service
 
-    def get_subscribe_movies(self, rid: int | None = None, state: str | None = None) -> dict:
-        """获取电影订阅"""
+    def get_subscribe_movies(
+        self, rid: int | None = None, state: str | None = None, user: UserContext | None = None
+    ) -> dict:
+        """获取电影订阅（user 非空时按数据归属过滤）"""
         ret_dict = {}
-        rss_movies = self._movie_repo.get_all(rssid=rid, state=state)
+        rss_movies = self._movie_repo.get_all(rssid=rid, state=state, user=user)
         rss_sites_valid = self._sites.get_site_names(rss=True)
         search_sites_valid = self._indexer_service.get_user_indexer_names()
         for rss_movie in rss_movies:
@@ -63,6 +66,7 @@ class SubscribeQueryService:
             search_sites = [site for site in (search_sites or []) if site in search_sites_valid]
             ret_dict[str(rss_movie.ID)] = {
                 "id": rss_movie.ID,
+                "user_id": rss_movie.USER_ID,
                 "name": rss_movie.NAME,
                 "year": rss_movie.YEAR,
                 "tmdbid": rss_movie.TMDBID,
@@ -90,10 +94,12 @@ class SubscribeQueryService:
             }
         return ret_dict
 
-    def get_subscribe_tvs(self, rid: int | None = None, state: str | None = None) -> dict:
-        """获取电视剧订阅"""
+    def get_subscribe_tvs(
+        self, rid: int | None = None, state: str | None = None, user: UserContext | None = None
+    ) -> dict:
+        """获取电视剧订阅（user 非空时按数据归属过滤）"""
         ret_dict = {}
-        rss_tvs = self._tv_repo.get_all(rssid=rid, state=state)
+        rss_tvs = self._tv_repo.get_all(rssid=rid, state=state, user=user)
         rss_sites_valid = self._sites.get_site_names(rss=True)
         search_sites_valid = self._indexer_service.get_user_indexer_names()
         for rss_tv in rss_tvs:
@@ -140,6 +146,7 @@ class SubscribeQueryService:
             search_sites = [site for site in (search_sites or []) if site in search_sites_valid]
             ret_dict[str(rss_tv.ID)] = {
                 "id": rss_tv.ID,
+                "user_id": rss_tv.USER_ID,
                 "name": rss_tv.NAME,
                 "year": rss_tv.YEAR,
                 "season": rss_tv.SEASON,
@@ -181,15 +188,16 @@ class SubscribeQueryService:
         tmdbid: str | None = None,
         title: str | None = None,
         year: str | None = None,
+        user: UserContext | None = None,
     ) -> list[int]:
         """获取某部剧集已订阅的季号列表
 
         SEASON 存储格式为 "S01" 或 "S01-S03"（区间），此处解析为季号整数列表。
-        优先按 tmdbid 匹配，其次按名称(+年份)匹配。
+        优先按 tmdbid 匹配，其次按名称(+年份)匹配。user 非空时按数据归属过滤。
         """
         seasons: set[int] = set()
         tmdbid_str = str(tmdbid) if tmdbid else ""
-        for rss_tv in self._tv_repo.get_all():
+        for rss_tv in self._tv_repo.get_all(user=user):
             matched = False
             if tmdbid_str and str(rss_tv.tmdb_id) == tmdbid_str:
                 matched = True
@@ -222,12 +230,13 @@ class SubscribeQueryService:
         season: str | None = None,
         rssid: int | None = None,
         tmdbid: str | None = None,
+        user: UserContext | None = None,
     ) -> Any:
-        """删除订阅"""
+        """删除订阅（user 非空且非超管时仅可删除自己的订阅）"""
         if mtype == MediaType.MOVIE:
-            return self._movie_repo.delete(title=title, year=year, rssid=rssid, tmdbid=tmdbid)
+            return self._movie_repo.delete(title=title, year=year, rssid=rssid, tmdbid=tmdbid, user=user)
         else:
-            return self._tv_repo.delete(title=title, season=season, rssid=rssid, tmdbid=tmdbid)
+            return self._tv_repo.delete(title=title, season=season, rssid=rssid, tmdbid=tmdbid, user=user)
 
     def get_subscribe_id(
         self,

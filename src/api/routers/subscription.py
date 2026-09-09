@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from api.deps import (
     get_apikey_service,
+    get_app_context,
     get_current_user,
     get_subscribe_calendar_service,
     get_subscribe_history_service,
@@ -234,6 +235,27 @@ def _invoke_for_seasons(
     return code, msg, media_info
 
 
+def _check_site_grants(app_context, user: UserContext, kwargs: dict) -> list[str]:
+    """校验订阅站点白名单：rss_sites 需 rss 用途、search_sites 需 search 用途。
+
+    返回未授权站点名列表（空列表=通过）。open 策略或 superadmin 直接通过。
+    """
+    grant_service = getattr(app_context, "site_grant_service", None)
+    if grant_service is None:
+        return []
+    visible = grant_service.get_visible_sites(user)
+    if visible is None:
+        return []
+    denied: list[str] = []
+    for site in kwargs.get("rss_sites") or []:
+        if not grant_service.is_site_allowed(visible, site, "builtin", usage="rss"):
+            denied.append(site)
+    for site in kwargs.get("search_sites") or []:
+        if not grant_service.is_site_allowed(visible, site, "builtin", usage="search"):
+            denied.append(site)
+    return denied
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -242,10 +264,21 @@ def _invoke_for_seasons(
 @router.post("/add", response_model=CommonResponse, summary="添加 RSS 订阅")
 def add_rss_media(
     req: AddRssMediaRequest,
-    user: str = Depends(require_any_permission("subscription:manage", "subscription:view")),
+    user: UserContext = Depends(require_any_permission("subscription:manage", "subscription:view")),
     svc: SubscribeService = Depends(get_subscribe_service),
+    app_context=Depends(get_app_context),
 ):
     kwargs = _build_add_kwargs(req)
+    kwargs["user_id"] = user.user_id
+    denied = _check_site_grants(app_context, user, kwargs)
+    if denied:
+        return fail(
+            code=ErrorCode.PARAM_VALIDATION_FAILED,
+            msg=f"以下站点未授权给你: {', '.join(denied)}",
+            page=req.page,
+            name=req.name,
+            rssid=None,
+        )
     code, msg, media_info = _invoke_for_seasons(req.season, kwargs, svc.add_rss_subscribe)
 
     # code 0=成功, 9=订阅已存在(幂等)；其余为真实失败，需上报而非伪装成功
@@ -275,12 +308,24 @@ def add_rss_media(
 @router.post("/update", response_model=CommonResponse, summary="更新 RSS 订阅")
 def update_rss_media(
     req: AddRssMediaRequest,
-    user: str = Depends(require_permission("subscription:manage")),
+    user: UserContext = Depends(require_permission("subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
+    app_context=Depends(get_app_context),
 ):
     kwargs = _build_update_kwargs(req)
+    kwargs["user"] = user
     if not req.rssid:
         return fail(code=ErrorCode.PARAM_VALIDATION_FAILED, msg="缺少订阅ID", page=req.page, name=req.name, rssid=None)
+
+    denied = _check_site_grants(app_context, user, kwargs)
+    if denied:
+        return fail(
+            code=ErrorCode.PARAM_VALIDATION_FAILED,
+            msg=f"以下站点未授权给你: {', '.join(denied)}",
+            page=req.page,
+            name=req.name,
+            rssid=req.rssid,
+        )
 
     code, msg, media_info = _invoke_for_seasons(
         req.season, kwargs, svc.update_rss_subscribe, req.total_ep, req.current_ep
@@ -300,22 +345,22 @@ def update_rss_media(
 @router.post("/history/delete", response_model=CommonResponse, summary="删除 RSS 历史")
 def delete_rss_history(
     req: SubscribeIdRequest,
-    user: str = Depends(require_permission("subscription:manage")),
+    user: UserContext = Depends(require_permission("subscription:manage")),
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
-    svc.delete(rssid=req.rssid)
+    svc.delete(rssid=req.rssid, user=user)
     return success()
 
 
 @router.post("/history/redo", response_model=CommonResponse, summary="重新执行 RSS 历史")
 def re_rss_history(
     req: RedoHistoryRequest,
-    user: str = Depends(require_permission("subscription:manage")),
+    user: UserContext = Depends(require_permission("subscription:manage")),
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
     parsed = MediaType.from_string(req.type or "")
     rtype = MediaType.MOVIE.value if parsed == MediaType.MOVIE else MediaType.TV.value
-    code, msg = svc.redo(rssid=req.rssid, rtype=rtype)
+    code, msg = svc.redo(rssid=req.rssid, rtype=rtype, user=user)
     if code == 0:
         return success(message=msg)
     return fail(code=ErrorCode.SUBSCRIPTION_FAILED, msg=msg)
@@ -324,7 +369,7 @@ def re_rss_history(
 @router.post("/refresh", response_model=CommonResponse, summary="刷新 RSS 订阅")
 def refresh_rss(
     req: RefreshRssRequest,
-    user: str = Depends(require_permission("subscription:manage")),
+    user: UserContext = Depends(require_permission("subscription:manage")),
     monitor: SubscriptionMonitor = Depends(get_subscription_monitor),
 ):
     monitor.refresh_subscription(mtype=req.type or "", rssid=req.rssid)
@@ -334,7 +379,7 @@ def refresh_rss(
 @router.post("/remove", response_model=CommonResponse, summary="移除 RSS 订阅")
 def remove_rss_media(
     req: RemoveRssMediaRequest,
-    user: str = Depends(require_any_permission("subscription:manage", "subscription:view")),
+    user: UserContext = Depends(require_any_permission("subscription:manage", "subscription:view")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
     tmdbid = req.tmdbid
@@ -352,6 +397,7 @@ def remove_rss_media(
             year=req.year,
             rssid=rssid,
             tmdbid=tmdbid,
+            user=user,
         )
     elif mtype == MediaType.TV:
         svc.delete_subscribe(
@@ -360,16 +406,19 @@ def remove_rss_media(
             season=_normalize_season(req.season),
             rssid=rssid,
             tmdbid=tmdbid,
+            user=user,
         )
     elif rssid:
         # 前端简化接口只传了 rssid 时，尝试两边都删除
         svc.delete_subscribe(
             mtype=MediaType.MOVIE,
             rssid=rssid,
+            user=user,
         )
         svc.delete_subscribe(
             mtype=MediaType.TV,
             rssid=rssid,
+            user=user,
         )
     return success(data=req.page)
 
@@ -377,15 +426,15 @@ def remove_rss_media(
 @router.post("/detail", response_model=CommonResponse, summary="获取 RSS 订阅详情")
 def rss_detail(
     req: SubscribeDetailRequest,
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
     parsed = MediaType.from_string(req.rsstype or "")
     if parsed == MediaType.MOVIE:
-        rssdetail = svc.get_subscribe_movies(rid=req.rssid)
+        rssdetail = svc.get_subscribe_movies(rid=req.rssid, user=user)
         mtype_value = MediaType.MOVIE.value
     else:
-        rssdetail = svc.get_subscribe_tvs(rid=req.rssid)
+        rssdetail = svc.get_subscribe_tvs(rid=req.rssid, user=user)
         mtype_value = MediaType.ANIME.value if parsed == MediaType.ANIME else MediaType.TV.value
     if not rssdetail:
         return fail()
@@ -397,7 +446,7 @@ def rss_detail(
 @router.post("/default_setting", response_model=CommonResponse, summary="获取默认 RSS 设置")
 def get_default_rss_setting(
     req: GetDefaultSubscribeSettingRequest,
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
     parsed = MediaType.from_string(req.mtype or "")
@@ -415,7 +464,7 @@ def get_default_rss_setting(
 @router.post("/default_setting/save", response_model=CommonResponse, summary="保存默认 RSS 设置")
 def save_default_rss_setting(
     req: DefaultSubscribeSettingSaveRequest,
-    user: str = Depends(require_permission("subscription:manage")),
+    user: UserContext = Depends(require_permission("subscription:manage")),
     cfg: SystemConfig = Depends(get_system_config_service),
 ):
     mtype = req.mtype
@@ -432,19 +481,19 @@ def save_default_rss_setting(
 @router.post("/calendar/ical", response_model=CommonResponse, summary="获取 RSS 日历事件")
 def get_ical_events(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeCalendarService = Depends(get_subscribe_calendar_service),
 ):
-    events = svc.get_events()
+    events = svc.get_events(user=user)
     return success(data=events)
 
 
 @router.post("/calendar/ical/download", summary="下载订阅日历 ICS 文件")
 def download_ical(
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeCalendarService = Depends(get_subscribe_calendar_service),
 ):
-    ics = svc.generate_ics()
+    ics = svc.generate_ics(user=user)
     return success(data=ics)
 
 
@@ -474,62 +523,63 @@ def get_webcal_url(
 @router.post("/movie/items", response_model=CommonResponse, summary="获取电影 RSS 订阅项")
 def get_movie_rss_items(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeCalendarService = Depends(get_subscribe_calendar_service),
 ):
-    return success(data=svc.get_movie_items())
+    return success(data=svc.get_movie_items(user=user))
 
 
 @router.post("/movie/list", response_model=CommonResponse, summary="获取电影 RSS 订阅列表")
 def get_movie_rss_list(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
-    result = svc.get_subscribe_movies()
+    result = svc.get_subscribe_movies(user=user)
     return success(data=list(result.values()) if isinstance(result, dict) else result)
 
 
 @router.post("/history", response_model=CommonResponse, summary="获取 RSS 历史")
 def get_rss_history(
     req: GetSubscribeHistoryRequest,
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
     parsed = MediaType.from_string(req.type or "")
     mtype = MediaType.MOVIE.value if parsed == MediaType.MOVIE else MediaType.TV.value
-    return success(data=svc.get_history(mtype=mtype))
+    return success(data=svc.get_history(mtype=mtype, user=user))
 
 
 @router.post("/tv/items", response_model=CommonResponse, summary="获取电视剧 RSS 订阅项")
 def get_tv_rss_items(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeCalendarService = Depends(get_subscribe_calendar_service),
 ):
-    return success(data=svc.get_tv_items())
+    return success(data=svc.get_tv_items(user=user))
 
 
 @router.post("/tv/list", response_model=CommonResponse, summary="获取电视剧 RSS 订阅列表")
 def get_tv_rss_list(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
-    result = svc.get_subscribe_tvs()
+    result = svc.get_subscribe_tvs(user=user)
     return success(data=list(result.values()) if isinstance(result, dict) else result)
 
 
 @router.post("/tv/seasons", response_model=CommonResponse, summary="获取电视剧已订阅季列表")
 def get_tv_subscribed_seasons(
     req: SubscribeSeasonsRequest,
-    user: str = Depends(require_any_permission("subscription:view", "subscription:manage")),
+    user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
     seasons = svc.get_subscribe_seasons(
         tmdbid=str(req.tmdbid) if req.tmdbid is not None else None,
         title=req.name,
         year=req.year,
+        user=user,
     )
     return success(data={"seasons": seasons})
 
@@ -537,8 +587,8 @@ def get_tv_subscribed_seasons(
 @router.post("/history/clear", response_model=CommonResponse, summary="清空 RSS 历史")
 def truncate_rsshistory(
     req: EmptyRequest = EmptyRequest(),
-    user: str = Depends(require_permission("subscription:manage")),
+    user: UserContext = Depends(require_permission("subscription:manage")),
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
-    svc.truncate()
+    svc.truncate(user=user)
     return success()

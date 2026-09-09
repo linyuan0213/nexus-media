@@ -54,6 +54,7 @@ class SubscribeHistoryEntity:
     start: int
     finish_time: str
     note: str
+    user_id: int | None = None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["SubscribeHistoryEntity"]:
@@ -73,6 +74,7 @@ class SubscribeHistoryEntity:
             start=orm_model.START or 0,
             finish_time=orm_model.FINISH_TIME or "",
             note=orm_model.NOTE or "",
+            user_id=getattr(orm_model, "USER_ID", None),
         )
 
     # 从 ORM 列名到 dataclass 字段名的映射
@@ -137,6 +139,7 @@ class SubscribeMovieEntity:
     note: str
     add_date: str = ""
     filter_free: bool = False
+    user_id: int | None = None
 
     @property
     def state_enum(self) -> SubscribeState:
@@ -235,6 +238,7 @@ class SubscribeMovieEntity:
             description=orm_model.DESC or "",
             note=orm_model.NOTE or "",
             add_date=getattr(orm_model, "ADD_DATE", None) or "",
+            user_id=getattr(orm_model, "USER_ID", None),
         )
 
     # 从 ORM 列名到 dataclass 字段名的映射
@@ -370,6 +374,7 @@ class SubscribeTvEntity:
     note: str
     add_date: str = ""
     filter_free: bool = False
+    user_id: int | None = None
 
     @property
     def state_enum(self) -> SubscribeState:
@@ -488,6 +493,7 @@ class SubscribeTvEntity:
             description=orm_model.DESC or "",
             note=orm_model.NOTE or "",
             add_date=getattr(orm_model, "ADD_DATE", None) or "",
+            user_id=getattr(orm_model, "USER_ID", None),
         )
 
     # 从 ORM 列名到 dataclass 字段名的映射

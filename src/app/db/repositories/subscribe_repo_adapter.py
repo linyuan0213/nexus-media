@@ -11,6 +11,7 @@ from app.domain.entities.rss import (
     SubscribeTvEntity,
 )
 from app.domain.mediatypes import MediaType
+from app.schemas.auth import UserContext
 
 
 class SubscribeMovieRepositoryAdapter:
@@ -19,8 +20,10 @@ class SubscribeMovieRepositoryAdapter:
     def __init__(self, repo: SubscribeRepository | None = None):
         self._repo = repo or SubscribeRepository()
 
-    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeMovieEntity]:
-        rows = self._repo.get_rss_movies(state=state, rssid=rssid)
+    def get_all(
+        self, state: str | None = None, rssid: int | None = None, user: UserContext | None = None
+    ) -> list[SubscribeMovieEntity]:
+        rows = self._repo.get_rss_movies(state=state, rssid=rssid, user=user)
         if not rows:
             return []
         return [entity for entity in [SubscribeMovieEntity.from_orm(r) for r in rows] if entity is not None]
@@ -50,8 +53,8 @@ class SubscribeMovieRepositoryAdapter:
     ) -> None:
         self.update_state(title, year, rssid, state)
 
-    def update(self, rssid: int, **kwargs) -> int:
-        return self._repo.update_rss_movie(rssid, **kwargs)
+    def update(self, rssid: int, user: UserContext | None = None, **kwargs) -> int:
+        return self._repo.update_rss_movie(rssid, user=user, **kwargs)
 
     def update_filter_order(self, rssid: int, res_order: int) -> None:
 
@@ -66,9 +69,14 @@ class SubscribeMovieRepositoryAdapter:
         return self.get_filter_order(rssid)
 
     def delete(
-        self, title: str | None = None, year: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+        self,
+        title: str | None = None,
+        year: str | None = None,
+        rssid: int | None = None,
+        tmdbid: str | None = None,
+        user: UserContext | None = None,
     ) -> None:
-        self._repo.delete_rss_movie(title, year, rssid, tmdbid)
+        self._repo.delete_rss_movie(title, year, rssid, tmdbid, user=user)
 
     def insert(
         self,
@@ -90,6 +98,7 @@ class SubscribeMovieRepositoryAdapter:
         desc=None,
         note=None,
         keyword=None,
+        user_id: int | None = None,
     ) -> int:
         return self._repo.insert_rss_movie(
             media_info=media_info,
@@ -110,6 +119,7 @@ class SubscribeMovieRepositoryAdapter:
             desc=desc,
             note=note,
             keyword=keyword,
+            user_id=user_id,
         )
 
 
@@ -119,8 +129,10 @@ class SubscribeTvRepositoryAdapter:
     def __init__(self, repo: SubscribeRepository | None = None):
         self._repo = repo or SubscribeRepository()
 
-    def get_all(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeTvEntity]:
-        rows = self._repo.get_rss_tvs(state=state, rssid=rssid)
+    def get_all(
+        self, state: str | None = None, rssid: int | None = None, user: UserContext | None = None
+    ) -> list[SubscribeTvEntity]:
+        rows = self._repo.get_rss_tvs(state=state, rssid=rssid, user=user)
         if not rows:
             return []
         return [entity for entity in [SubscribeTvEntity.from_orm(r) for r in rows] if entity is not None]
@@ -179,12 +191,17 @@ class SubscribeTvRepositoryAdapter:
         return self._repo.get_rss_overedition_order(MediaType.TV.value, rssid)
 
     def delete(
-        self, title: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+        self,
+        title: str | None = None,
+        season: str | None = None,
+        rssid: int | None = None,
+        tmdbid: str | None = None,
+        user: UserContext | None = None,
     ) -> None:
-        self._repo.delete_rss_tv(title, season, rssid, tmdbid)
+        self._repo.delete_rss_tv(title, season, rssid, tmdbid, user=user)
 
-    def update(self, rssid: int, **kwargs) -> int:
-        return self._repo.update_rss_tv(rssid, **kwargs)
+    def update(self, rssid: int, user: UserContext | None = None, **kwargs) -> int:
+        return self._repo.update_rss_tv(rssid, user=user, **kwargs)
 
     def insert(
         self,
@@ -210,6 +227,7 @@ class SubscribeTvRepositoryAdapter:
         desc=None,
         note=None,
         keyword=None,
+        user_id: int | None = None,
     ) -> int:
         return self._repo.insert_rss_tv(
             media_info=media_info,
@@ -234,6 +252,7 @@ class SubscribeTvRepositoryAdapter:
             desc=desc,
             note=note,
             keyword=keyword,
+            user_id=user_id,
         )
 
 
@@ -297,8 +316,10 @@ class SubscribeHistoryRepositoryAdapter:
     def delete_rss_history(self, rssid):
         self.delete(rssid)
 
-    def get_all(self, rtype: str | None = None, rid: int | None = None) -> list[SubscribeHistoryEntity]:
-        rows = self._repo.get_rss_history(rtype=rtype, rid=rid)
+    def get_all(
+        self, rtype: str | None = None, rid: int | None = None, user: UserContext | None = None
+    ) -> list[SubscribeHistoryEntity]:
+        rows = self._repo.get_rss_history(rtype=rtype, rid=rid, user=user)
         if not rows:
             return []
         return [entity for entity in [SubscribeHistoryEntity.from_orm(r) for r in rows] if entity is not None]
@@ -324,6 +345,7 @@ class SubscribeHistoryRepositoryAdapter:
         total: int | None = None,
         start: int | None = None,
         note: str = "",
+        user_id: int | None = None,
     ) -> None:
         self._repo.insert_rss_history(
             rssid,
@@ -337,6 +359,7 @@ class SubscribeHistoryRepositoryAdapter:
             str(total) if total is not None else None,
             str(start) if start is not None else None,
             note,
+            user_id=user_id,
         )
 
     def upsert(
@@ -352,6 +375,7 @@ class SubscribeHistoryRepositoryAdapter:
         total: int | None = None,
         start: int | None = None,
         note: str = "",
+        user_id: int | None = None,
     ) -> None:
         self._repo.upsert_rss_history(
             rssid,
@@ -365,6 +389,7 @@ class SubscribeHistoryRepositoryAdapter:
             str(total) if total is not None else None,
             str(start) if start is not None else None,
             note,
+            user_id=user_id,
         )
 
     def delete(self, rssid: int | None) -> None:

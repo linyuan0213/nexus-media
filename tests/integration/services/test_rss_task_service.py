@@ -119,7 +119,7 @@ class TestRssTaskService:
 
         with patch.object(service, "_refresh") as mock_refresh:
             result = service.delete_userrss_task(1)
-            service.config_repo.delete_userrss_task.assert_called_once_with(1)
+            service.config_repo.delete_userrss_task.assert_called_once_with(1, user=None)
             mock_refresh.assert_called_once()
             assert result is True
 
@@ -129,7 +129,7 @@ class TestRssTaskService:
         service.config_repo = MagicMock()
         service.config_repo.get_userrss_task_history.return_value = [{"id": 1}]
         result = service.get_userrss_task_history(1)
-        service.config_repo.get_userrss_task_history.assert_called_once_with(1)
+        service.config_repo.get_userrss_task_history.assert_called_once_with(1, user=None)
         assert result == [{"id": 1}]
 
     def test_stop_service(self):

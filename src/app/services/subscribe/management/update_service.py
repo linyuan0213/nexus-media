@@ -10,6 +10,7 @@ from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
 from app.events.payloads import SubscribeAddPayload
 from app.media import meta_info
+from app.schemas.auth import UserContext
 from app.services.subscribe.management.utils import gen_rss_note
 from app.services.web.utils import WebUtils
 
@@ -63,10 +64,17 @@ class SubscribeUpdateService:
         in_from: str | None = None,
         user_name: str | None = None,
         image: str | None = None,
+        user: UserContext | None = None,
     ) -> tuple[int, str, Any]:
-        """更新电影、电视剧订阅"""
+        """更新电影、电视剧订阅（user 非空且非超管时仅可更新自己的订阅）"""
         if not rssid:
             return -1, "缺少订阅ID", None
+
+        # 归属校验：普通用户越权更新返回不存在（避免资源探测）
+        if user is not None and not user.is_superadmin:
+            owner_repo = self._movie_repo if mtype == MediaType.MOVIE else self._tv_repo
+            if not owner_repo.get_all(rssid=int(rssid), user=user):
+                return -1, "订阅不存在", None
 
         year = int(str(year)) if str(year).isdigit() else ""
         if isinstance(rss_sites, str):
@@ -126,6 +134,7 @@ class SubscribeUpdateService:
                 season_str = media_info.get_season_string()
                 code = self._tv_repo.update(
                     rssid=int(rssid),
+                    user=user,
                     name=media_info.title,
                     year=media_info.year,
                     season=season_str,
@@ -156,6 +165,7 @@ class SubscribeUpdateService:
             else:
                 code = self._movie_repo.update(
                     rssid=int(rssid),
+                    user=user,
                     name=media_info.title,
                     year=media_info.year,
                     tmdbid=media_info.tmdb_id,
@@ -187,6 +197,7 @@ class SubscribeUpdateService:
             if mtype == MediaType.MOVIE:
                 code = self._movie_repo.update(
                     rssid=int(rssid),
+                    user=user,
                     name=name,
                     year=year,
                     image=image,
@@ -210,6 +221,7 @@ class SubscribeUpdateService:
                 season_str = media_info.get_season_string() if media_info.begin_season else ""
                 code = self._tv_repo.update(
                     rssid=int(rssid),
+                    user=user,
                     name=name,
                     year=year,
                     season=season_str,

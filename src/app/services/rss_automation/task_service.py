@@ -10,6 +10,7 @@ from app.domain.enums import UserRssTaskUseType
 from app.events.bus import EventBus
 from app.media import MediaService
 from app.message import Message
+from app.schemas.auth import UserContext
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.services.rss_automation.articles import (
@@ -138,6 +139,7 @@ class RssTaskService:
             self._rss_tasks.append(
                 {
                     "id": task.ID,
+                    "user_id": task.USER_ID,
                     "name": task.NAME,
                     "address": addresses,
                     "proxy": proxy,
@@ -213,17 +215,21 @@ class RssTaskService:
             self._scheduler_core.print_jobs(jobstore=self._jobstore)
             log.info("自定义订阅服务启动")
 
-    def get_rsstask_info(self, taskid: int | str | None = None) -> Any:
-        """获取单个RSS任务详细信息"""
+    def get_rsstask_info(self, taskid: int | str | None = None, user: UserContext | None = None) -> Any:
+        """获取RSS任务详细信息（user 非空且非超管时按数据归属过滤）"""
+        if user is not None and not user.is_superadmin:
+            tasks = [t for t in self._rss_tasks if t.get("user_id") == user.user_id]
+        else:
+            tasks = self._rss_tasks
         if taskid:
             if str(taskid).isdigit():
                 taskid = int(taskid)
-                for task in self._rss_tasks:
+                for task in tasks:
                     if task.get("id") == taskid:
                         return task
             else:
                 return {}
-        return self._rss_tasks
+        return tasks
 
     def get_userrss_parser(self, pid: int | str | None = None) -> Any:
         if pid:
@@ -234,8 +240,8 @@ class RssTaskService:
         else:
             return self._rss_parsers
 
-    def get_userrss_mediainfos(self) -> list[dict]:
-        taskinfos = self.config_repo.get_userrss_tasks()
+    def get_userrss_mediainfos(self, user: UserContext | None = None) -> list[dict]:
+        taskinfos = self.config_repo.get_userrss_tasks(user=user)
         mediainfos_all = []
         for taskinfo in taskinfos:
             mediainfos_raw = str(taskinfo.MEDIAINFOS or "")
@@ -264,20 +270,25 @@ class RssTaskService:
             case _:
                 return False
 
-    def delete_userrss_task(self, tid: int | None) -> Any:
-        """删除自定义RSS任务"""
-        ret = self.config_repo.delete_userrss_task(tid)
+    def delete_userrss_task(self, tid: int | None, user: UserContext | None = None) -> Any:
+        """删除自定义RSS任务（user 非空且非超管时校验归属）"""
+        ret = self.config_repo.delete_userrss_task(tid, user=user)
         self._refresh()
         return ret
 
-    def update_userrss_task(self, item: dict) -> Any:
-        """更新自定义RSS任务"""
-        ret = self.config_repo.update_userrss_task(item)
+    def update_userrss_task(self, item: dict, user: UserContext | None = None) -> Any:
+        """更新自定义RSS任务（user 非空且非超管时校验归属，新建写入归属）"""
+        ret = self.config_repo.update_userrss_task(item, user=user)
         self._refresh()
         return ret
 
-    def check_userrss_task(self, tid: int | None = None, state: str | None = None) -> Any:
-        """设置自定义RSS任务"""
+    def check_userrss_task(
+        self, tid: int | None = None, state: str | None = None, user: UserContext | None = None
+    ) -> Any:
+        """设置自定义RSS任务状态（user 非空且非超管时校验归属）"""
+        if user is not None and not user.is_superadmin and tid is not None:
+            if not self.get_rsstask_info(taskid=tid, user=user):
+                return None
         ret = self.config_repo.check_userrss_task(tid, state)
         self._refresh()
         return ret
@@ -294,9 +305,9 @@ class RssTaskService:
         self._refresh()
         return ret
 
-    def get_userrss_task_history(self, task_id: int | None) -> Any:
-        """获取自定义RSS任务下载记录"""
-        return self.config_repo.get_userrss_task_history(task_id or 0)
+    def get_userrss_task_history(self, task_id: int | None, user: UserContext | None = None) -> Any:
+        """获取自定义RSS任务下载记录（user 非空时按数据归属过滤）"""
+        return self.config_repo.get_userrss_task_history(task_id or 0, user=user)
 
     def check_task_rss(self, taskid: int | None) -> None:
         """处理自定义RSS任务，由定时服务调用"""

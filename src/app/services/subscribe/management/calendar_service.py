@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta
 
+from app.schemas.auth import UserContext
 from app.services.media_info_service import MediaInfoService
 from app.services.rss_automation.task_service import RssTaskService
 from app.services.subscribe.management.service import SubscribeService
@@ -32,16 +33,16 @@ class SubscribeCalendarService:
         self._subscribe = subscribe
         self._rss_task_service = rss_task_service
 
-    def get_movie_items(self) -> list[dict]:
-        """获取电影订阅项目列表."""
+    def get_movie_items(self, user: UserContext | None = None) -> list[dict]:
+        """获取电影订阅项目列表（user 非空时按数据归属过滤）."""
         return [
             {"id": movie.get("tmdbid"), "rssid": movie.get("id")}
-            for movie in self._subscribe.get_subscribe_movies().values()
+            for movie in self._subscribe.get_subscribe_movies(user=user).values()
             if movie.get("tmdbid")
         ]
 
-    def get_tv_items(self) -> list[dict]:
-        """获取电视剧订阅项目列表（含去重）."""
+    def get_tv_items(self, user: UserContext | None = None) -> list[dict]:
+        """获取电视剧订阅项目列表（含去重；user 非空时按数据归属过滤）."""
         rss_tv_items = [
             {
                 "id": tv.get("tmdbid"),
@@ -49,10 +50,10 @@ class SubscribeCalendarService:
                 "season": int(str(tv.get("season")).replace("S", "")),
                 "name": tv.get("name"),
             }
-            for tv in self._subscribe.get_subscribe_tvs().values()
+            for tv in self._subscribe.get_subscribe_tvs(user=user).values()
             if tv.get("season") and tv.get("tmdbid")
         ]
-        rss_tv_items += self._rss_task_service.get_userrss_mediainfos()
+        rss_tv_items += self._rss_task_service.get_userrss_mediainfos(user=user)
         uniques = set()
         unique_tv_items = []
         for item in rss_tv_items:
@@ -62,9 +63,9 @@ class SubscribeCalendarService:
                 unique_tv_items.append(item)
         return unique_tv_items
 
-    def generate_ics(self) -> str:
+    def generate_ics(self, user: UserContext | None = None) -> str:
         """生成 iCalendar (.ics) 格式文本."""
-        events = self.get_events()
+        events = self.get_events(user=user)
         lines = [
             "BEGIN:VCALENDAR",
             "VERSION:2.0",
@@ -98,14 +99,14 @@ class SubscribeCalendarService:
         lines.append("END:VCALENDAR")
         return "\r\n".join(lines)
 
-    def get_events(self) -> list[dict]:
-        """获取订阅日历事件."""
+    def get_events(self, user: UserContext | None = None) -> list[dict]:
+        """获取订阅日历事件（user 非空时按数据归属过滤）."""
         events = []
-        for movie in self.get_movie_items():
+        for movie in self.get_movie_items(user=user):
             info = self._media_info_service.get_movie_calendar(tid=movie.get("id"), rssid=movie.get("rssid"))
             if info and info.get("id"):
                 events.append(info)
-        for tv in self.get_tv_items():
+        for tv in self.get_tv_items(user=user):
             infos = self._media_info_service.get_tv_calendar(
                 tid=tv.get("id"), season=tv.get("season"), name=tv.get("name"), rssid=tv.get("rssid")
             )

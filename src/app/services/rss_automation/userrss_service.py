@@ -2,6 +2,7 @@ from typing import Any
 
 from app.domain.enums import UserRssTaskUseType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.schemas.auth import UserContext
 from app.schemas.userrss import (
     UserRssArticleListDTO,
     UserRssArticleTestDTO,
@@ -18,21 +19,23 @@ class UserRssService:
     def __init__(self, rss_checker: RssChecker):
         self._checker = rss_checker
 
-    def check_tasks(self, taskids: list | None, flag: str) -> None:
+    def check_tasks(self, taskids: list | None, flag: str, user: UserContext | None = None) -> None:
         flag_dict = {"enable": True, "disable": False}
         state = str(flag_dict.get(flag))
         if state is not None:
             if taskids:
                 for taskid in taskids:
-                    self._checker.check_userrss_task(tid=taskid, state=state)
+                    self._checker.check_userrss_task(tid=taskid, state=state, user=user)
             else:
+                if user is not None and not user.is_superadmin:
+                    return
                 self._checker.check_userrss_task(state=state)
 
     def delete_parser(self, pid) -> bool | None:
         return self._checker.delete_userrss_parser(pid)
 
-    def delete_task(self, tid) -> bool | None:
-        return self._checker.delete_userrss_task(tid)
+    def delete_task(self, tid, user: UserContext | None = None) -> bool | None:
+        return self._checker.delete_userrss_task(tid, user=user)
 
     def get_parsers(self):
         return self._checker.get_userrss_parser()
@@ -40,14 +43,14 @@ class UserRssService:
     def get_parser(self, pid):
         return self._checker.get_userrss_parser(pid=pid)
 
-    def get_task(self, taskid):
-        return self._checker.get_rsstask_info(taskid=taskid)
+    def get_task(self, taskid, user: UserContext | None = None):
+        return self._checker.get_rsstask_info(taskid=taskid, user=user)
 
-    def get_tasks(self):
-        return self._checker.get_rsstask_info()
+    def get_tasks(self, user: UserContext | None = None):
+        return self._checker.get_rsstask_info(user=user)
 
-    def get_articles(self, taskid) -> UserRssArticleListDTO:
-        task_info: Any = self._checker.get_rsstask_info(taskid=taskid)
+    def get_articles(self, taskid, user: UserContext | None = None) -> UserRssArticleListDTO:
+        task_info: Any = self._checker.get_rsstask_info(taskid=taskid, user=user)
         uses = task_info.get("uses") if isinstance(task_info, dict) else None
         address_count = len(task_info.get("address", [])) if isinstance(task_info, dict) else 0
         articles = self._checker.get_rss_articles(taskid)
@@ -55,8 +58,8 @@ class UserRssService:
             articles=articles or [], count=len(articles) if articles else 0, uses=uses, address_count=address_count
         )
 
-    def get_history(self, taskid) -> UserRssHistoryDTO:
-        historys = self._checker.get_userrss_task_history(task_id=taskid)
+    def get_history(self, taskid, user: UserContext | None = None) -> UserRssHistoryDTO:
+        historys = self._checker.get_userrss_task_history(task_id=taskid, user=user)
         downloads = []
         for history in historys:
             downloads.append({"title": history.TITLE, "downloader": history.DOWNLOADER, "date": history.DATE})
@@ -75,13 +78,19 @@ class UserRssService:
             name=media_info.get_name(), match_flag=match_flag, exist_flag=exist_flag, media_dict=media_dict
         )
 
-    def check_articles(self, taskid, flag, articles) -> bool | None:
+    def check_articles(self, taskid, flag, articles, user: UserContext | None = None) -> bool | None:
+        if user is not None and not self.get_task(taskid, user=user):
+            return None
         return self._checker.check_rss_articles(taskid=taskid, flag=flag, articles=articles)
 
-    def download_articles(self, taskid, articles) -> bool | None:
+    def download_articles(self, taskid, articles, user: UserContext | None = None) -> bool | None:
+        if user is not None and not self.get_task(taskid, user=user):
+            return None
         return self._checker.download_rss_articles(taskid=taskid, articles=articles)
 
-    def run_task(self, taskid) -> None:
+    def run_task(self, taskid, user: UserContext | None = None) -> None:
+        if user is not None and not self.get_task(taskid, user=user):
+            return
         lock_key = f"userrss:run_task:{taskid}"
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
         acquired = lock.acquire()
@@ -95,7 +104,7 @@ class UserRssService:
     def update_parser(self, params: dict) -> bool | None:
         return self._checker.update_userrss_parser(params)
 
-    def update_task(self, data: dict) -> UserRssTaskUpdateDTO:
+    def update_task(self, data: dict, user: UserContext | None = None) -> UserRssTaskUpdateDTO:
         uses = data.get("uses")
         address_parser = data.get("address_parser")
         if not address_parser:
@@ -122,6 +131,7 @@ class UserRssService:
 
         params = {
             "id": data.get("id"),
+            "user_id": user.user_id if user else None,
             "name": data.get("name"),
             "address": address,
             "parser": parser,
@@ -148,5 +158,5 @@ class UserRssService:
         else:
             return UserRssTaskUpdateDTO(success=False)
 
-        ret = self._checker.update_userrss_task(params)
+        ret = self._checker.update_userrss_task(params, user=user)
         return UserRssTaskUpdateDTO(success=bool(ret))

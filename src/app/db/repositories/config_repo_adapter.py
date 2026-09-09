@@ -384,26 +384,28 @@ class UserRssConfigRepositoryAdapter:
     def get_userrss_parser(self, pid: int | None = None) -> CONFIGRSSPARSER | None | list[CONFIGRSSPARSER]:
         return self._repo.get_userrss_parser(pid)
 
-    def get_userrss_tasks(self, tid: int | None = None) -> list[CONFIGUSERRSS]:
-        return self._repo.get_userrss_tasks(tid)
+    def get_userrss_tasks(self, tid: int | None = None, user=None) -> list[CONFIGUSERRSS]:
+        return self._repo.get_userrss_tasks(tid, user=user)
 
     def insert_userrss_mediainfos(self, tid: int | None = None, mediainfo: object | None = None) -> None:
         self._repo.insert_userrss_mediainfos(tid, mediainfo)
 
-    def insert_userrss_task_history(self, task_id: int, title: str, downloader: str) -> None:
-        self._repo.insert_userrss_task_history(task_id, title, downloader)
+    def insert_userrss_task_history(
+        self, task_id: int, title: str, downloader: str, user_id: int | None = None
+    ) -> None:
+        self._repo.insert_userrss_task_history(task_id, title, downloader, user_id=user_id)
 
     def update_userrss_task_info(self, tid: int | None, count: int) -> None:
         self._repo.update_userrss_task_info(tid, count)
 
-    def delete_userrss_task(self, tid: int | None) -> None:
-        self._repo.delete_userrss_task(tid)
+    def delete_userrss_task(self, tid: int | None, user=None) -> None:
+        self._repo.delete_userrss_task(tid, user=user)
 
-    def update_userrss_task(self, item: dict) -> None:
-        self._repo.update_userrss_task(item)
+    def update_userrss_task(self, item: dict, user=None) -> None:
+        self._repo.update_userrss_task(item, user=user)
 
-    def get_userrss_task_history(self, task_id: int) -> list[USERRSSTASKHISTORY]:
-        return self._repo.get_userrss_task_history(task_id)
+    def get_userrss_task_history(self, task_id: int, user=None) -> list[USERRSSTASKHISTORY]:
+        return self._repo.get_userrss_task_history(task_id, user=user)
 
     def check_userrss_task(self, tid: int | None = None, state: str | None = None) -> None:
         self._repo.check_userrss_task(tid, state)

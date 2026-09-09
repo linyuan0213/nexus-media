@@ -76,8 +76,9 @@ class SubscribeAddService:
         rssid: int | None = None,
         in_from: str | None = None,
         user_name: str | None = None,
+        user_id: int | None = None,
     ) -> tuple[int, str, Any]:
-        """添加电影、电视剧订阅"""
+        """添加电影、电视剧订阅（user_id 为订阅归属用户，None 为系统/插件创建）"""
         if not name:
             return -1, "标题或类型有误", None
         year = int(year) if str(year).isdigit() else ""
@@ -240,6 +241,7 @@ class SubscribeAddService:
                     desc=media_info.overview,
                     note=gen_rss_note(media_info),
                     keyword=keyword,
+                    user_id=user_id,
                 )
                 code = 0 if rssid not in (-1, 9) else rssid
             else:
@@ -262,6 +264,7 @@ class SubscribeAddService:
                     desc=media_info.overview,
                     note=gen_rss_note(media_info),
                     keyword=keyword,
+                    user_id=user_id,
                 )
                 code = 0 if rssid not in (-1, 9) else rssid
         else:
@@ -290,6 +293,7 @@ class SubscribeAddService:
                     download_setting=download_setting,
                     fuzzy_match=1,
                     keyword=keyword,
+                    user_id=user_id,
                 )
                 code = 0 if rssid not in (-1, 9) else rssid
             else:
@@ -312,6 +316,7 @@ class SubscribeAddService:
                     download_setting=download_setting,
                     fuzzy_match=1,
                     keyword=keyword,
+                    user_id=user_id,
                 )
                 code = 0 if rssid not in (-1, 9) else rssid
 

@@ -13,8 +13,10 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db.models import SubscribeHistory, SubscribeMovies, SubscribeTorrents, SubscribeTvEpisodes, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
+from app.db.repositories.data_scope import apply_owner_scope
 from app.domain.entities.rss import SubscribeState
 from app.domain.mediatypes import MediaType
+from app.schemas.auth import UserContext
 from app.utils.json_utils import JsonUtils
 
 if TYPE_CHECKING:
@@ -42,16 +44,21 @@ class SubscribeRepository(BaseRepository):
 
     # ==================== RSS Movies ====================
 
-    def get_rss_movies(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeMovies]:
+    def get_rss_movies(
+        self, state: str | None = None, rssid: int | None = None, user: UserContext | None = None
+    ) -> list[SubscribeMovies]:
         """
-        查询订阅电影信息
+        查询订阅电影信息（user=None 为系统上下文不过滤；否则按数据归属过滤）
         """
         with self.session() as db:
+            query = db.query(SubscribeMovies)
             if rssid:
-                return db.query(SubscribeMovies).filter(int(rssid) == SubscribeMovies.ID).all()
-            if not state:
-                return db.query(SubscribeMovies).all()
-            return db.query(SubscribeMovies).filter(state == SubscribeMovies.STATE).all()
+                query = query.filter(int(rssid) == SubscribeMovies.ID)
+            elif state:
+                query = query.filter(state == SubscribeMovies.STATE)
+            if user is not None:
+                query = apply_owner_scope(query, SubscribeMovies, user)
+            return query.all()
 
     def get_rss_movie_id(self, title: str, year: str | None = None, tmdbid: str | None = None) -> int | str | None:
         """
@@ -205,9 +212,10 @@ class SubscribeRepository(BaseRepository):
         desc: str | None = None,
         note: str | None = None,
         keyword: str | None = None,
+        user_id: int | None = None,
     ) -> int:
         """
-        新增RSS电影
+        新增RSS电影（user_id 为订阅归属用户，None 为系统/插件创建）
         """
         if search_sites is None:
             search_sites = []
@@ -232,15 +240,13 @@ class SubscribeRepository(BaseRepository):
             return -1
 
         with self.session() as db:
+            # 重复判定按归属用户维度（跨用户订阅同媒体合法）
+            dup_query = db.query(SubscribeMovies).filter(media_info.title == SubscribeMovies.NAME)
             if media_info.year is not None:
-                count = (
-                    db.query(SubscribeMovies)
-                    .filter(media_info.title == SubscribeMovies.NAME, str(media_info.year) == SubscribeMovies.YEAR)
-                    .count()
-                )
-            else:
-                count = db.query(SubscribeMovies).filter(media_info.title == SubscribeMovies.NAME).count()
-            if count > 0:
+                dup_query = dup_query.filter(str(media_info.year) == SubscribeMovies.YEAR)
+            if user_id is not None:
+                dup_query = dup_query.filter(SubscribeMovies.USER_ID == user_id)
+            if dup_query.count() > 0:
                 return 9
 
             try:
@@ -268,6 +274,7 @@ class SubscribeRepository(BaseRepository):
                     NOTE=note,
                     KEYWORD=keyword,
                     ADD_DATE=time.strftime("%Y-%m-%d %H:%M:%S"),
+                    USER_ID=user_id,
                 )
                 db.add(movie)
                 db.flush()
@@ -275,9 +282,9 @@ class SubscribeRepository(BaseRepository):
             except IntegrityError:
                 return 9
 
-    def update_rss_movie(self, rssid: int, **kwargs: str | int | list | None) -> int:
+    def update_rss_movie(self, rssid: int, user: UserContext | None = None, **kwargs: str | int | list | None) -> int:
         """
-        更新RSS电影订阅信息（根据rssid）
+        更新RSS电影订阅信息（根据rssid；user 非空且非超管时校验归属，越权为无操作）
         """
         if not rssid:
             return -1
@@ -321,20 +328,31 @@ class SubscribeRepository(BaseRepository):
         if not update_fields:
             return 0
         with self.session() as db:
-            db.query(SubscribeMovies).filter(int(rssid) == SubscribeMovies.ID).update(update_fields)
+            query = db.query(SubscribeMovies).filter(int(rssid) == SubscribeMovies.ID)
+            if user is not None and not user.is_superadmin:
+                query = query.filter(SubscribeMovies.USER_ID == user.user_id)
+            query.update(update_fields)
         return 0
 
     def delete_rss_movie(
-        self, title: str | None = None, year: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+        self,
+        title: str | None = None,
+        year: str | None = None,
+        rssid: int | None = None,
+        tmdbid: str | None = None,
+        user: UserContext | None = None,
     ) -> None:
         """
-        删除RSS电影
+        删除RSS电影（user 非空且非超管时校验归属，越权为无操作）
         """
         if not title and not rssid:
             return
         with self.session() as db:
             if rssid:
-                movie = db.query(SubscribeMovies).filter(int(rssid) == SubscribeMovies.ID).first()
+                query = db.query(SubscribeMovies).filter(int(rssid) == SubscribeMovies.ID)
+                if user is not None and not user.is_superadmin:
+                    query = query.filter(SubscribeMovies.USER_ID == user.user_id)
+                movie = query.first()
                 if movie:
                     title_filter = movie.NAME if movie.NAME else ""
                     year_filter = str(movie.YEAR) if movie.YEAR else ""
@@ -343,7 +361,7 @@ class SubscribeRepository(BaseRepository):
                             SubscribeTorrents.TITLE == title_filter,
                             SubscribeTorrents.YEAR == year_filter,
                         ).delete()
-                db.query(SubscribeMovies).filter(int(rssid) == SubscribeMovies.ID).delete()
+                    db.delete(movie)
             else:
                 if tmdbid:
                     db.query(SubscribeMovies).filter(tmdbid == SubscribeMovies.TMDBID).delete()
@@ -373,16 +391,21 @@ class SubscribeRepository(BaseRepository):
 
     # ==================== RSS TV Shows ====================
 
-    def get_rss_tvs(self, state: str | None = None, rssid: int | None = None) -> list[SubscribeTvs]:
+    def get_rss_tvs(
+        self, state: str | None = None, rssid: int | None = None, user: UserContext | None = None
+    ) -> list[SubscribeTvs]:
         """
-        查询订阅电视剧信息
+        查询订阅电视剧信息（user=None 为系统上下文不过滤；否则按数据归属过滤）
         """
         with self.session() as db:
+            query = db.query(SubscribeTvs)
             if rssid:
-                return db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID).all()
-            if not state:
-                return db.query(SubscribeTvs).all()
-            return db.query(SubscribeTvs).filter(state == SubscribeTvs.STATE).all()
+                query = query.filter(int(rssid) == SubscribeTvs.ID)
+            elif state:
+                query = query.filter(state == SubscribeTvs.STATE)
+            if user is not None:
+                query = apply_owner_scope(query, SubscribeTvs, user)
+            return query.all()
 
     def get_rss_tv_sites(self, rssid: int | None) -> SubscribeTvs | str:
         """
@@ -469,9 +492,10 @@ class SubscribeRepository(BaseRepository):
         note: str | None = None,
         keyword: str | None = None,
         rssid: int | None = None,
+        user_id: int | None = None,
     ) -> int:
         """
-        新增RSS电视剧（rssid 不为空时跳过 is_exists 检查，用于编辑替换场景）
+        新增RSS电视剧（rssid 不为空时跳过 is_exists 检查，用于编辑替换场景；user_id 为订阅归属用户）
         """
         if search_sites is None:
             search_sites = []
@@ -503,23 +527,16 @@ class SubscribeRepository(BaseRepository):
 
         with self.session() as db:
             if not rssid:
+                # 重复判定按归属用户维度（跨用户订阅同媒体合法）
+                dup_query = db.query(SubscribeTvs).filter(
+                    media_info.title == SubscribeTvs.NAME,
+                    str(media_info.year) == SubscribeTvs.YEAR,
+                )
                 if season_str:
-                    count = (
-                        db.query(SubscribeTvs)
-                        .filter(
-                            media_info.title == SubscribeTvs.NAME,
-                            str(media_info.year) == SubscribeTvs.YEAR,
-                            season_str == SubscribeTvs.SEASON,
-                        )
-                        .count()
-                    )
-                else:
-                    count = (
-                        db.query(SubscribeTvs)
-                        .filter(media_info.title == SubscribeTvs.NAME, str(media_info.year) == SubscribeTvs.YEAR)
-                        .count()
-                    )
-                if count > 0:
+                    dup_query = dup_query.filter(season_str == SubscribeTvs.SEASON)
+                if user_id is not None:
+                    dup_query = dup_query.filter(SubscribeTvs.USER_ID == user_id)
+                if dup_query.count() > 0:
                     return 9
 
             try:
@@ -552,6 +569,7 @@ class SubscribeRepository(BaseRepository):
                     NOTE=note,
                     KEYWORD=keyword,
                     ADD_DATE=time.strftime("%Y-%m-%d %H:%M:%S"),
+                    USER_ID=user_id,
                 )
                 db.add(tv)
                 db.flush()
@@ -559,9 +577,9 @@ class SubscribeRepository(BaseRepository):
             except IntegrityError:
                 return 9
 
-    def update_rss_tv(self, rssid: int, **kwargs: str | int | list | None) -> int:
+    def update_rss_tv(self, rssid: int, user: UserContext | None = None, **kwargs: str | int | list | None) -> int:
         """
-        更新RSS电视剧订阅信息（根据rssid）
+        更新RSS电视剧订阅信息（根据rssid；user 非空且非超管时校验归属，越权为无操作）
         """
         if not rssid:
             return -1
@@ -610,7 +628,10 @@ class SubscribeRepository(BaseRepository):
         if not update_fields:
             return 0
         with self.session() as db:
-            db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID).update(update_fields)
+            query = db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID)
+            if user is not None and not user.is_superadmin:
+                query = query.filter(SubscribeTvs.USER_ID == user.user_id)
+            query.update(update_fields)
         return 0
 
     def update_rss_tv_lack(
@@ -678,10 +699,15 @@ class SubscribeRepository(BaseRepository):
                     db.add(SubscribeTvEpisodes(RSSID=str(rssid), EPISODES=episodes_str))
 
     def delete_rss_tv(
-        self, title: str | None = None, season: str | None = None, rssid: int | None = None, tmdbid: str | None = None
+        self,
+        title: str | None = None,
+        season: str | None = None,
+        rssid: int | None = None,
+        tmdbid: str | None = None,
+        user: UserContext | None = None,
     ) -> None:
         """
-        删除RSS电视剧
+        删除RSS电视剧（user 非空且非超管时校验归属，越权为无操作）
         """
         if not title and not rssid:
             return
@@ -717,7 +743,10 @@ class SubscribeRepository(BaseRepository):
                         else:
                             rssid = items[0].ID
             if rssid:
-                tv = db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID).first()
+                query = db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID)
+                if user is not None and not user.is_superadmin:
+                    query = query.filter(SubscribeTvs.USER_ID == user.user_id)
+                tv = query.first()
                 if tv:
                     title_filter = tv.NAME if tv.NAME else ""
                     year_filter = str(tv.YEAR) if tv.YEAR else ""
@@ -728,8 +757,10 @@ class SubscribeRepository(BaseRepository):
                             SubscribeTorrents.YEAR == year_filter,
                             SubscribeTorrents.SEASON == season_filter,
                         ).delete()
-                db.query(SubscribeTvEpisodes).filter(cast(SubscribeTvEpisodes.RSSID, Integer) == int(rssid)).delete()
-                db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID).delete()
+                    db.query(SubscribeTvEpisodes).filter(
+                        cast(SubscribeTvEpisodes.RSSID, Integer) == int(rssid)
+                    ).delete()
+                    db.delete(tv)
 
     def update_rss_tv_state(
         self,
@@ -825,21 +856,21 @@ class SubscribeRepository(BaseRepository):
 
     # ==================== RSS History ====================
 
-    def get_rss_history(self, rtype: str | None = None, rid: int | None = None) -> list[SubscribeHistory]:
+    def get_rss_history(
+        self, rtype: str | None = None, rid: int | None = None, user: UserContext | None = None
+    ) -> list[SubscribeHistory]:
         """
-        查询RSS历史
+        查询RSS历史（user=None 为系统上下文不过滤；否则按数据归属过滤）
         """
         with self.session() as db:
+            query = db.query(SubscribeHistory)
             if rid:
-                return db.query(SubscribeHistory).filter(int(rid) == SubscribeHistory.ID).all()
-            if rtype:
-                return (
-                    db.query(SubscribeHistory)
-                    .filter(rtype == SubscribeHistory.TYPE)
-                    .order_by(SubscribeHistory.FINISH_TIME.desc())
-                    .all()
-                )
-            return db.query(SubscribeHistory).order_by(SubscribeHistory.FINISH_TIME.desc()).all()
+                query = query.filter(int(rid) == SubscribeHistory.ID)
+            elif rtype:
+                query = query.filter(rtype == SubscribeHistory.TYPE)
+            if user is not None:
+                query = apply_owner_scope(query, SubscribeHistory, user)
+            return query.order_by(SubscribeHistory.FINISH_TIME.desc()).all()
 
     def is_exists_rss_history(self, rssid: int | None) -> bool:
         """
@@ -881,9 +912,10 @@ class SubscribeRepository(BaseRepository):
         total: str | None = None,
         start: str | None = None,
         note: str = "",
+        user_id: int | None = None,
     ) -> None:
         """
-        登记RSS历史
+        登记RSS历史（user_id 为归属用户）
         """
         with self.session() as db:
             if db.query(SubscribeHistory).filter(cast(SubscribeHistory.RSSID, Integer) == rssid).count() > 0:
@@ -902,6 +934,7 @@ class SubscribeRepository(BaseRepository):
                     START=start,
                     NOTE=note,
                     FINISH_TIME=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                    USER_ID=user_id,
                 )
             )
 
@@ -918,6 +951,7 @@ class SubscribeRepository(BaseRepository):
         total: str | None = None,
         start: str | None = None,
         note: str = "",
+        user_id: int | None = None,
     ) -> None:
         """
         登记或更新RSS历史：按媒体维度去重，同一 TMDB ID + 季的记录只保留一条
@@ -930,6 +964,8 @@ class SubscribeRepository(BaseRepository):
             query = db.query(SubscribeHistory).filter(
                 SubscribeHistory.TYPE == rtype,
             )
+            if user_id is not None:
+                query = query.filter(SubscribeHistory.USER_ID == user_id)
             if season:
                 query = query.filter(SubscribeHistory.SEASON == season)
             else:
@@ -972,6 +1008,7 @@ class SubscribeRepository(BaseRepository):
                         START=start,
                         NOTE=note,
                         FINISH_TIME=finish_time,
+                        USER_ID=user_id,
                     )
                 )
 

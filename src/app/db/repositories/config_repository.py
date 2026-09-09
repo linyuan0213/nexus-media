@@ -23,6 +23,8 @@ from app.db.models import (
     USERRSSTASKHISTORY,
 )
 from app.db.repositories.base_repository import BaseRepository
+from app.db.repositories.data_scope import apply_owner_scope
+from app.schemas.auth import UserContext
 from app.utils.json_utils import JsonUtils
 
 
@@ -363,33 +365,29 @@ class ConfigRepository(BaseRepository):
 
     # ==================== User RSS ====================
 
-    def get_userrss_tasks(self, tid: int | None = None) -> list[CONFIGUSERRSS]:
+    def get_userrss_tasks(self, tid: int | None = None, user: UserContext | None = None) -> list[CONFIGUSERRSS]:
         """
-        查询自定义RSS任务
-
-        Args:
-            tid: 任务ID
-
-        Returns:
-            任务列表
+        查询自定义RSS任务（user=None 为系统上下文不过滤；否则按数据归属过滤）
         """
         with self.session() as db:
+            query = db.query(CONFIGUSERRSS)
             if tid:
-                return db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).all()
-            else:
-                return db.query(CONFIGUSERRSS).order_by(CONFIGUSERRSS.STATE.desc()).all()
+                query = query.filter(int(tid) == CONFIGUSERRSS.ID)
+            if user is not None:
+                query = apply_owner_scope(query, CONFIGUSERRSS, user)
+            return query.order_by(CONFIGUSERRSS.STATE.desc()).all()
 
-    def delete_userrss_task(self, tid: int | None) -> None:
+    def delete_userrss_task(self, tid: int | None, user: UserContext | None = None) -> None:
         """
-        删除自定义RSS任务
-
-        Args:
-            tid: 任务ID
+        删除自定义RSS任务（user 非空且非超管时校验归属，越权为无操作）
         """
         if not tid:
             return
         with self.session() as db:
-            db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID).delete()
+            query = db.query(CONFIGUSERRSS).filter(int(tid) == CONFIGUSERRSS.ID)
+            if user is not None and not user.is_superadmin:
+                query = query.filter(CONFIGUSERRSS.USER_ID == user.user_id)
+            query.delete()
 
     def update_userrss_task_info(self, tid: int | None, count: int) -> None:
         """
@@ -409,15 +407,14 @@ class ConfigRepository(BaseRepository):
                 }
             )
 
-    def update_userrss_task(self, item: dict) -> None:
+    def update_userrss_task(self, item: dict, user: UserContext | None = None) -> None:
         """
-        更新或插入自定义RSS任务
-
-        Args:
-            item: 任务信息字典
+        更新或插入自定义RSS任务（user 非空且非超管时校验归属，越权为无操作；新建写入归属）
         """
+        user_id = item.get("user_id")
         with self.session() as db:
-            if item.get("id") and self.get_userrss_tasks(item.get("id")):
+            existing = self.get_userrss_tasks(item.get("id"), user=user) if item.get("id") else []
+            if item.get("id") and existing:
                 db.query(CONFIGUSERRSS).filter(int(item.get("id") or 0) == CONFIGUSERRSS.ID).update(
                     {
                         "NAME": item.get("name"),
@@ -462,6 +459,7 @@ class ConfigRepository(BaseRepository):
                         FILTER_ARGS=JsonUtils.dumps(item.get("filter_args")),
                         NOTE=JsonUtils.dumps(item.get("note")),
                         PROCESS_COUNT="0",
+                        USER_ID=user_id,
                     )
                 )
 
@@ -512,14 +510,11 @@ class ConfigRepository(BaseRepository):
                 {"MEDIAINFOS": JsonUtils.dumps(mediainfos)}
             )
 
-    def insert_userrss_task_history(self, task_id: int, title: str, downloader: str) -> None:
+    def insert_userrss_task_history(
+        self, task_id: int, title: str, downloader: str, user_id: int | None = None
+    ) -> None:
         """
-        增加自定义RSS订阅任务的下载记录
-
-        Args:
-            task_id: 任务ID
-            title: 标题
-            downloader: 下载器
+        增加自定义RSS订阅任务的下载记录（user_id 为任务归属用户）
         """
         with self.session() as db:
             db.add(
@@ -528,28 +523,21 @@ class ConfigRepository(BaseRepository):
                     TITLE=title,
                     DOWNLOADER=downloader,
                     DATE=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+                    USER_ID=user_id,
                 )
             )
 
-    def get_userrss_task_history(self, task_id: int) -> list[USERRSSTASKHISTORY]:
+    def get_userrss_task_history(self, task_id: int, user: UserContext | None = None) -> list[USERRSSTASKHISTORY]:
         """
-        查询自定义RSS订阅任务的下载记录
-
-        Args:
-            task_id: 任务ID
-
-        Returns:
-            历史记录列表
+        查询自定义RSS订阅任务的下载记录（user 非空时按数据归属过滤）
         """
         if not task_id:
             return []
         with self.session() as db:
-            return (
-                db.query(USERRSSTASKHISTORY)
-                .filter(task_id == USERRSSTASKHISTORY.TASK_ID)
-                .order_by(USERRSSTASKHISTORY.DATE.desc())
-                .all()
-            )
+            query = db.query(USERRSSTASKHISTORY).filter(task_id == USERRSSTASKHISTORY.TASK_ID)
+            if user is not None:
+                query = apply_owner_scope(query, USERRSSTASKHISTORY, user)
+            return query.order_by(USERRSSTASKHISTORY.DATE.desc()).all()
 
     # ==================== RSS Parser ====================
 
