@@ -7,7 +7,7 @@ ADR-021 多用户数据权限与站点访问控制：
 4. 订阅唯一索引（先合并同用户重复订阅行）
 
 Revision ID: d8e9f0a1b2c4
-Revises: f5c99c5c67c5
+Revises: a8c14c1cc4c4
 Create Date: 2026-09-09T00:00:00.000000
 
 """
@@ -18,7 +18,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "d8e9f0a1b2c4"
-down_revision = "f5c99c5c67c5"
+down_revision = "a8c14c1cc4c4"
 branch_labels = None
 depends_on = None
 
