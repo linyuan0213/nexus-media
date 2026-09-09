@@ -465,6 +465,28 @@ class RssFeedStrategy:
                 rtype=download_item.type, rssid=download_item.rssid, media=download_item
             )
 
+        # 同一轮 RSS 中同一资源可能因多条规则/多个条目被重复收集，
+        # 先去重，避免对同一 dl 链接反复解析种子、反复下载触发站点限流
+        seen_urls: set[str] = set()
+        unique_media: list = []
+        for _m in rss_download_torrents:
+            _enclosure = getattr(_m, "enclosure", "") or ""
+            _key = (
+                _enclosure
+                if _enclosure and not _enclosure.startswith("magnet:")
+                else (getattr(_m, "page_url", "") or "")
+            )
+            _key = _key or str(getattr(_m, "rssid", "") or "")
+            if not _key:
+                unique_media.append(_m)
+                continue
+            if _key in seen_urls:
+                log.info(f"[RssFeedStrategy] 重复候选已去重，跳过：{_key[:120]}")
+                continue
+            seen_urls.add(_key)
+            unique_media.append(_m)
+        rss_download_torrents = unique_media
+
         for media in rss_download_torrents:
             if media.type not in (MediaType.TV, MediaType.ANIME):
                 continue
