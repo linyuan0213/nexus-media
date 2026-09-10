@@ -235,12 +235,20 @@ class TestEffectiveSearchSites:
         result = strategy._get_effective_search_sites({"search_sites": None}, MediaType.MOVIE)
         assert result == ["movieSite"]
 
-    def test_no_system_config_returns_empty(self, strategy):
+    def test_no_system_config_returns_none(self, strategy):
+        """无默认设置 → None（全部可见站点）"""
         strategy._system_config = None
-        assert strategy._get_effective_search_sites({"search_sites": None}, MediaType.TV) == []
+        assert strategy._get_effective_search_sites({"search_sites": None}, MediaType.TV) is None
 
-    def test_invalid_default_setting_returns_empty(self, strategy):
+    def test_invalid_default_setting_returns_none(self, strategy):
         sys_config = MagicMock()
         sys_config.get.return_value = "not_a_dict"
         strategy._system_config = sys_config
-        assert strategy._get_effective_search_sites({"search_sites": None}, MediaType.TV) == []
+        assert strategy._get_effective_search_sites({"search_sites": None}, MediaType.TV) is None
+
+    def test_empty_default_sites_returns_none(self, strategy):
+        """默认设置未配站点 → None（而非零站点）"""
+        sys_config = MagicMock()
+        sys_config.get.return_value = {"search_sites": []}
+        strategy._system_config = sys_config
+        assert strategy._get_effective_search_sites({"search_sites": []}, MediaType.TV) is None

@@ -100,8 +100,6 @@ class SubscribeAddService:
                 default_free = default_rss_setting.get("free")
                 default_download_setting = default_rss_setting.get("download_setting")
                 default_over_edition = default_rss_setting.get("over_edition")
-                default_rss_sites = default_rss_setting.get("rss_sites")
-                default_search_sites = default_rss_setting.get("search_sites")
                 if filter_restype is None and default_restype:
                     filter_restype = default_restype
                 if filter_pix is None and default_pix:
@@ -124,10 +122,8 @@ class SubscribeAddService:
                         if str(default_download_setting).replace("-", "").isdigit()
                         else None
                     )
-                if not rss_sites and default_rss_sites:
-                    rss_sites = default_rss_sites
-                if not search_sites and default_search_sites:
-                    search_sites = default_search_sites
+                # 站点留空表示"全部当前用户可见站点"：不再强制继承默认设置，
+                # 由搜索/RSS 执行时按用户可见站点兜底，避免"未配置即搜不到"
 
         rss_sites = rss_sites or []
         if isinstance(rss_sites, str):

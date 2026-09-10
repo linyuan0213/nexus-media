@@ -33,6 +33,9 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                 return -1, f"{content} 未识别到媒体信息！"
 
         filter_args = dict(filters or {})
+        if filter_args.get("site") == []:
+            # 前端未选择站点时传空数组：归一为 None（全部可见站点）
+            filter_args["site"] = None
         if "site" not in filter_args and system_config:
             _apply_default_sites(filter_args, media_type, system_config)
 
@@ -57,7 +60,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
 
 
 def _apply_default_sites(filter_args: dict, media_type: MediaType | None, system_config: Any) -> None:
-    """未显式指定站点时，应用默认订阅设置的 search_sites（沿用旧 Web 流水线行为）"""
+    """未显式指定站点时，应用默认搜索站点；默认未配置则 None（全部当前用户可见站点）"""
     try:
         default_setting = system_config.get(
             SystemConfigKey.DefaultSubscribeSettingTV
@@ -66,6 +69,7 @@ def _apply_default_sites(filter_args: dict, media_type: MediaType | None, system
         )
         if not isinstance(default_setting, dict):
             default_setting = {}
-        filter_args["site"] = default_setting.get("search_sites") or []
+        # None = 不限制，由索引器按用户可见站点过滤；避免空列表被当成"零站点"
+        filter_args["site"] = default_setting.get("search_sites") or None
     except Exception as e:
         log.warn(f"[WebSearch]读取默认订阅设置站点失败: {e}")

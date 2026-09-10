@@ -305,11 +305,14 @@ class Indexer:
             visible = self.site_grant_service.get_visible_sites_by_id(user_id)
             if visible is not None:
                 source = client.get_client_id()
+                before = len(indexers)
                 indexers = [
                     i
                     for i in indexers
                     if self.site_grant_service.is_site_allowed(visible, i.name, source, usage="search")
                 ]
+                if before and not indexers:
+                    log.warn(f"[Indexer]用户 {user_id} 未被授权任何可用搜索站点（原 {before} 个），请管理员授权")
         return indexers
 
     def get_user_indexer_dict(self):

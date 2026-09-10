@@ -358,7 +358,8 @@ class Searcher:
             "seeders": True,
         }
         if filters:
-            filter_args.update(filters)
+            # site 为权威参数，filters 中的同名键忽略，避免空列表覆盖 effective sites
+            filter_args.update({k: v for k, v in filters.items() if k != "site"})
         if user_id:
             filter_args["user_id"] = user_id
 
@@ -494,7 +495,7 @@ class SearchService:
             media_info=media_info,
             in_from=in_from or SearchType.WEB,
             no_exists=no_exists,
-            sites=sites or [],
+            sites=sites,
             filters=filters or {},
             user_name=user_name,
             user_id=user_id,

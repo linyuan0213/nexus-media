@@ -114,13 +114,17 @@ class BaseSearchStrategy:
         self._search_movies(state=SubscribeState.ERROR.value)
         self._search_tvs(state=SubscribeState.ERROR.value)
 
-    def _get_effective_search_sites(self, rss_info: dict, mtype: MediaType) -> list:
-        """订阅未配置搜索站点时，回退到默认订阅设置的 search_sites（空则不搜索）"""
+    def _get_effective_search_sites(self, rss_info: dict, mtype: MediaType) -> list | None:
+        """订阅有效搜索站点.
+
+        优先级：订阅显式配置 → 全局默认设置 → None（不限制，由用户可见站点集合决定）。
+        返回 None 表示搜索全部当前用户可见站点，避免"未配置即搜不到"。
+        """
         sites = rss_info.get("search_sites") or []
         if sites:
             return sites
         if not self._system_config:
-            return []
+            return None
         try:
             default_setting = self._system_config.get(
                 SystemConfigKey.DefaultSubscribeSettingTV
@@ -128,11 +132,11 @@ class BaseSearchStrategy:
                 else SystemConfigKey.DefaultSubscribeSettingMOV
             )
             if not isinstance(default_setting, dict):
-                return []
-            return default_setting.get("search_sites") or []
+                return None
+            return default_setting.get("search_sites") or None
         except Exception as e:
             log.debug(f"[Subscribe]读取默认订阅设置站点失败: {e}")
-            return []
+            return None
 
     @contextmanager
     def _lock_context(self, media_info):
@@ -226,7 +230,6 @@ class BaseSearchStrategy:
                             "include": rss_info.get("filter_include"),
                             "exclude": rss_info.get("filter_exclude"),
                             "free": rss_info.get("filter_free"),
-                            "site": rss_info.get("search_sites"),
                         }
                         search_result, _, _, _ = self._searcher.search_one_media(
                             media_info=media_info,
@@ -415,7 +418,6 @@ class BaseSearchStrategy:
                         "include": rss_info.get("filter_include"),
                         "exclude": rss_info.get("filter_exclude"),
                         "free": rss_info.get("filter_free"),
-                        "site": sites,
                     }
                     search_result, no_exists, _, _ = self._searcher.search_one_media(
                         media_info=media_info,
