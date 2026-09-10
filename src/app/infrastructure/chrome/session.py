@@ -119,6 +119,12 @@ class BrowserSession(_BaseBrowserSession):
         )
         response.raise_for_status()
 
+    def turnstile(self, timeout: int = 25) -> dict[str, Any]:
+        """显式求解页面内嵌 Turnstile（点击复选框并等待 token）."""
+        response = self._client.post(self._session_url(f"/sessions/{self._sid}/turnstile"), params={"timeout": timeout})
+        response.raise_for_status()
+        return (response.json() or {}).get("data") or {}
+
     def execute(self, script: str) -> Any:
         response = self._client.post(self._session_url(f"/sessions/{self._sid}/execute"), json={"script": script})
         response.raise_for_status()

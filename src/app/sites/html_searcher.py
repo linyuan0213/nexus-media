@@ -209,38 +209,37 @@ class HtmlSiteSearcher:
                 proxy_url=proxy_url,
             ) as session:
                 session.navigate(base_url, cookie=self._user_config.get("cookie") or "")
-                # 等待挑战/Turnstile 由 chrome 自动完成后清除
-                html = session.html()
-                for _ in range(10):
-                    if not (is_challenge(html) or has_pending_turnstile(html)):
-                        break
-                    time.sleep(2)
-                    html = session.html()
-                # 记录提交前结果签名：首页本身就有行，且注入输入值也会改变 HTML，
-                # 必须用"结果标题集合变化"判定搜索是否真正生效
+                # 内嵌验证需数秒自动完成后再求解。这里不做 is_challenge 判断：
+                # 站点引入 challenge-platform 脚本会被误判为拦截页，导致无谓等待
+                # 并错过验证窗口（实测导航后立即/等待判断再求解均会使点击失效）。
+                time.sleep(3)
+                try:
+                    session.turnstile(timeout=15)
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 求解失败: {e}")
+                time.sleep(1)
+                # 记录提交前结果签名
                 baseline_html = session.html()
                 baseline_sig = tuple(
                     str(r.get("title")) for r in (self._parse_html(baseline_html, is_browse=True) or [])
                 )
-                session.input(input_selector, keyword)
-                time.sleep(1)
-                for sel in submit_selectors:
-                    try:
-                        session.click(sel)
-                        break
-                    except Exception:  # noqa: BLE001, S112  # 选择器不存在则尝试下一个
-                        continue
-                # 轮询直到结果签名变化（提交生效），异步渲染/挑战需时间
-                changed = False
-                for _ in range(15):
-                    time.sleep(2)
-                    html = session.html()
-                    sig = tuple(str(r.get("title")) for r in (self._parse_html(html, is_browse=False) or []))
-                    if sig and sig != baseline_sig:
-                        changed = True
-                        break
-                # 结果未变化说明提交未生效：返回 None，避免把首页当搜索结果
-                return html if changed else None
+                # 提交并等待结果签名变化；按钮可能因验证未就绪暂时禁用，重试数次
+                for _attempt in range(4):
+                    session.input(input_selector, keyword)
+                    time.sleep(1)
+                    for sel in submit_selectors:
+                        try:
+                            session.click(sel)
+                            break
+                        except Exception:  # noqa: BLE001, S112
+                            continue
+                    for _ in range(6):
+                        time.sleep(2)
+                        html = session.html()
+                        sig = tuple(str(r.get("title")) for r in (self._parse_html(html, is_browse=False) or []))
+                        if sig and sig != baseline_sig:
+                            return html
+                return None
         except Exception as e:  # noqa: BLE001
             log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器表单搜索失败: {e}")
             return None
