@@ -19,6 +19,7 @@ import log
 from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
+from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.domain.enums import ProgressKey, SyncType
 from app.domain.mediatypes import MediaType
@@ -83,6 +84,7 @@ class FileTransferService:
         path_resolver: TransferPathResolver,
         existence_checker: MediaExistenceChecker,
         cleanup_service: TransferCleanupService,
+        download_repo=None,
     ):
         self.media = media_service
         self.message = message
@@ -101,6 +103,7 @@ class FileTransferService:
         self._path_resolver = path_resolver
         self._existence = existence_checker
         self._history = history_manager
+        self._download_repo = download_repo or DownloadHistoryRepositoryAdapter()
         self._cleanup = cleanup_service
 
         # 从配置读取媒体处理参数
@@ -124,6 +127,16 @@ class FileTransferService:
         self._default_operation = (settings.get("pt") or {}).get("rmt_mode", "copy") or "copy"
 
     # ---------- 路径相关委托方法（公共 API 兼容） ----------
+
+    def _resolve_owner_user_id(self, path: str | None) -> int | None:
+        """按源路径从下载历史反查归属用户（转移通知定向用）"""
+        if not path or self._download_repo is None:
+            return None
+        try:
+            row = self._download_repo.get_download_history_by_path(path)
+            return row.USER_ID if row is not None else None
+        except Exception:  # noqa: BLE001
+            return None
 
     def is_target_dir_path(self, path):
         return self._path_resolver.is_target_dir_path(path)
@@ -815,6 +828,7 @@ class FileTransferService:
                 self._history.update_transfer_unknown_state(reg_path)
 
                 if media.type == MediaType.MOVIE:
+                    media.user_id = self._resolve_owner_user_id(reg_path)
                     self.message.send_transfer_movie_message(
                         in_from, media, exist_filenum, self._path_resolver.movie_category_flag or False
                     )
@@ -822,6 +836,7 @@ class FileTransferService:
                     message_key = f"{media.get_title_string()}-{media.get_season_string()}"
                     if not message_medias.get(message_key):
                         message_medias[message_key] = media
+                        media.user_id = self._resolve_owner_user_id(reg_path)
                     if not message_medias[message_key].is_in_episode(media.get_episode_list()):
                         message_medias[message_key].total_episodes += media.total_episodes
                         message_medias[message_key].size += media.size

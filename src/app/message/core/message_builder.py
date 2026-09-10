@@ -57,6 +57,11 @@ class MessageBuilder:
             description = html_re.sub("", can_item.description)
             can_item.description = re.sub(r"<[^>]+>", "", description)
             msg_text = f"{msg_text}\n描述：{can_item.description}"
+        # 归属用户的下载事件：定向推送（Web + 绑定渠道），不广播全局外部渠道（ADR-021 5.6）
+        owner_user_id = getattr(can_item, "user_id", None)
+        if owner_user_id:
+            self._dispatcher.send_user_msg(owner_user_id, msg_title, msg_text, image=message_image, url="downloading")
+            return
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_text)
         for client in self._client_manager.active_clients:
@@ -126,6 +131,13 @@ class MessageBuilder:
         )
         if exist_filenum != 0:
             msg_str = f"{msg_str}，{exist_filenum}个文件已存在"
+        # 归属用户的入库事件：定向推送（ADR-021 5.6）
+        owner_user_id = getattr(media_info, "user_id", None)
+        if owner_user_id:
+            self._dispatcher.send_user_msg(
+                owner_user_id, msg_title, msg_str, image=media_info.get_message_image(), url="history"
+            )
+            return
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
         for client in self._client_manager.active_clients:
@@ -169,6 +181,13 @@ class MessageBuilder:
                 msg_str = f"{msg_str}，大小：{StringUtils.str_filesize(item_info.size)}{from_source}"
             else:
                 msg_str = f"{msg_str}，总大小：{StringUtils.str_filesize(item_info.size)}{from_source}"
+            # 归属用户的入库事件：定向推送（ADR-021 5.6）
+            owner_user_id = getattr(item_info, "user_id", None)
+            if owner_user_id:
+                self._dispatcher.send_user_msg(
+                    owner_user_id, msg_title, msg_str, image=item_info.get_message_image(), url="history"
+                )
+                continue
             if self._messagecenter:
                 self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
             for client in self._client_manager.active_clients:
@@ -197,6 +216,10 @@ class MessageBuilder:
     def send_download_fail_message(self, item, error_msg: str) -> None:
         title = f"添加下载任务失败：{item.get_title_string()} {item.get_season_episode_string()}"
         text = f"站点：{item.site}\n种子名称：{item.org_string}\n种子链接：{item.enclosure}\n错误信息：{error_msg}"
+        owner_user_id = getattr(item, "user_id", None)
+        if owner_user_id:
+            self._dispatcher.send_user_msg(owner_user_id, title, text, image=item.get_message_image())
+            return
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=title, content=text)
         for client in self._client_manager.active_clients:

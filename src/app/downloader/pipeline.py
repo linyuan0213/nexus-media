@@ -94,14 +94,14 @@ class DownloadPipeline:
         # ---------- 阶段1：获取种子内容 ----------
         fetch = self._stage_fetch(media_info=media_info, torrent_file=torrent_file, proxy=proxy)
         if not fetch:
-            self._fail(media_info, in_from, "下载链接为空")
+            self._fail(media_info, in_from, "下载链接为空", user_id=user_id)
             return None, None, "下载链接为空"
         content, file_path, dl_files_folder, dl_files, retmsg, site_info, torrent_attr = fetch
 
         if retmsg:
             log.warn(f"[DownloadPipeline]{retmsg}")
         if not content:
-            self._fail(media_info, in_from, retmsg)
+            self._fail(media_info, in_from, retmsg, user_id=user_id)
             return None, None, retmsg
 
         # ---------- 阶段2：解析下载设置 ----------
@@ -129,7 +129,7 @@ class DownloadPipeline:
         downloader = self._client_factory.get_client(downloader_id)
         if not downloader or not downloader_conf:
             msg = "请检查下载设置所选下载器是否有效且启用"
-            self._fail(media_info, in_from, msg)
+            self._fail(media_info, in_from, msg, user_id=user_id)
             return None, None, f"下载设置 {download_setting_name} 所选下载器失效"
         downloader_name = downloader_conf.get("name")
 
@@ -145,7 +145,7 @@ class DownloadPipeline:
         if not getattr(downloader, "supports_pt", True) and self._is_pt_torrent(site_info, content):
             msg = f"下载器 {downloader_name} 不支持 PT 私有站点种子，已拒绝下载"
             log.warn(f"[DownloadPipeline]{msg}: {title}")
-            self._fail(media_info, in_from, msg)
+            self._fail(media_info, in_from, msg, user_id=user_id)
             return downloader_id, None, msg
 
         # ---------- 阶段3：添加任务 ----------
@@ -168,7 +168,7 @@ class DownloadPipeline:
         )
         if not download_id:
             msg = f"下载器 {downloader_name} 添加下载任务失败"
-            self._fail(media_info, in_from, msg)
+            self._fail(media_info, in_from, msg, user_id=user_id)
             return downloader_id, None, msg
 
         self._event_bus.publish(
@@ -447,7 +447,7 @@ class DownloadPipeline:
                 downloader = self._client_factory.get_client(downloader_id)
                 if downloader:
                     downloader.delete_torrents(ids=download_id, delete_file=True)
-                self._fail(media_info, in_from, "请检查下载任务保存目录是否正确")
+                self._fail(media_info, in_from, "请检查下载任务保存目录是否正确", user_id=user_id)
                 return
 
         try:
@@ -482,6 +482,7 @@ class DownloadPipeline:
 
         if in_from:
             media_info.user_name = user_name
+            media_info.user_id = user_id
             media_info.hit_and_run = bool(torrent_attr and torrent_attr.get("hr"))
             self._message.send_download_message(
                 in_from=in_from,
@@ -546,7 +547,7 @@ class DownloadPipeline:
                     return True
         return False
 
-    def _fail(self, media_info, in_from, reason):
+    def _fail(self, media_info, in_from, reason, user_id=None):
         self._event_bus.publish(
             Event(
                 event_type=DOWNLOAD_FAILED,
@@ -554,4 +555,5 @@ class DownloadPipeline:
             )
         )
         if in_from:
+            media_info.user_id = user_id
             self._message.send_download_fail_message(media_info, f"添加下载任务失败：{reason}")
