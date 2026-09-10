@@ -138,6 +138,7 @@ class GetCategoryConfigRequest(BaseModel):
 class GetDownloadedRequest(BaseModel):
     page: int | None = None
     page_size: int | None = Field(default=30, ge=1, le=200)
+    user_id: int | None = None  # superadmin 按归属用户过滤
 
 
 class GetTransferHistoryRequest(BaseModel):
@@ -408,7 +409,11 @@ def get_downloaded(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
-    items = svc.get_download_history(page=req.page or 1, num=req.page_size or 30, user=current_user)
+    # superadmin 可按归属用户过滤；普通用户行级过滤兜底
+    scoped_user = current_user
+    if req.user_id and current_user.is_superadmin:
+        scoped_user = current_user.model_copy(update={"user_id": req.user_id, "role_codes": []})
+    items = svc.get_download_history(page=req.page or 1, num=req.page_size or 30, user=scoped_user)
     if items:
         return success(
             data=[

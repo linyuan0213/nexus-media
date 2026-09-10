@@ -272,8 +272,9 @@ def get_site_definitions(
 @router.post("/sites", response_model=CommonResponse, summary="获取站点列表")
 def get_sites(
     req: SiteFilterRequest,
-    user: str = Depends(require_any_permission("site:view", "site:manage")),
+    user=Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
+    app_context=Depends(get_app_context),
 ):
     sites = svc.get_sites(
         rss=bool(req.rss),
@@ -282,6 +283,13 @@ def get_sites(
         basic=bool(req.basic),
         source=req.source,
     )
+    # 无站点管理权限的用户按站点授权过滤（ADR-021 4.3）
+    grant_service = getattr(app_context, "site_grant_service", None)
+    can_manage = user.is_superadmin or "site:manage" in user.permissions or "*" in user.permissions
+    if grant_service is not None and not can_manage:
+        visible = grant_service.get_visible_sites(user)
+        if visible is not None:
+            sites = [s for s in sites if grant_service.is_site_name_allowed(visible, s.get("name", ""), usage="search")]
     return success(data=sites)
 
 

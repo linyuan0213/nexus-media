@@ -75,7 +75,7 @@ class MessageSearchService:
 
         # 数字选择
         if input_str.isdigit() and int(input_str) < 10:
-            self._handle_selection(int(input_str), in_from, user_id, user_name)
+            self._handle_selection(int(input_str), in_from, user_id, user_name, bound_user_id)
             return
 
         # 文本输入
@@ -94,11 +94,18 @@ class MessageSearchService:
 
         self._pagination.send_page_message(in_from, user_id)
 
-    def _handle_selection(self, choose: int, in_from: SearchType, user_id: str, user_name: str | None = None):
+    def _handle_selection(
+        self,
+        choose: int,
+        in_from: SearchType,
+        user_id: str,
+        user_name: str | None = None,
+        bound_user_id: int | None = None,
+    ):
         """处理数字选择"""
         # 优先从分页缓存选择
         if self._pagination.has_page(user_id):
-            self._select_from_pagination(choose, in_from, user_id, user_name)
+            self._select_from_pagination(choose, in_from, user_id, user_name, bound_user_id=bound_user_id)
             return
 
         # 从媒体缓存选择
@@ -112,12 +119,19 @@ class MessageSearchService:
         media_type = self._pagination.get_media_type(user_id)
 
         if media_type == "SUBSCRIBE":
-            self._add_rss(in_from, media_info, user_id=user_id, user_name=user_name)
+            self._add_rss(in_from, media_info, user_id=user_id, user_name=user_name, bound_user_id=bound_user_id)
         else:
-            self._search_and_download(in_from, media_info, user_id, user_name)
+            self._search_and_download(in_from, media_info, user_id, user_name, bound_user_id=bound_user_id)
 
-    def _select_from_pagination(self, choose: int, in_from: SearchType, user_id: str, user_name: str | None = None):
-        """从分页结果中选择下载"""
+    def _select_from_pagination(
+        self,
+        choose: int,
+        in_from: SearchType,
+        user_id: str,
+        user_name: str | None = None,
+        bound_user_id: int | None = None,
+    ):
+        """从分页结果中选择下载（bound_user_id 为数据归属用户）"""
         item = self._pagination.select_item(user_id, choose)
         if not item:
             self._message.send_channel_msg(channel=in_from, title="输入有误！", user_id=user_id)
@@ -152,7 +166,7 @@ class MessageSearchService:
         media_info.size = item.SIZE or 0
         media_info.org_string = item.TORRENT_NAME or title
 
-        self._downloader.download(media_info=media_info, in_from=in_from, user_name=user_name)
+        self._downloader.download(media_info=media_info, in_from=in_from, user_name=user_name, user_id=bound_user_id)
         self._pagination.clear_media_cache(user_id)
 
     def _handle_text(

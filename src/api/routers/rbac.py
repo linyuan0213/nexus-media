@@ -285,12 +285,14 @@ def reset_password(
 async def upload_avatar(
     user_id: int,
     file: UploadFile = File(...),
-    current_user: UserContext = Depends(require_permission("user:update")),
+    current_user: UserContext = Depends(require_any_permission("user:update", "user:self")),
     svc=Depends(get_rbac_service),
 ):
-    """上传用户头像"""
+    """上传用户头像（本人或管理员）"""
     if not file.content_type or not file.content_type.startswith("image/"):
         return fail(success=False, message="请上传图片文件")
+    if not _is_admin(current_user) and current_user.user_id != user_id:
+        return fail(success=False, message="无权修改其他用户头像")
 
     try:
         # 头像保存目录
