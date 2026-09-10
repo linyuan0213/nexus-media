@@ -20,7 +20,23 @@ from app.utils.config_tools import get_domain
 class Message:
     """消息业务 Facade，由 lifespan 通过 AppContext 创建并管理生命周期。"""
 
-    def __init__(self, apikey_service: APIKeyService, message_center: MessageCenter | None = None):
+    # 绑定表渠道键 → 交互客户端键（client_manager 以枚举名/插件渠道名注册）
+    _CHANNEL_KEY_MAP = {
+        "telegram": "TG",
+        "wechat": "WX",
+        "slack": "SLACK",
+        "synologychat": "SYNOLOGY",
+        "feishu": "FEISHU",
+        "dingtalk": "DINGTALK",
+    }
+
+    def __init__(
+        self,
+        apikey_service: APIKeyService,
+        message_center: MessageCenter | None = None,
+        channel_binding_service=None,
+    ):
+        self._channel_binding_service = channel_binding_service
         self._domain = get_domain() or ""
         self.messagecenter = message_center or MessageCenter()
         self._client_manager = ClientManager(apikey_service=apikey_service, message=self)
@@ -35,6 +51,11 @@ class Message:
         )
         # 插件注册的消息命令
         self._command_manager._plugin_commands = {}
+
+    def set_channel_binding_service(self, service) -> None:
+        """延迟注入渠道绑定服务（DI 分层：Message 在基础设施层先于 rbac 构建）"""
+        self._channel_binding_service = service
+        self._dispatcher.set_channel_binding_service(service)
 
     def set_agent_enhancer(self, enhancer) -> None:
         """注入 Agent 通知增强器（单流替换模板；facade 与 builder 同步指向包装器）"""
@@ -133,6 +154,20 @@ class Message:
 
     def send_channel_list_msg(self, channel: Any, title: str, medias: list, user_id: str = "") -> bool:
         return self._dispatcher.send_channel_list_msg(channel, title, medias, user_id)
+
+    def send_user_msg(
+        self,
+        system_user_id: int | None,
+        title: str,
+        text: str = "",
+        image: str | None = None,
+        url: str | None = None,
+    ) -> bool:
+        """按归属用户定向发送（ADR-021 5.6）：Web 消息 + 该用户绑定的外部渠道.
+
+        system_user_id 为 None 时退化为 Web 系统消息（无归属）。
+        """
+        return self._dispatcher.send_user_msg(system_user_id, title, text, image=image, url=url)
 
     # ---------- 业务消息构建委托 ----------
 

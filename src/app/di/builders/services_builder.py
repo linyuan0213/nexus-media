@@ -335,6 +335,8 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     )
     # 索引器层站点授权过滤（L3）
     indexer.site_grant_service = site_grant_service
+    # 消息定向发送按用户绑定渠道路由
+    message.set_channel_binding_service(channel_binding_service)
     user_rss_service = UserRssService(rss_checker=rss_task_service)
 
     douban = DouBan()

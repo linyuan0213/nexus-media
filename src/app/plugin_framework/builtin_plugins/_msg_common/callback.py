@@ -47,9 +47,9 @@ class InteractiveCallbackMixin:
             return {"code": 0, "msg": "success"}
         log.info(f"[{self.channel_type}]收到消息: user={user_id}, text={text[:60]}...")
         try:
-            # 渠道身份绑定解析：未绑定拒绝交互
+            # 渠道身份绑定解析：未绑定拒绝交互（channel_type 为小写渠道名，与绑定表一致）
             binding_service = getattr(self._app_context, "channel_binding_service", None)
-            channel_key = getattr(self.channel_search_type, "value", str(self.channel_search_type))
+            channel_key = (self.channel_type or "").lower()
             bound_user = binding_service.resolve_user(channel_key, user_id) if binding_service else None
             if text.startswith("/bind"):
                 code = text[5:].strip()

@@ -272,6 +272,7 @@ class SubscribeUpdateService:
             )
             if in_from and media_info:
                 media_info.user_name = user_name
+                media_info.user_id = user.user_id if user else None
                 self._message.send_subscribe_success_message(
                     in_from=cast(SubscribeType, in_from), media_info=media_info
                 )

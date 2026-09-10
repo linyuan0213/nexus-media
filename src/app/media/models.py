@@ -107,6 +107,7 @@ class MediaInfo(BaseModel):
     site: str | None = None
     site_order: int = 0
     user_name: str | None = None
+    user_id: int | None = None  # 数据归属用户（多用户权限）
     enclosure: str | None = None
     res_order: int = 0
     filter_rule: str | None = None

@@ -223,6 +223,11 @@ class MessageBuilder:
         msg_str = f"{msg_str}，来自：{StringUtils.resolve_in_from_display(in_from)}"
         if media_info.user_name:
             msg_str = f"{msg_str}，用户：{media_info.user_name}"
+        # 归属用户的订阅事件：定向推送给该用户（Web + 绑定渠道），不广播到全局外部渠道（ADR-021 5.6）
+        owner_user_id = getattr(media_info, "user_id", None)
+        if owner_user_id:
+            self._dispatcher.send_user_msg(owner_user_id, msg_title, msg_str, image=media_info.get_message_image())
+            return
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
         for client in self._client_manager.active_clients:

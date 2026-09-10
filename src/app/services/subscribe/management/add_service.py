@@ -347,6 +347,7 @@ class SubscribeAddService:
             )
             if in_from:
                 media_info.user_name = user_name
+                media_info.user_id = user_id
                 self._message.send_subscribe_success_message(
                     in_from=cast(SubscribeType, in_from), media_info=media_info
                 )
