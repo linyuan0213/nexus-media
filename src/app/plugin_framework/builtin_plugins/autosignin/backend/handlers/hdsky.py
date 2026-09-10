@@ -92,7 +92,7 @@ class HDSky(SiteSigninHandler):
             time.sleep(1)
 
         if not ocr_result:
-            return SigninResult.fail(site, "未获取到验证码")
+            return SigninResult.fail(site, "验证码识别失败(OCR)")
 
         data = {"action": "showup", "imagehash": img_hash, "imagestring": ocr_result}
         signin_url = base_url + "/showup.php"
