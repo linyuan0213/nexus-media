@@ -70,9 +70,9 @@ class HtmlSiteSearcher:
                 parsed = self._parse_html(form_html, is_browse=False)
                 if parsed:
                     result = parsed
-        # 直连返回成功但无结果（JS/挑战外壳页，或 CF 内嵌 Turnstile 未被强特征识别）：
-        # 开启浏览器自动化时强制经 nexus-chrome 渲染后重试一次
-        if not result and bool(self._user_config.get("chrome")):
+        # 仅浏览（无关键词）模式才做"整页浏览器渲染"回退；关键词搜索若回退到
+        # 列表页会把首页当搜索结果（假阳性），因此关键词搜索只认表单搜索结果。
+        if not result and is_browse and bool(self._user_config.get("chrome")):
             rendered = self._fetch_html(url, force_browser=True)
             if rendered and rendered != html_text:
                 retried = self._parse_html(rendered, is_browse=is_browse)
@@ -158,93 +158,71 @@ class HtmlSiteSearcher:
         return url
 
     def _browser_form_search(self, keyword: str) -> str | None:
-        """浏览器交互式搜索：过盾 → 填关键词 → 点提交 → 返回结果页 HTML.
-
-        适用于搜索表单受 Cloudflare/Turnstile 保护、普通 GET 不生效的站点
-        （如观众 audiences）。仅站点开启浏览器自动化时可用。
-        """
+        """浏览器过盾后重新提交搜索链接，返回结果页 HTML（站点搜索受 CF 保护）."""
         if not keyword or not self._user_config.get("chrome"):
             return None
         server = get_chrome_server_url()
         if not server:
             return None
         domain = self._user_config.get("domain") or self._site.domain or ""
+        search_url = self._build_url(keyword, 0, None, None)
+        if not search_url:
+            return None
         search_cfg = self._cfg_get(self._site.html or {}, "search", {}) or {}
         paths = search_cfg.get("paths") or []
         base_path = str((paths[0].get("path") if paths else "torrents.php") or "torrents.php")
         base_url = f"{domain.rstrip('/')}/{base_path.lstrip('/')}"
-        # 关键词参数名：取 params 中含 {keyword} 的键
-        param_name = "search"
-        for k, v in (search_cfg.get("params") or {}).items():
-            if isinstance(v, str) and "{keyword}" in v:
-                param_name = str(k)
-                break
-        submit_selectors = [
-            "#search_btn",
-            "button.js-torrent-search-submit",
-            "button[type=submit]",
-            "input[type=submit]",
-        ]
         proxies = get_proxies() if self._user_config.get("proxy") else None
         proxy_url = proxies.get("http") if isinstance(proxies, dict) else None
+        browser_cfg = build_browser_mode(
+            site_info={
+                "chrome": True,
+                "ua": self._user_config.get("ua"),
+                "browser_render": True,
+                "browser_persistent": bool(self._user_config.get("browser_persistent")),
+            },
+            site_key=domain,
+            proxy_url=proxy_url,
+            render_html=True,
+        )
+        session_id = make_session_key(domain, browser_cfg) if browser_cfg else domain
+        fp_profile_id = browser_cfg.fp_profile_id if browser_cfg else None
+        fingerprint = browser_cfg.fingerprint_profile if browser_cfg else "stealth"
+        cookie = self._user_config.get("cookie") or ""
         try:
-            browser_cfg = build_browser_mode(
-                site_info={
-                    "chrome": True,
-                    "ua": self._user_config.get("ua"),
-                    "browser_render": True,
-                    "browser_persistent": bool(self._user_config.get("browser_persistent")),
-                },
-                site_key=domain,
-                proxy_url=proxy_url,
-                render_html=True,
-            )
-            # 使用与 ChromeTransport 相同的会话键，确保过盾 Cookie 可被后续抓取复用
-            session_id = make_session_key(domain, browser_cfg) if browser_cfg else domain
-            # 必须携带与 session_id/站点 UA 匹配的指纹画像：站点 UA 为 Mac 时若落到
-            # 默认 Linux 实例，会出现「UA=Mac / navigator.platform=Linux」的自相矛盾，
-            # 被 Cloudflare Turnstile 判为异常而拒绝渲染（表现为一直过不了盾）。
             with BrowserSession(
                 session_id,
                 server_url=server,
                 user_agent=self._user_config.get("ua"),
                 proxy_url=proxy_url,
-                fp_profile_id=browser_cfg.fp_profile_id if browser_cfg else None,
-                fingerprint=browser_cfg.fingerprint_profile if browser_cfg else "stealth",
+                fp_profile_id=fp_profile_id,
+                fingerprint=fingerprint,
             ) as session:
-                input_selector = f'#torrent-search-form input[name="{param_name}"]'
-                session.navigate(base_url, cookie=self._user_config.get("cookie") or "")
-                time.sleep(5)
-                baseline_sig = tuple(
-                    str(r.get("title")) for r in (self._parse_html(session.html(), is_browse=True) or [])
-                )
-                # 重试"点击验证 → 填词 → 提交 → 查结果"：CF 限流时才出现验证，
-                # 点击生效后按钮解除禁用；未限流时直接可提交。
-                for _attempt in range(6):
+                # 1) 打开搜索页：chrome 负责过 CF 拦截/内嵌验证
+                session.navigate(base_url, cookie=cookie)
+                try:
+                    session.turnstile(timeout=12)
+                except Exception as e:  # noqa: BLE001
+                    log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 处理失败: {e}")
+                # 2) 过盾后重新提交搜索链接（会话内 HTTP，携带过盾 Cookie）
+                for _ in range(3):
                     try:
-                        session.turnstile(timeout=8)
+                        res = session.fetch(search_url, method="GET")
+                        body = (res or {}).get("body") or (res or {}).get("html") or ""
+                        if body and self._parse_html(body, is_browse=False):
+                            log.info(f"[HtmlSiteSearcher]{self._site.name} 过盾后重提搜索成功")
+                            return body
                     except Exception as e:  # noqa: BLE001
-                        log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 点击失败: {e}")
-                    try:
-                        session.input(input_selector, keyword)
-                    except Exception as e:  # noqa: BLE001
-                        log.debug(f"[HtmlSiteSearcher]{self._site.name} 填充关键词失败: {e}")
-                    time.sleep(0.5)
-                    for sel in submit_selectors:
-                        try:
-                            session.click(sel)
-                            break
-                        except Exception:  # noqa: BLE001, S112
-                            continue
-                    for _ in range(5):
-                        time.sleep(2)
-                        html = session.html()
-                        sig = tuple(str(r.get("title")) for r in (self._parse_html(html, is_browse=False) or []))
-                        if sig and sig != baseline_sig:
-                            return html
+                        log.debug(f"[HtmlSiteSearcher]{self._site.name} 重提搜索失败: {e}")
+                    time.sleep(2)
+                # 3) 兜底：浏览器直接导航到搜索链接
+                session.navigate(search_url, cookie=cookie)
+                html = session.html()
+                if html and self._parse_html(html, is_browse=False):
+                    return html
                 return None
         except Exception as e:  # noqa: BLE001
-            log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器表单搜索失败: {e}")
+            log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器搜索失败: {e}")
             return None
 
     def _fetch_html(self, url, force_browser: bool = False):
