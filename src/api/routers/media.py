@@ -586,7 +586,7 @@ def get_search_result(
 @router.post("/transfer/history", response_model=CommonResponse, summary="获取转移历史")
 def get_transfer_history(
     req: GetTransferHistoryRequest,
-    current_user=Depends(require_any_permission("library:view", "library:manage")),
+    current_user=Depends(require_any_permission("transfer:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     result = svc.get_transfer_history_page(search_str=req.keyword, page=req.page, page_num=req.pagenum)
@@ -604,7 +604,7 @@ def get_transfer_history(
 @router.post("/transfer/statistics", response_model=CommonResponse, summary="获取转移统计")
 def get_transfer_statistics(
     req: GetTransferStatisticsRequest,
-    current_user=Depends(require_any_permission("library:view", "library:manage")),
+    current_user=Depends(require_any_permission("transfer:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     result = svc.get_transfer_statistics(days=req.days if req.days is not None else 90)
@@ -613,7 +613,7 @@ def get_transfer_statistics(
 
 @router.post("/unknown", response_model=CommonResponse, summary="获取未识别列表")
 def get_unknown_list(
-    current_user=Depends(require_any_permission("library:view", "library:manage")),
+    current_user=Depends(require_any_permission("transfer:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     items = svc.get_unknown_list()
@@ -623,7 +623,7 @@ def get_unknown_list(
 @router.post("/unknown/paged", response_model=CommonResponse, summary="分页获取未识别列表")
 def get_unknown_list_by_page(
     req: GetUnknownListByPageRequest,
-    current_user=Depends(require_any_permission("library:view", "library:manage")),
+    current_user=Depends(require_any_permission("transfer:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     result = svc.get_unknown_list_by_page(search_str=req.keyword, page=req.page, page_num=req.pagenum)
@@ -667,7 +667,7 @@ def search_media_infos(
 
 @router.post("/unknown/list", response_model=CommonResponse, summary="重新识别未识别项")
 def unidentification(
-    current_user=Depends(require_any_permission("library:view", "library:manage")),
+    current_user=Depends(require_any_permission("transfer:view", "library:manage")),
     svc: TransferHistoryService = Depends(get_transfer_history_service),
 ):
     svc.re_identify_unknown()
@@ -778,7 +778,7 @@ async def upload_file(
 
 @router.post("/library/paths", response_model=CommonResponse, summary="获取媒体库路径")
 def get_library_paths(
-    current_user=Depends(require_any_permission("library:view", "library:manage")),
+    current_user=Depends(require_permission("library:manage")),
     media_svc=Depends(get_media_config_service),
     sync_svc=Depends(get_sync_service),
     media_file_svc: MediaFileService = Depends(get_media_file_service),
@@ -797,7 +797,7 @@ def get_tmdb_blacklist(
     page: int = Query(1, ge=1),
     count: int = Query(30, ge=1, le=100),
     s: str | None = Query(""),
-    current_user=Depends(require_any_permission("library:view", "library:manage")),
+    current_user=Depends(require_permission("library:manage")),
     tmdb_svc=Depends(get_tmdb_blacklist_service),
 ):
     items, total = tmdb_svc.get_blacklist(tmdb_id=s if s else None, page=page, count=count)

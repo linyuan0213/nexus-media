@@ -13,8 +13,9 @@ from app.schemas.auth import SUPERADMIN_ROLE_CODE
 class RBACUserService:
     """用户管理服务"""
 
-    def __init__(self, user_repo):
+    def __init__(self, user_repo, data_cleaner=None):
         self.user_repo = user_repo
+        self._data_cleaner = data_cleaner
 
     def create_user(
         self,
@@ -76,7 +77,8 @@ class RBACUserService:
             raise ServiceError("不能删除当前登录用户")
         self._check_not_last_superadmin(user_id)
         # 显式清理归属数据（SQLite 未启用外键级联，ADR-021 5.7）
-        get_owned_data_cleaner().purge_user(user_id)
+        cleaner = self._data_cleaner or get_owned_data_cleaner()
+        cleaner.purge_user(user_id)
         success = self.user_repo.delete_user(user_id)
         if not success:
             raise ResourceNotFoundError("删除失败")

@@ -12,8 +12,9 @@ from app.schemas.auth import SUPERADMIN_ROLE_CODE
 class RBACRoleService:
     """角色管理服务"""
 
-    def __init__(self, role_repo):
+    def __init__(self, role_repo, data_cleaner=None):
         self.role_repo = role_repo
+        self._data_cleaner = data_cleaner
 
     def create_role(
         self,
@@ -65,7 +66,8 @@ class RBACRoleService:
         if str(role.ROLE_CODE or "") == SUPERADMIN_ROLE_CODE:
             raise ServiceError("内置超级管理员角色不可删除")
         # 显式清理角色归属数据（站点授权，ADR-021 5.7）
-        get_owned_data_cleaner().purge_role(role_id)
+        cleaner = self._data_cleaner or get_owned_data_cleaner()
+        cleaner.purge_role(role_id)
         success = self.role_repo.delete_role(role_id)
         if not success:
             raise ResourceNotFoundError("删除失败")
