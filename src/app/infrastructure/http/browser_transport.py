@@ -13,6 +13,7 @@ from urllib.parse import quote
 import httpx2
 
 import log
+from app.infrastructure.chrome.limits import browser_slot
 from app.infrastructure.http.config import BrowserModeConfig
 from app.utils.render_normalize import normalize_rendered_html
 from app.utils.session_key import to_session_id
@@ -185,15 +186,16 @@ class _BaseChromeTransport:
         if request.method in ("POST", "PUT", "PATCH"):
             data = request.content.decode("utf-8") if request.content else None
 
-        payload = self._server.request(
-            self._session_key,
-            self._browser,
-            url=url,
-            method=method,
-            headers=headers or None,
-            data=data,
-            cookie=cookie,
-        )
+        with browser_slot():
+            payload = self._server.request(
+                self._session_key,
+                self._browser,
+                url=url,
+                method=method,
+                headers=headers or None,
+                data=data,
+                cookie=cookie,
+            )
         return self._build_response(request, payload)
 
     def close(self) -> None:

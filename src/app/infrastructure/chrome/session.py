@@ -12,6 +12,7 @@ from urllib.parse import quote
 import httpx2
 
 import log
+from app.infrastructure.chrome.limits import browser_slot
 from app.utils.browser_mode import get_chrome_api_key
 from app.utils.session_key import to_session_id
 
@@ -39,6 +40,7 @@ class _BaseBrowserSession:
         self.fp_profile_id = fp_profile_id
         self.timeout = timeout
         self.session_id = site_key
+        self._slot: Any = None
         # 会话键可能含 URL（https://...），规范化为 URL 安全 id，避免路径 404
         self.session_id = to_session_id(site_key)
         self._sid = quote(self.session_id, safe="")
@@ -70,11 +72,20 @@ class BrowserSession(_BaseBrowserSession):
         self._client = httpx2.Client(timeout=self.timeout, follow_redirects=True, headers=self._auth_headers())
 
     def __enter__(self) -> BrowserSession:
+        # 浏览器并发闸门：占满时阻塞等待，避免 chrome 实例/标签页被挤爆
+        self._slot = browser_slot()
+        self._slot.__enter__()
         self._ensure_session()
         return self
 
     def __exit__(self, *exc: Any) -> None:
-        self.close()
+        try:
+            self.close()
+        finally:
+            slot = self._slot
+            self._slot = None
+            if slot is not None:
+                slot.__exit__(None, None, None)
 
     def _ensure_session(self) -> None:
         try:
