@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted（已实施，见文末「实施记录」）
 
 ## Date
 
@@ -335,6 +335,7 @@ def apply_owner_scope(query, model, user: UserContext):
 5. **事件路由分流**：成功类事件按归属用户定向推送（5.6）；失败/人工介入类（转移失败、`TRANSFER_UNKNOWN`、种子红种）属共享资源故障，推系统/管理员渠道。
 6. **全局默认设置快照**：用户新建订阅继承全局默认（`DefaultSubscribeSettingTV/MOV`、默认保存路径）时落库固化快照并在 UI 明示，避免管理员后续改全局配置导致存量订阅行为漂移。
 7. **插件约束**：插件 handler 必须透传 `UserContext`；插件代码禁止绕过 repository 直连 ORM 读写订阅/下载/搜索数据（owner-scope 不可旁路）。该约束加入插件开发规范。
+8. **站点账号数据按可见站点过滤**（已实施）：站点活跃度/历史/日统计/做种/用户统计接口对非超管按站点授权裁剪，只返回用户被授权站点的共享账号数据；`open` 策略、superadmin、`builtin:*` 通配不受限。媒体库路径、TMDB 黑名单收敛为 `library:manage`。
 
 ### 7. 其他补全项
 
@@ -388,6 +389,36 @@ def apply_owner_scope(query, model, user: UserContext):
 ### 11. Phase 2（后续阶段，不在本 ADR 范围）
 
 **用户级站点凭据**：`CONFIG_SITE` 目前一站一 Cookie 全局共享，多用户实际共用管理员一个人的 PT 账号搜索/下载，做种量与 H&R 考核都挂在该账号上。若需每个用户使用自己的站点账号，则 `CONFIG_SITE` 加 `USER_ID` 做用户级凭据覆盖（用户凭据优先，缺省回落全局凭据），站点用户数据/做种统计随之按凭据归属。此项与行级隔离正交，单独设计。
+
+## 实施记录（2026-09-10）
+
+分支 `feature/multi-user-permission`（后端 + 前端 `nexus-media-web` 同名分支），3036 测试通过，ruff/pyright 全绿。
+
+### 已交付
+
+| 层 | 内容 |
+|---|---|
+| 基础设施 | `UserContext.role_codes`/`is_superadmin`、`system_user_context()`、`RBACSnapshotCache` 权限快照（TTL 60s + 变更主动失效，判定走服务端不信任 JWT 副本）、`data_scope.apply_owner_scope/is_owner` |
+| 数据模型 | 8 张业务表加 `USER_ID`（订阅四表/自定义RSS及其历史/下载历史；搜索结果沿用既有 String(64) 列），新增 `RBAC_ROLE_SITES`/`RBAC_USER_SITES`/`RBAC_USER_CHANNELS`；Alembic 迁移 `d8e9f0a1b2c4`（含存量归属首个 superadmin、重复订阅去重、具名外键 CASCADE/SET NULL、可回滚） |
+| 站点授权 | 角色级 ∪ 用户级授权（`search`/`rss` 用途粒度）、`site_grant_default_policy` 开关、索引器搜索过滤、RSS 执行时兜底、订阅保存白名单、授权管理 API + `/sites/visible`、站点统计数据按可见站点过滤 |
+| 数据隔离 | 订阅/自定义RSS/搜索/下载历史全链路归属过滤与越权守卫（越权为无操作）；通知按归属用户定向（Web 隔离 + 绑定渠道单发） |
+| 账号链路 | JWT 仅认证、API Key 继承创建者快照、IM 渠道绑定（绑定码/身份解析/未绑定拒绝）、系统上下文 |
+| 权限码 | 新增 `site:assign`/`user:self`/`download:create`/`transfer:view`；`POST /search` 改用 `search:execute`；默认 `user` 角色移除 `site:view`/`service:view` 及站点管理/服务面板菜单 |
+| 生命周期 | 删除用户/角色时 `OwnedDataCleaner` 显式清理归属数据（SQLite 未启用外键级联，服务层兜底） |
+
+### 与设计的偏差（有意简化，功能正确）
+
+1. **5.4 fan-out 落法更轻**：RSS 刷新本就是站点级一次拉取，"搜索一次"天然成立。实现为 matcher 收集全部命中订阅 + 下载完成后联动完成兄弟订阅；**仅联动过滤签名一致且未开洗版**的兄弟订阅（避免高要求用户被低清副本满足）。部分季集的逐集进度联动未做，兄弟订阅待下一轮匹配推进（最终一致）。
+2. **任务队列仍为全局视图**：`download:view` 可见进行中下载列表（ADR 5/6 有意设计，共享下载器），保留原状。
+3. **转移历史管理员专属**：原由 `library:view` 守卫导致越权可见，已改为 `transfer:view`/`library:manage`；无 owner 字段，故不支持"只看自己的"。
+4. **搜索结果 USER_ID 为既有 String(64) 列**：模型与读写对齐既有类型，避免 Integer/String 漂移。
+5. **Telegram 轮询不再按 `admin_ids` 拦截**：多用户由绑定层鉴权（`admin_ids` 仅存量迁移为绑定）。
+
+### 已知残留
+
+- 存量安装的默认角色权限不会自动同步（角色权限仅首次创建时分配）；新权限码需管理员在角色管理中手动授予，或将 `user` 角色的 `site:view`/`service:view` 手动移除。
+- 钉钉个人主动推送依赖短期 sessionWebhook，主动推送不可靠（平台限制），入站命令正常。
+- 前端入口（站点授权抽屉、渠道绑定页、聚合视图、按用户筛选）已实现；`?user_id=` 下载历史筛选后端就绪、前端暂无独立页面。
 
 ## Consequences
 

@@ -63,6 +63,19 @@ backend/
 - 遵循现有代码风格；项目混合了新旧模式，新代码尽量使用新模式。
 - `third_party/`、`src/app/media/doubanapi/`、`src/app/media/tmdbv3api/` 中的第三方代码 — 不要重构。
 
+## 多用户权限模型（ADR-021）
+- **三层**：L1 功能权限（`require_permission`，权限码挂在角色）+ L2 数据归属（`USER_ID` 行级过滤）+ L3 站点授权（角色/用户两级授权表）。
+- **管理员判定**：角色码 `superadmin`（`schemas/auth.py` 的 `SUPERADMIN_ROLE_CODE`，`UserContext.is_superadmin`），不再是 `is_admin` 属性。
+- **行级过滤统一入口**：`app/db/repositories/data_scope.py` 的 `apply_owner_scope(query, model, user, include_shared=...)`；`user=None` 或 `is_superadmin` 表示系统上下文不过滤。新增按用户隔离的表必须接入。
+- **权限即时生效**：`RBACCheckService` 快照缓存（`RBACSnapshotCache`，TTL 60s），角色/权限/授权变更后主动失效；判定一律以服务端快照为准，不信任 JWT 内嵌副本。
+- **站点可见性**：`SiteGrantService.get_visible_sites(user)`（`None`=不过滤）；搜索经 `filter_args["user_id"]` 过滤，RSS 轮询执行时兜底，站点统计数据按可见站点裁剪。
+- **通知路由**：归属用户事件走 `Message.send_user_msg`（Web 隔离 + 绑定渠道定向），全局渠道只收系统事件。
+- **IM 渠道**：入站经 `ChannelBindingService.resolve_user` 解析系统用户，未绑定拒绝；`/bind <code>` 绑定；出站经绑定表翻译目标。
+- **删除级联**：服务层 `OwnedDataCleaner` 显式清理（SQLite 未启用外键级联，不能只依赖 FK）。
+- **共享资源保护**（ADR-021 6.1）：用户操作单向性；站点请求/磁盘等全局闸门；RSS 站点级聚合；插件禁止绕过 repository 直连 ORM。
+- 设计全文：`docs/decisions/ADR-021-multi-user-data-permission.md`。
+
+
 ## 数据库
 - 工厂: `src/app/db/database_factory.py`
 - 迁移: `alembic/` 目录（`alembic upgrade head`）
