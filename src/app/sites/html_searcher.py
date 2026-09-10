@@ -179,7 +179,6 @@ class HtmlSiteSearcher:
             if isinstance(v, str) and "{keyword}" in v:
                 param_name = str(k)
                 break
-        input_selector = f'input[name="{param_name}"]'
         submit_selectors = [
             "#search_btn",
             "button.js-torrent-search-submit",
@@ -208,32 +207,31 @@ class HtmlSiteSearcher:
                 user_agent=self._user_config.get("ua"),
                 proxy_url=proxy_url,
             ) as session:
+                input_selector = f'#torrent-search-form input[name="{param_name}"]'
                 session.navigate(base_url, cookie=self._user_config.get("cookie") or "")
-                # 内嵌验证需数秒自动完成后再求解。这里不做 is_challenge 判断：
-                # 站点引入 challenge-platform 脚本会被误判为拦截页，导致无谓等待
-                # 并错过验证窗口（实测导航后立即/等待判断再求解均会使点击失效）。
-                time.sleep(3)
-                try:
-                    session.turnstile(timeout=15)
-                except Exception as e:  # noqa: BLE001
-                    log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 求解失败: {e}")
-                time.sleep(1)
-                # 记录提交前结果签名
-                baseline_html = session.html()
+                time.sleep(5)
                 baseline_sig = tuple(
-                    str(r.get("title")) for r in (self._parse_html(baseline_html, is_browse=True) or [])
+                    str(r.get("title")) for r in (self._parse_html(session.html(), is_browse=True) or [])
                 )
-                # 提交并等待结果签名变化；按钮可能因验证未就绪暂时禁用，重试数次
-                for _attempt in range(4):
-                    session.input(input_selector, keyword)
-                    time.sleep(1)
+                # 重试"点击验证 → 填词 → 提交 → 查结果"：CF 限流时才出现验证，
+                # 点击生效后按钮解除禁用；未限流时直接可提交。
+                for _attempt in range(6):
+                    try:
+                        session.turnstile(timeout=8)
+                    except Exception as e:  # noqa: BLE001
+                        log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 点击失败: {e}")
+                    try:
+                        session.input(input_selector, keyword)
+                    except Exception as e:  # noqa: BLE001
+                        log.debug(f"[HtmlSiteSearcher]{self._site.name} 填充关键词失败: {e}")
+                    time.sleep(0.5)
                     for sel in submit_selectors:
                         try:
                             session.click(sel)
                             break
                         except Exception:  # noqa: BLE001, S112
                             continue
-                    for _ in range(6):
+                    for _ in range(5):
                         time.sleep(2)
                         html = session.html()
                         sig = tuple(str(r.get("title")) for r in (self._parse_html(html, is_browse=False) or []))
