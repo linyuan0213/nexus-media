@@ -21,6 +21,7 @@ from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
 from app.infrastructure.chrome.challenge import has_pending_turnstile, is_challenge
 from app.infrastructure.chrome.session import BrowserSession
+from app.infrastructure.chrome.site_lock import site_serial
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.sites import engine_tools
 from app.sites.api_searcher import ApiSiteSearcher
@@ -188,6 +189,18 @@ class HtmlSiteSearcher:
         fp_profile_id = browser_cfg.fp_profile_id if browser_cfg else None
         fingerprint = browser_cfg.fingerprint_profile if browser_cfg else "stealth"
         cookie = self._user_config.get("cookie") or ""
+
+        def _reuse_fetch(session) -> str | None:
+            """复用会话 clearance 直接请求搜索链接（锁外，允许并发）."""
+            try:
+                res = session.fetch(search_url, method="GET")
+                body = (res or {}).get("body") or (res or {}).get("html") or ""
+                if body and self._parse_html(body, is_browse=False):
+                    return body
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[HtmlSiteSearcher]{self._site.name} 复用会话请求失败: {e}")
+            return None
+
         try:
             with BrowserSession(
                 session_id,
@@ -196,37 +209,36 @@ class HtmlSiteSearcher:
                 proxy_url=proxy_url,
                 fp_profile_id=fp_profile_id,
                 fingerprint=fingerprint,
+                persist=True,
             ) as session:
-                # 直接导航搜索结果页：导航过程中由 chrome 过 CF，命中即返回
-                session.navigate(search_url, cookie=cookie)
-                html = session.html()
-                if html and self._parse_html(html, is_browse=False):
-                    log.info(f"[HtmlSiteSearcher]{self._site.name} 过盾后搜索成功")
-                    return html
-                # 未命中：打开搜索页再过一次盾后重试
-                session.navigate(base_url, cookie=cookie)
-                session.navigate(search_url, cookie=cookie)
-                html = session.html()
-                if html and self._parse_html(html, is_browse=False):
-                    return html
-                # 3) 仅有内嵌验证时处理一次，再重试
-                try:
-                    session.turnstile(timeout=8)
-                except Exception as e:  # noqa: BLE001
-                    log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 处理失败: {e}")
-                session.navigate(search_url, cookie=cookie)
-                html = session.html()
-                if html and self._parse_html(html, is_browse=False):
-                    return html
-                # 4) 兜底：会话内 HTTP 重提搜索链接
-                try:
-                    res = session.fetch(search_url, method="GET")
-                    body = (res or {}).get("body") or (res or {}).get("html") or ""
-                    if body and self._parse_html(body, is_browse=False):
-                        return body
-                except Exception as e:  # noqa: BLE001
-                    log.debug(f"[HtmlSiteSearcher]{self._site.name} 重提搜索失败: {e}")
-                return None
+                # 1) 过盾后的并发路径：已有 clearance 时直接请求，无需拿站点锁
+                reused = _reuse_fetch(session)
+                if reused:
+                    return reused
+                # 2) 需要过盾：仅此阶段串行（双重检查，避免并发重复过盾）
+                with site_serial(session_id):
+                    reused = _reuse_fetch(session)
+                    if reused:
+                        return reused
+                    session.navigate(search_url, cookie=cookie)
+                    html = session.html()
+                    if html and self._parse_html(html, is_browse=False):
+                        log.info(f"[HtmlSiteSearcher]{self._site.name} 过盾后搜索成功")
+                        return html
+                    session.navigate(base_url, cookie=cookie)
+                    session.navigate(search_url, cookie=cookie)
+                    html = session.html()
+                    if html and self._parse_html(html, is_browse=False):
+                        return html
+                    try:
+                        session.turnstile(timeout=8)
+                    except Exception as e:  # noqa: BLE001
+                        log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 处理失败: {e}")
+                    session.navigate(search_url, cookie=cookie)
+                    html = session.html()
+                    if html and self._parse_html(html, is_browse=False):
+                        return html
+                    return None
         except Exception as e:  # noqa: BLE001
             log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器搜索失败: {e}")
             return None

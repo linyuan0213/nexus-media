@@ -31,6 +31,7 @@ class _BaseBrowserSession:
         fp_profile_id: str | None = None,
         timeout: float = 60.0,
         api_key: str | None = None,
+        persist: bool = False,
     ):
         self.site_key = site_key
         self.server_url = server_url.rstrip("/")
@@ -41,6 +42,8 @@ class _BaseBrowserSession:
         self.timeout = timeout
         self.session_id = site_key
         self._slot: Any = None
+        # persist=True 时关闭不删除会话，保留过盾 Cookie 供后续请求复用
+        self._persist = persist
         # 会话键可能含 URL（https://...），规范化为 URL 安全 id，避免路径 404
         self.session_id = to_session_id(site_key)
         self._sid = quote(self.session_id, safe="")
@@ -154,7 +157,9 @@ class BrowserSession(_BaseBrowserSession):
         response.raise_for_status()
         return response.json().get("data", {})
 
-    def close(self, delete_session: bool = True) -> None:
+    def close(self, delete_session: bool | None = None) -> None:
+        if delete_session is None:
+            delete_session = not self._persist
         if delete_session:
             try:
                 self._client.delete(self._session_url(f"/sessions/{self._sid}"))
