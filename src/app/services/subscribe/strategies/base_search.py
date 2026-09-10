@@ -237,6 +237,7 @@ class BaseSearchStrategy:
                             no_exists=no_exists,
                             sites=self._get_effective_search_sites(rss_info, MediaType.MOVIE),
                             filters=filters,
+                            user_id=rss_info.get("user_id"),
                         )
                         if search_result:
                             if over_edition:
@@ -425,6 +426,7 @@ class BaseSearchStrategy:
                         no_exists=rss_no_exists_local,
                         sites=sites,
                         filters=filters_tv,
+                        user_id=rss_info.get("user_id"),
                     )
                     if over_edition:
                         if search_result:

@@ -252,3 +252,36 @@ class TestEffectiveSearchSites:
         sys_config.get.return_value = {"search_sites": []}
         strategy._system_config = sys_config
         assert strategy._get_effective_search_sites({"search_sites": []}, MediaType.TV) is None
+
+
+class TestSubscribeSearchEnforcesOwnerScope:
+    """订阅搜索必须透传归属用户，确保按用户可见站点过滤（防止兜底越权）"""
+
+    def test_search_movies_passes_owner_user_id(self, strategy):
+        strategy._system_config = None  # 无默认设置 → sites=None（全部可见）
+        strategy._service.get_subscribe_movies.return_value = {"1": {"id": 1, "name": "Movie", "user_id": 7}}
+        strategy._movie_repo = MagicMock()
+        strategy._searcher.search_one_media.return_value = (None, None, None, None)
+        strategy._downloader.check_exists_medias.return_value = (False, {}, None)
+        with patch.object(strategy, "_get_media_info", return_value=_MediaInfo()):
+            strategy._search_movies()
+        _, kwargs = strategy._searcher.search_one_media.call_args
+        assert kwargs["user_id"] == 7
+        assert kwargs["sites"] is None
+
+    def test_search_tvs_passes_owner_user_id(self, strategy):
+        strategy._system_config = None
+        strategy._service.get_subscribe_tvs.return_value = {
+            "1": {"id": 1, "name": "TV", "season": 1, "total": 10, "user_id": 8}
+        }
+        strategy._tv_repo = MagicMock()
+        strategy._tv_episode_repo = MagicMock()
+        strategy._tv_episode_repo.get.return_value = None
+        media = _MediaInfo()
+        media.type = "tv"
+        strategy._searcher.search_one_media.return_value = (None, {}, None, None)
+        strategy._downloader.check_exists_medias.return_value = (False, {123: [{"season": 1, "episodes": [1]}]}, None)
+        with patch.object(strategy, "_get_media_info", return_value=media):
+            strategy._search_tvs()
+        _, kwargs = strategy._searcher.search_one_media.call_args
+        assert kwargs["user_id"] == 8
