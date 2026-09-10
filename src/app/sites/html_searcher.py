@@ -201,11 +201,16 @@ class HtmlSiteSearcher:
             )
             # 使用与 ChromeTransport 相同的会话键，确保过盾 Cookie 可被后续抓取复用
             session_id = make_session_key(domain, browser_cfg) if browser_cfg else domain
+            # 必须携带与 session_id/站点 UA 匹配的指纹画像：站点 UA 为 Mac 时若落到
+            # 默认 Linux 实例，会出现「UA=Mac / navigator.platform=Linux」的自相矛盾，
+            # 被 Cloudflare Turnstile 判为异常而拒绝渲染（表现为一直过不了盾）。
             with BrowserSession(
                 session_id,
                 server_url=server,
                 user_agent=self._user_config.get("ua"),
                 proxy_url=proxy_url,
+                fp_profile_id=browser_cfg.fp_profile_id if browser_cfg else None,
+                fingerprint=browser_cfg.fingerprint_profile if browser_cfg else "stealth",
             ) as session:
                 input_selector = f'#torrent-search-form input[name="{param_name}"]'
                 session.navigate(base_url, cookie=self._user_config.get("cookie") or "")

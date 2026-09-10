@@ -75,7 +75,10 @@ def build_browser_mode(
         site_key=site_key,
         fingerprint_profile="stealth",
         fp_profile_id=fp_profile_id,
-        user_agent=site_info.get("ua"),
+        # 指纹画像自带完整 UA/平台；站点 ua 可能与画像平台不一致（如移动画像配桌面
+        # UA），同时下发会造成 UA 与 navigator.platform/WebGL 自相矛盾，被 Cloudflare
+        # 判定为异常。仅在无画像时才用站点 ua 覆盖。
+        user_agent=None if fp_profile_id else site_info.get("ua"),
         proxy_url=proxy_url,
         render_html=render_html if render_html is not None else bool(site_info.get("browser_render")),
         api_key=get_chrome_api_key(),
