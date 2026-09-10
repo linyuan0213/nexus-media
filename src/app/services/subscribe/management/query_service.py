@@ -12,13 +12,21 @@ from app.utils.json_utils import JsonUtils
 class SubscribeQueryService:
     """订阅查询服务"""
 
-    def __init__(self, movie_repo, tv_repo, tv_episode_repo, history_repo, sites, indexer_service):
+    def __init__(self, movie_repo, tv_repo, tv_episode_repo, history_repo, sites, indexer_service, user_repo=None):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
         self._tv_episode_repo = tv_episode_repo
         self._history_repo = history_repo
         self._sites = sites
         self._indexer_service = indexer_service
+        self._user_repo = user_repo
+
+    def _usernames(self, rows) -> dict[int, str]:
+        """批量解析订阅归属用户名（无 user_repo 时返回空映射）"""
+        if self._user_repo is None:
+            return {}
+        ids = list({r.USER_ID for r in rows if getattr(r, "USER_ID", None)})
+        return self._user_repo.get_usernames_by_ids(ids) if ids else {}
 
     def get_subscribe_movies(
         self, rid: int | None = None, state: str | None = None, user: UserContext | None = None
@@ -26,6 +34,7 @@ class SubscribeQueryService:
         """获取电影订阅（user 非空时按数据归属过滤）"""
         ret_dict = {}
         rss_movies = self._movie_repo.get_all(rssid=rid, state=state, user=user)
+        usernames = self._usernames(rss_movies)
         rss_sites_valid = self._sites.get_site_names(rss=True)
         search_sites_valid = self._indexer_service.get_user_indexer_names()
         for rss_movie in rss_movies:
@@ -67,6 +76,7 @@ class SubscribeQueryService:
             ret_dict[str(rss_movie.ID)] = {
                 "id": rss_movie.ID,
                 "user_id": rss_movie.USER_ID,
+                "username": usernames.get(rss_movie.USER_ID) if rss_movie.USER_ID else None,
                 "name": rss_movie.NAME,
                 "year": rss_movie.YEAR,
                 "tmdbid": rss_movie.TMDBID,
@@ -100,6 +110,7 @@ class SubscribeQueryService:
         """获取电视剧订阅（user 非空时按数据归属过滤）"""
         ret_dict = {}
         rss_tvs = self._tv_repo.get_all(rssid=rid, state=state, user=user)
+        usernames = self._usernames(rss_tvs)
         rss_sites_valid = self._sites.get_site_names(rss=True)
         search_sites_valid = self._indexer_service.get_user_indexer_names()
         for rss_tv in rss_tvs:
@@ -147,6 +158,7 @@ class SubscribeQueryService:
             ret_dict[str(rss_tv.ID)] = {
                 "id": rss_tv.ID,
                 "user_id": rss_tv.USER_ID,
+                "username": usernames.get(rss_tv.USER_ID) if rss_tv.USER_ID else None,
                 "name": rss_tv.NAME,
                 "year": rss_tv.YEAR,
                 "season": rss_tv.SEASON,

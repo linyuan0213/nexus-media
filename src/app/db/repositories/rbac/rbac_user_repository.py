@@ -46,6 +46,14 @@ class RBACUserRepository(BaseRepository):
         with self.session() as db:
             return self._get_user_with_roles(db, user_id)
 
+    def get_usernames_by_ids(self, user_ids: list[int]) -> dict[int, str]:
+        """批量查询用户名映射 {user_id: username}（订阅归属展示用）"""
+        if not user_ids:
+            return {}
+        with self.session() as db:
+            rows = db.query(RBACUser.ID, RBACUser.USERNAME).filter(RBACUser.ID.in_(user_ids)).all()
+            return {row[0]: row[1] for row in rows}
+
     def get_user_by_username(self, username: str) -> RBACUser | None:
         """
         根据用户名获取用户（不过滤状态，让上层判断）

@@ -3,6 +3,7 @@
 from typing import Any
 
 import log
+from app.db.repositories.rbac.rbac_user_repo_adapter import RBACUserRepositoryAdapter
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SystemConfigKey
 from app.domain.mediatypes import MediaType
@@ -35,6 +36,7 @@ class SubscribeService:
         system_config: Any,
         download_repo: Any = None,
         transfer_history_manager: Any = None,
+        user_repo: Any = None,
     ):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
@@ -77,6 +79,8 @@ class SubscribeService:
         self._finish_svc = SubscribeFinishService(
             self._movie_repo, self._tv_repo, self._history_repo, self._message, self._event_bus, self._download_repo
         )
+        if user_repo is None:
+            user_repo = RBACUserRepositoryAdapter()
         self._query_svc = SubscribeQueryService(
             self._movie_repo,
             self._tv_repo,
@@ -84,6 +88,7 @@ class SubscribeService:
             self._history_repo,
             self._sites,
             self._indexer_service,
+            user_repo,
         )
         self._refresh_svc = SubscribeRefreshService(self._movie_repo, self._tv_repo, self._tv_episode_repo, self._media)
 

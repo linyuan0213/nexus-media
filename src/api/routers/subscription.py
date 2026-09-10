@@ -42,6 +42,7 @@ router = APIRouter()
 
 class EmptyRequest(BaseModel):
     data: dict | None = None
+    user_id: int | None = None  # superadmin 按归属用户过滤订阅列表
 
 
 class AddRssMediaRequest(BaseModel):
@@ -233,6 +234,13 @@ def _invoke_for_seasons(
             kwargs["current_ep"] = current_ep
         code, msg, media_info = invoke(**kwargs)
     return code, msg, media_info
+
+
+def _scoped_user(user: UserContext, target_user_id: int | None) -> UserContext:
+    """superadmin 可通过 user_id 过滤查看指定用户订阅；普通用户忽略该参数（行级过滤兜底）"""
+    if target_user_id and user.is_superadmin:
+        return user.model_copy(update={"user_id": target_user_id, "role_codes": []})
+    return user
 
 
 def _check_site_grants(app_context, user: UserContext, kwargs: dict) -> list[str]:
@@ -535,7 +543,7 @@ def get_movie_rss_list(
     user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
-    result = svc.get_subscribe_movies(user=user)
+    result = svc.get_subscribe_movies(user=_scoped_user(user, req.user_id))
     return success(data=list(result.values()) if isinstance(result, dict) else result)
 
 
@@ -565,7 +573,7 @@ def get_tv_rss_list(
     user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
-    result = svc.get_subscribe_tvs(user=user)
+    result = svc.get_subscribe_tvs(user=_scoped_user(user, req.user_id))
     return success(data=list(result.values()) if isinstance(result, dict) else result)
 
 

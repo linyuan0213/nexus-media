@@ -25,6 +25,10 @@ class RBACUserRepositoryAdapter(IRBACUserRepository):
         row = self._repo.get_user_by_id(user_id)
         return RBACUserEntity.from_orm(row)
 
+    def get_usernames_by_ids(self, user_ids: list[int]) -> dict[int, str]:
+        """批量查询用户名映射 {user_id: username}（订阅归属展示用）"""
+        return self._repo.get_usernames_by_ids(user_ids)
+
     def get_user_by_username(self, username: str) -> RBACUserEntity | None:
         row = self._repo.get_user_by_username(username)
         return RBACUserEntity.from_orm(row)
