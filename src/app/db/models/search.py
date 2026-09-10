@@ -5,7 +5,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, Float, ForeignKey, Index, Integer, Sequence, String, Text
+from sqlalchemy import BigInteger, DateTime, Float, Index, Integer, Sequence, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -14,6 +14,7 @@ from app.db.models.base import Base
 class SEARCHRESULTINFO(Base):
     __tablename__ = "SEARCH_RESULT_INFO"
     __table_args__ = (
+        Index("ix_search_result_user_id", "USER_ID"),
         # 使用前缀索引避免超过 MySQL InnoDB utf8mb4 3072 字节限制
         Index(
             "uq_search_pageurl_site_session",
@@ -26,7 +27,8 @@ class SEARCHRESULTINFO(Base):
     )
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
+    # 既有列（migration t1u2v3w4x5y6）：字符串用户标识，索引名沿用历史命名
+    USER_ID: Mapped[str | None] = mapped_column(String(64), nullable=True)
     TORRENT_NAME: Mapped[str] = mapped_column(String(255))
     ENCLOSURE: Mapped[str] = mapped_column(String(8192), default="", server_default="")
     DESCRIPTION: Mapped[str] = mapped_column(Text, default="")

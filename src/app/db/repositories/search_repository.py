@@ -118,7 +118,7 @@ class SearchRepository(BaseRepository):
                 if session_id:
                     mapping["SEARCH_SESSION_ID"] = session_id
                 if user_id:
-                    mapping["USER_ID"] = int(user_id)
+                    mapping["USER_ID"] = str(user_id)
                 mapping["CREATED_AT"] = datetime.now(timezone.utc).replace(tzinfo=None)
                 mappings.append(mapping)
 
@@ -203,7 +203,7 @@ class SearchRepository(BaseRepository):
                 # 归属过滤：本人行 + NULL（系统/后台）行
                 query = query.filter(
                     or_(
-                        SEARCHRESULTINFO.USER_ID == int(user_id),
+                        SEARCHRESULTINFO.USER_ID == str(user_id),
                         SEARCHRESULTINFO.USER_ID.is_(None),
                     )
                 )

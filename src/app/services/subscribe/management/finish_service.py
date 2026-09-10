@@ -31,6 +31,7 @@ class SubscribeFinishService:
             rss = self._movie_repo.get_all(rssid=rssid)
             if not rss:
                 return
+            owner_user_id = getattr(rss[0], "USER_ID", None)
             self._history_repo.upsert(
                 rssid=rssid,
                 rtype=rtype,
@@ -39,6 +40,7 @@ class SubscribeFinishService:
                 tmdbid=rss[0].TMDBID,
                 image=media.get_poster_image(),
                 desc=media.overview,
+                user_id=owner_user_id,
             )
             delete_subscribe_fn(mtype=MediaType.MOVIE, rssid=rssid)
         else:
@@ -47,6 +49,7 @@ class SubscribeFinishService:
                 return
             total = rss[0].TOTAL_EP
             over_edition = bool(rss[0].OVER_EDITION) if hasattr(rss[0], "OVER_EDITION") else False
+            owner_user_id = getattr(rss[0], "USER_ID", None)
             self._history_repo.upsert(
                 rssid=rssid,
                 rtype=rtype,
@@ -58,6 +61,7 @@ class SubscribeFinishService:
                 desc=media.overview,
                 total=total,
                 start=rss[0].CURRENT_EP,
+                user_id=owner_user_id,
             )
             delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
 
@@ -76,4 +80,4 @@ class SubscribeFinishService:
             f"[Subscribe]{media.type.value} {media.get_title_string()} "
             f"{media.get_season_string()} 订阅完成，删除订阅..."
         )
-        self._message.send_rss_finished_message(media_info=media)
+        self._message.send_rss_finished_message(media_info=media, owner_user_id=getattr(rss[0], "USER_ID", None))

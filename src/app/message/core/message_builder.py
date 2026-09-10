@@ -267,7 +267,7 @@ class MessageBuilder:
                     template_engine=self._template_engine,
                 )
 
-    def send_rss_finished_message(self, media_info) -> None:
+    def send_rss_finished_message(self, media_info, owner_user_id: int | None = None) -> None:
         if media_info.type == MediaType.MOVIE:
             return
         if media_info.over_edition:
@@ -277,6 +277,12 @@ class MessageBuilder:
         msg_str = f"类型：{media_info.type.display_name}"
         if media_info.vote_average:
             msg_str = f"{msg_str}，{media_info.get_vote_string()}"
+        # 归属用户的订阅完成事件：定向推送（ADR-021 5.6）
+        if owner_user_id:
+            self._dispatcher.send_user_msg(
+                owner_user_id, msg_title, msg_str, image=media_info.get_message_image(), url="downloaded"
+            )
+            return
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
         for client in self._client_manager.active_clients:
