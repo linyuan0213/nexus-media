@@ -216,26 +216,30 @@ class HtmlSiteSearcher:
                         break
                     time.sleep(2)
                     html = session.html()
+                # 记录提交前结果签名：首页本身就有行，且注入输入值也会改变 HTML，
+                # 必须用"结果标题集合变化"判定搜索是否真正生效
+                baseline_html = session.html()
+                baseline_sig = tuple(
+                    str(r.get("title")) for r in (self._parse_html(baseline_html, is_browse=True) or [])
+                )
                 session.input(input_selector, keyword)
                 time.sleep(1)
-                # 记录提交前页面：首页/列表页本身就有行，必须等提交后页面变化再判定成功
-                before = session.html()
                 for sel in submit_selectors:
                     try:
                         session.click(sel)
                         break
                     except Exception:  # noqa: BLE001, S112  # 选择器不存在则尝试下一个
                         continue
-                # 轮询直到页面变化且可解析出结果（挑战/异步渲染需时间）
+                # 轮询直到结果签名变化（提交生效），异步渲染/挑战需时间
                 changed = False
                 for _ in range(15):
                     time.sleep(2)
                     html = session.html()
-                    if html != before:
+                    sig = tuple(str(r.get("title")) for r in (self._parse_html(html, is_browse=False) or []))
+                    if sig and sig != baseline_sig:
                         changed = True
-                        if self._parse_html(html, is_browse=False):
-                            break
-                # 页面未变化说明提交未生效：返回 None，避免把首页当搜索结果
+                        break
+                # 结果未变化说明提交未生效：返回 None，避免把首页当搜索结果
                 return html if changed else None
         except Exception as e:  # noqa: BLE001
             log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器表单搜索失败: {e}")

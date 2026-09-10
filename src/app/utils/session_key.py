@@ -6,7 +6,8 @@ import re
 def to_session_id(key: str) -> str:
     """规范化为 URL 安全会话 id.
 
-    会话键可能包含站点 URL（如 https://a.me），其中的 `/` 等字符无法作为
-    单个路径段传给 nexus-chrome；统一替换为 `_`（仅作标识，无需可逆）。
+    只保留 [A-Za-z0-9_-]，其余（`/`、`:`、`.` 等）替换为 `_`：
+    URL 型会话键含 `/`、`:` 等字符，编码后仍可能不被 nexus-chrome 路由正确解码，
+    因此统一为纯 ASCII 安全 id（仅作标识，无需可逆）。
     """
-    return re.sub(r"[^A-Za-z0-9_.:\-]", "_", key or "")
+    return re.sub(r"[^A-Za-z0-9_-]", "_", key or "")
