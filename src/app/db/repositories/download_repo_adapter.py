@@ -69,8 +69,8 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
         self._repo.insert_download_history(media_info, downloader, download_id, save_dir, user_id=user_id)
 
     # 兼容旧Repository方法名
-    def get_download_history(self, date=None, hid=None, num=30, page=1):
-        return self._repo.get_download_history(date=date, hid=hid, num=num, page=page)
+    def get_download_history(self, date=None, hid=None, num=30, page=1, user=None):
+        return self._repo.get_download_history(date=date, hid=hid, num=num, page=page, user=user)
 
     # 兼容旧Repository方法名
     def get_download_history_by_title(self, title: str):

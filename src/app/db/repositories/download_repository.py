@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import Integer, and_, case, cast, func, tuple_
+from sqlalchemy import Integer, and_, case, cast, func, or_, tuple_
 
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
@@ -195,7 +195,12 @@ class DownloadRepository(BaseRepository):
                 )
 
     def get_download_history(
-        self, date: str | None = None, hid: int | None = None, num: int = 30, page: int = 1
+        self,
+        date: str | None = None,
+        hid: int | None = None,
+        num: int = 30,
+        page: int = 1,
+        user=None,
     ) -> list[DOWNLOADHISTORY]:
         """
         查询下载历史
@@ -203,7 +208,12 @@ class DownloadRepository(BaseRepository):
         """
         with self.session() as db:
             if hid:
-                return db.query(DOWNLOADHISTORY).filter(int(hid) == DOWNLOADHISTORY.ID).all()
+                query = db.query(DOWNLOADHISTORY).filter(int(hid) == DOWNLOADHISTORY.ID)
+                if user is not None and not user.is_superadmin:
+                    query = query.filter(
+                        or_(DOWNLOADHISTORY.USER_ID == user.user_id, DOWNLOADHISTORY.USER_ID.is_(None))
+                    )
+                return query.all()
 
             # 使用子查询获取每个 TMDBID + SE 组合的最大日期，而非仅按 TITLE 聚合
             sub_query = (
@@ -212,11 +222,16 @@ class DownloadRepository(BaseRepository):
                 .subquery()
             )
 
+            owner_filter = None
+            if user is not None and not user.is_superadmin:
+                owner_filter = or_(DOWNLOADHISTORY.USER_ID == user.user_id, DOWNLOADHISTORY.USER_ID.is_(None))
+
             if date:
+                base = db.query(DOWNLOADHISTORY).filter(date < DOWNLOADHISTORY.DATE)
+                if owner_filter is not None:
+                    base = base.filter(owner_filter)
                 return (
-                    db.query(DOWNLOADHISTORY)
-                    .filter(date < DOWNLOADHISTORY.DATE)
-                    .join(
+                    base.join(
                         sub_query,
                         and_(
                             sub_query.c.TMDBID == DOWNLOADHISTORY.TMDBID,
@@ -229,9 +244,11 @@ class DownloadRepository(BaseRepository):
                 )
             else:
                 offset = (int(page) - 1) * int(num)
+                base = db.query(DOWNLOADHISTORY)
+                if owner_filter is not None:
+                    base = base.filter(owner_filter)
                 return (
-                    db.query(DOWNLOADHISTORY)
-                    .join(
+                    base.join(
                         sub_query,
                         and_(
                             sub_query.c.TMDBID == DOWNLOADHISTORY.TMDBID,

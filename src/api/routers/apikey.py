@@ -107,7 +107,7 @@ async def list_api_keys(
     service: APIKeyService = Depends(get_apikey_service),
 ):
     """获取 API Key 列表"""
-    result = service.list_keys(page=page, page_size=page_size)
+    result = service.list_keys(page=page, page_size=page_size, user=user)
     return success(data=result)
 
 
@@ -124,6 +124,7 @@ async def update_api_key(
         name=req.name,
         status=req.status,
         description=req.description,
+        user=user,
     )
     if not ok:
         raise NexusError("API Key 不存在或更新失败", errcode=ErrorCode.APIKEY_NOT_FOUND, http_status=404)
@@ -137,7 +138,7 @@ async def delete_api_key(
     service: APIKeyService = Depends(get_apikey_service),
 ):
     """删除 API Key"""
-    ok = service.delete_key(key_id)
+    ok = service.delete_key(key_id, user=user)
     if not ok:
         raise NexusError("API Key 不存在", errcode=ErrorCode.APIKEY_NOT_FOUND, http_status=404)
     return success(message="删除成功")

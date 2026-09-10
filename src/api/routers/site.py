@@ -477,16 +477,18 @@ def get_visible_sites(
     current_user=Depends(get_current_user),
     app_context=Depends(get_app_context),
 ):
-    """当前用户可用于搜索的站点列表（closed 策略下按站点授权白名单过滤）"""
+    """当前用户可用站点列表（closed 策略下按站点授权白名单过滤），带用途粒度"""
     grant_service = app_context.site_grant_service
     visible = grant_service.get_visible_sites(current_user)
     indexers = app_context.indexer_service.indexer.get_indexers_with_source(check=True)
     if visible is None:
-        # 不过滤：superadmin 或 open 策略
-        return success(data=indexers)
-    sites = [
-        item
-        for item in indexers
-        if grant_service.is_site_allowed(visible, item["name"], item["source"], usage="search")
-    ]
+        # 不过滤：superadmin 或 open 策略，全部用途可用
+        return success(data=[{**item, "permissions": ["search", "rss"]} for item in indexers])
+    sites = []
+    for item in indexers:
+        grants: set[str] = set()
+        for key in (f"{item['source']}:{item['name']}", f"{item['source']}:*", item["name"]):
+            grants |= visible.get(key, set())
+        if grants:
+            sites.append({**item, "permissions": sorted(grants)})
     return success(data=sites)

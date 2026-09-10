@@ -482,8 +482,8 @@ class DownloadCore:
 
     # ---------- 历史记录 / 配置 CRUD 代理 ----------
 
-    def get_download_history(self, date=None, hid=None, num=30, page=1):
-        return self._download_repo.get_download_history(date=date, hid=hid, num=num, page=page)
+    def get_download_history(self, date=None, hid=None, num=30, page=1, user=None):
+        return self._download_repo.get_download_history(date=date, hid=hid, num=num, page=page, user=user)
 
     def get_download_history_by_title(self, title):
         return self._download_repo.get_download_history_by_title(title=title) or []

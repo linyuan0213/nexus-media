@@ -32,8 +32,10 @@ class APIKeyRepositoryAdapter(IAPIKeyRepository):
         row = self._repo.get_by_name(name, status)
         return APIKeyEntity.from_orm(row)
 
-    def list_keys(self, page: int = 1, page_size: int = 50) -> tuple[list[APIKeyEntity], int]:
-        rows, total = self._repo.list_keys(page, page_size)
+    def list_keys(
+        self, page: int = 1, page_size: int = 50, created_by: int | None = None
+    ) -> tuple[list[APIKeyEntity], int]:
+        rows, total = self._repo.list_keys(page, page_size, created_by=created_by)
         return [e for e in [APIKeyEntity.from_orm(r) for r in rows] if e is not None], total
 
     def create_key(

@@ -77,10 +77,18 @@ class APIKeyService:
         except Exception as e:
             ExceptionUtils.log_and_raise(e, target=ServiceError, message="创建 API Key 失败")
 
-    def list_keys(self, page: int = 1, page_size: int = 50) -> dict[str, Any]:
-        """获取 API Key 列表"""
+    def _is_owner(self, key_id: int, user_id: int) -> bool:
+        """校验 API Key 归属（CREATED_BY）"""
+        items, _ = self._key_repo.list_keys(page=1, page_size=200, created_by=user_id)
+        return any(getattr(i, "id", None) == key_id for i in items)
+
+    def list_keys(self, page: int = 1, page_size: int = 50, user=None) -> dict[str, Any]:
+        """获取 API Key 列表（普通用户仅见自己创建的）"""
         try:
-            items, total = self._key_repo.list_keys(page, page_size)
+            created_by = None
+            if user is not None and not user.is_superadmin:
+                created_by = user.user_id
+            items, total = self._key_repo.list_keys(page, page_size, created_by=created_by)
             return {
                 "total": total,
                 "page": page,
@@ -93,9 +101,17 @@ class APIKeyService:
             ExceptionUtils.log_and_raise(e, target=ServiceError, message="获取 API Key 列表失败")
 
     def update_key(
-        self, key_id: int, name: str | None = None, status: int | None = None, description: str | None = None
+        self,
+        key_id: int,
+        name: str | None = None,
+        status: int | None = None,
+        description: str | None = None,
+        user=None,
     ) -> bool:
-        """更新 API Key"""
+        """更新 API Key（普通用户仅可操作自己创建的）"""
+        if user is not None and not user.is_superadmin:
+            if not self._is_owner(key_id, user.user_id):
+                return False
         try:
             kwargs = {}
             if name is not None:
@@ -110,8 +126,11 @@ class APIKeyService:
         except Exception as e:
             ExceptionUtils.log_and_raise(e, target=ServiceError, message="更新 API Key 失败")
 
-    def delete_key(self, key_id: int) -> bool:
-        """删除 API Key"""
+    def delete_key(self, key_id: int, user=None) -> bool:
+        """删除 API Key（普通用户仅可删除自己创建的）"""
+        if user is not None and not user.is_superadmin:
+            if not self._is_owner(key_id, user.user_id):
+                return False
         try:
             return self._key_repo.delete_key(key_id)
         except (ServiceError, RepositoryError):

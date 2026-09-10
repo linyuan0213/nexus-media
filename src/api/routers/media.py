@@ -408,7 +408,7 @@ def get_downloaded(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: Downloader = Depends(get_downloader_service),
 ):
-    items = svc.get_download_history(page=req.page or 1, num=req.page_size or 30)
+    items = svc.get_download_history(page=req.page or 1, num=req.page_size or 30, user=current_user)
     if items:
         return success(
             data=[

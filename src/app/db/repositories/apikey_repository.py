@@ -37,10 +37,13 @@ class APIKeyRepository(BaseRepository):
                 query = query.filter(status == APIKEY.STATUS)
             return query.order_by(desc(APIKEY.CREATED_AT)).first()
 
-    def list_keys(self, page: int = 1, page_size: int = 50) -> tuple[list[APIKEY], int]:
-        """获取 API Key 列表（支持分页）"""
+    def list_keys(self, page: int = 1, page_size: int = 50, created_by: int | None = None) -> tuple[list[APIKEY], int]:
+        """获取 API Key 列表（支持分页；created_by 非空时按创建者过滤）"""
         with self.session() as db:
-            query = db.query(APIKEY).order_by(desc(APIKEY.CREATED_AT))
+            query = db.query(APIKEY)
+            if created_by is not None:
+                query = query.filter(APIKEY.CREATED_BY == created_by)
+            query = query.order_by(desc(APIKEY.CREATED_AT))
             total = query.count()
             items = self._paginate(query, page, page_size).all()
             return items, total
