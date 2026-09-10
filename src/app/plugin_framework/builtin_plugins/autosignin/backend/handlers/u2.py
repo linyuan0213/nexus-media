@@ -45,7 +45,7 @@ class U2(SiteSigninHandler):
                 return SigninResult.fail(site, SigninResult.SITE_UNREACHABLE)
 
         text = index_res.text
-        if "login.php" in text:
+        if self._is_cookie_expired(text, str(index_res.url)):
             return SigninResult.fail(site, SigninResult.COOKIE_EXPIRED)
 
         if self.sign_in_result(text, self._ALREADY_REGEXS):
@@ -81,6 +81,17 @@ class U2(SiteSigninHandler):
             return SigninResult.success(site)
 
         return SigninResult.fail(site, "签到失败，未知原因")
+
+    @staticmethod
+    def _is_cookie_expired(text: str, final_url: str = "") -> bool:
+        """判定 U2 会话是否失效.
+
+        不能仅凭页面含 `login.php` 链接判断——已登录的签到页同样带有该链接。
+        以登录表单（password 输入）且无登出/用户页链接，或跳转门户登录页为准。
+        """
+        is_login_page = 'name="password"' in text and "logout.php" not in text and "userdetails.php" not in text
+        redirected_to_login = "portal.php" in final_url and "returnto=" in final_url
+        return is_login_page or redirected_to_login
 
     def _extract_form_params(self, text: str) -> tuple | None:
         req = self._extract_input(text, "req")
