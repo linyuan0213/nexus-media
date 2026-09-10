@@ -264,3 +264,32 @@ class TestSiteServiceGet:
         assert result.site["rss_enable"] is True
         assert result.site["statistic_enable"] is True
         assert result.site_free is True
+
+
+class TestSiteVisibilityFilter:
+    """站点数据按授权过滤（ADR-021 6.1）"""
+
+    def test_user_statistics_filtered_by_allowed_sites(self, site_service):
+        site_service._site_user_info.get_site_user_statistics.return_value = [
+            {"site_name": "siteA", "url": "http://a"},
+            {"site_name": "siteB", "url": "http://b"},
+        ]
+        result = site_service.get_site_user_statistics(allowed_sites={"siteA"})
+        assert [r["site_name"] for r in result] == ["siteA"]
+
+    def test_user_statistics_unfiltered_when_none(self, site_service):
+        site_service._site_user_info.get_site_user_statistics.return_value = [
+            {"site_name": "siteA"},
+            {"site_name": "siteB"},
+        ]
+        assert len(site_service.get_site_user_statistics(allowed_sites=None)) == 2
+
+    def test_daily_history_limits_to_allowed_sites(self, site_service):
+        site_service._sites.get_sites.return_value = [
+            {"name": "siteA", "strict_url": "http://a"},
+            {"name": "siteB", "strict_url": "http://b"},
+        ]
+        site_service._site_repo.get_site_daily_history.return_value = {"ok": True}
+        site_service.get_site_daily_history(days=7, allowed_sites={"siteA"})
+        _, kwargs = site_service._site_repo.get_site_daily_history.call_args
+        assert kwargs["strict_urls"] == ["http://a"]

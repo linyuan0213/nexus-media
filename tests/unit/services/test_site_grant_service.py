@@ -113,3 +113,30 @@ class TestSiteGrantService:
         assert RBACSnapshotCache.get("site_grants:7") is not None
         svc.set_user_grants(7, [{"site_name": "siteX", "permissions": ["rss"]}])
         assert RBACSnapshotCache.get("site_grants:7") is None
+
+
+class TestAllowedSiteNames:
+    """路由层可见站点名解析（ADR-021 6.1）"""
+
+    def _resolve(self, visible):
+        from api.routers.site import _allowed_site_names
+
+        grant_service = MagicMock()
+        grant_service.get_visible_sites.return_value = visible
+        app_context = MagicMock()
+        app_context.site_grant_service = grant_service
+        return _allowed_site_names(MagicMock(), app_context)
+
+    def test_none_means_unrestricted(self):
+        assert self._resolve(None) is None
+
+    def test_builtin_wildcard_unrestricted(self):
+        assert self._resolve({"builtin:*": {"search"}}) is None
+
+    def test_exact_and_prefixed_names(self):
+        result = self._resolve({"siteA": {"search"}, "jackett:siteB": {"search"}})
+        assert result == {"siteA", "siteB"}
+
+    def test_source_wildcard_excluded_from_names(self):
+        result = self._resolve({"jackett:*": {"search"}, "siteA": {"search"}})
+        assert result == {"siteA"}

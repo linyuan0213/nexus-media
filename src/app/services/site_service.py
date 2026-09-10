@@ -415,9 +415,14 @@ class SiteService:
         dataset.extend(seeding_info)
         return SiteSeedingDTO(dataset=dataset)
 
-    def get_site_daily_history(self, days: int = 30, end_day: str | None = None) -> dict:
+    def get_site_daily_history(
+        self, days: int = 30, end_day: str | None = None, allowed_sites: set[str] | None = None
+    ) -> dict:
+        """站点日统计（allowed_sites 非空时仅统计被授权站点，ADR-021 6.1）"""
         site_urls = []
         for site in self._sites.get_sites(statistic=True):
+            if allowed_sites is not None and site.get("name") not in allowed_sites:
+                continue
             site_url = site.get("strict_url")
             if site_url:
                 site_urls.append(site_url)
@@ -434,8 +439,12 @@ class SiteService:
         sort_by: str | None = None,
         sort_on: str | None = None,
         site_hash: str | None = None,
+        allowed_sites: set[str] | None = None,
     ) -> list[Any]:
         statistics = self._site_user_info.get_site_user_statistics(sites=sites, encoding="DICT")
+        # 按站点授权过滤（ADR-021 6.1；None=不过滤）
+        if allowed_sites is not None:
+            statistics = [item for item in statistics if cast(dict[str, Any], item).get("site_name") in allowed_sites]
         # 修复馒头站点显示
         for item in statistics:
             item_dict = cast(dict[str, Any], item)
