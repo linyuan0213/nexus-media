@@ -30,7 +30,9 @@ class DOWNLOADHISTORY(Base):
     __tablename__ = "DOWNLOAD_HISTORY"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
+    USER_ID: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="SET NULL"), nullable=True, index=True
+    )
     TITLE: Mapped[str] = mapped_column(String(255), index=True)
     YEAR: Mapped[str] = mapped_column(String(255))
     TYPE: Mapped[str] = mapped_column(String(255))

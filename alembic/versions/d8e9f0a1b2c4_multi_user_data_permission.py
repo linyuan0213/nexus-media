@@ -33,6 +33,15 @@ USER_ID_TABLES = [
     "DOWNLOAD_HISTORY",
 ]
 
+# 业务行：随用户删除级联（ADR-021 5.7）
+CASCADE_TABLES = {
+    "SUBSCRIBE_MOVIES",
+    "SUBSCRIBE_TVS",
+    "SUBSCRIBE_HISTORY",
+    "SUBSCRIBE_TV_EPISODES",
+    "CONFIG_USER_RSS",
+}
+
 # 存量数据归属第一个 superadmin 的表
 OWNED_TO_ADMIN_TABLES = [
     "SUBSCRIBE_MOVIES",
@@ -166,6 +175,13 @@ def upgrade() -> None:
         with op.batch_alter_table(table) as batch_op:
             batch_op.add_column(sa.Column("USER_ID", sa.Integer(), nullable=True))
             batch_op.create_index(f"ix_{table}_USER_ID", ["USER_ID"])
+            batch_op.create_foreign_key(
+                f"fk_{table}_USER_ID",
+                "RBAC_USERS",
+                ["USER_ID"],
+                ["ID"],
+                ondelete="CASCADE" if table in CASCADE_TABLES else "SET NULL",
+            )
 
     # 4. 存量数据归属第一个 superadmin
     conn = op.get_bind()
@@ -202,6 +218,7 @@ def downgrade() -> None:
     for table in USER_ID_TABLES:
         if has_table(table) and has_column(table, "USER_ID"):
             with op.batch_alter_table(table) as batch_op:
+                batch_op.drop_constraint(f"fk_{table}_USER_ID", type_="foreignkey")
                 batch_op.drop_index(f"ix_{table}_USER_ID")
                 batch_op.drop_column("USER_ID")
     for table in ["RBAC_USER_CHANNELS", "RBAC_USER_SITES", "RBAC_ROLE_SITES"]:

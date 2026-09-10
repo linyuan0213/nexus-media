@@ -57,7 +57,9 @@ class USERRSSTASKHISTORY(Base):
     __tablename__ = "USERRSS_TASK_HISTORY"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
+    USER_ID: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="SET NULL"), nullable=True, index=True
+    )
     TASK_ID: Mapped[str] = mapped_column(String(255), index=True)
     TITLE: Mapped[str] = mapped_column(String(255))
     DOWNLOADER: Mapped[str] = mapped_column(String(255))

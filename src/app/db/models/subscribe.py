@@ -15,7 +15,9 @@ class SubscribeHistory(Base):
     __tablename__ = "SUBSCRIBE_HISTORY"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
+    USER_ID: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=True, index=True
+    )
     TYPE: Mapped[str] = mapped_column(String(255))
     RSSID: Mapped[str] = mapped_column(String(255), index=True)
     NAME: Mapped[str] = mapped_column(String(255))
@@ -38,7 +40,9 @@ class SubscribeMovies(Base):
     __table_args__ = (Index("UQ_SUBSCRIBE_MOVIES_USER_TMDB", "USER_ID", "TMDBID", unique=True),)
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
+    USER_ID: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=True, index=True
+    )
     NAME: Mapped[str] = mapped_column(String(255), index=True)
     YEAR: Mapped[str] = mapped_column(String(255), nullable=True)
     KEYWORD: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -86,7 +90,9 @@ class SubscribeTvs(Base):
     __table_args__ = (Index("UQ_SUBSCRIBE_TVS_USER_TMDB_SEASON", "USER_ID", "TMDBID", "SEASON", unique=True),)
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
+    USER_ID: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=True, index=True
+    )
     NAME: Mapped[str] = mapped_column(String(255), index=True)
     YEAR: Mapped[str] = mapped_column(String(255), nullable=True)
     KEYWORD: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -124,6 +130,8 @@ class SubscribeTvEpisodes(Base):
     __tablename__ = "SUBSCRIBE_TV_EPISODES"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    USER_ID: Mapped[int | None] = mapped_column(Integer, ForeignKey("RBAC_USERS.ID"), nullable=True, index=True)
+    USER_ID: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=True, index=True
+    )
     RSSID: Mapped[str] = mapped_column(String(255), index=True)
     EPISODES: Mapped[str] = mapped_column(String(255))
