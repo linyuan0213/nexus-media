@@ -267,10 +267,8 @@ class Telegram(_IMessageClient):
         text = msg.get("text", "")
         if not text:
             return
-        user = msg.get("from", {})
-        user_id = str(user.get("id", ""))
-        if self._admin_ids and user_id not in self._admin_ids:
-            return
+        # 不再按 admin_ids 白名单拦截：多用户下由渠道绑定层鉴权（未绑定在 webhook 拒绝，
+        # /bind 允许任意用户完成绑定）。admin_ids 仅保留兼容配置。
         ds_url = f"http://127.0.0.1:{settings.get('app').get('web_port')}/telegram?apikey={self._api_key}"
         with contextlib.suppress(Exception):
             HttpClient(config=HttpClientConfig(timeout=5)).post(ds_url, data=update)
