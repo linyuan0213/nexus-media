@@ -167,9 +167,13 @@ def del_site(
 @router.post("/sites/detail", response_model=CommonResponse, summary="获取站点详情")
 def get_site(
     req: SiteIdRequest,
-    user: str = Depends(require_any_permission("site:view", "site:manage")),
+    user=Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
+    app_context=Depends(get_app_context),
 ):
+    allowed = _allowed_site_names(user, app_context)
+    if not _index_id_allowed(allowed, app_context, req.id):
+        return fail(msg="无权查看该站点")
     dto = svc.get_site(req.id)
     return success(
         data={"site": dto.site, "site_free": dto.site_free, "site_2xfree": dto.site_2xfree, "site_hr": dto.site_hr}
@@ -265,7 +269,7 @@ def refresh_site_statistics(
 
 @router.post("/sites/definitions", response_model=CommonResponse, summary="获取所有可添加的站点定义")
 def get_site_definitions(
-    user: str = Depends(require_any_permission("site:view", "site:manage")),
+    user: str = Depends(require_permission("site:manage")),
     svc: SiteService = Depends(get_site_service),
 ):
     defs = svc.get_site_definitions()
@@ -386,9 +390,13 @@ def get_site_user_statistics(
 @router.post("/sites/resources", response_model=CommonResponse, summary="获取站点资源列表")
 def list_site_resources(
     req: SiteResourcesRequest,
-    user: str = Depends(require_any_permission("site:view", "site:manage")),
+    user=Depends(require_any_permission("site:view", "site:manage")),
     svc: SiteService = Depends(get_site_service),
+    app_context=Depends(get_app_context),
 ):
+    allowed = _allowed_site_names(user, app_context)
+    if not _index_id_allowed(allowed, app_context, req.id):
+        return fail(msg="无权查看该站点资源")
     resources = svc.list_site_resources(
         index_id=req.id or "",
         page=req.page or 0,
@@ -501,6 +509,22 @@ def parse_health_run(
 
     threading.Thread(target=_run, name="parse-health-check", daemon=True).start()
     return success(data={"running": True, "started": True})
+
+
+def _index_id_allowed(allowed: set[str] | None, app_context, index_id) -> bool:
+    """按索引器 id/名称判断是否属于用户授权站点（allowed=None 表示不限制）"""
+    if allowed is None:
+        return True
+    key = str(index_id or "")
+    try:
+        for i in app_context.indexer_service.get_indexers(check=False) or []:
+            iid = str(getattr(i, "id", ""))
+            iname = str(getattr(i, "name", ""))
+            if key in (iid, iname):
+                return iname in allowed
+    except Exception as e:  # noqa: BLE001
+        log.debug(f"[Site]解析索引器授权失败: {e}")
+    return key.split(":", 1)[-1] in allowed
 
 
 def _allowed_site_names(user, app_context) -> set[str] | None:

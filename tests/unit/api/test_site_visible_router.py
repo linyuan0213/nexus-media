@@ -70,3 +70,23 @@ class TestVisibleSitesCapability:
         by_name = {d["name"]: d["permissions"] for d in data}
         assert by_name["siteA"] == ["rss", "search"]
         assert by_name["siteB"] == ["search"]
+
+
+class TestIndexIdAllowed:
+    """站点读接口按授权站点判定（site:view 用户只见被授权站点）"""
+
+    def _ctx(self, indexers):
+        return SimpleNamespace(indexer_service=SimpleNamespace(get_indexers=lambda check=False: indexers))
+
+    def test_none_allowed_means_unrestricted(self):
+        assert site_router._index_id_allowed(None, self._ctx([]), "anything") is True
+
+    def test_matches_by_name(self):
+        ctx = self._ctx([SimpleNamespace(id="builtin:mteam", name="mteam")])
+        assert site_router._index_id_allowed({"mteam"}, ctx, "builtin:mteam") is True
+        assert site_router._index_id_allowed({"other"}, ctx, "builtin:mteam") is False
+
+    def test_fallback_prefix_parse(self):
+        ctx = self._ctx([])
+        assert site_router._index_id_allowed({"mteam"}, ctx, "jackett:mteam") is True
+        assert site_router._index_id_allowed({"other"}, ctx, "jackett:mteam") is False
