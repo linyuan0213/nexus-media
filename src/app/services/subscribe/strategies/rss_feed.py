@@ -425,6 +425,7 @@ class RssFeedStrategy:
                     download_volume_factor=match_info.get("download_volume_factor"),
                     upload_volume_factor=match_info.get("upload_volume_factor"),
                     rssid=match_info.get("id"),
+                    sibling_rssids=match_info.get("sibling_rssids"),
                 )
                 media_info.set_download_info(
                     download_setting=match_info.get("download_setting"), save_path=match_info.get("save_path")
@@ -465,6 +466,13 @@ class RssFeedStrategy:
             if self.subscribe is None:
                 return
             self.subscribe.finish_rss_subscribe(rssid=download_item.rssid, media=download_item)
+            # 同媒体其他用户的订阅联动完成（共享媒体库已满足，ADR-021 5.4 记账分离）
+            for sibling_id in getattr(download_item, "sibling_rssids", None) or []:
+                if sibling_id in finished_rss_torrents:
+                    continue
+                finished_rss_torrents.append(sibling_id)
+                log.info(f"[RssFeedStrategy] 联动完成兄弟订阅 rssid={sibling_id}（同一媒体共享下载）")
+                self.subscribe.finish_rss_subscribe(rssid=sibling_id, media=download_item)
 
         def __update_tv_rss(download_item, left_media):
             if not download_item or not left_media:

@@ -290,3 +290,56 @@ class TestFuzzyNameMatch:
         rss_tvs = {1: {"name": "攻壳机动队", "year": "2026", "season": "S01", "tmdbid": None, "fuzzy_match": True}}
         match_flag, _, _ = matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
         assert match_flag is False
+
+
+class TestMultiUserFanout:
+    """多用户同媒体订阅 fan-out：主匹配 + 兄弟订阅联动记账（ADR-021 5.4）"""
+
+    @staticmethod
+    def _tv_sub(sub_id, user_id, **overrides):
+        base = {
+            "id": sub_id,
+            "user_id": user_id,
+            "name": "进击的巨人",
+            "year": "2013",
+            "season": "S01",
+            "tmdbid": None,
+            "fuzzy_match": False,
+            "rss_sites": None,
+        }
+        base.update(overrides)
+        return base
+
+    def _match(self, matcher, media_info, rss_tvs):
+        return matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
+
+    def test_sibling_subscription_attached(self, matcher):
+        """同媒体多用户订阅：主匹配携带兄弟订阅 id"""
+        media_info = _make_media_info(MediaType.TV, "进击的巨人", "2013")
+        rss_tvs = {1: self._tv_sub(1, 1), 2: self._tv_sub(2, 2)}
+        match_flag, _, match_info = self._match(matcher, media_info, rss_tvs)
+        assert match_flag is True
+        assert match_info.get("sibling_rssids") == [2]
+
+    def test_sibling_with_different_quality_not_fanned_out(self, matcher):
+        """过滤要求不同的兄弟订阅不联动（避免高要求用户被低清共享副本满足）"""
+        media_info = _make_media_info(MediaType.TV, "进击的巨人", "2013")
+        rss_tvs = {1: self._tv_sub(1, 1), 2: self._tv_sub(2, 2, filter_pix="4k")}
+        match_flag, _, match_info = self._match(matcher, media_info, rss_tvs)
+        assert match_flag is True
+        assert match_info.get("sibling_rssids") is None
+
+    def test_sibling_with_over_edition_not_fanned_out(self, matcher):
+        """开洗版的兄弟订阅不联动（洗版需要后续升级下载）"""
+        media_info = _make_media_info(MediaType.TV, "进击的巨人", "2013")
+        rss_tvs = {1: self._tv_sub(1, 1), 2: self._tv_sub(2, 2, over_edition=1)}
+        match_flag, _, match_info = self._match(matcher, media_info, rss_tvs)
+        assert match_flag is True
+        assert match_info.get("sibling_rssids") is None
+
+    def test_single_subscription_no_siblings(self, matcher):
+        media_info = _make_media_info(MediaType.TV, "进击的巨人", "2013")
+        rss_tvs = {1: self._tv_sub(1, 1)}
+        match_flag, _, match_info = self._match(matcher, media_info, rss_tvs)
+        assert match_flag is True
+        assert match_info.get("sibling_rssids") is None

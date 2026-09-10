@@ -43,6 +43,19 @@ class SubscribeMatcher:
         return result.matched
 
     @staticmethod
+    def _filter_signature(rss_info: dict) -> tuple:
+        """订阅过滤要求签名：用于判断兄弟订阅是否可被同一共享下载满足"""
+        return (
+            rss_info.get("filter_restype") or "",
+            rss_info.get("filter_pix") or "",
+            rss_info.get("filter_team") or "",
+            str(rss_info.get("filter_rule") or ""),
+            rss_info.get("filter_include") or "",
+            rss_info.get("filter_exclude") or "",
+            str(rss_info.get("filter_free") or ""),
+        )
+
+    @staticmethod
     def _fuzzy_name_match(name, media_info) -> bool:
         """规范化子串匹配：防正则注入、大小写/标点鲁棒（替代裸 re.search）"""
         if not name:
@@ -81,7 +94,8 @@ class SubscribeMatcher:
         download_volume_factor = None
         hit_and_run = False
 
-        # ---------- 匹配电影 ----------
+        # ---------- 收集全部命中订阅（多用户同媒体 fan-out 记账用） ----------
+        candidates: list[dict] = []
         if media_info.type == MediaType.MOVIE and rss_movies:
             for _rid, rss_info in rss_movies.items():
                 rss_sites = rss_info.get("rss_sites")
@@ -108,11 +122,8 @@ class SubscribeMatcher:
                     if not self._fuzzy_name_match(name, media_info):
                         continue
 
-                match_flag = True
-                match_rss_info = rss_info
-                break
+                candidates.append(rss_info)
 
-        # ---------- 匹配电视剧 ----------
         elif media_info.type != MediaType.MOVIE and rss_tvs:
             for _rid, rss_info in rss_tvs.items():
                 rss_sites = rss_info.get("rss_sites")
@@ -144,16 +155,33 @@ class SubscribeMatcher:
                     if not self._fuzzy_name_match(name, media_info):
                         continue
 
-                match_flag = True
-                match_rss_info = rss_info
-                # 种子未识别时不覆盖 TMDB，避免衍生作品被错标
+                candidates.append(rss_info)
+
+        # 取第一个候选作为主匹配（保持原行为），其余为兄弟订阅
+        if candidates:
+            match_flag = True
+            match_rss_info = candidates[0]
+            # 种子未识别时不覆盖 TMDB，避免衍生作品被错标
+            rss_info = match_rss_info
+            if media_info.type != MediaType.MOVIE:
                 if rss_info.get("tmdbid") and media_info.tmdb_id and int(rss_info["tmdbid"]) == media_info.tmdb_id:
                     media_info.tmdb_id = int(rss_info["tmdbid"])
                 if rss_info.get("type"):
                     media_info.type = MediaType(rss_info["type"])
                 if rss_info.get("year") and not media_info.year:
                     media_info.year = rss_info["year"]
-                break
+            # 兄弟订阅 id 挂到主匹配上，供下载完成后联动记账。
+            # 仅联动过滤要求一致（质量/规则签名相同）且未开洗版的兄弟订阅，
+            # 避免高要求用户（如要 4K）被低清共享副本错误满足。
+            primary_sig = self._filter_signature(match_rss_info)
+            sibling_ids = [
+                c.get("id")
+                for c in candidates[1:]
+                if c.get("id") and not c.get("over_edition") and self._filter_signature(c) == primary_sig
+            ]
+            if sibling_ids:
+                match_rss_info = dict(match_rss_info)
+                match_rss_info["sibling_rssids"] = sibling_ids
 
         # ---------- 匹配成功，应用过滤规则 ----------
         if not match_flag:
