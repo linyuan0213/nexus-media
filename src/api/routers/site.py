@@ -528,19 +528,37 @@ def _allowed_site_names(user, app_context) -> set[str] | None:
 def get_visible_sites(
     current_user=Depends(get_current_user),
     app_context=Depends(get_app_context),
+    site_svc: SiteService = Depends(get_site_service),
 ):
-    """当前用户可用站点列表（closed 策略下按站点授权白名单过滤），带用途粒度"""
+    """当前用户可用站点列表（closed 策略下按站点授权白名单过滤），带用途粒度.
+
+    用途粒度同时受站点实际能力约束：搜索需站点已启用（索引器 check），
+    RSS 需站点已配置 RSS 源，避免向用户展示"选了也没用"的站点。
+    """
     grant_service = app_context.site_grant_service
     visible = grant_service.get_visible_sites(current_user)
     indexers = app_context.indexer_service.indexer.get_indexers_with_source(check=True)
+    # RSS 能力：站点已配置 RSS 源
+    try:
+        rss_capable = {s.get("name") for s in (site_svc.get_sites(rss=True) or []) if s.get("name")}
+    except Exception:  # noqa: BLE001
+        rss_capable = set()
+
+    def _permissions(name: str, grants: set[str] | None) -> list[str]:
+        perms = set(grants) if grants is not None else {"search", "rss"}
+        if name not in rss_capable:
+            perms.discard("rss")
+        return sorted(perms)
+
     if visible is None:
-        # 不过滤：superadmin 或 open 策略，全部用途可用
-        return success(data=[{**item, "permissions": ["search", "rss"]} for item in indexers])
+        # 不过滤：superadmin 或 open 策略
+        return success(data=[{**item, "permissions": _permissions(item["name"], None)} for item in indexers])
     sites = []
     for item in indexers:
         grants: set[str] = set()
         for key in (f"{item['source']}:{item['name']}", f"{item['source']}:*", item["name"]):
             grants |= visible.get(key, set())
-        if grants:
-            sites.append({**item, "permissions": sorted(grants)})
+        perms = _permissions(item["name"], grants)
+        if perms:
+            sites.append({**item, "permissions": perms})
     return success(data=sites)
