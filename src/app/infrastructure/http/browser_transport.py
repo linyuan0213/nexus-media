@@ -15,6 +15,7 @@ import httpx2
 import log
 from app.infrastructure.http.config import BrowserModeConfig
 from app.utils.render_normalize import normalize_rendered_html
+from app.utils.session_key import to_session_id
 
 
 def _make_session_key(site_key: str, browser: BrowserModeConfig) -> str:
@@ -63,7 +64,7 @@ class _ChromeServerClient:
     def ensure_session(self, session_key: str, browser: BrowserModeConfig) -> dict[str, Any]:
         """幂等创建 session; 409/已存在时返回现有会话."""
         payload = {
-            "session_id": session_key,
+            "session_id": to_session_id(session_key),
             "fingerprint_profile": browser.fingerprint_profile,
             "fp_profile_id": browser.fp_profile_id,
             "user_agent": browser.user_agent,
@@ -81,7 +82,7 @@ class _ChromeServerClient:
         """删除会话，关闭对应浏览器标签页；不存在时忽略."""
         try:
             # 会话键可能包含 URL（如 https://site），必须编码为单个路径段
-            self._request("DELETE", f"/sessions/{quote(session_key, safe='')}", raise_for_status=False)
+            self._request("DELETE", f"/sessions/{quote(to_session_id(session_key), safe='')}", raise_for_status=False)
         except Exception as e:  # noqa: BLE001
             log.warn(f"[ChromeServer] 删除会话 {session_key} 失败: {e}")
 
@@ -109,7 +110,7 @@ class _ChromeServerClient:
         if cookie:
             payload["cookie"] = cookie
         # 会话键可能包含 URL（如 https://site），必须编码为单个路径段，否则路由 404
-        return self._request("POST", f"/sessions/{quote(session_key, safe='')}/request", json=payload)
+        return self._request("POST", f"/sessions/{quote(to_session_id(session_key), safe='')}/request", json=payload)
 
     def close(self) -> None:
         self._client.close()

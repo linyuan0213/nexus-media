@@ -13,6 +13,7 @@ import httpx2
 
 import log
 from app.utils.browser_mode import get_chrome_api_key
+from app.utils.session_key import to_session_id
 
 
 class _BaseBrowserSession:
@@ -38,8 +39,9 @@ class _BaseBrowserSession:
         self.fp_profile_id = fp_profile_id
         self.timeout = timeout
         self.session_id = site_key
-        # 会话键可能含 URL（https://...），作为路径段必须编码，否则路由 404
-        self._sid = quote(site_key, safe="")
+        # 会话键可能含 URL（https://...），规范化为 URL 安全 id，避免路径 404
+        self.session_id = to_session_id(site_key)
+        self._sid = quote(self.session_id, safe="")
         # 未显式传入时读取全局配置（laboratory.chrome_admin_token）
         self._api_key = api_key if api_key is not None else get_chrome_api_key()
 

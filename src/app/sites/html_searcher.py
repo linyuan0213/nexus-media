@@ -27,7 +27,7 @@ from app.sites import engine_tools
 from app.sites.api_searcher import ApiSiteSearcher
 from app.sites.engine import SiteDefinition
 from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
-from app.utils.browser_mode import build_browser_mode, get_chrome_server_url
+from app.utils.browser_mode import build_browser_mode, get_chrome_server_url, make_session_key
 from app.utils.config_tools import get_proxies
 
 
@@ -189,8 +189,21 @@ class HtmlSiteSearcher:
         proxies = get_proxies() if self._user_config.get("proxy") else None
         proxy_url = proxies.get("http") if isinstance(proxies, dict) else None
         try:
+            browser_cfg = build_browser_mode(
+                site_info={
+                    "chrome": True,
+                    "ua": self._user_config.get("ua"),
+                    "browser_render": True,
+                    "browser_persistent": bool(self._user_config.get("browser_persistent")),
+                },
+                site_key=domain,
+                proxy_url=proxy_url,
+                render_html=True,
+            )
+            # 使用与 ChromeTransport 相同的会话键，确保过盾 Cookie 可被后续抓取复用
+            session_id = make_session_key(domain, browser_cfg) if browser_cfg else domain
             with BrowserSession(
-                domain,
+                session_id,
                 server_url=server,
                 user_agent=self._user_config.get("ua"),
                 proxy_url=proxy_url,
@@ -205,19 +218,25 @@ class HtmlSiteSearcher:
                     html = session.html()
                 session.input(input_selector, keyword)
                 time.sleep(1)
+                # 记录提交前页面：首页/列表页本身就有行，必须等提交后页面变化再判定成功
+                before = session.html()
                 for sel in submit_selectors:
                     try:
                         session.click(sel)
                         break
                     except Exception:  # noqa: BLE001, S112  # 选择器不存在则尝试下一个
                         continue
-                # 轮询结果渲染
-                for _ in range(12):
+                # 轮询直到页面变化且可解析出结果（挑战/异步渲染需时间）
+                changed = False
+                for _ in range(15):
                     time.sleep(2)
                     html = session.html()
-                    if self._parse_html(html, is_browse=False):
-                        break
-                return html
+                    if html != before:
+                        changed = True
+                        if self._parse_html(html, is_browse=False):
+                            break
+                # 页面未变化说明提交未生效：返回 None，避免把首页当搜索结果
+                return html if changed else None
         except Exception as e:  # noqa: BLE001
             log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器表单搜索失败: {e}")
             return None
