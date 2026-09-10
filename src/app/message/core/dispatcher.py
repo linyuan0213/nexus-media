@@ -112,7 +112,8 @@ class MessageDispatcher:
     ) -> bool:
         """按渠道发送消息，用于消息交互."""
         if channel == SearchType.WEB:
-            if self._messagecenter:
+            # 全局系统消息队列仅接收无归属事件；归属用户事件只进按用户隔离的 WebMessageStore
+            if not user_id and self._messagecenter:
                 self._messagecenter.insert_system_message(title=title, content=text)
             WebMessageStore.instance().add(
                 title=title, content=text, kind="reply", image=image or "", url=url or "", user_id=user_id

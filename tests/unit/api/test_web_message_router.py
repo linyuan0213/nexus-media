@@ -108,6 +108,26 @@ class TestWebMessageRouter:
             resp = c.post("/api/agent/message/interact", json={"text": "x"})
         assert resp.status_code == 403
 
+    def test_history_accessible_without_agent_view(self):
+        """通知读取不依赖 agent:view（数据按用户自隔离）"""
+        app = FastAPI()
+        app.include_router(web_message_router.router, prefix="/api/agent")
+        guest = UserContext(user_id=9, username="g", level=100, permissions=[])
+        app.dependency_overrides[get_current_user] = lambda: guest
+        no_db_store = WebMessageStore(enable_db=False)
+        no_db_store.add(title="本人消息", kind="reply", user_id="9")
+        no_db_store.add(title="全局消息", kind="notify")
+        with (
+            patch.object(WebMessageStore, "instance", return_value=no_db_store),
+            TestClient(app) as c,
+        ):
+            resp = c.get("/api/agent/message/history")
+        data = resp.json()
+        assert data["code"] == 0
+        titles = [m["title"] for m in data["data"]["messages"]]
+        assert "本人消息" in titles
+        assert "全局消息" in titles
+
     def test_stream_endpoint_exists(self, client):
         # 仅验证路由注册（FastAPI 0.139 惰性路由：检查 _IncludedRouter 原始路由）
         inc = [r for r in client.client.app.router.routes if type(r).__name__ == "_IncludedRouter"]

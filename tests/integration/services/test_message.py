@@ -287,6 +287,15 @@ class TestMessageDispatcher:
         assert result is True
         msg_center.insert_system_message.assert_called_once_with(title="title", content="text")
 
+    def test_send_channel_msg_web_user_attributed_not_global(self):
+        """归属用户事件不进入全局系统消息队列（多用户隔离）"""
+        client_mgr = MagicMock()
+        msg_center = MagicMock()
+        dispatcher = MessageDispatcher(client_mgr, msg_center)
+        result = dispatcher.send_channel_msg(SearchType.WEB, "title", "text", user_id="2")
+        assert result is True
+        msg_center.insert_system_message.assert_not_called()
+
     def test_send_channel_msg_no_client(self):
         client_mgr = MagicMock()
         client_mgr.get_interactive_client.return_value = None

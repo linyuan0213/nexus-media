@@ -14,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import log
-from api.deps import get_app_context, require_permission
+from api.deps import get_app_context, get_current_user, require_permission
 from app.agent.agents.memory import MemoryKey
 from app.di.context import AppContext
 from app.domain.enums import SearchType
@@ -75,7 +75,7 @@ def conversation(
 @router.get("/message/history")
 def message_history(
     limit: int = 50,
-    user: Any = Depends(require_permission("agent:view")),
+    user: Any = Depends(get_current_user),
 ):
     """最近通知历史（刷新后恢复显示；全局通知 + 本人消息）"""
     store = WebMessageStore.instance()
@@ -85,7 +85,7 @@ def message_history(
 
 @router.get("/message/unread-count")
 def message_unread_count(
-    user: Any = Depends(require_permission("agent:view")),
+    user: Any = Depends(get_current_user),
 ):
     """当前用户未读消息数（通知栏红点徽标）"""
     store = WebMessageStore.instance()
@@ -95,7 +95,7 @@ def message_unread_count(
 @router.get("/message/unread")
 def message_unread_list(
     limit: int = 100,
-    user: Any = Depends(require_permission("agent:view")),
+    user: Any = Depends(get_current_user),
 ):
     """当前用户未读消息列表 + 未读数（通知栏下拉，轻量接口）"""
     store = WebMessageStore.instance()
@@ -107,7 +107,7 @@ def message_unread_list(
 @router.post("/message/read")
 def message_mark_read(
     req: MarkReadRequest,
-    user: Any = Depends(require_permission("agent:view")),
+    user: Any = Depends(get_current_user),
 ):
     """标记已读（ids 为空则全部已读），供通知去重与徽标清零"""
     store = WebMessageStore.instance()
@@ -118,7 +118,7 @@ def message_mark_read(
 @router.get("/message/stream")
 def message_stream(
     cursor: int = 0,
-    user: Any = Depends(require_permission("agent:view")),
+    user: Any = Depends(get_current_user),
 ):
     """SSE 消息流：游标之后的消息增量推送（按当前用户过滤）+ 心跳保活"""
     store = WebMessageStore.instance()
