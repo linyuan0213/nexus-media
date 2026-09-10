@@ -13,6 +13,7 @@ from app.services.subscribe.management.finish_service import SubscribeFinishServ
 from app.services.subscribe.management.query_service import SubscribeQueryService
 from app.services.subscribe.management.refresh_service import SubscribeRefreshService
 from app.services.subscribe.management.update_service import SubscribeUpdateService
+from app.services.subscribe.management.utils import tv_filter_signature
 from app.services.web.utils import WebUtils
 
 
@@ -191,7 +192,37 @@ class SubscribeService:
             return True
         return int(pre_res_order) < int(res_order or 0)
 
+    def _find_tv_siblings(self, rssid, media_info) -> list:
+        """同媒体（TMDB+季）其他用户的订阅（排除主订阅、洗版、过滤要求不同者）"""
+        tmdb = str(getattr(media_info, "tmdb_id", "") or "")
+        season = media_info.get_season_string() if hasattr(media_info, "get_season_string") else ""
+        primary = self._tv_repo.get_all(rssid=rssid)
+        primary_sig = tv_filter_signature(primary[0]) if primary else None
+        siblings = []
+        for row in self._tv_repo.get_all() or []:
+            rid = getattr(row, "id", None)
+            if rid is None or rid == rssid:
+                continue
+            if str(getattr(row, "tmdb_id", "") or "") != tmdb:
+                continue
+            if season and str(getattr(row, "season", "") or "") != str(season):
+                continue
+            if getattr(row, "over_edition", False):
+                continue
+            if primary_sig is not None and tv_filter_signature(row) != primary_sig:
+                continue
+            siblings.append(row)
+        return siblings
+
     def update_subscribe_tv_lack(self, rssid, media_info, seasoninfo):
+        self._apply_tv_lack(rssid, media_info, seasoninfo)
+        # 同媒体其他用户订阅联动更新缺集进度（ADR-021 5.4）
+        for sibling in self._find_tv_siblings(rssid, media_info):
+            self._apply_tv_lack(getattr(sibling, "id", None), media_info, seasoninfo)
+
+    def _apply_tv_lack(self, rssid, media_info, seasoninfo):
+        if not rssid:
+            return
         self._tv_repo.update_state(title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value)
         if not seasoninfo:
             return

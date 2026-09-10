@@ -46,6 +46,18 @@ class RBACUserRepository(BaseRepository):
         with self.session() as db:
             return self._get_user_with_roles(db, user_id)
 
+    def get_user_ids_by_role_code(self, role_code: str) -> list[int]:
+        """按角色码查询启用用户 ID 列表（如 superadmin，通知管理员用）"""
+        with self.session() as db:
+            users = db.query(RBACUser).filter(RBACUser.STATUS == 1).all()
+            return [
+                u.ID
+                for u in users
+                if any(
+                    getattr(r, "ROLE_CODE", None) == role_code and getattr(r, "status", 0) == 1 for r in (u.roles or [])
+                )
+            ]
+
     def get_usernames_by_ids(self, user_ids: list[int]) -> dict[int, str]:
         """批量查询用户名映射 {user_id: username}（订阅归属展示用）"""
         if not user_ids:

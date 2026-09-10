@@ -8,6 +8,7 @@ from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.constants import SUBSCRIBE_FINISHED
 from app.events.payloads import SubscribeFinishedPayload
+from app.services.subscribe.management.utils import tv_filter_signature
 
 
 class SubscribeFinishService:
@@ -20,6 +21,31 @@ class SubscribeFinishService:
         self._message = message
         self._event_bus = event_bus
         self._download_repo = download_repo
+
+    def _finish_sibling_tvs(self, primary_row, media: Any, delete_subscribe_fn) -> None:
+        """同媒体其他用户的订阅联动完成（共享媒体库已满足，ADR-021 5.4）"""
+        try:
+            siblings = self._tv_repo.get_all() or []
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[Subscribe]查询兄弟订阅失败: {e}")
+            return
+        tmdb = str(getattr(primary_row, "TMDBID", None) or getattr(primary_row, "tmdb_id", "") or "")
+        season = str(getattr(primary_row, "SEASON", None) or getattr(primary_row, "season", "") or "")
+        primary_sig = tv_filter_signature(primary_row)
+        for row in siblings:
+            sid = getattr(row, "ID", None) or getattr(row, "id", None)
+            if not sid or str(sid) == str(getattr(primary_row, "ID", "") or getattr(primary_row, "id", "")):
+                continue
+            row_tmdb = str(getattr(row, "TMDBID", None) or getattr(row, "tmdb_id", "") or "")
+            row_season = str(getattr(row, "SEASON", None) or getattr(row, "season", "") or "")
+            if row_tmdb != tmdb or (season and row_season != season):
+                continue
+            if getattr(row, "OVER_EDITION", None) or getattr(row, "over_edition", False):
+                continue
+            if tv_filter_signature(row) != primary_sig:
+                continue
+            log.info(f"[Subscribe]联动完成兄弟订阅 rssid={sid}（同一媒体共享下载）")
+            delete_subscribe_fn(mtype=MediaType.TV, rssid=sid)
 
     def finish_rss_subscribe(self, rssid: int | None, media: Any, delete_subscribe_fn) -> None:
         """完成订阅"""
@@ -64,6 +90,7 @@ class SubscribeFinishService:
                 user_id=owner_user_id,
             )
             delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
+            self._finish_sibling_tvs(rss[0], media, delete_subscribe_fn)
 
         # 仅洗版订阅完成后清理下载历史（允许后续升级重下）；
         # 普通订阅保留下载历史，避免重新订阅时重复下载已完成的剧集

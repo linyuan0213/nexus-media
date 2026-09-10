@@ -6,7 +6,9 @@ from enum import Enum
 from typing import Any
 
 import log
+from app.db.repositories.rbac.rbac_user_repo_adapter import RBACUserRepositoryAdapter
 from app.domain.mediatypes import MediaType
+from app.schemas.auth import SUPERADMIN_ROLE_CODE
 from app.services.web import WebUtils
 from app.utils import StringUtils
 
@@ -19,6 +21,24 @@ class MessageBuilder:
         self._dispatcher = dispatcher
         self._messagecenter = messagecenter
         self._template_engine = template_engine
+
+    def _send_admin_msg(self, title: str, text: str, url: str | None = None, image: str | None = None) -> bool:
+        """系统/人工介入类事件定向推送给超级管理员（Web + 其绑定渠道）.
+
+        返回是否有管理员被通知；无管理员时退化为全局系统消息。
+        """
+        try:
+            admin_ids = RBACUserRepositoryAdapter().get_user_ids_by_role_code(SUPERADMIN_ROLE_CODE)
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[Message]查询管理员失败: {e}")
+            admin_ids = []
+        if not admin_ids:
+            if self._messagecenter:
+                self._messagecenter.insert_system_message(title=title, content=text)
+            return False
+        for uid in admin_ids:
+            self._dispatcher.send_user_msg(uid, title, text, image=image, url=url)
+        return True
 
     def send_download_message(self, in_from, can_item, download_setting_name=None, downloader_name=None) -> None:
         msg_title = f"{can_item.get_title_ep_string()} 开始下载"
@@ -220,8 +240,8 @@ class MessageBuilder:
         if owner_user_id:
             self._dispatcher.send_user_msg(owner_user_id, title, text, image=item.get_message_image())
             return
-        if self._messagecenter:
-            self._messagecenter.insert_system_message(title=title, content=text)
+        # 无归属的失败事件 → 定向超级管理员
+        self._send_admin_msg(title, text, image=item.get_message_image())
         for client in self._client_manager.active_clients:
             if "download_fail" in (client.get("switches") or ""):
                 variables = {"item": item, "error_msg": error_msg}
@@ -365,8 +385,8 @@ class MessageBuilder:
             return
         title = f"[{count} 个文件入库失败]"
         text = f"源路径：{path}\n原因：{text}"
-        if self._messagecenter:
-            self._messagecenter.insert_system_message(title=title, content=text)
+        # 失败/人工介入类事件定向给超级管理员（ADR-021 5.6），不再广播给所有用户
+        self._send_admin_msg(title, text, url="unidentification")
         for client in self._client_manager.active_clients:
             if "transfer_fail" in (client.get("switches") or ""):
                 variables = {"path": path, "count": count, "text": text}
