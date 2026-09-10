@@ -28,7 +28,7 @@ Nexus Media 是一个功能强大的媒体库管理工具，提供自动化追�
 - [消息通知模板](docs/message_templates.md) - 通知渠道与模板配置
 - [服务与调度](docs/service.md) - 服务面板与调度任务
 - [存储后端](docs/storage.md) - 本地/WebDAV/SMB/S3 等存储后端
-- [用户与权限](docs/users.md) - 用户/角色/API Key 管理
+- [用户与权限](docs/users.md) - 多用户数据隔离、角色、站点授权、渠道绑定、API Key
 
 ### 插件
 - [插件使用](docs/plugins.md) - 内置插件配置（签到、CookieCloud 等）

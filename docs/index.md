@@ -29,6 +29,8 @@ Nexus Media 是一个功能强大的媒体库管理工具，提供自动化追�
 | 媒体整理 | `/rename/history` | [媒体整理](media_organization.md) |
 | 服务 | `/service/panel` | [服务与调度](service.md) |
 | 系统设置 | `/system/basic` | [基础配置](configuration.md) |
+| 用户与权限 | `/system/users` | [用户与权限](users.md) |
+| 个人设置（渠道绑定） | `/profile` | [用户与权限](users.md) · [通知渠道配置](notifications.md#个人渠道绑定多用户) |
 | 插件中心 | `/plugin/market` | [插件使用](plugins.md) |
 
 ## 快速开始
@@ -38,6 +40,7 @@ Nexus Media 是一个功能强大的媒体库管理工具，提供自动化追�
 3. [站点配置](sites.md) — 添加第一个 PT 站点
 4. [下载器配置](downloaders.md) — 连接 qBittorrent / Transmission
 5. [RSS 订阅](rss.md) — 建立第一个订阅
+6. [用户与权限](users.md) — 多用户：创建用户、分配角色、站点授权、绑定通知渠道
 6. [AI 助手](agent.md) — 用对话方式操作整个系统
 
 ## 支持与帮助
