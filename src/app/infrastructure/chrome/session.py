@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
 import httpx2
 
@@ -37,6 +38,8 @@ class _BaseBrowserSession:
         self.fp_profile_id = fp_profile_id
         self.timeout = timeout
         self.session_id = site_key
+        # 会话键可能含 URL（https://...），作为路径段必须编码，否则路由 404
+        self._sid = quote(site_key, safe="")
         # 未显式传入时读取全局配置（laboratory.chrome_admin_token）
         self._api_key = api_key if api_key is not None else get_chrome_api_key()
 
@@ -87,57 +90,55 @@ class BrowserSession(_BaseBrowserSession):
         timeout: int = 30,
     ) -> dict[str, Any]:
         payload = {"url": url, "cookie": cookie, "referer": referer, "timeout": timeout}
-        response = self._client.post(self._session_url(f"/sessions/{self.session_id}/navigate"), json=payload)
+        response = self._client.post(self._session_url(f"/sessions/{self._sid}/navigate"), json=payload)
         response.raise_for_status()
         return response.json().get("data", {})
 
     def html(self) -> str:
-        response = self._client.get(self._session_url(f"/sessions/{self.session_id}/html"))
+        response = self._client.get(self._session_url(f"/sessions/{self._sid}/html"))
         response.raise_for_status()
         data = response.json().get("data", {})
         return data.get("html", "")
 
     def cookies(self, domain: str | None = None) -> dict[str, Any]:
         params = {"domain": domain} if domain else {}
-        response = self._client.get(self._session_url(f"/sessions/{self.session_id}/cookies"), params=params)
+        response = self._client.get(self._session_url(f"/sessions/{self._sid}/cookies"), params=params)
         response.raise_for_status()
         return response.json().get("data", {})
 
     def click(self, selector: str) -> None:
-        response = self._client.post(
-            self._session_url(f"/sessions/{self.session_id}/click"), json={"selector": selector}
-        )
+        response = self._client.post(self._session_url(f"/sessions/{self._sid}/click"), json={"selector": selector})
         response.raise_for_status()
 
     def input(self, selector: str, text: str) -> None:
         response = self._client.post(
-            self._session_url(f"/sessions/{self.session_id}/input"),
+            self._session_url(f"/sessions/{self._sid}/input"),
             json={"selector": selector, "text": text},
         )
         response.raise_for_status()
 
     def execute(self, script: str) -> Any:
-        response = self._client.post(self._session_url(f"/sessions/{self.session_id}/execute"), json={"script": script})
+        response = self._client.post(self._session_url(f"/sessions/{self._sid}/execute"), json={"script": script})
         response.raise_for_status()
         return response.json().get("data", {}).get("result")
 
     def fetch(self, url: str, method: str = "GET", **kwargs: Any) -> dict[str, Any]:
         payload = {"url": url, "method": method, **kwargs}
-        response = self._client.post(self._session_url(f"/sessions/{self.session_id}/fetch"), json=payload)
+        response = self._client.post(self._session_url(f"/sessions/{self._sid}/fetch"), json=payload)
         response.raise_for_status()
         return response.json().get("data", {})
 
     def screenshot(self, tab_name: str | None = None, full_page: bool = False) -> dict[str, Any]:
         """对指定（或活动）标签页截图，返回 {png_base64, size, ...}"""
         payload = {"tab_name": tab_name, "full_page": full_page}
-        response = self._client.post(self._session_url(f"/sessions/{self.session_id}/screenshot"), json=payload)
+        response = self._client.post(self._session_url(f"/sessions/{self._sid}/screenshot"), json=payload)
         response.raise_for_status()
         return response.json().get("data", {})
 
     def close(self, delete_session: bool = True) -> None:
         if delete_session:
             try:
-                self._client.delete(self._session_url(f"/sessions/{self.session_id}"))
+                self._client.delete(self._session_url(f"/sessions/{self._sid}"))
             except Exception as e:
                 log.warn(f"[BrowserSession] 关闭会话 {self.session_id} 失败: {e}")
         self._client.close()
@@ -173,59 +174,57 @@ class AsyncBrowserSession(_BaseBrowserSession):
         timeout: int = 30,
     ) -> dict[str, Any]:
         payload = {"url": url, "cookie": cookie, "referer": referer, "timeout": timeout}
-        response = await self._client.post(self._session_url(f"/sessions/{self.session_id}/navigate"), json=payload)
+        response = await self._client.post(self._session_url(f"/sessions/{self._sid}/navigate"), json=payload)
         response.raise_for_status()
         return response.json().get("data", {})
 
     async def html(self) -> str:
-        response = await self._client.get(self._session_url(f"/sessions/{self.session_id}/html"))
+        response = await self._client.get(self._session_url(f"/sessions/{self._sid}/html"))
         response.raise_for_status()
         data = response.json().get("data", {})
         return data.get("html", "")
 
     async def cookies(self, domain: str | None = None) -> dict[str, Any]:
         params = {"domain": domain} if domain else {}
-        response = await self._client.get(self._session_url(f"/sessions/{self.session_id}/cookies"), params=params)
+        response = await self._client.get(self._session_url(f"/sessions/{self._sid}/cookies"), params=params)
         response.raise_for_status()
         return response.json().get("data", {})
 
     async def click(self, selector: str) -> None:
         response = await self._client.post(
-            self._session_url(f"/sessions/{self.session_id}/click"), json={"selector": selector}
+            self._session_url(f"/sessions/{self._sid}/click"), json={"selector": selector}
         )
         response.raise_for_status()
 
     async def input(self, selector: str, text: str) -> None:
         response = await self._client.post(
-            self._session_url(f"/sessions/{self.session_id}/input"),
+            self._session_url(f"/sessions/{self._sid}/input"),
             json={"selector": selector, "text": text},
         )
         response.raise_for_status()
 
     async def execute(self, script: str) -> Any:
-        response = await self._client.post(
-            self._session_url(f"/sessions/{self.session_id}/execute"), json={"script": script}
-        )
+        response = await self._client.post(self._session_url(f"/sessions/{self._sid}/execute"), json={"script": script})
         response.raise_for_status()
         return response.json().get("data", {}).get("result")
 
     async def fetch(self, url: str, method: str = "GET", **kwargs: Any) -> dict[str, Any]:
         payload = {"url": url, "method": method, **kwargs}
-        response = await self._client.post(self._session_url(f"/sessions/{self.session_id}/fetch"), json=payload)
+        response = await self._client.post(self._session_url(f"/sessions/{self._sid}/fetch"), json=payload)
         response.raise_for_status()
         return response.json().get("data", {})
 
     async def screenshot(self, tab_name: str | None = None, full_page: bool = False) -> dict[str, Any]:
         """对指定（或活动）标签页截图，返回 {png_base64, size, ...}"""
         payload = {"tab_name": tab_name, "full_page": full_page}
-        response = await self._client.post(self._session_url(f"/sessions/{self.session_id}/screenshot"), json=payload)
+        response = await self._client.post(self._session_url(f"/sessions/{self._sid}/screenshot"), json=payload)
         response.raise_for_status()
         return response.json().get("data", {})
 
     async def close(self, delete_session: bool = True) -> None:
         if delete_session:
             try:
-                await self._client.delete(self._session_url(f"/sessions/{self.session_id}"))
+                await self._client.delete(self._session_url(f"/sessions/{self._sid}"))
             except Exception as e:
                 log.warn(f"[AsyncBrowserSession] 关闭会话 {self.session_id} 失败: {e}")
         await self._client.aclose()

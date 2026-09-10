@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 from typing import Any
+from urllib.parse import quote
 
 import httpx2
 
@@ -79,7 +80,8 @@ class _ChromeServerClient:
     def delete_session(self, session_key: str) -> None:
         """删除会话，关闭对应浏览器标签页；不存在时忽略."""
         try:
-            self._request("DELETE", f"/sessions/{session_key}", raise_for_status=False)
+            # 会话键可能包含 URL（如 https://site），必须编码为单个路径段
+            self._request("DELETE", f"/sessions/{quote(session_key, safe='')}", raise_for_status=False)
         except Exception as e:  # noqa: BLE001
             log.warn(f"[ChromeServer] 删除会话 {session_key} 失败: {e}")
 
@@ -106,7 +108,8 @@ class _ChromeServerClient:
         }
         if cookie:
             payload["cookie"] = cookie
-        return self._request("POST", f"/sessions/{session_key}/request", json=payload)
+        # 会话键可能包含 URL（如 https://site），必须编码为单个路径段，否则路由 404
+        return self._request("POST", f"/sessions/{quote(session_key, safe='')}/request", json=payload)
 
     def close(self) -> None:
         self._client.close()

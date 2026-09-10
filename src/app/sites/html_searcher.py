@@ -10,6 +10,7 @@ HTML 站点搜索器
 """
 
 import re
+import time
 from copy import deepcopy
 from typing import Any
 from urllib.parse import quote
@@ -19,13 +20,14 @@ from lxml import etree
 import log
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
-from app.infrastructure.chrome.challenge import is_challenge
+from app.infrastructure.chrome.challenge import has_pending_turnstile, is_challenge
+from app.infrastructure.chrome.session import BrowserSession
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.sites import engine_tools
 from app.sites.api_searcher import ApiSiteSearcher
 from app.sites.engine import SiteDefinition
 from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
-from app.utils.browser_mode import build_browser_mode
+from app.utils.browser_mode import build_browser_mode, get_chrome_server_url
 from app.utils.config_tools import get_proxies
 
 
@@ -59,7 +61,24 @@ class HtmlSiteSearcher:
         if not html_text:
             return []
 
-        return self._parse_html(html_text, is_browse=is_browse)
+        result = self._parse_html(html_text, is_browse=is_browse)
+        # 关键词搜索且结果为空：站点搜索表单受 CF/Turnstile 保护（普通 GET 不生效），
+        # 走浏览器交互：过盾 → 填词 → 点提交 → 取结果
+        if not result and keyword and bool(self._user_config.get("chrome")):
+            form_html = self._browser_form_search(keyword)
+            if form_html:
+                parsed = self._parse_html(form_html, is_browse=False)
+                if parsed:
+                    result = parsed
+        # 直连返回成功但无结果（JS/挑战外壳页，或 CF 内嵌 Turnstile 未被强特征识别）：
+        # 开启浏览器自动化时强制经 nexus-chrome 渲染后重试一次
+        if not result and bool(self._user_config.get("chrome")):
+            rendered = self._fetch_html(url, force_browser=True)
+            if rendered and rendered != html_text:
+                retried = self._parse_html(rendered, is_browse=is_browse)
+                if retried:
+                    result = retried
+        return result
 
     @staticmethod
     def _cfg_get(cfg, key, default=None):
@@ -138,7 +157,72 @@ class HtmlSiteSearcher:
                 url += f"{'&' if '?' in url else '?'}page={int(page) + 1}"
         return url
 
-    def _fetch_html(self, url):
+    def _browser_form_search(self, keyword: str) -> str | None:
+        """浏览器交互式搜索：过盾 → 填关键词 → 点提交 → 返回结果页 HTML.
+
+        适用于搜索表单受 Cloudflare/Turnstile 保护、普通 GET 不生效的站点
+        （如观众 audiences）。仅站点开启浏览器自动化时可用。
+        """
+        if not keyword or not self._user_config.get("chrome"):
+            return None
+        server = get_chrome_server_url()
+        if not server:
+            return None
+        domain = self._user_config.get("domain") or self._site.domain or ""
+        search_cfg = self._cfg_get(self._site.html or {}, "search", {}) or {}
+        paths = search_cfg.get("paths") or []
+        base_path = str((paths[0].get("path") if paths else "torrents.php") or "torrents.php")
+        base_url = f"{domain.rstrip('/')}/{base_path.lstrip('/')}"
+        # 关键词参数名：取 params 中含 {keyword} 的键
+        param_name = "search"
+        for k, v in (search_cfg.get("params") or {}).items():
+            if isinstance(v, str) and "{keyword}" in v:
+                param_name = str(k)
+                break
+        input_selector = f'input[name="{param_name}"]'
+        submit_selectors = [
+            "#search_btn",
+            "button.js-torrent-search-submit",
+            "button[type=submit]",
+            "input[type=submit]",
+        ]
+        proxies = get_proxies() if self._user_config.get("proxy") else None
+        proxy_url = proxies.get("http") if isinstance(proxies, dict) else None
+        try:
+            with BrowserSession(
+                domain,
+                server_url=server,
+                user_agent=self._user_config.get("ua"),
+                proxy_url=proxy_url,
+            ) as session:
+                session.navigate(base_url, cookie=self._user_config.get("cookie") or "")
+                # 等待挑战/Turnstile 由 chrome 自动完成后清除
+                html = session.html()
+                for _ in range(10):
+                    if not (is_challenge(html) or has_pending_turnstile(html)):
+                        break
+                    time.sleep(2)
+                    html = session.html()
+                session.input(input_selector, keyword)
+                time.sleep(1)
+                for sel in submit_selectors:
+                    try:
+                        session.click(sel)
+                        break
+                    except Exception:  # noqa: BLE001, S112  # 选择器不存在则尝试下一个
+                        continue
+                # 轮询结果渲染
+                for _ in range(12):
+                    time.sleep(2)
+                    html = session.html()
+                    if self._parse_html(html, is_browse=False):
+                        break
+                return html
+        except Exception as e:  # noqa: BLE001
+            log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器表单搜索失败: {e}")
+            return None
+
+    def _fetch_html(self, url, force_browser: bool = False):
         cookie = self._user_config.get("cookie", "")
         headers = {}
         ua = self._user_config.get("ua", "")
@@ -176,16 +260,23 @@ class HtmlSiteSearcher:
                 if client is not None and with_browser is not None:
                     client.close()
 
-        # 站点开启浏览器自动化：直连失败/疑似挑战页时自动经 nexus-chrome 渲染再取一次
-        html = _request(None)
-        if html is None or is_challenge(html):
+        # 站点开启浏览器自动化：直连失败 / 挑战页 / 内嵌 Turnstile 时经 nexus-chrome 渲染再取一次
+        html = _request(None) if not force_browser else None
+        need_browser = (
+            force_browser
+            or html is None
+            or is_challenge(html)
+            or (chrome_enabled and bool(html) and has_pending_turnstile(html))
+        )
+        if need_browser:
             if not chrome_enabled:
                 return html
             browser = build_browser_mode(
                 site_info={
                     "chrome": True,
                     "ua": ua,
-                    "browser_render": render,
+                    # 强制/内嵌验证场景需要渲染后再取 DOM（等待 JS/挑战完成）
+                    "browser_render": True if (force_browser or has_pending_turnstile(html or "")) else render,
                     "browser_persistent": bool(self._user_config.get("browser_persistent")),
                 },
                 site_key=self._user_config.get("domain") or self._site.domain or "",
@@ -224,6 +315,12 @@ class HtmlSiteSearcher:
             rows = html_doc.xpath(xpath)
         except Exception:
             rows = []
+        # 部分站点行位于 <tbody> 内而选择器写的是 `table > tr`：补一层 tbody 兜底
+        if not rows and "> tr" in list_selector and "tbody" not in list_selector:
+            try:
+                rows = html_doc.xpath(_css_to_xpath(list_selector.replace("> tr", "> tbody > tr", 1)))
+            except Exception:
+                rows = []
         if not rows and ":has(" not in list_selector:
             try:
                 rows = html_doc.cssselect(list_selector)
