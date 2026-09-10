@@ -62,6 +62,19 @@ class SiteGrantService:
                 return True
         return False
 
+    @staticmethod
+    def is_site_name_allowed(visible: dict[str, set[str]], site_name: str, usage: str = "search") -> bool:
+        """按站点名做 source 无关匹配（订阅保存校验用，站点名在客户端侧无 source 信息）.
+
+        匹配顺序：任意 `*:<site>`、精确站点名、任意 `*:*` 通配。
+        """
+        for key, perms in visible.items():
+            if not perms or usage not in perms:
+                continue
+            if key == site_name or key.endswith(f":{site_name}") or key.endswith(":*"):
+                return True
+        return False
+
     def can_access_site(
         self, user: UserContext, site_name: str, source: str = "builtin", usage: str = "search"
     ) -> bool:

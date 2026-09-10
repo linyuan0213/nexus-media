@@ -256,10 +256,10 @@ def _check_site_grants(app_context, user: UserContext, kwargs: dict) -> list[str
         return []
     denied: list[str] = []
     for site in kwargs.get("rss_sites") or []:
-        if not grant_service.is_site_allowed(visible, site, "builtin", usage="rss"):
+        if not grant_service.is_site_name_allowed(visible, site, usage="rss"):
             denied.append(site)
     for site in kwargs.get("search_sites") or []:
-        if not grant_service.is_site_allowed(visible, site, "builtin", usage="search"):
+        if not grant_service.is_site_name_allowed(visible, site, usage="search"):
             denied.append(site)
     return denied
 
