@@ -202,7 +202,7 @@ def _apply_one(ctx: ToolContext, entry: dict) -> str:
     if sec == "indexers":
         return _apply_indexer(ctx, payload)
     if sec == "scraper":
-        ctx.system_config_service.set(SystemConfigKey.UserScraperConf, payload)
+        ctx.system_config_service.set_merged(SystemConfigKey.UserScraperConf, payload)
         return "刮削配置已保存"
     if sec == "config":
         result = ConfigUpdateService.update_config(payload)

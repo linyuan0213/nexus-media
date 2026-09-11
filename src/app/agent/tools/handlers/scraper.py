@@ -39,7 +39,7 @@ def scraper_config_save(ctx: ToolContext, config: dict, confirmed: bool = False)
             },
         )
     try:
-        svc.set(SystemConfigKey.UserScraperConf, config)
+        svc.set_merged(SystemConfigKey.UserScraperConf, config)
     except Exception as e:  # noqa: BLE001
         return ToolResult(success=False, error=f"保存刮削配置失败: {e}")
     return ToolResult(success=True, data={"message": "刮削配置已保存"})

@@ -295,6 +295,17 @@ class MediaServerConfigService:
             raise ValueError(getattr(result, "msg", "保存失败"))
 
 
+def _deep_merge(base: dict, patch: dict) -> dict:
+    """递归合并 patch 到 base（返回新 dict）；仅覆盖 patch 中出现的键."""
+    result = dict(base)
+    for k, v in patch.items():
+        if isinstance(v, dict) and isinstance(result.get(k), dict):
+            result[k] = _deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+
 class SystemConfigService:
     """
     系统配置业务服务
@@ -310,6 +321,17 @@ class SystemConfigService:
     def set(self, key: str, value) -> None:
         """设置系统配置项"""
         self._system_config.set(key=key, value=value)
+
+    def set_merged(self, key: str, patch) -> None:
+        """深合并写入：仅覆盖 patch 中出现的键，保留未提供的既有键。
+
+        用于刮削等结构化配置，避免 agent/前端提交不完整 payload 时整体覆盖丢配置。
+        """
+        current = self._system_config.get(key)
+        if isinstance(current, dict) and isinstance(patch, dict):
+            self._system_config.set(key=key, value=_deep_merge(current, patch))
+        else:
+            self._system_config.set(key=key, value=patch)
 
     def set_config(self, key: str, value) -> bool:
         """设置系统配置项（兼容旧接口）"""

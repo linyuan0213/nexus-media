@@ -710,7 +710,7 @@ def set_scraper_config(
     svc=Depends(get_system_config_service),
 ):
     value = req.dict(exclude_none=True)
-    svc.set(SystemConfigKey.UserScraperConf, value)
+    svc.set_merged(SystemConfigKey.UserScraperConf, value)
     return success()
 
 
