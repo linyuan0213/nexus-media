@@ -128,9 +128,9 @@ class DownloadPipeline:
         downloader_conf = self._client_factory.get_downloader_conf(downloader_id)
         downloader = self._client_factory.get_client(downloader_id)
         if not downloader or not downloader_conf:
-            msg = "请检查下载设置所选下载器是否有效且启用"
+            msg = f"下载设置「{download_setting_name}」所选下载器无效或未启用，请检查下载设置与下载器连接状态"
             self._fail(media_info, in_from, msg, user_id=user_id)
-            return None, None, f"下载设置 {download_setting_name} 所选下载器失效"
+            return None, None, msg
         downloader_name = downloader_conf.get("name")
 
         download_info = self._client_factory.get_download_dir_info(media_info, downloader_conf.get("download_dir"))
@@ -167,7 +167,15 @@ class DownloadPipeline:
             file_names=file_names,
         )
         if not download_id:
+            detail = ""
+            get_error = getattr(downloader, "get_last_add_error", None)
+            if callable(get_error):
+                detail = get_error() or ""
             msg = f"下载器 {downloader_name} 添加下载任务失败"
+            if detail:
+                msg = f"{msg}：{detail}"
+            else:
+                msg = f"{msg}（下载器未返回明确原因，请检查下载器连接/保存路径/磁盘空间或是否已存在重复种子）"
             self._fail(media_info, in_from, msg, user_id=user_id)
             return downloader_id, None, msg
 
@@ -558,4 +566,4 @@ class DownloadPipeline:
         )
         if in_from:
             media_info.user_id = user_id
-            self._message.send_download_fail_message(media_info, f"添加下载任务失败：{reason}")
+            self._message.send_download_fail_message(media_info, reason)

@@ -221,13 +221,38 @@ class TestQbittorrentAddTorrent:
         assert kwargs.get("save_path") == "/做种2"
         assert kwargs.get("use_auto_torrent_management") is False
 
+    def test_add_torrent_ok_legacy_string(self, client):
+        """旧版 qBittorrent 返回 'Ok.' 字符串."""
+        qb, mock_qbc = client
+        mock_qbc.torrents_add.return_value = "Ok."
+        assert qb.add_torrent(content=b"torrent-bytes") is True
+
+    def test_add_torrent_ok_metadata_success_count(self, client):
+        """qBittorrent 5.2+ 返回 TorrentsAddedMetadata(success_count>0)."""
+        qb, mock_qbc = client
+        mock_qbc.torrents_add.return_value = MagicMock(success_count=1)
+        assert qb.add_torrent(content=b"torrent-bytes") is True
+
+    def test_add_torrent_fails_metadata_zero_success(self, client):
+        """5.2+ 重复种子 success_count=0 视为失败."""
+        qb, mock_qbc = client
+        mock_qbc.torrents_add.return_value = MagicMock(success_count=0)
+        assert qb.add_torrent(content=b"torrent-bytes") is False
+        assert "success_count=0" in qb.get_last_add_error()
+
+    def test_add_torrent_success_clears_last_error(self, client):
+        qb, mock_qbc = client
+        qb._set_last_add_error("旧错误")
+        mock_qbc.torrents_add.return_value = MagicMock(success_count=1)
+        assert qb.add_torrent(content=b"torrent-bytes") is True
+        assert qb.get_last_add_error() == ""
+
 
 class TestGetDownloadingTorrents:
     def test_get_downloading_excludes_completed(self):
         """已完成（progress=1，pausedUP 等）的任务不应计入正在下载数"""
         from app.downloader.client.qbittorrent import Qbittorrent
         from app.schemas.download import Torrent, TorrentStatus
-        
 
         downloading = Torrent()
         downloading.progress = 0.5

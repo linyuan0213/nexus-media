@@ -194,6 +194,18 @@ class _IDownloadClient(metaclass=ABCMeta):
     def add_torrent(self, content: str | bytes, **kwargs) -> bool:
         """添加下载任务"""
 
+    def get_last_add_error(self) -> str:
+        """最近一次 add_torrent 失败的具体原因（无则为空字符串）.
+
+        子类在 add_torrent 失败时调用 _set_last_add_error 写入下载器返回的原始信息，
+        供上层生成明确的失败通知，避免只报"下载失败"。
+        """
+        return getattr(self, "_last_add_error", "") or ""
+
+    def _set_last_add_error(self, message: str | None) -> None:
+        """记录/清空最近一次添加失败原因。"""
+        self._last_add_error = message or ""
+
     def add_torrent_and_get_id(
         self,
         content: str | bytes,

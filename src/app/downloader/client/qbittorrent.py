@@ -622,8 +622,31 @@ class Qbittorrent(_IDownloadClient):
                 use_auto_torrent_management=is_auto,
                 cookie=cookie,
             )
-            ret_ok = bool(qbc_ret and str(qbc_ret).find("Ok") != -1)
-            if not ret_ok:
+            # 兼容 qBittorrent 新旧 Web API 返回值。
+            # 旧版通常返回 "Ok."；qBittorrent 5.2+ 返回 TorrentsAddedMetadata，
+            # 其中 success_count > 0 表示至少有一个种子添加成功。
+            ret_ok = False
+            detail = ""
+            if qbc_ret:
+                success_count = getattr(qbc_ret, "success_count", None)
+                if success_count is not None:
+                    try:
+                        ret_ok = int(success_count or 0) > 0
+                    except (TypeError, ValueError):
+                        ret_ok = False
+                    if not ret_ok:
+                        detail = f"qBittorrent 5.2+ 返回 success_count={success_count}（重复种子/路径非法/已被拒绝）"
+                else:
+                    # 兼容旧版 qBittorrent API
+                    ret_ok = "Ok" in str(qbc_ret)
+                    if not ret_ok:
+                        detail = f"qBittorrent 返回：{qbc_ret!r}"
+            else:
+                detail = "qBittorrent 未返回添加结果（Web API 异常或返回空）"
+            if ret_ok:
+                self._set_last_add_error("")
+            else:
+                self._set_last_add_error(detail)
                 log.warn(
                     f"[{self.client_name}]{self.name} 添加种子失败，"
                     f"qBittorrent 返回: {qbc_ret!r}（重复种子会返回 Fails.，需确认是否已在下载器中）"
@@ -633,6 +656,7 @@ class Qbittorrent(_IDownloadClient):
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
+            self._set_last_add_error(f"调用 qBittorrent 接口异常：{err!s}")
             return False
 
     def add_torrent_and_get_id(
