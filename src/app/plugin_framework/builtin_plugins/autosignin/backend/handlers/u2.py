@@ -1,6 +1,5 @@
 """U2 签到处理器。"""
 
-import random
 import re
 from datetime import datetime
 
@@ -32,6 +31,7 @@ class U2(SiteSigninHandler):
         base_url = StringUtils.get_base_url(ctx.site_url)
         showup_url = base_url + "/showup.php"
         base_headers = {"User-Agent": ctx.ua} if ctx.ua else {}
+        post_headers = {**base_headers, "Referer": showup_url, "Origin": base_url}
 
         with self._http_client(ctx) as client:
             try:
@@ -47,30 +47,19 @@ class U2(SiteSigninHandler):
         text = index_res.text
         if self._is_cookie_expired(text, str(index_res.url)):
             return SigninResult.fail(site, SigninResult.COOKIE_EXPIRED)
-
         if self.sign_in_result(text, self._ALREADY_REGEXS):
             return SigninResult.already(site)
 
-        params = self._extract_form_params(text)
-        if not params:
+        data = self._build_signin_data(text)
+        if not data:
             return SigninResult.fail(site, "未获取到签到参数")
-
-        req, hash_str, form, submit_name, submit_value = params
-        answer_num = random.randint(0, min(3, len(submit_name) - 1))
-        data = {
-            "req": req,
-            "hash": hash_str,
-            "form": form,
-            "message": "一切随缘~",
-            submit_name[answer_num]: submit_value[answer_num],
-        }
 
         with self._http_client(ctx) as client:
             try:
                 sign_res = client.post(
                     url=showup_url + "?action=show",
                     data=data,
-                    headers=base_headers,
+                    headers=post_headers,
                     auth=CookieAuth(ctx.cookie),
                 )
             except Exception as e:
@@ -80,7 +69,47 @@ class U2(SiteSigninHandler):
         if self._SUCCESS_TEXT in sign_res.text:
             return SigninResult.success(site)
 
+        # 验证码选错也会记录出勤（"错误"仅代表选番剧小游戏答错），
+        # 因此以再次请求首页是否显示"已签到"作为最终判定。
+        with self._http_client(ctx) as client:
+            try:
+                verify_res = client.get(
+                    url=showup_url,
+                    headers=base_headers,
+                    auth=CookieAuth(ctx.cookie),
+                )
+            except Exception:  # noqa: BLE001
+                return SigninResult.fail(site, "签到结果校验失败")
+        if self.sign_in_result(verify_res.text, self._ALREADY_REGEXS):
+            return SigninResult.success(site)
         return SigninResult.fail(site, "签到失败，未知原因")
+
+    def _build_signin_data(self, text: str) -> dict | None:
+        """构造签到表单数据。
+
+        U2 的 showup 表单必须携带 `_csrf`（否则 403 Invalid or expired link），
+        且提交按钮中混有非签到按钮（如 shout），只能从 `captcha_*` 选项里选。
+        验证码答错不影响出勤，任选一个候选即可。
+        """
+        params = self._extract_form_params(text)
+        if not params:
+            return None
+        req, hash_str, form, submit_names, submit_values = params
+        captcha_options = [
+            (name, value) for name, value in zip(submit_names, submit_values) if name.startswith("captcha_")
+        ]
+        if not captcha_options:
+            return None
+        submit_name, submit_value = captcha_options[0]
+        data = {
+            "_csrf": self._extract_input(text, "_csrf") or "",
+            "req": req,
+            "hash": hash_str,
+            "form": form,
+            "message": "一切随缘~",
+            submit_name: submit_value,
+        }
+        return data
 
     @staticmethod
     def _is_cookie_expired(text: str, final_url: str = "") -> bool:
