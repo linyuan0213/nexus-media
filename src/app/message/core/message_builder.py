@@ -249,11 +249,29 @@ class MessageBuilder:
                         template_engine=self._template_engine,
                     )
 
+    @staticmethod
+    def _format_season_episode(item) -> str:
+        """生成季集标识；单集条目缺失 E 编号时用 get_episode_list 兜底补齐."""
+        tag = ""
+        if hasattr(item, "get_season_episode_string"):
+            tag = item.get_season_episode_string() or ""
+        if "E" not in tag and hasattr(item, "get_episode_list"):
+            episodes = item.get_episode_list() or []
+            if episodes:
+                seq = f"E{episodes[0]:02d}" if len(episodes) == 1 else f"E{episodes[0]:02d}-E{episodes[-1]:02d}"
+                tag = f"{tag} {seq}".strip()
+        if not tag and hasattr(item, "get_season_string"):
+            tag = item.get_season_string() or ""
+        return tag
+
     def send_download_fail_message(self, item, error_msg: str) -> None:
-        title = f"添加下载任务失败：{item.get_title_string()} {item.get_season_episode_string()}"
+        title = f"{item.get_title_string()} {self._format_season_episode(item)} 添加下载任务失败".strip()
         if not _should_notify_fail(f"{title}|{getattr(item, 'enclosure', '')}"):
             return
-        text = f"站点：{item.site}\n种子名称：{item.org_string}\n种子链接：{item.enclosure}\n错误信息：{error_msg}"
+        site = getattr(item, "site", "") or ""
+        org_string = getattr(item, "org_string", "") or ""
+        enclosure = getattr(item, "enclosure", "") or ""
+        text = f"标题：{title}\n站点：{site}\n种子名称：{org_string}\n种子链接：{enclosure}\n错误信息：{error_msg}"
         owner_user_id = getattr(item, "user_id", None)
         if owner_user_id:
             self._dispatcher.send_user_msg(owner_user_id, title, text, image=item.get_message_image())
