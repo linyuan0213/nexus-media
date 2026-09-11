@@ -190,13 +190,23 @@ class HtmlSiteSearcher:
         fingerprint = browser_cfg.fingerprint_profile if browser_cfg else "stealth"
         cookie = self._user_config.get("cookie") or ""
 
+        def _accept_results(html_text: str | None) -> str | None:
+            """仅接受'非挑战页且能解析出结果'的 HTML，避免把盾页面当成结果返回."""
+            if not html_text:
+                return None
+            if is_challenge(html_text):
+                log.debug(f"[HtmlSiteSearcher]{self._site.name} 仍处于盾挑战页，未过盾")
+                return None
+            if self._parse_html(html_text, is_browse=False):
+                return html_text
+            return None
+
         def _reuse_fetch(session) -> str | None:
             """复用会话 clearance 直接请求搜索链接（锁外，允许并发）."""
             try:
                 res = session.fetch(search_url, method="GET")
                 body = (res or {}).get("body") or (res or {}).get("html") or ""
-                if body and self._parse_html(body, is_browse=False):
-                    return body
+                return _accept_results(body)
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[HtmlSiteSearcher]{self._site.name} 复用会话请求失败: {e}")
             return None
@@ -221,25 +231,21 @@ class HtmlSiteSearcher:
                         reused = _reuse_fetch(session)
                         if reused:
                             return reused
-                        session.navigate(search_url, cookie=cookie)
-                        html = session.html()
-                        if html and self._parse_html(html, is_browse=False):
-                            log.info(f"[HtmlSiteSearcher]{self._site.name} 过盾后搜索成功")
-                            return html
+                        # 未过盾：先访问站点首页触发并通过盾，再请求搜索链接，
+                        # 避免在盾未通过时直接打搜索 URL（浪费/可能被流控）
                         session.navigate(base_url, cookie=cookie)
                         session.navigate(search_url, cookie=cookie)
                         html = session.html()
-                        if html and self._parse_html(html, is_browse=False):
-                            return html
+                        accepted = _accept_results(html)
+                        if accepted:
+                            log.info(f"[HtmlSiteSearcher]{self._site.name} 过盾后搜索成功")
+                            return accepted
                         try:
                             session.turnstile(timeout=8)
                         except Exception as e:  # noqa: BLE001
                             log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 处理失败: {e}")
                         session.navigate(search_url, cookie=cookie)
-                        html = session.html()
-                        if html and self._parse_html(html, is_browse=False):
-                            return html
-                        return None
+                        return _accept_results(session.html())
                 finally:
                     # 保留会话（clearance/Cookie 复用），仅关闭标签页，
                     # 避免同一 Chrome 实例标签页长期堆积导致卡死
