@@ -1,6 +1,7 @@
 """MessageBuilder - 业务消息构建与发送."""
 
 import re
+import threading
 import time
 from enum import Enum
 from typing import Any
@@ -11,6 +12,21 @@ from app.domain.mediatypes import MediaType
 from app.schemas.auth import SUPERADMIN_ROLE_CODE
 from app.services.web import WebUtils
 from app.utils import StringUtils
+
+_FAIL_NOTIFY_INTERVAL = 600
+_fail_notify_cache: dict[str, float] = {}
+_fail_notify_lock = threading.Lock()
+
+
+def _should_notify_fail(key: str) -> bool:
+    """失败通知去重：同一媒体+链接在间隔内只通知一次，避免重复刷屏."""
+    now = time.monotonic()
+    with _fail_notify_lock:
+        last = _fail_notify_cache.get(key)
+        if last is not None and now - last < _FAIL_NOTIFY_INTERVAL:
+            return False
+        _fail_notify_cache[key] = now
+        return True
 
 
 class MessageBuilder:
@@ -235,6 +251,8 @@ class MessageBuilder:
 
     def send_download_fail_message(self, item, error_msg: str) -> None:
         title = f"添加下载任务失败：{item.get_title_string()} {item.get_season_episode_string()}"
+        if not _should_notify_fail(f"{title}|{getattr(item, 'enclosure', '')}"):
+            return
         text = f"站点：{item.site}\n种子名称：{item.org_string}\n种子链接：{item.enclosure}\n错误信息：{error_msg}"
         owner_user_id = getattr(item, "user_id", None)
         if owner_user_id:

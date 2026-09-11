@@ -61,6 +61,10 @@ class Torrent:
             )
             if not file_path:
                 return None, content, "", [], errmsg
+            # 站点可能返回 JSON/HTML（如一过性下载链接过期）而非种子内容，
+            # 提前识别给出明确原因，避免后续 bencode 解析报"种子数据有误"误导。
+            if not self._looks_like_torrent(file_path):
+                return None, content, "", [], "下载链接已失效或非种子数据（请等待重新搜索获取新链接）"
             # 解析种子文件
             files_folder, files, retmsg = self.get_torrent_files(file_path)
             # 种子文件路径、种子内容、种子文件列表主目录、种子文件列表、错误信息
@@ -68,6 +72,15 @@ class Torrent:
 
         except Exception as err:
             return None, None, "", [], f"下载种子文件出现异常：{str(err)}"
+
+    @staticmethod
+    def _looks_like_torrent(file_path) -> bool:
+        """判断文件是否为 bencode 种子（dict 以 'd' 开头）."""
+        try:
+            with open(file_path, "rb") as f:
+                return f.read(1) == b"d"
+        except OSError:
+            return False
 
     def save_torrent_file(self, url, cookie=None, api_key=None, bearer_token=None, ua=None, referer=None, proxy=False):
         """
