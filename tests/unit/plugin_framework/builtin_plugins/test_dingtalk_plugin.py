@@ -62,15 +62,24 @@ class TestDingtalkPlugin:
 
     def test_callback_handles_message(self):
         plugin = self._plugin()
-        with patch(
-            "app.plugin_framework.builtin_plugins._msg_common.callback.get_message_command_handler"
-        ) as mf:
+        bound = MagicMock()
+        bound.nickname = "绑定用户"
+        bound.username = "bound"
+        bound.permissions = ["search:execute"]
+        bound.user_id = 7
+        plugin._app_context.channel_binding_service.resolve_user.return_value = bound
+        with patch("app.plugin_framework.builtin_plugins._msg_common.callback.get_message_command_handler") as mf:
             handler = MagicMock()
             mf.return_value = handler
             result = plugin._on_callback({"apikey": "k", "user_id": "staff1", "text": "搜索 三体"})
             assert result["code"] == 0
             handler.handle_message_job.assert_called_once_with(  # type: ignore[attr-defined]
-                msg="搜索 三体", in_from="DINGTALK", user_id="staff1"
+                msg="搜索 三体",
+                in_from="DINGTALK",
+                user_id="staff1",
+                user_name="绑定用户",
+                user_permissions=["search:execute"],
+                bound_user_id=7,
             )
 
 
@@ -82,9 +91,7 @@ class TestDingtalkClient:
 
     def test_send_msg_webhook(self):
         client = self._client({"webhook_url": "https://oapi.dingtalk.com/robot/send?access_token=x"})
-        with patch(
-            "app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient"
-        ) as mock_http:
+        with patch("app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient") as mock_http:
             resp = MagicMock()
             resp.json.return_value = {"errcode": 0}
             mock_http.return_value.post.return_value = resp
@@ -102,9 +109,7 @@ class TestDingtalkClient:
 
     def test_send_msg_signature_header(self):
         client = self._client({"webhook_url": "https://x/robot/send", "secret": "sec"})
-        with patch(
-            "app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient"
-        ) as mock_http:
+        with patch("app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient") as mock_http:
             resp = MagicMock()
             resp.json.return_value = {"errcode": 0}
             mock_http.return_value.post.return_value = resp
@@ -117,9 +122,7 @@ class TestDingtalkClient:
         media = MagicMock()
         media.get_title_string.return_value = "三体"
         client = self._client({"webhook_url": "https://x/robot/send"})
-        with patch(
-            "app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient"
-        ) as mock_http:
+        with patch("app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient") as mock_http:
             resp = MagicMock()
             resp.json.return_value = {"errcode": 0}
             mock_http.return_value.post.return_value = resp
@@ -131,9 +134,7 @@ class TestDingtalkClient:
     def test_send_msg_uses_session_webhook_for_reply(self):
         client = self._client({})
         client.save_session_webhook("staff1", "https://oapi.dingtalk.com/robot/send?access_token=session")
-        with patch(
-            "app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient"
-        ) as mock_http:
+        with patch("app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient") as mock_http:
             resp = MagicMock()
             resp.json.return_value = {"errcode": 0}
             mock_http.return_value.post.return_value = resp
@@ -144,9 +145,7 @@ class TestDingtalkClient:
 
     def test_send_msg_fallback_to_webhook_without_session(self):
         client = self._client({"webhook_url": "https://x/robot/send"})
-        with patch(
-            "app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient"
-        ) as mock_http:
+        with patch("app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient") as mock_http:
             resp = MagicMock()
             resp.json.return_value = {"errcode": 0}
             mock_http.return_value.post.return_value = resp
@@ -159,9 +158,8 @@ class TestDingtalkClient:
         client = self._client(
             {"app_key": "ding_k", "app_secret": "sec", "agent_id": "123456", "default_user_ids": "user1"}
         )
-        with patch(
-            "app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient"
-        ) as mock_http:
+        with patch("app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient") as mock_http:
+
             def _fake_post(url, **kw):
                 resp = MagicMock()
                 if "oauth2/accessToken" in str(url):
@@ -189,9 +187,8 @@ class TestDingtalkClient:
                 "webhook_url": "https://x/robot/send",
             }
         )
-        with patch(
-            "app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient"
-        ) as mock_http:
+        with patch("app.plugin_framework.builtin_plugins.msg_dingtalk.backend.message_client.HttpClient") as mock_http:
+
             def _fake_post(url, **kw):
                 resp = MagicMock()
                 if "oauth2/accessToken" in str(url):

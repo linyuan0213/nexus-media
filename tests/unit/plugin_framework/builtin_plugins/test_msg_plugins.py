@@ -15,9 +15,19 @@ from app.plugin_framework.builtin_plugins.msg_synologychat.backend.event_parser 
 from app.plugin_framework.builtin_plugins.msg_synologychat.backend.plugin import MsgSynologychatPlugin
 
 BASE = "src/app/plugin_framework/builtin_plugins"
-MSG_PLUGINS = ["msg_bark", "msg_chanify", "msg_gotify", "msg_iyuu", "msg_ntfy",
-               "msg_pushdeer", "msg_pushplus", "msg_serverchan", "msg_slack",
-               "msg_synologychat", "msg_webhook"]
+MSG_PLUGINS = [
+    "msg_bark",
+    "msg_chanify",
+    "msg_gotify",
+    "msg_iyuu",
+    "msg_ntfy",
+    "msg_pushdeer",
+    "msg_pushplus",
+    "msg_serverchan",
+    "msg_slack",
+    "msg_synologychat",
+    "msg_webhook",
+]
 
 
 class TestMsgPluginManifest:
@@ -85,6 +95,12 @@ class TestSlackPlugin:
     def test_callback_handles_message(self):
         plugin = self._plugin()
         plugin._message.get_interactive_client.return_value = {"client": None}
+        bound = MagicMock()
+        bound.nickname = "绑定用户"
+        bound.username = "bound"
+        bound.permissions = ["search:execute"]
+        bound.user_id = 7
+        plugin._app_context.channel_binding_service.resolve_user.return_value = bound
         with patch("app.plugin_framework.builtin_plugins._msg_common.callback.get_message_command_handler") as mf:
             handler = MagicMock()
             mf.return_value = handler
@@ -93,7 +109,12 @@ class TestSlackPlugin:
             )
             assert result["code"] == 0
             handler.handle_message_job.assert_called_once_with(  # type: ignore[attr-defined]
-                msg="搜索 三体", in_from="SLACK", user_id="U123"
+                msg="搜索 三体",
+                in_from="SLACK",
+                user_id="U123",
+                user_name="绑定用户",
+                user_permissions=["search:execute"],
+                bound_user_id=7,
             )
 
     def test_event_parser(self):
@@ -113,9 +134,13 @@ class TestSynologyChatPlugin:
     def test_callback_handles_message(self):
         plugin = self._plugin()
         plugin._message.get_interactive_client.return_value = {"client": None}
-        with patch(
-            "app.plugin_framework.builtin_plugins._msg_common.callback.get_message_command_handler"
-        ) as mf:
+        bound = MagicMock()
+        bound.nickname = "绑定用户"
+        bound.username = "bound"
+        bound.permissions = ["search:execute"]
+        bound.user_id = 7
+        plugin._app_context.channel_binding_service.resolve_user.return_value = bound
+        with patch("app.plugin_framework.builtin_plugins._msg_common.callback.get_message_command_handler") as mf:
             handler = MagicMock()
             mf.return_value = handler
             result = plugin._on_callback(
@@ -123,7 +148,12 @@ class TestSynologyChatPlugin:
             )
             assert result["code"] == 0
             handler.handle_message_job.assert_called_once_with(  # type: ignore[attr-defined]
-                msg="订阅 三体", in_from="SYNOLOGY", user_id="5"
+                msg="订阅 三体",
+                in_from="SYNOLOGY",
+                user_id="5",
+                user_name="绑定用户",
+                user_permissions=["search:execute"],
+                bound_user_id=7,
             )
 
     def test_event_parser(self):

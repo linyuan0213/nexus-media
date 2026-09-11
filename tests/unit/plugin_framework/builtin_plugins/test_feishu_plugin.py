@@ -118,6 +118,12 @@ class TestFeishuPluginCallback:
 
     def test_callback_handles_message(self):
         plugin = self._plugin()
+        bound = MagicMock()
+        bound.nickname = "绑定用户"
+        bound.username = "bound"
+        bound.permissions = ["search:execute"]
+        bound.user_id = 7
+        plugin._app_context.channel_binding_service.resolve_user.return_value = bound
         with patch(
             "app.plugin_framework.builtin_plugins._msg_common.callback.get_message_command_handler"
         ) as mock_factory:
@@ -126,7 +132,14 @@ class TestFeishuPluginCallback:
             result = plugin._on_callback({"apikey": "valid", "user_id": "ou_123", "text": "搜索 三体"})
             assert result["code"] == 0
             mock_factory.assert_called_once_with(plugin._app_context, plugin._message)
-            handler.handle_message_job.assert_called_once_with(msg="搜索 三体", in_from="FEISHU", user_id="ou_123")
+            handler.handle_message_job.assert_called_once_with(
+                msg="搜索 三体",
+                in_from="FEISHU",
+                user_id="ou_123",
+                user_name="绑定用户",
+                user_permissions=["search:execute"],
+                bound_user_id=7,
+            )
 
     def test_callback_ignores_empty_text(self):
         plugin = self._plugin()
