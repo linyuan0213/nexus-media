@@ -19,7 +19,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninHandler,
 )
 from app.utils import StringUtils
-from app.utils.browser_mode import get_chrome_server_url
+from app.utils.browser_mode import get_chrome_server_url, get_default_fp_profile_id
 from app.utils.chinese_utils import to_simplified
 from app.utils.json_utils import JsonUtils
 from app.utils.path_utils import get_temp_path
@@ -163,7 +163,9 @@ class Tjupt(SiteSigninHandler):
         if not server_url:
             self._plugin_ctx.info("Chrome 服务器未配置或未启用，跳过 Google 识图")
             return SigninResult.fail(site, "未配置 Chrome 服务器")
-        with BrowserSession(site_key="tjupt", server_url=server_url) as session:
+        with BrowserSession(
+            site_key="tjupt", server_url=server_url, fp_profile_id=get_default_fp_profile_id()
+        ) as session:
             session.navigate(image_search_url)
             html_text = session.html()
         search_results = BeautifulSoup(html_text, "lxml").find_all("div", class_="UAiK1e")

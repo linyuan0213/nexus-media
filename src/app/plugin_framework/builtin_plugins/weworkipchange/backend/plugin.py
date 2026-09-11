@@ -18,7 +18,7 @@ from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapt
 from app.infrastructure.chrome import BrowserSession
 from app.infrastructure.http.client import HttpClient
 from app.plugin_framework.context import PluginContext
-from app.utils.browser_mode import get_chrome_server_url
+from app.utils.browser_mode import get_chrome_server_url, get_default_fp_profile_id
 from app.utils.config_tools import get_ua
 
 
@@ -51,6 +51,7 @@ class WeworkIPChangePlugin:
             self._session = BrowserSession(
                 site_key=self._session_id,
                 server_url=server_url,
+                fp_profile_id=get_default_fp_profile_id(),
             )
         return self._session
 

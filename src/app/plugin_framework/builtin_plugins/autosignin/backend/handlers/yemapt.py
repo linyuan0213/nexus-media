@@ -16,7 +16,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninContext,
     SiteSigninHandler,
 )
-from app.utils.browser_mode import get_chrome_server_url
+from app.utils.browser_mode import get_chrome_server_url, get_default_fp_profile_id
 
 _CHECKIN_PATH = "/#/user/growth?tab=checkIn"
 _CHECKIN_DEFAULT_BASE = "https://www.yemapt.org"
@@ -50,7 +50,9 @@ class YemaPT(SiteSigninHandler):
         checkin_url = self._resolve_checkin_url(ctx)
         self._plugin_ctx.info(f"[{site}] 开始浏览器签到（ALTCHA）: {checkin_url}")
         try:
-            with BrowserSession(site_key=site, server_url=server_url) as session:
+            with BrowserSession(
+                site_key=site, server_url=server_url, fp_profile_id=get_default_fp_profile_id()
+            ) as session:
                 # 1. 打开签到页（SPA hash 路由），等待渲染
                 session.navigate(checkin_url, cookie=ctx.cookie)
                 time.sleep(_PAGE_SETTLE)

@@ -7,7 +7,7 @@ from lxml import etree
 from app.infrastructure.chrome import BrowserSession
 from app.plugin_framework.context import PluginContext
 from app.sites.utils import is_logged_in
-from app.utils.browser_mode import get_chrome_server_url
+from app.utils.browser_mode import get_chrome_server_url, get_default_fp_profile_id
 
 from .base import SiteRssGenContext, SiteRssGenHandler, SiteRssGenResult
 
@@ -36,7 +36,9 @@ class BrowserRssGenHandler(SiteRssGenHandler):
 
         self._plugin_ctx.info(f"开始浏览器RSS生成：{site}")
         try:
-            with BrowserSession(site_key=site, server_url=server_url) as session:
+            with BrowserSession(
+                site_key=site, server_url=server_url, fp_profile_id=get_default_fp_profile_id()
+            ) as session:
                 result = session.navigate(url, cookie=ctx.cookie)
                 html_text = result.get("html", "")
                 if not html_text:

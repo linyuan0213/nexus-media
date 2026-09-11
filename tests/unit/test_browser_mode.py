@@ -49,6 +49,27 @@ def test_build_browser_mode_enabled():
     assert browser.session_key.startswith("pt:")
 
 
+def test_build_browser_mode_uses_configured_profile_when_absent():
+    """未显式传画像时统一使用配置的默认画像，保证 chrome 侧复用同一实例。"""
+    with patch("app.utils.browser_mode.settings") as mock_settings:
+        mock_settings.get.return_value = {
+            "chrome_enabled": True,
+            "chrome_server_host": "http://chrome:9850",
+            "chrome_fp_profile_id": "user_1",
+        }
+        browser = build_browser_mode({"chrome": True}, "pt", server_url="http://chrome:9850")
+    assert browser is not None
+    assert browser.fp_profile_id == "user_1"
+
+
+def test_get_default_fp_profile_id_empty():
+    from app.utils.browser_mode import get_default_fp_profile_id
+
+    with patch("app.utils.browser_mode.settings") as mock_settings:
+        mock_settings.get.return_value = {}
+        assert get_default_fp_profile_id() is None
+
+
 def test_build_browser_mode_drops_site_ua_when_profile_set():
     """有指纹画像时不再下发站点 UA，避免 UA 与画像平台错配（cloudflare 异常）。"""
     browser = build_browser_mode(

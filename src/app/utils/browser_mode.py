@@ -31,6 +31,15 @@ def get_chrome_server_url() -> str | None:
     return host.rstrip("/") if host else None
 
 
+def get_default_fp_profile_id() -> str | None:
+    """返回系统配置的默认指纹画像 ID（未配置返回 None）。
+
+    所有后台浏览器会话都应使用同一画像，确保 nexus-chrome 侧复用同一个浏览器实例；
+    混用 None 与画像 ID 会各自建一个实例，导致实例数膨胀。
+    """
+    return str((settings.get("laboratory") or {}).get("chrome_fp_profile_id") or "") or None
+
+
 def get_chrome_api_key() -> str | None:
     """返回 nexus-chrome 访问凭证（复用 laboratory.chrome_admin_token）。
 
@@ -66,7 +75,7 @@ def build_browser_mode(
         return None
 
     if not fp_profile_id:
-        fp_profile_id = str(settings.get("laboratory").get("chrome_fp_profile_id") or "") or None
+        fp_profile_id = get_default_fp_profile_id()
 
     browser = BrowserModeConfig(
         enabled=True,
