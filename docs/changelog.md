@@ -1,5 +1,12 @@
 # 版本历史
 
+## v4.20.8 (2026-09-11)
+
+### 修复
+
+- 新增 head 幂等迁移（随机 revision `8599a96d1abd`），确保 `SEARCH_RESULT_INFO.USER_ID` 与 `ix_search_result_user_id` 索引存在
+- 修复部分库 alembic 版本已到 head 但链中间迁移未实际执行，导致搜索结果写入报 `1054 Unknown column 'USER_ID'`
+
 ## v4.20.7 (2026-09-11)
 
 ### 修复
