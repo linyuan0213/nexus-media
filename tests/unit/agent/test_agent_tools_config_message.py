@@ -412,6 +412,16 @@ class _SystemCfgSvc:
         self.store[self._k(key)] = value
         self.set_calls.append((self._k(key), value))
 
+    def set_merged(self, key, value):
+        """深合并写入（与 SystemConfigService.set_merged 行为一致）."""
+        current = self.store.get(self._k(key))
+        if isinstance(current, dict) and isinstance(value, dict):
+            merged = {**current, **value}
+            self.store[self._k(key)] = merged
+            self.set_calls.append((self._k(key), merged))
+        else:
+            self.set(key, value)
+
 
 class TestIndexer:
     def test_get_masks_secret(self):
