@@ -150,6 +150,21 @@ class BrowserSession(_BaseBrowserSession):
         response.raise_for_status()
         return response.json().get("data", {})
 
+    def list_tabs(self) -> list[str]:
+        """列出会话内标签页名称."""
+        response = self._client.get(self._session_url(f"/sessions/{self._sid}/tabs"))
+        response.raise_for_status()
+        data = (response.json() or {}).get("data") or {}
+        return list((data.get("tabs") if isinstance(data, dict) else data) or [])
+
+    def close_tabs(self) -> None:
+        """关闭会话内全部标签页，保留会话（Cookie/clearance 仍可复用）."""
+        try:
+            for name in self.list_tabs():
+                self._client.delete(self._session_url(f"/sessions/{self._sid}/tabs/{quote(str(name), safe='')}"))
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[BrowserSession] 关闭标签页失败: {e}")
+
     def screenshot(self, tab_name: str | None = None, full_page: bool = False) -> dict[str, Any]:
         """对指定（或活动）标签页截图，返回 {png_base64, size, ...}"""
         payload = {"tab_name": tab_name, "full_page": full_page}

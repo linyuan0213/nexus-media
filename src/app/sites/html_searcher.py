@@ -211,34 +211,39 @@ class HtmlSiteSearcher:
                 fingerprint=fingerprint,
                 persist=True,
             ) as session:
-                # 1) 过盾后的并发路径：已有 clearance 时直接请求，无需拿站点锁
-                reused = _reuse_fetch(session)
-                if reused:
-                    return reused
-                # 2) 需要过盾：仅此阶段串行（双重检查，避免并发重复过盾）
-                with site_serial(session_id):
+                try:
+                    # 1) 过盾后的并发路径：已有 clearance 时直接请求，无需拿站点锁
                     reused = _reuse_fetch(session)
                     if reused:
                         return reused
-                    session.navigate(search_url, cookie=cookie)
-                    html = session.html()
-                    if html and self._parse_html(html, is_browse=False):
-                        log.info(f"[HtmlSiteSearcher]{self._site.name} 过盾后搜索成功")
-                        return html
-                    session.navigate(base_url, cookie=cookie)
-                    session.navigate(search_url, cookie=cookie)
-                    html = session.html()
-                    if html and self._parse_html(html, is_browse=False):
-                        return html
-                    try:
-                        session.turnstile(timeout=8)
-                    except Exception as e:  # noqa: BLE001
-                        log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 处理失败: {e}")
-                    session.navigate(search_url, cookie=cookie)
-                    html = session.html()
-                    if html and self._parse_html(html, is_browse=False):
-                        return html
-                    return None
+                    # 2) 需要过盾：仅此阶段串行（双重检查，避免并发重复过盾）
+                    with site_serial(session_id):
+                        reused = _reuse_fetch(session)
+                        if reused:
+                            return reused
+                        session.navigate(search_url, cookie=cookie)
+                        html = session.html()
+                        if html and self._parse_html(html, is_browse=False):
+                            log.info(f"[HtmlSiteSearcher]{self._site.name} 过盾后搜索成功")
+                            return html
+                        session.navigate(base_url, cookie=cookie)
+                        session.navigate(search_url, cookie=cookie)
+                        html = session.html()
+                        if html and self._parse_html(html, is_browse=False):
+                            return html
+                        try:
+                            session.turnstile(timeout=8)
+                        except Exception as e:  # noqa: BLE001
+                            log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 处理失败: {e}")
+                        session.navigate(search_url, cookie=cookie)
+                        html = session.html()
+                        if html and self._parse_html(html, is_browse=False):
+                            return html
+                        return None
+                finally:
+                    # 保留会话（clearance/Cookie 复用），仅关闭标签页，
+                    # 避免同一 Chrome 实例标签页长期堆积导致卡死
+                    session.close_tabs()
         except Exception as e:  # noqa: BLE001
             log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器搜索失败: {e}")
             return None
