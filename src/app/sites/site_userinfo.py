@@ -1,5 +1,6 @@
 import base64
 import time
+import unicodedata
 from concurrent.futures import as_completed
 from datetime import datetime
 from threading import Lock
@@ -289,31 +290,12 @@ class SiteUserInfo:
             self.__refresh_all_site_data(force=True, specify_sites=specify_sites)
         finally:
             refresh_lock.release()
-        # 刷完发送消息
-        string_list = []
-
-        # 增量数据
-        inc_uploads = 0
-        inc_downloads = 0
+        # 刷完发送消息：每站一行紧凑展示，顶部给出总量
         _, _, site, upload, download = self.get_pt_site_statistics_history(2)
-
         # 按照上传降序排序
         data_list = list(zip(site, upload, download, strict=False))
         data_list = sorted(data_list, key=lambda x: x[1], reverse=True)
-
-        for data in data_list:
-            site = data[0]
-            upload = int(data[1])
-            download = int(data[2])
-            if upload > 0 or download > 0:
-                inc_uploads += int(upload)
-                inc_downloads += int(download)
-                string_list.append(
-                    f"[{site}]\n"
-                    f"上传量：{StringUtils.str_filesize(upload)}\n"
-                    f"下载量：{StringUtils.str_filesize(download)}\n"
-                    f"\n————————————"
-                )
+        string_list, inc_uploads, inc_downloads = self._build_stats_message_rows(data_list)
 
         if inc_downloads or inc_uploads:
             if self.message is None:
@@ -324,6 +306,55 @@ class SiteUserInfo:
                 log.info("[Sites]站点数据统计无变化，跳过重复发送")
                 return
             self.message.send_user_statistics_message(string_list)
+
+    @staticmethod
+    def _display_width(text: str) -> int:
+        """按终端显示宽度计算（CJK 全角字符占 2 列），用于对齐中英混排站点名."""
+        return sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in text)
+
+    @classmethod
+    def _build_stats_message_rows(cls, data_list: list) -> tuple[list[str], int, int]:
+        """构建站点增量统计消息行：共 N 站 + 总量，随后每站一行对齐展示。
+
+        :return: (消息行列表, 总上传增量, 总下载增量)
+        """
+        inc_uploads = 0
+        inc_downloads = 0
+        entries: list[tuple[str, int, int]] = []
+        for data in data_list:
+            site_name = data[0]
+            upload = int(data[1])
+            download = int(data[2])
+            if upload <= 0 and download <= 0:
+                continue
+            inc_uploads += upload
+            inc_downloads += download
+            entries.append((site_name, upload, download))
+        if not entries:
+            return [], 0, 0
+
+        name_width = max(cls._display_width(name) for name, _, _ in entries)
+        up_strs = [StringUtils.str_filesize(upload) if upload > 0 else "-" for _, upload, _ in entries]
+        dl_strs = [StringUtils.str_filesize(download) if download > 0 else "-" for _, _, download in entries]
+        up_width = max(len(s) for s in up_strs)
+        dl_width = max(len(s) for s in dl_strs)
+
+        rows: list[str] = []
+        for idx, (site_name, _, _) in enumerate(entries):
+            pad = " " * (name_width - cls._display_width(site_name))
+            rows.append(
+                (
+                    f"{idx + 1}. {site_name}{pad}  ⬆️ {up_strs[idx].ljust(up_width)}  ⬇️ {dl_strs[idx].ljust(dl_width)}"
+                ).rstrip()
+            )
+
+        total_parts = []
+        if inc_uploads > 0:
+            total_parts.append(f"⬆️ {StringUtils.str_filesize(inc_uploads)}")
+        if inc_downloads > 0:
+            total_parts.append(f"⬇️ {StringUtils.str_filesize(inc_downloads)}")
+        header = f"共 {len(rows)} 个站点  " + "  ".join(total_parts)
+        return [header, "", *rows], inc_uploads, inc_downloads
 
     def _stats_message_unchanged(self, msg_text: str) -> bool:
         """统计消息内容是否与最近一次已发送（持久化）的一致"""
