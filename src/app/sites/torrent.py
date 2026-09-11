@@ -323,9 +323,14 @@ class Torrent:
         return target
 
     @staticmethod
-    def get_download_list(media_list, download_order):
+    def get_download_list(media_list, download_order, collapse: bool = True, max_per_name: int = 8):
         """
         对媒体信息进行排序、去重
+
+        :param collapse: 是否按"标题+季集"折叠为单一最优候选。
+            True（默认，搜索/手动下载场景）：每个名称只保留最优的一个。
+            False（订阅下载场景）：保留有序的多站点候选，失败后可自动回退到下一个。
+        :param max_per_name: collapse=False 时每个名称最多保留的候选数，防止列表膨胀。
         """
         if not media_list:
             return []
@@ -374,8 +379,9 @@ class Torrent:
         # 控重
         can_download_list_item = []
         seen_media_names = set()
+        name_counts: dict[str, int] = {}
 
-        # 排序后重新加入数组，按真实名称控重，即只取每个名称的第一个
+        # 排序后重新加入数组，按真实名称控重
         for t_item in media_list:
             # 控重的主链是名称、年份、季、集
             if t_item.type != MediaType.MOVIE:
@@ -383,9 +389,17 @@ class Torrent:
             else:
                 media_name = t_item.get_title_string()
 
-            # 如果名称未被处理过，将其加入结果列表
-            if media_name not in seen_media_names:
-                seen_media_names.add(media_name)
-                can_download_list_item.append(t_item)
+            if collapse:
+                # 每个名称只取最优的一个
+                if media_name not in seen_media_names:
+                    seen_media_names.add(media_name)
+                    can_download_list_item.append(t_item)
+                continue
+
+            # 订阅场景：保留多个候选，按同一名称限流，失败可回退到下一站点
+            if name_counts.get(media_name, 0) >= max_per_name:
+                continue
+            name_counts[media_name] = name_counts.get(media_name, 0) + 1
+            can_download_list_item.append(t_item)
 
         return can_download_list_item

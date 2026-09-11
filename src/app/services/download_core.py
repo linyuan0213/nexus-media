@@ -12,6 +12,7 @@ DownloadCore - 下载核心业务逻辑
 """
 
 import os
+import threading
 from typing import Any
 
 import log
@@ -30,17 +31,31 @@ from app.downloader.pipeline import DownloadPipeline
 from app.downloader.strategy import RemoveStrategy
 from app.events.bus import EventBus
 from app.events.registry import EventHandlerRegistry  # noqa: F401
+from app.infrastructure.cache_system import get_cache_manager
 from app.media import meta_info
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.schemas.download import Torrent as TorrentInfo
-from app.services.download_strategies import EpisodeStrategy, MovieDownloadStrategy, SeasonPackStrategy
+from app.services.download_strategies import (
+    EpisodeStrategy,
+    MovieDownloadStrategy,
+    SeasonPackStrategy,
+    mark_download_failed,
+)
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.sites import SiteConf, SiteSubtitle
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.torrent import Torrent
 from app.utils import ExceptionUtils
+
+# 轮内种子解析缓存上限（防止异常情况无限增长）与存活时长（秒）
+_EPISODE_CACHE_MAX = 500
+_EPISODE_CACHE_TTL = 300
+# 普通下载失败后的短路时长（秒），避免多策略/多阶段重复取链
+_DOWNLOAD_FAIL_TTL = 600
+# 站点明确拒绝（如限额/不可重试）后的短路时长（秒），避免持续消耗站点配额
+_DOWNLOAD_UNRETRYABLE_TTL = 6 * 3600
 
 
 class DownloadCore:
@@ -79,6 +94,16 @@ class DownloadCore:
         self._downloader_repo = downloader_repo
         self._site_engine = site_engine
         self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
+        cache_manager = get_cache_manager()
+        # 轮内种子解析缓存：key -> (episodes, file_path)，避免同一链接被多阶段反复下载
+        self._episode_cache = cache_manager.get_or_create(
+            "download_episode_parse", "memory", maxsize=_EPISODE_CACHE_MAX, ttl=_EPISODE_CACHE_TTL
+        )
+        # 下载失败负缓存：key -> 错误信息，避免重复取链消耗站点配额（Redis 跨进程共享）
+        self._download_fail_cache = cache_manager.get_or_create("download_fail", "redis", ttl=_DOWNLOAD_FAIL_TTL)
+        # 按链接的单飞锁：保证同一链接在进程内串行，避免并发取链/下载
+        self._link_locks: dict[str, threading.Lock] = {}
+        self._link_locks_guard = threading.Lock()
         self._pipeline = DownloadPipeline(
             client_factory=self._client_factory,
             message=self._message,
@@ -94,6 +119,15 @@ class DownloadCore:
         )
 
     # ---------- 媒体存在性检查 ----------
+
+    def _get_link_lock(self, key: str) -> threading.Lock:
+        """按链接获取进程内单飞锁（并发访问同一链接时串行）."""
+        with self._link_locks_guard:
+            lock = self._link_locks.get(key)
+            if lock is None:
+                lock = threading.Lock()
+                self._link_locks[key] = lock
+            return lock
 
     def check_exists_medias(self, meta_info, no_exists=None, total_ep=None):
         """检查媒体是否已存在于媒体库中."""
@@ -142,6 +176,37 @@ class DownloadCore:
 
         :return: 下载器类型, 种子ID，错误信息
         """
+        fail_key = media_info.enclosure or media_info.page_url or ""
+        if fail_key:
+            # 单飞：并发同一链接串行执行，锁内复查失败负缓存，避免并发重复取链
+            with self._get_link_lock(fail_key):
+                cached_fail = self._download_fail_cache.get(fail_key)
+                if cached_fail:
+                    log.info(f"[Downloader]同一资源已失败并处于短路期，跳过重复下载：{fail_key[:120]}")
+                    return None, None, cached_fail
+                result = self._pipeline.execute(
+                    media_info=media_info,
+                    is_paused=is_paused,
+                    tag=tag,
+                    download_dir=download_dir,
+                    download_setting=download_setting,
+                    downloader_id=downloader_id,
+                    upload_limit=upload_limit,
+                    download_limit=download_limit,
+                    torrent_file=torrent_file,
+                    in_from=in_from,
+                    user_name=user_name,
+                    proxy=proxy,
+                    file_indices=file_indices,
+                    file_names=file_names,
+                    user_id=user_id,
+                )
+                _, download_id, msg = result
+                if not download_id and msg:
+                    ttl = _DOWNLOAD_UNRETRYABLE_TTL if "[不可重试]" in msg else _DOWNLOAD_FAIL_TTL
+                    self._download_fail_cache.set(fail_key, msg, ttl=ttl)
+                return result
+
         return self._pipeline.execute(
             media_info=media_info,
             is_paused=is_paused,
@@ -161,22 +226,37 @@ class DownloadCore:
         )
 
     def batch_download(
-        self, in_from: Any, media_list: list, need_tvs: dict | None = None, user_name: str | None = None
+        self,
+        in_from: Any,
+        media_list: list,
+        need_tvs: dict | None = None,
+        user_name: str | None = None,
+        user_id: int | None = None,
     ) -> tuple[list, list]:
         download_items: list = []
+        # 每轮重置种子解析缓存；失败负缓存由 TTL 控制跨轮保留
+        self._episode_cache.clear()
         download_order = self._client_factory.download_order if self._client_factory else None
-        download_list = Torrent.get_download_list(media_list, download_order)
+        # 订阅下载保留有序多站点候选，失败后可回退到下一个候选
+        download_list = Torrent.get_download_list(media_list, download_order, collapse=False)
 
         def _download_callback(item, torrent_file=None, is_paused=None):
+            # 多用户：优先用候选自身的归属（RSS 批次可能混合多个用户的订阅），
+            # 其次回退到批量层传入的 user_id，保证下载记录/通知归属正确
+            owner_id = getattr(item, "user_id", None) or user_id
             downloader_id, download_id, _ = self.download(
                 media_info=item,
                 torrent_file=torrent_file,
                 is_paused=is_paused,
                 in_from=in_from,
                 user_name=user_name,
+                user_id=owner_id,
             )
             if download_id and item not in download_items:
                 download_items.append(item)
+            elif not download_id:
+                # 标记本轮失败，后续策略阶段跳过该候选，自动尝试下一个站点/链接
+                mark_download_failed(item)
             return downloader_id, download_id, ""
 
         # 1. 下载所有电影
@@ -454,31 +534,38 @@ class DownloadCore:
         if not url:
             log.error("[Downloader]url 链接为空")
             return [], None
-        site_info: Any = self._sites.get_sites(siteurl=url) or {}
-        torrent = Torrent(site_engine=self._site_engine)
-        file_path, _, _, files, retmsg = torrent.get_torrent_info(
-            url=url,
-            cookie=site_info.get("cookie"),
-            api_key=site_info.get("api_key"),
-            bearer_token=site_info.get("bearer_token"),
-            ua=site_info.get("ua"),
-            referer=page_url if site_info.get("referer") else None,
-            proxy=site_info.get("proxy") or False,
-        )
-        if not files:
-            log.error(f"[Downloader]读取种子文件集数出错：{retmsg}")
-            if file_path:
-                Torrent.delete_torrent_file(file_path)
-            return [], None
-        episodes = []
-        for file in files:
-            if os.path.splitext(file)[-1] not in RMT_MEDIAEXT:
-                continue
-            meta = meta_info(file)
-            if not meta.begin_episode:
-                continue
-            episodes = list(set(episodes).union(set(meta.get_episode_list())))
-        return episodes, file_path
+        cache_key = url
+        with self._get_link_lock(cache_key):
+            cached = self._episode_cache.get(cache_key)
+            if cached is not None:
+                return list(cached[0]), cached[1]
+            site_info: Any = self._sites.get_sites(siteurl=url) or {}
+            torrent = Torrent(site_engine=self._site_engine)
+            file_path, _, _, files, retmsg = torrent.get_torrent_info(
+                url=url,
+                cookie=site_info.get("cookie"),
+                api_key=site_info.get("api_key"),
+                bearer_token=site_info.get("bearer_token"),
+                ua=site_info.get("ua"),
+                referer=page_url if site_info.get("referer") else None,
+                proxy=site_info.get("proxy") or False,
+            )
+            if not files:
+                log.error(f"[Downloader]读取种子文件集数出错：{retmsg}")
+                if file_path:
+                    Torrent.delete_torrent_file(file_path)
+                self._episode_cache.set(cache_key, ([], None))
+                return [], None
+            episodes = []
+            for file in files:
+                if os.path.splitext(file)[-1] not in RMT_MEDIAEXT:
+                    continue
+                meta = meta_info(file)
+                if not meta.begin_episode:
+                    continue
+                episodes = list(set(episodes).union(set(meta.get_episode_list())))
+            self._episode_cache.set(cache_key, (list(episodes), file_path))
+            return episodes, file_path
 
     # ---------- 历史记录 / 配置 CRUD 代理 ----------
 

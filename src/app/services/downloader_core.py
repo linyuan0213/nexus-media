@@ -138,9 +138,9 @@ class DownloaderCore:
             user_id=user_id,
         )
 
-    def batch_download(self, in_from, media_list, need_tvs=None, user_name=None) -> Any:
+    def batch_download(self, in_from, media_list, need_tvs=None, user_name=None, user_id=None) -> Any:
         return self._download_core.batch_download(
-            in_from=in_from, media_list=media_list, need_tvs=need_tvs, user_name=user_name
+            in_from=in_from, media_list=media_list, need_tvs=need_tvs, user_name=user_name, user_id=user_id
         )
 
     # ---------- 转移 ----------

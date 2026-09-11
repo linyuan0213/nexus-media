@@ -10,8 +10,23 @@ DownloadStrategies - 批量下载策略
 便于单元测试和独立演进。
 """
 
+import contextlib
+
 import log
 from app.domain.mediatypes import MediaType
+
+_DOWNLOAD_FAILED_FLAG = "_download_failed"
+
+
+def is_download_failed(item) -> bool:
+    """候选是否已在本轮下载失败（失败后不再重复选中，自动落到下一个候选）."""
+    return bool(getattr(item, _DOWNLOAD_FAILED_FLAG, False))
+
+
+def mark_download_failed(item) -> None:
+    """标记候选本轮下载失败，供后续策略阶段跳过."""
+    with contextlib.suppress(Exception):
+        setattr(item, _DOWNLOAD_FAILED_FLAG, True)
 
 
 class MovieDownloadStrategy:
@@ -30,16 +45,28 @@ class MovieDownloadStrategy:
         :return: 已下载项目列表
         """
         return_items = []
+        downloaded_names: set[str] = set()
         for item in download_list:
-            if item.type == MediaType.MOVIE:
-                if not item.enclosure:
-                    item.enclosure = get_download_url_callback(item.page_url)
-                _downloader_id, did, msg = download_callback(item)
-                if did:
-                    if item not in return_items:
-                        return_items.append(item)
-                else:
-                    log.error(f"[Downloader]下载失败: {item.title}, 错误: {msg}")
+            if item.type != MediaType.MOVIE or is_download_failed(item):
+                continue
+            # 同一电影已成功下载一个候选即停止，失败则继续尝试下一个候选
+            movie_title = (
+                item.get_title_string() if hasattr(item, "get_title_string") else (getattr(item, "title", "") or "")
+            )
+            movie_tmdb_id = getattr(item, "tmdb_id", None)
+            movie_name = f"{movie_tmdb_id}:{movie_title}" if movie_tmdb_id else movie_title
+            if movie_name in downloaded_names:
+                continue
+            if not item.enclosure:
+                item.enclosure = get_download_url_callback(item.page_url)
+            _downloader_id, did, msg = download_callback(item)
+            if did:
+                downloaded_names.add(movie_name)
+                if item not in return_items:
+                    return_items.append(item)
+            else:
+                mark_download_failed(item)
+                log.error(f"[Downloader]下载失败: {item.title}, 错误: {msg}")
         return return_items
 
 
@@ -71,6 +98,8 @@ class SeasonPackStrategy:
         for need_tmdbid, need_season in list(need_seasons.items()):
             for item in download_list:
                 if item.type == MediaType.MOVIE:
+                    continue
+                if is_download_failed(item):
                     continue
                 item_season = item.get_season_list()
                 if item.get_episode_list():
@@ -190,7 +219,7 @@ class EpisodeStrategy:
                         continue
                     if item.tmdb_id != need_tmdbid:
                         continue
-                    if item in return_items:
+                    if item in return_items or is_download_failed(item):
                         continue
                     # 只处理单季含集的种子
                     item_season = item.get_season_list()
@@ -251,7 +280,7 @@ class EpisodeStrategy:
                 for item in download_list:
                     if item.type == MediaType.MOVIE:
                         continue
-                    if item in return_items:
+                    if item in return_items or is_download_failed(item):
                         continue
                     if not need_episodes:
                         break

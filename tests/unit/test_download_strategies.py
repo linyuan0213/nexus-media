@@ -26,8 +26,8 @@ class MockMediaItem:
 
 class TestMovieDownloadStrategy:
     def test_download_movies(self):
-        movie1 = MockMediaItem(type=MediaType.MOVIE, enclosure="url1")
-        movie2 = MockMediaItem(type=MediaType.MOVIE, enclosure="")
+        movie1 = MockMediaItem(type=MediaType.MOVIE, enclosure="url1", title="Movie A", tmdb_id=1)
+        movie2 = MockMediaItem(type=MediaType.MOVIE, enclosure="", title="Movie B", tmdb_id=2)
         tv = MockMediaItem(type=MediaType.TV)
 
         downloaded = []
@@ -44,6 +44,35 @@ class TestMovieDownloadStrategy:
         assert movie1 in result
         assert movie2 in result
         assert movie2.enclosure == "resolved_url"
+
+    def test_download_movies_same_title_falls_back_on_failure(self):
+        """同一电影多个候选：失败后回退到下一个，成功后不再重复下载"""
+        bad = MockMediaItem(type=MediaType.MOVIE, enclosure="bad", title="Same Movie", tmdb_id=9)
+        good = MockMediaItem(type=MediaType.MOVIE, enclosure="good", title="Same Movie", tmdb_id=9)
+        attempted = []
+
+        def download_cb(item, torrent_file=None, tag=None, is_paused=None):
+            attempted.append(item.enclosure)
+            if item.enclosure == "bad":
+                return None, None, "fail"
+            return "did", "id1", ""
+
+        result = MovieDownloadStrategy.download_movies([bad, good], download_cb, lambda x: x)
+        assert attempted == ["bad", "good"]
+        assert result == [good]
+
+    def test_download_movies_same_title_stops_after_success(self):
+        first = MockMediaItem(type=MediaType.MOVIE, enclosure="first", title="Same Movie", tmdb_id=9)
+        second = MockMediaItem(type=MediaType.MOVIE, enclosure="second", title="Same Movie", tmdb_id=9)
+        attempted = []
+
+        def download_cb(item, torrent_file=None, tag=None, is_paused=None):
+            attempted.append(item.enclosure)
+            return "did", "id1", ""
+
+        result = MovieDownloadStrategy.download_movies([first, second], download_cb, lambda x: x)
+        assert attempted == ["first"]
+        assert result == [first]
 
     def test_download_movies_failure(self):
         movie = MockMediaItem(type=MediaType.MOVIE, enclosure="url1")

@@ -102,3 +102,56 @@ class TestTorrentGetDownloadList:
         )
         result = Torrent.get_download_list([low, high], download_order="seeder")
         assert result[0].title == "Low"
+
+    def test_collapse_keeps_single_best_candidate_per_name(self):
+        first = _MediaInfo(
+            title="Same Show",
+            type=MediaType.ANIME,
+            tmdb_id=1,
+            begin_season=1,
+            begin_episode=1,
+            end_episode=1,
+            res_order=1,
+            site_order=99,
+            seeders=10,
+        )
+        second = _MediaInfo(
+            title="Same Show",
+            type=MediaType.ANIME,
+            tmdb_id=1,
+            begin_season=1,
+            begin_episode=1,
+            end_episode=1,
+            res_order=1,
+            site_order=-21,
+            seeders=10,
+        )
+        result = Torrent.get_download_list([first, second], download_order="site")
+        assert len(result) == 1
+        assert result[0] is first
+
+    def test_no_collapse_keeps_multi_site_candidates_in_order(self):
+        first = _MediaInfo(
+            title="Same Show",
+            type=MediaType.ANIME,
+            tmdb_id=1,
+            begin_season=1,
+            begin_episode=1,
+            end_episode=1,
+            res_order=1,
+            site_order=99,
+            seeders=10,
+        )
+        second = _MediaInfo(
+            title="Same Show",
+            type=MediaType.ANIME,
+            tmdb_id=1,
+            begin_season=1,
+            begin_episode=1,
+            end_episode=1,
+            res_order=1,
+            site_order=-21,
+            seeders=10,
+        )
+        result = Torrent.get_download_list([first, second], download_order="site", collapse=False)
+        assert result == [first, second]

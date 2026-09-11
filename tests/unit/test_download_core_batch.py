@@ -1,5 +1,7 @@
 """DownloadCore batch_download 完整流程测试"""
 
+import time
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -29,6 +31,7 @@ class MockMediaItem:
         self.res_order = kwargs.get("res_order", 100)
         self.site_order = kwargs.get("site_order", 100)
         self.seeders = kwargs.get("seeders", 0)
+        self.user_id = kwargs.get("user_id", None)
 
     def get_season_list(self):
         return self._season_list
@@ -260,6 +263,177 @@ class TestBatchDownloadFlow:
 
         downloaded, left = core.batch_download("WEB", [movie1, movie2])
         assert len(downloaded) == 2
+
+
+class TestDownloadShortCircuitAndCache:
+    """同轮去重：失败短路与种子解析缓存."""
+
+    @pytest.fixture
+    def mock_core(self):
+        mock_factory = MagicMock()
+        mock_factory.download_order = None
+
+        with patch("app.services.download_core.DownloadPipeline") as mock_pipeline_cls:
+            mock_pipeline_cls.return_value = MagicMock()
+            core = DownloadCore(
+                client_factory=mock_factory,
+                message=MagicMock(),
+                mediaserver=MagicMock(),
+                filetransfer=MagicMock(),
+                sites=MagicMock(),
+                siteconf=MagicMock(),
+                sitesubtitle=MagicMock(),
+                event_bus=MagicMock(),
+                download_repo=MagicMock(),
+                download_setting_repo=MagicMock(),
+                systemconfig=MagicMock(),
+                downloader_repo=MagicMock(),
+                site_engine=MagicMock(),
+            )
+            core._episode_cache.clear()
+            core._download_fail_cache.clear()
+            yield core
+
+    def test_download_failure_short_circuits_same_enclosure(self, mock_core):
+        core = mock_core
+        core._pipeline.execute.return_value = (None, None, "[不可重试]站点返回：相同種子當天最多下載10次")
+        media = MockMediaItem(enclosure="http://site/dlv2?sign=abc", page_url="http://site/detail/1")
+
+        first = core.download(media)
+        second = core.download(media)
+
+        assert first[1] is None and second[1] is None
+        assert core._pipeline.execute.call_count == 1
+        assert "不可重试" in second[2]
+
+    def test_download_success_is_not_short_circuited(self, mock_core):
+        core = mock_core
+        core._pipeline.execute.return_value = ("qb", "tid1", "")
+        media = MockMediaItem(enclosure="http://site/dlv2?sign=ok")
+
+        assert core.download(media)[1] == "tid1"
+        assert core.download(media)[1] == "tid1"
+        assert core._pipeline.execute.call_count == 2
+
+    def test_get_torrent_episodes_caches_within_round(self, mock_core):
+        core = mock_core
+        with patch("app.services.download_core.Torrent") as torrent_cls:
+            torrent_cls.return_value.get_torrent_info.return_value = (
+                "/tmp/a.torrent",
+                b"data",
+                "",
+                ["Show.S01E01.mkv", "Show.S01E02.mkv"],
+                "",
+            )
+            with patch("app.services.download_core.meta_info") as meta:
+                m1, m2 = MagicMock(), MagicMock()
+                m1.begin_episode = 1
+                m1.get_episode_list.return_value = [1]
+                m2.begin_episode = 2
+                m2.get_episode_list.return_value = [2]
+                meta.side_effect = [m1, m2]
+
+                first = core.get_torrent_episodes("http://site/dlv2?sign=x")
+                second = core.get_torrent_episodes("http://site/dlv2?sign=x")
+
+        assert first[0] == [1, 2]
+        assert first[1] == "/tmp/a.torrent"
+        assert second == ([1, 2], "/tmp/a.torrent")
+        assert torrent_cls.return_value.get_torrent_info.call_count == 1
+
+    def test_batch_download_resets_episode_cache(self, mock_core):
+        core = mock_core
+        core._episode_cache.set("stale", ([1], "/tmp/old"))
+        core.batch_download("WEB", [])
+        assert core._episode_cache.get("stale") is None
+
+    def test_batch_download_uses_item_owner_user_id(self, mock_core):
+        """多用户：候选自带 user_id 优先，缺失时回退批量层 user_id."""
+        core = mock_core
+        owned = MockMediaItem(type=MediaType.MOVIE, enclosure="a", title="A", tmdb_id=1)
+        owned.user_id = 7
+        fallback = MockMediaItem(type=MediaType.MOVIE, enclosure="b", title="B", tmdb_id=2)
+        fallback.user_id = None
+        seen: dict[str, object] = {}
+
+        def mock_download(**kwargs):
+            seen[kwargs["media_info"].enclosure] = kwargs.get("user_id")
+            return "qb", "tid", ""
+
+        core.download = mock_download
+        core.batch_download("WEB", [owned, fallback], user_id=3)
+
+        assert seen["a"] == 7
+        assert seen["b"] == 3
+
+    def test_concurrent_same_link_single_flight(self, mock_core):
+        core = mock_core
+        calls = {"n": 0}
+
+        def slow_execute(**kwargs):
+            calls["n"] += 1
+            time.sleep(0.2)
+            return None, None, "[不可重试]站点返回：相同種子當天最多下載10次"
+
+        core._pipeline.execute.side_effect = slow_execute
+        media = MockMediaItem(enclosure="http://site/dlv2?sign=race")
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda _: core.download(media), range(2)))
+
+        assert calls["n"] == 1
+        assert all(r[1] is None for r in results)
+
+    def test_failed_candidate_falls_back_to_next(self, mock_core):
+        core = mock_core
+        first = MockMediaItem(type=MediaType.MOVIE, enclosure="url-bad", title="Bad")
+        second = MockMediaItem(type=MediaType.MOVIE, enclosure="url-good", title="Good")
+
+        def mock_download(**kwargs):
+            if kwargs["media_info"].enclosure == "url-bad":
+                return None, None, "[不可重试]站点返回：相同種子當天最多下載10次"
+            return "thunder-1", "tid-ok", ""
+
+        core.download = mock_download
+
+        downloaded, left = core.batch_download("WEB", [first, second])
+        assert downloaded == [second]
+        assert first in left
+
+    def test_failed_candidate_skipped_across_strategies(self, mock_core):
+        core = mock_core
+        bad = MockMediaItem(
+            type=MediaType.TV,
+            tmdb_id=321,
+            season_list=[1],
+            episode_list=[],
+            enclosure="pack-bad",
+            org_string="Show S01 Pack",
+        )
+        good = MockMediaItem(
+            type=MediaType.TV,
+            tmdb_id=321,
+            season_list=[1],
+            episode_list=[],
+            enclosure="pack-good",
+            org_string="Show S01 Pack",
+        )
+        attempts = []
+
+        def mock_download(**kwargs):
+            attempts.append(kwargs["media_info"].enclosure)
+            if kwargs["media_info"].enclosure == "pack-bad":
+                return None, None, "[不可重试]限额"
+            return "thunder-1", "tid-good", ""
+
+        core.download = mock_download
+        core.get_torrent_episodes = lambda url, page_url=None: ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], "path")
+
+        need_tvs = {321: [{"season": 1, "episodes": [], "total_episodes": 12}]}
+        downloaded, left = core.batch_download("RSS", [bad, good], need_tvs=need_tvs)
+
+        assert downloaded == [good]
+        assert attempts == ["pack-bad", "pack-good"]
 
 
 class TestGetDownloadDirInfo:
