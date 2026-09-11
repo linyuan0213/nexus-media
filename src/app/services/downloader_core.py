@@ -340,6 +340,12 @@ class DownloaderCore:
     def get_download_history_by_downloader(self, downloader, download_id):
         return self._download_core.get_download_history_by_downloader(downloader=downloader, download_id=download_id)
 
+    def delete_download_history_by_id(self, hid, user=None) -> bool:
+        return self._download_core.delete_download_history_by_id(hid, user=user)
+
+    def delete_all_download_history(self, user=None) -> int:
+        return self._download_core.delete_all_download_history(user=user)
+
     # ---------- 下载器 CRUD ----------
 
     def _refresh_all_factories(self) -> None:

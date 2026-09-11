@@ -141,6 +141,15 @@ class GetDownloadedRequest(BaseModel):
     user_id: int | None = None  # superadmin 按归属用户过滤
 
 
+class DeleteDownloadedRequest(BaseModel):
+    history_id: int  # DOWNLOAD_HISTORY.ID
+    user_id: int | None = None  # superadmin 按归属用户校验
+
+
+class DeleteAllDownloadedRequest(BaseModel):
+    user_id: int | None = None  # superadmin 按归属用户校验
+
+
 class GetTransferHistoryRequest(BaseModel):
     keyword: str | None = None
     page: int | None = None
@@ -432,11 +441,41 @@ def get_downloaded(
                     "season_episode": item.SE or "",
                     "date": item.DATE,
                     "site": item.SITE,
+                    "history_id": item.ID,
                 }
                 for item in items
             ]
         )
     return success(data=[])
+
+
+@router.post("/library/downloaded/delete", response_model=CommonResponse, summary="删除单条已下载记录")
+def delete_downloaded(
+    req: DeleteDownloadedRequest,
+    current_user=Depends(require_permission("library:manage")),
+    svc: Downloader = Depends(get_downloader_service),
+):
+    """删除一条下载历史记录（非超管仅能删除本人或系统记录）."""
+    scoped_user = current_user
+    if req.user_id and current_user.is_superadmin:
+        scoped_user = current_user.model_copy(update={"user_id": req.user_id, "role_codes": []})
+    if svc.delete_download_history_by_id(req.history_id, user=scoped_user):
+        return success(data=True)
+    return fail(msg="记录不存在或无权删除")
+
+
+@router.post("/library/downloaded/delete_all", response_model=CommonResponse, summary="清空已下载记录")
+def delete_all_downloaded(
+    req: DeleteAllDownloadedRequest,
+    current_user=Depends(require_permission("library:manage")),
+    svc: Downloader = Depends(get_downloader_service),
+):
+    """清空下载历史记录（非超管仅清空本人或系统记录），返回删除条数."""
+    scoped_user = current_user
+    if req.user_id and current_user.is_superadmin:
+        scoped_user = current_user.model_copy(update={"user_id": req.user_id, "role_codes": []})
+    count = svc.delete_all_download_history(user=scoped_user)
+    return success(data={"count": count})
 
 
 @router.post("/library/count", response_model=CommonResponse, summary="获取媒体库统计")

@@ -80,6 +80,12 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
     def get_download_history_by_downloader(self, downloader: str, download_id: str):
         return self._repo.get_download_history_by_downloader(downloader, download_id)
 
+    def delete_download_history_by_id(self, hid, user=None) -> bool:
+        return self._repo.delete_download_history_by_id(hid, user=user)
+
+    def delete_all_download_history(self, user=None) -> int:
+        return self._repo.delete_all_download_history(user=user)
+
     def get_by_id(self, download_id: str):
         return self._repo.get_download_history_by_id(download_id)
 

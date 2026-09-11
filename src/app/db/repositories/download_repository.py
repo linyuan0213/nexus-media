@@ -113,6 +113,28 @@ class DownloadRepository(BaseRepository):
             db.commit()
             return count
 
+    def delete_download_history_by_id(self, hid: int | str | None, user=None) -> bool:
+        """按历史记录 ID 删除单条下载历史（非超管仅可删除本人或系统记录）."""
+        if not hid:
+            return False
+        with self.session() as db:
+            query = db.query(DOWNLOADHISTORY).filter(DOWNLOADHISTORY.ID == int(hid))
+            if user is not None and not user.is_superadmin:
+                query = query.filter(or_(DOWNLOADHISTORY.USER_ID == user.user_id, DOWNLOADHISTORY.USER_ID.is_(None)))
+            count = query.delete(synchronize_session="fetch")
+            db.commit()
+            return count > 0
+
+    def delete_all_download_history(self, user=None) -> int:
+        """删除全部下载历史（非超管仅删除本人或系统记录），返回删除条数."""
+        with self.session() as db:
+            query = db.query(DOWNLOADHISTORY)
+            if user is not None and not user.is_superadmin:
+                query = query.filter(or_(DOWNLOADHISTORY.USER_ID == user.user_id, DOWNLOADHISTORY.USER_ID.is_(None)))
+            count = query.delete(synchronize_session="fetch")
+            db.commit()
+            return int(count or 0)
+
     def insert_download_history(
         self,
         media_info: Any,
