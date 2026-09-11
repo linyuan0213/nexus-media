@@ -407,6 +407,30 @@ class SubscribeRepository(BaseRepository):
                 query = apply_owner_scope(query, SubscribeTvs, user)
             return query.all()
 
+    def find_tv_owner_user_id(self, tmdbid: str | None, season: str | None = None) -> int | None:
+        """按 TMDB（+季）反查 TV 订阅归属用户（历史被清理后转移通知仍可定向）."""
+        if not tmdbid:
+            return None
+        with self.session() as db:
+            query = db.query(SubscribeTvs.USER_ID).filter(SubscribeTvs.TMDBID == str(tmdbid))
+            if season:
+                query = query.filter(SubscribeTvs.SEASON == str(season))
+            row = query.order_by(SubscribeTvs.ID.desc()).first()
+            return int(row[0]) if row and row[0] is not None else None
+
+    def find_movie_owner_user_id(self, tmdbid: str | None) -> int | None:
+        """按 TMDB 反查电影订阅归属用户."""
+        if not tmdbid:
+            return None
+        with self.session() as db:
+            row = (
+                db.query(SubscribeMovies.USER_ID)
+                .filter(SubscribeMovies.TMDBID == str(tmdbid))
+                .order_by(SubscribeMovies.ID.desc())
+                .first()
+            )
+            return int(row[0]) if row and row[0] is not None else None
+
     def get_rss_tv_sites(self, rssid: int | None) -> SubscribeTvs | str:
         """
         获取订阅电视剧站点
