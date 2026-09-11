@@ -126,7 +126,12 @@ class SearchExecutor:
 
         with ThreadExecutor(max_workers=optimal_workers, name=self._thread_name_prefix) as executor:
             for search_name in search_names:
-                task = executor.submit(search_func, search_name, filter_args, media_info, in_from)
+                try:
+                    task = executor.submit(search_func, search_name, filter_args, media_info, in_from)
+                except RuntimeError as e:
+                    # 应用退出/线程池关闭时提交会抛 RuntimeError，静默跳过，避免订阅处理报错刷屏
+                    log.debug(f"[Search]执行器不可用，跳过搜索：{e}")
+                    continue
                 all_task.append(task)
 
             finish_count = 0

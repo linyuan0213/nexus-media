@@ -12,6 +12,7 @@ from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.db.repositories.site_repository import SiteRepository
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
+from app.infrastructure.http.exceptions import HttpClientError
 from app.infrastructure.rate_limiter import MemoryTokenBucketBackend, RateLimitEngine
 from app.infrastructure.thread import ThreadExecutor
 from app.message import Message
@@ -164,8 +165,13 @@ class SiteUserInfo:
                 return site_user_info
 
         except Exception as e:
-            ExceptionUtils.exception_traceback(e)
-            log.error(f"[Sites]站点 {site_name} 获取流量数据失败：{e!s}")
+            # 站点 5xx/连接类错误属站点侧问题，降级为 warn，避免刷「系统 Exception」堆栈
+            msg = str(e)
+            if isinstance(e, HttpClientError) or "Server error" in msg or "Connection" in msg:
+                log.warn(f"[Sites]站点 {site_name} 获取流量数据失败（站点/网络）：{msg}")
+            else:
+                ExceptionUtils.exception_traceback(e)
+                log.error(f"[Sites]站点 {site_name} 获取流量数据失败：{e!s}")
 
     def build(
         self,
