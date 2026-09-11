@@ -240,7 +240,7 @@ class Qbittorrent(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as err:
-            ExceptionUtils.exception_traceback(err)
+            self._log_conn_error(f"[{self.client_name}]{self.name} 获取种子失败：{err!s}")
             return [], True
 
     def _get_torrents_sync(
@@ -282,11 +282,17 @@ class Qbittorrent(_IDownloadClient):
         except (InfrastructureError, NetworkError):
             raise
         except Exception as err:
-            ExceptionUtils.exception_traceback(err)
-            # 回退到全量接口
+            self._log_conn_error(f"[{self.client_name}]{self.name} sync 失败，回退全量接口：{err!s}")
             self._sync_rid = 0
             self._sync_torrents = {}
             return self._fallback_get_torrents(status=status, tag=tag)
+
+    def _log_conn_error(self, msg: str) -> None:
+        """连接类错误限流：60 秒内只告警一次，避免轮询刷屏."""
+        now = time.monotonic()
+        if now - getattr(self, "_last_conn_error_at", 0.0) >= 60:
+            self._last_conn_error_at = now
+            log.warn(msg)
 
     def _fallback_get_torrents(
         self,
@@ -297,7 +303,16 @@ class Qbittorrent(_IDownloadClient):
         if not self.qbc:
             return [], True
         status_filter = cast(Any, status) if isinstance(status, str) else None
-        torrents = self.qbc.torrents_info(status_filter=status_filter)
+        try:
+            torrents = self.qbc.torrents_info(status_filter=status_filter)
+        except (InfrastructureError, NetworkError):
+            raise
+        except Exception as err:
+            # qBittorrent 离线/拒连（如 ConnectionRefused）时优雅降级：返回空列表并标记异常，
+            # 避免定时任务整条链路抛异常刷屏
+            self._log_conn_error(f"[{self.client_name}]{self.name} 连接失败，本次跳过：{err!s}")
+            self._set_last_add_error(f"qBittorrent 连接失败：{err!s}")
+            return [], True
         torrent_list: list[Torrent] = []
         for torrent in torrents:
             torrent_list.append(self.torrent_properties(torrent=torrent))

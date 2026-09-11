@@ -247,6 +247,22 @@ class TestQbittorrentAddTorrent:
         assert qb.add_torrent(content=b"torrent-bytes") is True
         assert qb.get_last_add_error() == ""
 
+    def test_fallback_connection_error_returns_empty(self, client):
+        """qBittorrent 离线（ConnectionRefused）时回退接口应优雅返回空并标记异常."""
+        qb, mock_qbc = client
+        mock_qbc.torrents_info.side_effect = Exception("Connection refused")
+        result, error = qb._fallback_get_torrents()
+        assert result == []
+        assert error is True
+
+    def test_sync_connection_error_is_graceful(self, client):
+        qb, mock_qbc = client
+        mock_qbc.sync_maindata.side_effect = Exception("Connection refused")
+        mock_qbc.torrents_info.side_effect = Exception("Connection refused")
+        result, error = qb._get_torrents_sync(status="completed")
+        assert result == []
+        assert error is True
+
 
 class TestGetDownloadingTorrents:
     def test_get_downloading_excludes_completed(self):
