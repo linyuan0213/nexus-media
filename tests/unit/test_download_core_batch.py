@@ -384,6 +384,22 @@ class TestDownloadShortCircuitAndCache:
         assert calls["n"] == 1
         assert all(r[1] is None for r in results)
 
+    def test_candidate_exception_does_not_break_batch(self, mock_core):
+        """单个候选抛异常（如详情页抓取失败）不应中断整批，应回退下一个候选."""
+        core = mock_core
+        bad = MockMediaItem(type=MediaType.MOVIE, enclosure="a", title="A", tmdb_id=1)
+        good = MockMediaItem(type=MediaType.MOVIE, enclosure="b", title="B", tmdb_id=2)
+
+        def boom(**kwargs):
+            if kwargs["media_info"].enclosure == "a":
+                raise RuntimeError("种子详情页抓取为空")
+            return "qb", "tid", ""
+
+        core.download = boom
+        downloaded, left = core.batch_download("WEB", [bad, good])
+        assert downloaded == [good]
+        assert bad in left
+
     def test_failed_candidate_falls_back_to_next(self, mock_core):
         core = mock_core
         first = MockMediaItem(type=MediaType.MOVIE, enclosure="url-bad", title="Bad")

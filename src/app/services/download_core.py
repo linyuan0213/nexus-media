@@ -244,14 +244,20 @@ class DownloadCore:
             # 多用户：优先用候选自身的归属（RSS 批次可能混合多个用户的订阅），
             # 其次回退到批量层传入的 user_id，保证下载记录/通知归属正确
             owner_id = getattr(item, "user_id", None) or user_id
-            downloader_id, download_id, _ = self.download(
-                media_info=item,
-                torrent_file=torrent_file,
-                is_paused=is_paused,
-                in_from=in_from,
-                user_name=user_name,
-                user_id=owner_id,
-            )
+            try:
+                downloader_id, download_id, _ = self.download(
+                    media_info=item,
+                    torrent_file=torrent_file,
+                    is_paused=is_paused,
+                    in_from=in_from,
+                    user_name=user_name,
+                    user_id=owner_id,
+                )
+            except Exception as e:  # noqa: BLE001
+                # 单个候选的异常不应中断整批：标记失败后交由策略尝试下一个候选
+                log.warn(f"[Downloader]候选下载异常，已跳过：{getattr(item, 'title', '')} - {e}")
+                mark_download_failed(item)
+                return None, None, str(e)
             if download_id and item not in download_items:
                 download_items.append(item)
             elif not download_id:

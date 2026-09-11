@@ -835,10 +835,13 @@ class SiteEngine:
         rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
         cookie = user_config.get("cookie", "")
         if site and site.api:
-            auth_headers, auth = engine_tools._build_auth(self, site, user_config)
-            headers.update(auth_headers)
+            # 页面（HTML 详情/搜索页）抓取优先使用会话 cookie；无 cookie 时才回退 API 鉴权，
+            # 避免把 api-key 混发到页面请求（API 详情走 torrent_attr 分支，不经过这里）
             if cookie:
                 auth = CookieAuth(cookie)
+            else:
+                auth_headers, auth = engine_tools._build_auth(self, site, user_config)
+                headers.update(auth_headers)
         else:
             auth = CookieAuth(cookie) if cookie else None
 

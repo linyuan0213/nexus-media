@@ -257,6 +257,9 @@ class DownloadPipeline:
             else:
                 site_info = self._sites.get_sites(siteurl=url)
                 cookie = site_info.get("cookie")
+                # 属性详情页走站点会话（cookie），与下载 API 鉴权不同：
+                # API 站下载可用 api_key，但详情页仍需 cookie，否则会被 CF 拦截/抓取为空
+                attr_cookie = site_info.get("cookie")
                 api_key = site_info.get("api_key")
                 bearer_token = site_info.get("bearer_token")
                 site_def = self._site_engine.get_by_url(url)
@@ -265,16 +268,22 @@ class DownloadPipeline:
                 headers = site_info.get("headers")
                 headers = JsonUtils.loads(headers) if headers else {}
                 if media_info.page_url and site_info.get("id"):
-                    torrent_attr = self._siteconf.check_torrent_attr(
-                        torrent_url=media_info.page_url,
-                        cookie=cookie,
-                        api_key=api_key,
-                        bearer_token=bearer_token,
-                        ua=site_info.get("ua"),
-                        headers=headers,
-                        proxy=proxy if proxy is not None else site_info.get("proxy") or False,
-                        browser_persistent=bool(site_info.get("browser_persistent")),
-                    )
+                    try:
+                        torrent_attr = self._siteconf.check_torrent_attr(
+                            torrent_url=media_info.page_url,
+                            cookie=attr_cookie,
+                            api_key=api_key,
+                            bearer_token=bearer_token,
+                            ua=site_info.get("ua"),
+                            headers=headers,
+                            proxy=proxy if proxy is not None else site_info.get("proxy") or False,
+                            browser_persistent=bool(site_info.get("browser_persistent")),
+                        )
+                    except Exception as e:  # noqa: BLE001
+                        # 详情页抓取失败不应中断下载：降级为无属性（HR/优惠等）继续，
+                        # 否则单个种子的属性异常会冒泡打断整批订阅处理
+                        log.warn(f"[Pipeline]获取种子属性失败，跳过属性校正继续下载：{media_info.page_url[:120]} - {e}")
+                        torrent_attr = {}
                 file_path, content, dl_files_folder, dl_files, retmsg = Torrent(self._site_engine).get_torrent_info(
                     url=url,
                     cookie=cookie,
