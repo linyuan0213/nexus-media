@@ -121,9 +121,10 @@ class SubscriptionMonitor:
     def _run_queue_search(self) -> None:
         try:
             log.info("[SubscriptionMonitor] 开始队列搜索...")
-            self._queue_strategy.run()
+            # 记录尝试时间（而非成功时间），避免策略异常时每个调度周期紧循环重试
             self._last_queue_run = datetime.datetime.now(self._tz)
             self._save_last_run_times()
+            self._queue_strategy.run()
 
             self._error_retry_count += 1
             if self._error_retry_count >= self._ERROR_RETRY_CYCLE:
@@ -142,9 +143,10 @@ class SubscriptionMonitor:
     def _run_rss_feed(self) -> None:
         try:
             log.info("[SubscriptionMonitor] 开始 RSS 轮询...")
-            self._rss_strategy.run()
+            # 记录尝试时间，异常时仍推进周期，避免每 5 分钟重复全量轮询
             self._last_rss_run = datetime.datetime.now(self._tz)
             self._save_last_run_times()
+            self._rss_strategy.run()
         except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as e:
             log.error(f"[SubscriptionMonitor] RSS 轮询失败: {e}")
         except Exception as e:  # noqa: BLE001
@@ -157,9 +159,10 @@ class SubscriptionMonitor:
     def _run_indexer_search(self) -> None:
         try:
             log.info("[SubscriptionMonitor] 开始主动搜索...")
-            self._indexer_strategy.run()
+            # 记录尝试时间，异常时仍推进 6 小时周期，避免退化成每 5 分钟搜索
             self._last_search_run = datetime.datetime.now(self._tz)
             self._save_last_run_times()
+            self._indexer_strategy.run()
         except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as e:
             log.error(f"[SubscriptionMonitor] 主动搜索失败: {e}")
         finally:

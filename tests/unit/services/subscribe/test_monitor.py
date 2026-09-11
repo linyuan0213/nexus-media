@@ -83,6 +83,25 @@ class TestSubscriptionMonitor:
                     monitor.run()
         assert monitor._running_tasks["queue"] is False
 
+    def test_strategy_failure_advances_last_run_time(self, monitor):
+        """策略异常时也应推进上次运行时间，避免每 5 分钟紧循环重试."""
+        from app.core.exceptions import ServiceError
+
+        monitor._last_queue_run = None
+        monitor._last_rss_run = None
+        monitor._last_search_run = None
+        monitor._queue_strategy.run.side_effect = ServiceError("boom")
+        monitor._rss_strategy.run.side_effect = ServiceError("boom")
+        monitor._indexer_strategy.run.side_effect = ServiceError("boom")
+
+        monitor._run_queue_search()
+        monitor._run_rss_feed()
+        monitor._run_indexer_search()
+
+        assert monitor._last_queue_run is not None
+        assert monitor._last_rss_run is not None
+        assert monitor._last_search_run is not None
+
     def test_bind_coordinator(self, monitor):
         assert monitor._queue_strategy.set_coordinator.called
         assert monitor._rss_strategy.set_coordinator.called

@@ -194,6 +194,7 @@ class BaseSearchStrategy:
                 media_info.set_download_info(
                     download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
                 )
+                media_info.user_id = rss_info.get("user_id")
                 media_info.keyword = keyword
 
                 if self._coordinator and not self._coordinator.try_acquire(media_info):
@@ -318,6 +319,7 @@ class BaseSearchStrategy:
                 media_info.set_download_info(
                     download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
                 )
+                media_info.user_id = rss_info.get("user_id")
                 season = 1
                 if rss_info.get("season"):
                     season = int(str(rss_info.get("season")).replace("S", ""))

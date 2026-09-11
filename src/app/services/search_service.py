@@ -258,10 +258,10 @@ class SearchResultProcessor:
         finally:
             lock.release()
 
-    def batch_download(self, media_list: list, in_from: SearchType, no_exists: dict, user_name=None):
+    def batch_download(self, media_list: list, in_from: SearchType, no_exists: dict, user_name=None, user_id=None):
         """择优下载"""
         return self._downloader.batch_download(
-            in_from=in_from, media_list=media_list, need_tvs=no_exists, user_name=user_name
+            in_from=in_from, media_list=media_list, need_tvs=no_exists, user_name=user_name, user_id=user_id
         )
 
 
@@ -422,7 +422,7 @@ class Searcher:
 
         # 5. 择优下载
         download_items, left_medias = processor.batch_download(
-            filtered_media_list, in_from or SearchType.WEB, no_exists, user_name
+            filtered_media_list, in_from or SearchType.WEB, no_exists, user_name, user_id=user_id
         )
 
         if not download_items:

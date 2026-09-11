@@ -381,13 +381,20 @@ class RssFeedStrategy:
                                     episodes = list(range(int(current_ep), int(total_ep or 0) + 1))
                             if media_info.tmdb_id not in rss_no_exists:
                                 rss_no_exists[media_info.tmdb_id] = []
-                            rss_no_exists[media_info.tmdb_id].append(
-                                {
-                                    "season": season,
-                                    "episodes": episodes,
-                                    "total_episodes": total_ep,
-                                }
-                            )
+                            # 同一季可能因多条匹配规则被多次收集，按季覆盖而非追加，
+                            # 否则重复条目会让后续策略对同一缺失季重复下载
+                            season_entries = rss_no_exists[media_info.tmdb_id]
+                            entry = {
+                                "season": season,
+                                "episodes": episodes,
+                                "total_episodes": total_ep,
+                            }
+                            for idx, exist in enumerate(season_entries):
+                                if exist.get("season") == season:
+                                    season_entries[idx] = entry
+                                    break
+                            else:
+                                season_entries.append(entry)
                             exist_flag, library_no_exists, _ = self.downloader.check_exists_medias(
                                 meta_info=media_info, total_ep={season: total_ep}
                             )
@@ -430,6 +437,7 @@ class RssFeedStrategy:
                 media_info.set_download_info(
                     download_setting=match_info.get("download_setting"), save_path=match_info.get("save_path")
                 )
+                media_info.user_id = match_info.get("user_id")
                 self.rsshelper.insert_rss_torrents(media_info)
                 if media_info not in rss_download_torrents:
                     rss_download_torrents.append(media_info)
@@ -531,8 +539,8 @@ class RssFeedStrategy:
                 continue
             try:
                 episodes, file_path = self.downloader.get_torrent_episodes(media.enclosure, media.page_url)
-                if file_path:
-                    Torrent.delete_torrent_file(file_path)
+                # 不删除种子文件：同轮后续策略会复用该解析结果与文件路径，避免重复取链
+                # 消耗站点下载配额；临时文件由 temp_manager 定期清理。
                 if episodes:
                     media.total_episodes = len(episodes)
                     media.begin_episode = min(episodes)

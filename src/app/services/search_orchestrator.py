@@ -101,7 +101,11 @@ class SearchOrchestrator:
         # 7. 择优下载
         if ctx.auto_download and filtered:
             download_items, left_medias = self._downloader.batch_download(
-                in_from=ctx.search_type, media_list=filtered, need_tvs=ctx.no_exists, user_name=ctx.user_name
+                in_from=ctx.search_type,
+                media_list=filtered,
+                need_tvs=ctx.no_exists,
+                user_name=ctx.user_name,
+                user_id=ctx.user_id,
             )
             if download_items:
                 total = len(media_list)
