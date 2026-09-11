@@ -279,7 +279,7 @@ class DownloadPipeline:
 
                 # enclosure 下载失败且为 API 站(如 M-Team 预签名链接过期)时，
                 # 用详情页 tid 重新走下载 API 拿新鲜链接后重试一次
-                if not file_path and media_info.enclosure and media_info.page_url:
+                if not file_path and media_info.enclosure and media_info.page_url and "不可重试" not in (retmsg or ""):
                     # 注意：详情页域名可能与站点定义域名不同（如 M-Team 详情 kp.m-team.cc、
                     # 定义 api.m-team.cc），必须优先用种子链接解析到的站点定义。
                     page_site = site_def or self._site_engine.get_by_url(media_info.page_url)

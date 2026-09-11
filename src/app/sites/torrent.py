@@ -14,6 +14,7 @@ from app.infrastructure.http.exceptions import HttpClientError
 from app.infrastructure.temp import temp_manager
 from app.sites import engine_tools
 from app.utils.config_tools import get_proxies
+from app.utils.json_utils import JsonUtils
 from app.utils.string_utils import StringUtils
 
 
@@ -64,7 +65,7 @@ class Torrent:
             # 站点可能返回 JSON/HTML（如一过性下载链接过期）而非种子内容，
             # 提前识别给出明确原因，避免后续 bencode 解析报"种子数据有误"误导。
             if not self._looks_like_torrent(file_path):
-                return None, content, "", [], "下载链接已失效或非种子数据（请等待重新搜索获取新链接）"
+                return None, content, "", [], self._site_error_message(file_path)
             # 解析种子文件
             files_folder, files, retmsg = self.get_torrent_files(file_path)
             # 种子文件路径、种子内容、种子文件列表主目录、种子文件列表、错误信息
@@ -72,6 +73,25 @@ class Torrent:
 
         except Exception as err:
             return None, None, "", [], f"下载种子文件出现异常：{str(err)}"
+
+    @staticmethod
+    def _site_error_message(file_path) -> str:
+        """站点返回非种子内容（JSON 错误）时解析 message，并标注不可重试.
+
+        M-Team 等会在超限时返回 JSON（如"相同種子當天最多下載10次"），
+        此时重试无意义且会继续消耗限额，需标记 [不可重试]。
+        """
+        try:
+            with open(file_path, "rb") as f:
+                raw = f.read(2048)
+            if raw[:1] in (b"{", b"["):
+                data = JsonUtils.loads(raw.decode("utf-8", errors="ignore"))
+                msg = (data or {}).get("message") if isinstance(data, dict) else None
+                if msg:
+                    return f"[不可重试]站点返回：{msg}"
+        except Exception as err:  # noqa: BLE001
+            log.debug(f"解析站点错误信息失败：{err}")
+        return "下载链接已失效或非种子数据（请等待重新搜索获取新链接）"
 
     @staticmethod
     def _looks_like_torrent(file_path) -> bool:
