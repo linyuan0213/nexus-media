@@ -64,60 +64,43 @@ class MediaFileService:
             raise ValidationError(f"非法文件名: {name!r}")
 
     def get_dir_list(self, in_dir: str, backend_id: str = "") -> list:
-        """获取目录列表，支持本地和远程存储后端，失败时抛出异常"""
-        result = []
-        if backend_id and backend_id != "local":
-            backend = self._resolve_backend(backend_id)
-            for fi in backend.list_dir(in_dir or "/"):
-                item = {
-                    "name": os.path.basename(fi.path),
-                    "path": fi.path,
-                    "is_dir": fi.is_dir,
-                }
-                if fi.mtime:
-                    item["mtime"] = fi.mtime
-                if fi.size is not None and not fi.is_dir:
-                    item["size"] = fi.size
-                    item["ext"] = os.path.splitext(fi.path)[1][1:]
-                result.append(item)
+        """获取目录列表：统一走存储后端（本地/远程），异常时返回空列表而非 500."""
+        result: list = []
+        backend = self._resolve_backend(backend_id)
+        is_windows = SystemUtils.get_system() == OsType.WINDOWS
+
+        # Windows 根目录：枚举盘符（仅本地后端）
+        if (not in_dir or in_dir == "/") and is_windows and not backend_id:
+            partitions = SystemUtils.get_windows_drives()
+            if partitions:
+                return [{"name": p, "path": p, "is_dir": True} for p in partitions]
+
+        target = in_dir or "/"
+        # 传入文件路径时列出其父目录
+        try:
+            info = backend.stat(target)
+        except Exception:  # noqa: BLE001
+            info = None
+        if info is not None and not info.is_dir:
+            target = os.path.dirname(target) or "/"
+
+        try:
+            entries = list(backend.list_dir(target))
+        except Exception as e:  # noqa: BLE001
+            log.warn(f"[MediaFile]列目录失败 backend={backend_id or 'local'} path={target!r}: {e}")
             return result
 
-        if not in_dir or in_dir == "/":
-            if SystemUtils.get_system() == OsType.WINDOWS:
-                partitions = SystemUtils.get_windows_drives()
-                if partitions:
-                    for p in partitions:
-                        result.append({"name": p, "path": p, "is_dir": True})
-                else:
-                    for f in os.listdir("C:/"):
-                        ff = os.path.join("C:/", f)
-                        result.append({"name": f, "path": ff.replace("\\", "/"), "is_dir": os.path.isdir(ff)})
-            else:
-                for f in os.listdir("/"):
-                    ff = os.path.join("/", f)
-                    result.append({"name": f, "path": ff.replace("\\", "/"), "is_dir": os.path.isdir(ff)})
-        else:
-            d = os.path.normpath(in_dir)
-            if not os.path.isdir(d):
-                d = os.path.dirname(d)
-            for f in os.listdir(d):
-                ff = os.path.join(d, f)
-                is_dir = os.path.isdir(ff)
-                item = {"name": f, "path": ff.replace("\\", "/"), "is_dir": is_dir}
-                try:
-                    st = os.stat(ff)
-                    item["mtime"] = st.st_mtime
-                    item["ctime"] = st.st_ctime
-                except OSError:
-                    item["mtime"] = None
-                    item["ctime"] = None
-                if not is_dir:
-                    item["ext"] = os.path.splitext(f)[1][1:]
-                    try:
-                        item["size"] = os.path.getsize(ff)
-                    except OSError:
-                        item["size"] = None
-                result.append(item)
+        for fi in entries:
+            name = os.path.basename(fi.path.rstrip("/")) or fi.path
+            item = {"name": name, "path": fi.path.replace("\\", "/"), "is_dir": fi.is_dir}
+            if fi.mtime:
+                item["mtime"] = fi.mtime
+            if getattr(fi, "ctime", None):
+                item["ctime"] = fi.ctime
+            if not fi.is_dir and fi.size is not None:
+                item["size"] = fi.size
+                item["ext"] = os.path.splitext(fi.path)[1][1:]
+            result.append(item)
         return result
 
     def get_library_paths(self, media: dict, sync_svc, downloader_svc=None) -> dict:

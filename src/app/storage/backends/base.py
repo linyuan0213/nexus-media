@@ -26,6 +26,7 @@ class FileInfo:
     size: int
     mtime: float
     is_dir: bool
+    ctime: float | None = None
     mime_type: str = ""
 
 

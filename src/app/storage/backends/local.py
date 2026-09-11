@@ -40,10 +40,12 @@ class LocalStorageBackend(StorageBackend):
     def list_dir(self, path: str) -> Iterator[FileInfo]:
         rp = self._resolve(path)
         for entry in os.scandir(rp):
+            st = entry.stat()
             yield FileInfo(
                 path=entry.path,
-                size=entry.stat().st_size if entry.is_file() else 0,
-                mtime=entry.stat().st_mtime,
+                size=st.st_size if entry.is_file() else 0,
+                mtime=st.st_mtime,
+                ctime=st.st_ctime,
                 is_dir=entry.is_dir(),
             )
 
