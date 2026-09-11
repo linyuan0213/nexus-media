@@ -93,52 +93,59 @@ class MessageBuilder:
             description = html_re.sub("", can_item.description)
             can_item.description = re.sub(r"<[^>]+>", "", description)
             msg_text = f"{msg_text}\n描述：{can_item.description}"
+        size_str = StringUtils.str_filesize(can_item.size) if can_item.size else ""
+        description_clean = ""
+        if can_item.description:
+            description_clean = re.sub(r"<[^>]+>", "", can_item.description)
+        variables = {
+            "item": can_item,
+            "in_from": StringUtils.resolve_in_from_display(in_from),
+            "download_setting_name": download_setting_name or "",
+            "downloader_name": downloader_name or "",
+            "title": can_item.title or can_item.get_name() or "",
+            "year": can_item.year or "",
+            "season": can_item.get_season_string() if hasattr(can_item, "get_season_string") else "",
+            "episode": can_item.get_episode_string() if hasattr(can_item, "get_episode_string") else "",
+            "site": can_item.site or "",
+            "size": can_item.size or 0,
+            "size_str": size_str,
+            "seeders": can_item.seeders or 0,
+            "peers": can_item.peers or 0,
+            "org_string": can_item.org_string or "",
+            "description": description_clean,
+            "description_raw": can_item.description or "",
+            "resource_type": can_item.get_resource_type_string()
+            if hasattr(can_item, "get_resource_type_string")
+            else "",
+            "volume_factor": can_item.get_volume_factor_string()
+            if hasattr(can_item, "get_volume_factor_string")
+            else "未知",
+            "hit_and_run": can_item.hit_and_run or False,
+            "user_name": can_item.user_name or "",
+            "page_url": can_item.page_url or "",
+            "vote_average": can_item.vote_average or 0,
+            "star_string": can_item.get_star_string() if hasattr(can_item, "get_star_string") else "",
+            "title_ep_string": can_item.get_title_ep_string() if hasattr(can_item, "get_title_ep_string") else "",
+            "title_string": can_item.get_title_string() if hasattr(can_item, "get_title_string") else "",
+        }
         # 归属用户的下载事件：定向推送（Web + 绑定渠道），不广播全局外部渠道（ADR-021 5.6）
         owner_user_id = getattr(can_item, "user_id", None)
         if owner_user_id:
-            self._dispatcher.send_user_msg(owner_user_id, msg_title, msg_text, image=message_image, url="downloading")
+            self._dispatcher.send_user_msg(
+                owner_user_id,
+                msg_title,
+                msg_text,
+                image=message_image,
+                url="downloading",
+                msg_type="download_start",
+                variables=variables,
+                template_engine=self._template_engine,
+            )
             return
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_text)
         for client in self._client_manager.active_clients:
             if "download_start" in (client.get("switches") or ""):
-                size_str = StringUtils.str_filesize(can_item.size) if can_item.size else ""
-                description_clean = ""
-                if can_item.description:
-                    description_clean = re.sub(r"<[^>]+>", "", can_item.description)
-                variables = {
-                    "item": can_item,
-                    "in_from": StringUtils.resolve_in_from_display(in_from),
-                    "download_setting_name": download_setting_name or "",
-                    "downloader_name": downloader_name or "",
-                    "title": can_item.title or can_item.get_name() or "",
-                    "year": can_item.year or "",
-                    "season": can_item.get_season_string() if hasattr(can_item, "get_season_string") else "",
-                    "episode": can_item.get_episode_string() if hasattr(can_item, "get_episode_string") else "",
-                    "site": can_item.site or "",
-                    "size": can_item.size or 0,
-                    "size_str": size_str,
-                    "seeders": can_item.seeders or 0,
-                    "peers": can_item.peers or 0,
-                    "org_string": can_item.org_string or "",
-                    "description": description_clean,
-                    "description_raw": can_item.description or "",
-                    "resource_type": can_item.get_resource_type_string()
-                    if hasattr(can_item, "get_resource_type_string")
-                    else "",
-                    "volume_factor": can_item.get_volume_factor_string()
-                    if hasattr(can_item, "get_volume_factor_string")
-                    else "未知",
-                    "hit_and_run": can_item.hit_and_run or False,
-                    "user_name": can_item.user_name or "",
-                    "page_url": can_item.page_url or "",
-                    "vote_average": can_item.vote_average or 0,
-                    "star_string": can_item.get_star_string() if hasattr(can_item, "get_star_string") else "",
-                    "title_ep_string": can_item.get_title_ep_string()
-                    if hasattr(can_item, "get_title_ep_string")
-                    else "",
-                    "title_string": can_item.get_title_string() if hasattr(can_item, "get_title_string") else "",
-                }
                 self._dispatcher.sendmsg(
                     client=client,
                     title=msg_title,
@@ -167,23 +174,30 @@ class MessageBuilder:
         )
         if exist_filenum != 0:
             msg_str = f"{msg_str}，{exist_filenum}个文件已存在"
+        variables = {
+            "media_info": media_info,
+            "in_from": StringUtils.resolve_in_from_display(in_from),
+            "exist_filenum": exist_filenum,
+            "category_flag": category_flag,
+        }
         # 归属用户的入库事件：定向推送（ADR-021 5.6）
         owner_user_id = getattr(media_info, "user_id", None)
         if owner_user_id:
             self._dispatcher.send_user_msg(
-                owner_user_id, msg_title, msg_str, image=media_info.get_message_image(), url="history"
+                owner_user_id,
+                msg_title,
+                msg_str,
+                image=media_info.get_message_image(),
+                url="history",
+                msg_type="transfer_finished",
+                variables=variables,
+                template_engine=self._template_engine,
             )
             return
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
         for client in self._client_manager.active_clients:
             if "transfer_finished" in (client.get("switches") or ""):
-                variables = {
-                    "media_info": media_info,
-                    "in_from": StringUtils.resolve_in_from_display(in_from),
-                    "exist_filenum": exist_filenum,
-                    "category_flag": category_flag,
-                }
                 self._dispatcher.sendmsg(
                     client=client,
                     title=msg_title,
@@ -217,27 +231,34 @@ class MessageBuilder:
                 msg_str = f"{msg_str}，大小：{StringUtils.str_filesize(item_info.size)}{from_source}"
             else:
                 msg_str = f"{msg_str}，总大小：{StringUtils.str_filesize(item_info.size)}{from_source}"
+            variables = {
+                "media_info": item_info,
+                "in_from": StringUtils.resolve_in_from_display(in_from),
+                "exist_filenum": exist_filenum,
+                "category_flag": category_flag,
+                "total_episodes": item_info.total_episodes if hasattr(item_info, "total_episodes") else 1,
+                "season_episode": item_info.get_season_episode_string()
+                if hasattr(item_info, "get_season_episode_string")
+                else "",
+            }
             # 归属用户的入库事件：定向推送（ADR-021 5.6）
             owner_user_id = getattr(item_info, "user_id", None)
             if owner_user_id:
                 self._dispatcher.send_user_msg(
-                    owner_user_id, msg_title, msg_str, image=item_info.get_message_image(), url="history"
+                    owner_user_id,
+                    msg_title,
+                    msg_str,
+                    image=item_info.get_message_image(),
+                    url="history",
+                    msg_type="transfer_finished",
+                    variables=variables,
+                    template_engine=self._template_engine,
                 )
                 continue
             if self._messagecenter:
                 self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
             for client in self._client_manager.active_clients:
                 if "transfer_finished" in (client.get("switches") or ""):
-                    variables = {
-                        "media_info": item_info,
-                        "in_from": StringUtils.resolve_in_from_display(in_from),
-                        "exist_filenum": exist_filenum,
-                        "category_flag": category_flag,
-                        "total_episodes": item_info.total_episodes if hasattr(item_info, "total_episodes") else 1,
-                        "season_episode": item_info.get_season_episode_string()
-                        if hasattr(item_info, "get_season_episode_string")
-                        else "",
-                    }
                     self._dispatcher.sendmsg(
                         client=client,
                         title=msg_title,
@@ -274,7 +295,15 @@ class MessageBuilder:
         text = f"标题：{title}\n站点：{site}\n种子名称：{org_string}\n种子链接：{enclosure}\n错误信息：{error_msg}"
         owner_user_id = getattr(item, "user_id", None)
         if owner_user_id:
-            self._dispatcher.send_user_msg(owner_user_id, title, text, image=item.get_message_image())
+            self._dispatcher.send_user_msg(
+                owner_user_id,
+                title,
+                text,
+                image=item.get_message_image(),
+                msg_type="download_fail",
+                variables={"item": item, "error_msg": error_msg},
+                template_engine=self._template_engine,
+            )
             return
         # 无归属的失败事件 → 定向超级管理员
         self._send_admin_msg(title, text, image=item.get_message_image())
@@ -302,16 +331,25 @@ class MessageBuilder:
         msg_str = f"{msg_str}，来自：{StringUtils.resolve_in_from_display(in_from)}"
         if media_info.user_name:
             msg_str = f"{msg_str}，用户：{media_info.user_name}"
+        variables = {"media_info": media_info, "in_from": StringUtils.resolve_in_from_display(in_from)}
         # 归属用户的订阅事件：定向推送给该用户（Web + 绑定渠道），不广播到全局外部渠道（ADR-021 5.6）
         owner_user_id = getattr(media_info, "user_id", None)
         if owner_user_id:
-            self._dispatcher.send_user_msg(owner_user_id, msg_title, msg_str, image=media_info.get_message_image())
+            self._dispatcher.send_user_msg(
+                owner_user_id,
+                msg_title,
+                msg_str,
+                image=media_info.get_message_image(),
+                url="movie_rss" if media_info.type == MediaType.MOVIE else "tv_rss",
+                msg_type="rss_added",
+                variables=variables,
+                template_engine=self._template_engine,
+            )
             return
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
         for client in self._client_manager.active_clients:
             if "rss_added" in (client.get("switches") or ""):
-                variables = {"media_info": media_info, "in_from": StringUtils.resolve_in_from_display(in_from)}
                 self._dispatcher.sendmsg(
                     client=client,
                     title=msg_title,
@@ -333,20 +371,27 @@ class MessageBuilder:
         msg_str = f"类型：{media_info.type.display_name}"
         if media_info.vote_average:
             msg_str = f"{msg_str}，{media_info.get_vote_string()}"
+        variables = {
+            "media_info": media_info,
+            "over_edition": media_info.over_edition if hasattr(media_info, "over_edition") else False,
+        }
         # 归属用户的订阅完成事件：定向推送（ADR-021 5.6）
         if owner_user_id:
             self._dispatcher.send_user_msg(
-                owner_user_id, msg_title, msg_str, image=media_info.get_message_image(), url="downloaded"
+                owner_user_id,
+                msg_title,
+                msg_str,
+                image=media_info.get_message_image(),
+                url="downloaded",
+                msg_type="rss_finished",
+                variables=variables,
+                template_engine=self._template_engine,
             )
             return
         if self._messagecenter:
             self._messagecenter.insert_system_message(title=msg_title, content=msg_str)
         for client in self._client_manager.active_clients:
             if "rss_finished" in (client.get("switches") or ""):
-                variables = {
-                    "media_info": media_info,
-                    "over_edition": media_info.over_edition if hasattr(media_info, "over_edition") else False,
-                }
                 self._dispatcher.sendmsg(
                     client=client,
                     title=msg_title,

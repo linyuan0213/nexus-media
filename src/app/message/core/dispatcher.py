@@ -13,14 +13,35 @@ class MessageDispatcher:
     """负责消息入队、实际发送和渠道路由."""
 
     # 绑定表渠道键 → 交互客户端键
+    # 渠道名 → 交互客户端 search_type。兼容各插件上报的英文/中文/别名写法，
+    # 避免因绑定渠道名（如「微信」）与映射键（wechat）不一致导致定向消息被静默丢弃。
     _CHANNEL_KEY_MAP = {
         "telegram": "TG",
+        "tg": "TG",
+        "电报": "TG",
         "wechat": "WX",
+        "weixin": "WX",
+        "wx": "WX",
+        "微信": "WX",
         "slack": "SLACK",
         "synologychat": "SYNOLOGY",
+        "synology": "SYNOLOGY",
+        "synology_chat": "SYNOLOGY",
+        "群晖": "SYNOLOGY",
         "feishu": "FEISHU",
+        "lark": "FEISHU",
+        "飞书": "FEISHU",
         "dingtalk": "DINGTALK",
+        "钉钉": "DINGTALK",
     }
+
+    @classmethod
+    def _resolve_channel_key(cls, channel: str) -> str | None:
+        """把绑定里记录的渠道名解析为交互客户端 key（大小写/中英文容错）."""
+        raw = str(channel or "").strip()
+        if not raw:
+            return None
+        return cls._CHANNEL_KEY_MAP.get(raw.lower()) or cls._CHANNEL_KEY_MAP.get(raw)
 
     def __init__(self, client_manager, messagecenter, domain: str = ""):
         self._client_manager = client_manager
@@ -131,15 +152,30 @@ class MessageDispatcher:
         text: str = "",
         image: str | None = None,
         url: str | None = None,
+        msg_type: str | None = None,
+        variables: dict | None = None,
+        template_engine=None,
     ) -> bool:
-        """按归属用户定向发送（ADR-021 5.6）：Web 消息 + 该用户绑定的外部渠道."""
+        """按归属用户定向发送（ADR-021 5.6）：Web 消息 + 该用户绑定的外部渠道。
+
+        传入 msg_type/variables/template_engine 时按各渠道模板渲染，
+        保证定向消息与全局广播使用同一套模板（不再退化为纯文本）。
+        """
         delivered = False
-        self.send_channel_msg(SearchType.WEB, title, text, image=image, url=url, user_id=str(system_user_id or ""))
+        web_title, web_text = title, text
+        if msg_type and variables and template_engine:
+            tpl_title, tpl_text = template_engine.apply_client_template({}, msg_type, variables)
+            web_title = tpl_title if tpl_title is not None else title
+            web_text = tpl_text if tpl_text else text
+        self.send_channel_msg(
+            SearchType.WEB, web_title, web_text, image=image, url=url, user_id=str(system_user_id or "")
+        )
         delivered = True
         if system_user_id and self._channel_binding_service is not None:
             for binding in self._channel_binding_service.list_bindings(system_user_id):
-                client_key = self._CHANNEL_KEY_MAP.get(binding.get("channel", ""))
+                client_key = self._resolve_channel_key(binding.get("channel", ""))
                 if not client_key:
+                    log.debug(f"[Message]未知绑定渠道: {binding.get('channel')!r}，跳过")
                     continue
                 client = self._client_manager.get_interactive_client(client_key)
                 if client:
@@ -151,6 +187,9 @@ class MessageDispatcher:
                             image=image,
                             url=url,
                             user_id=binding.get("channel_user_id", ""),
+                            msg_type=msg_type,
+                            variables=variables,
+                            template_engine=template_engine,
                         )
                         delivered = True
                     except Exception:  # noqa: BLE001
