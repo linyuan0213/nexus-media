@@ -845,7 +845,7 @@ class FileTransferService:
                 self._scrape_queue_service.submit_file_scrape(
                     media=media,
                     dir_path=ret_dir_path,
-                    file_name=os.path.basename(ret_file_path or ret_dir_path or ""),
+                    file_name=self._scrape_file_base_name(ret_file_path, ret_dir_path),
                     file_ext=file_ext,
                     dst_backend=dst_backend,
                 )
@@ -882,6 +882,16 @@ class FileTransferService:
             "error_message": error_message,
             "exist_filenum": total_exist_filenum,
         }
+
+    @staticmethod
+    def _scrape_file_base_name(ret_file_path: str | None, ret_dir_path: str | None) -> str:
+        """刮削 NFO 基础名：文件取去扩展名的文件名，目录（蓝光原盘）取目录名。
+
+        直接用含扩展名的文件名会导致生成 `xxx.mkv.nfo`，媒体库无法识别并自行生成 movie.nfo。
+        """
+        if ret_file_path:
+            return os.path.splitext(os.path.basename(ret_file_path))[0]
+        return os.path.basename(ret_dir_path or "")
 
     def _publish_subtitle_download(self, media, ret_file_path, file_ext, bluray):
         self._thread_executor.submit(
