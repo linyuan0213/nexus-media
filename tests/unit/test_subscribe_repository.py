@@ -133,3 +133,19 @@ class TestUpdateRssTvLackAdvancesCurrentEp:
             row = db.query(SubscribeTvs).filter(SubscribeTvs.ID == 1).first()
             assert row.LACK == 0
             assert row.CURRENT_EP == 26  # 无缺失集时不改 current_ep（完成态由 STATE 表达）
+
+    def test_update_current_ep_resets_persisted_missing(self):
+        """编辑开始集数时应重置缺失集列表与 LACK，避免进度被旧列表推回"""
+        from app.db.models.subscribe import SubscribeTvEpisodes
+
+        mgr = self._setup_repo()
+        repo = SubscribeRepository()
+        repo.update_rss_tv(rssid=1, current_ep=5, total=48)
+        with mgr.session_scope() as db:
+            row = db.query(SubscribeTvs).filter(SubscribeTvs.ID == 1).first()
+            assert row.CURRENT_EP == 5
+            assert row.LACK == 44  # 5..48 共 44 集
+            ep = db.query(SubscribeTvEpisodes).filter(SubscribeTvEpisodes.RSSID == 1).first()
+            assert ep is not None
+            assert ep.EPISODES.startswith("5,")
+            assert ep.EPISODES.endswith(",48")

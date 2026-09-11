@@ -627,7 +627,25 @@ class SubscribeRepository(BaseRepository):
                 update_fields[col] = v
         if not update_fields:
             return 0
+        # 开始集数变更时，同步重置持久化的缺失集列表与 LACK，
+        # 否则下一轮轮询仍按旧列表处理，update_rss_tv_lack 会把 CURRENT_EP 推回旧位置
+        sync_episodes: list[int] | None = None
+        if "CURRENT_EP" in update_fields:
+            cur = update_fields.get("CURRENT_EP")
+            total_num = update_fields.get("TOTAL") or update_fields.get("TOTAL_EP")
+            if isinstance(cur, int) and isinstance(total_num, int) and 0 < cur <= total_num:
+                sync_episodes = list(range(cur, total_num + 1))
+            else:
+                sync_episodes = []
+            update_fields["LACK"] = len(sync_episodes)
         with self.session() as db:
+            if sync_episodes is not None:
+                episodes_str = ",".join(str(e) for e in sync_episodes)
+                ep_filter = cast(SubscribeTvEpisodes.RSSID, Integer) == int(rssid)
+                if db.query(SubscribeTvEpisodes).filter(ep_filter).count() > 0:
+                    db.query(SubscribeTvEpisodes).filter(ep_filter).update({"EPISODES": episodes_str})
+                else:
+                    db.add(SubscribeTvEpisodes(RSSID=rssid, EPISODES=episodes_str))
             query = db.query(SubscribeTvs).filter(int(rssid) == SubscribeTvs.ID)
             if user is not None and not user.is_superadmin:
                 query = query.filter(SubscribeTvs.USER_ID == user.user_id)
