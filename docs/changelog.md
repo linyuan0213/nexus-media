@@ -1,5 +1,14 @@
 # 版本历史
 
+## v4.20.15 (2026-09-12)
+
+### 修复
+
+- 补列自愈迁移 `3dcf1ef5f1af` 改用 `quoted_name` 保留实际表名大小写：
+  - 修复 v4.20.14 在 PostgreSQL 大写表（引号保留）上 `op.add_column` 未加引号、被折叠为小写而报 `NoSuchTable` 的问题
+  - 大写表加引号、小写表不加引号，PG / MySQL / SQLite 均正确
+- 实测四种组合通过：SQLite 大写表、MySQL 大写表、PostgreSQL 小写表、PostgreSQL 引号大写表；`版本已 stamped 到 247c 且缺列` 的库 `upgrade head` 自动补齐 `USER_ID / ADD_DATE / DST_BACKEND / SEEDS_*`
+
 ## v4.20.14 (2026-09-12)
 
 ### 修复
