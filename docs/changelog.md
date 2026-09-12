@@ -1,5 +1,14 @@
 # 版本历史
 
+## v4.20.14 (2026-09-12)
+
+### 修复
+
+- 补列自愈迁移兼容多数据库：修复 v4.20.13 的 `3dcf1ef5f1af` 在 PostgreSQL 上因标识符大小写导致补列空转/报错
+  - 原因：PG 未加引号标识符折叠为小写，精确大小写的 `has_table/has_column` 返回 False、`batch_alter_table` 报 `NoSuchTableError`
+  - 改为 `小写→实际表名` 映射 + `op.add_column` 按实际表名加列
+- SQLite/MySQL/PostgreSQL 三种库均已实测：版本已 stamped 到 head 且缺列的库，`alembic upgrade head` 自动补齐 `USER_ID / ADD_DATE / DST_BACKEND / SEEDS_*`
+
 ## v4.20.13 (2026-09-12)
 
 ### 修复
