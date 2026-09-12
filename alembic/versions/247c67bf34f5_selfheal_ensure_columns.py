@@ -50,9 +50,9 @@ def _has_index(table: str, index_name: str) -> bool:
 def _add_column(table: str, name: str, column_type) -> None:
     if not _has_table(table) or _has_column(table, name):
         return
-    with contextlib.suppress(Exception):
-        with op.batch_alter_table(table) as batch_op:
-            batch_op.add_column(sa.Column(name, column_type, nullable=True))
+    # 不加 suppress：补列失败必须显式报错，避免"迁移标记成功但没加列"
+    with op.batch_alter_table(table) as batch_op:
+        batch_op.add_column(sa.Column(name, column_type, nullable=True))
 
 
 def _create_index(table: str, index_name: str, columns: list, unique: bool = False) -> None:
