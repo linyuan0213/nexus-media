@@ -1,5 +1,16 @@
 # 版本历史
 
+## v4.20.16 (2026-09-12)
+
+### 修复
+
+- 修复 v4.0.0 之后迁移链在 SQLite 上无法升级的问题（`版本落后 + 表已存在` 时必炸）：
+  - `f5c99c5c67c5`：`ADD_DATE` 改为逐表逐列存在性判断，避免重复加列报 `duplicate column name`
+  - `a1b2c3d4e5f6`：`ENCLOSURE` 设置默认值，SQLite 走 `batch_alter_table` 重建表
+  - `e5efa40afddb`：`RSS_RULE / REMOVE_RULE` 改 TEXT，SQLite 走 `batch_alter_table` 重建表
+  - `5ec25bdc842f`：外键创建改为幂等（已存在则跳过）+ SQLite 走 `batch_alter_table`，修复 `NotImplementedError: No support for ALTER of constraints`
+- 三库（SQLite / MySQL / PostgreSQL）× 三场景（全新库 / v4.1.0 基线升到 head / head 前缺列自愈）实测全部通过
+
 ## v4.20.15 (2026-09-12)
 
 ### 修复
