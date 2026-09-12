@@ -1,5 +1,13 @@
 # 版本历史
 
+## v4.20.13 (2026-09-12)
+
+### 修复
+
+- 新增末端幂等补列迁移 `3dcf1ef5f1af`：只要库版本低于它，`alembic upgrade head` 即自动补齐缺失列（USER_ID / ADD_DATE / DST_BACKEND / SEEDS_*）
+- 修复"库 alembic 版本已 stamped 到旧 head、但历史加列未执行"导致启动/转移报 `no such column`，用户更新镜像重启即自动修复
+- 去掉旧自愈迁移中补列的 `contextlib.suppress`，补列失败显式报错，避免"标记成功但没加列"
+
 ## v4.20.12 (2026-09-12)
 
 ### 修复
