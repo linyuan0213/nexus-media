@@ -9,6 +9,7 @@ Revises: 247c67bf34f5
 """
 
 import sqlalchemy as sa
+from sqlalchemy.sql import quoted_name
 
 from alembic import op
 
@@ -41,30 +42,25 @@ def _insp():
 
 
 def _table_names() -> dict[str, str]:
-    # PostgreSQL 会把未加引号的标识符折叠为小写：建立 小写->实际名 映射，兼容 MySQL/PG/SQLite
+    # 建立 小写->实际名 映射：兼容 PG（可能小写折叠，也可能引号保留大写）/MySQL/SQLite
     return {n.lower(): n for n in _insp().get_table_names()}
 
 
-def _actual_table_name(table: str) -> str | None:
-    return _table_names().get(table.lower())
-
-
-def _has_column(table: str, column: str) -> bool:
-    actual = _actual_table_name(table)
-    if not actual:
-        return False
+def _has_column(actual: str, column: str) -> bool:
     return column.lower() in {c["name"].lower() for c in _insp().get_columns(actual)}
 
 
 def upgrade() -> None:
+    tables = _table_names()
     for table, columns in REQUIRED_COLUMNS.items():
-        actual = _actual_table_name(table)
+        actual = tables.get(table.lower())
         if not actual:
             continue
         for name, column_type in columns:
-            if _has_column(table, name):
+            if _has_column(actual, name):
                 continue
-            op.add_column(actual, sa.Column(name, column_type, nullable=True))
+            # quoted_name 保留实际大小写：PG 下大写表需加引号（"T"），小写表不加引号（t）
+            op.add_column(quoted_name(actual, True), sa.Column(name, column_type, nullable=True))
 
 
 def downgrade() -> None:
