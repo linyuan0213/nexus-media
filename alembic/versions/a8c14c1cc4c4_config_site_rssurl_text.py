@@ -19,21 +19,51 @@ branch_labels = None
 depends_on = None
 
 
+def has_table(table_name):
+    inspector = sa.inspect(op.get_bind())
+    return table_name in inspector.get_table_names()
+
+
 def upgrade() -> None:
-    op.alter_column(
-        "CONFIG_SITE",
-        "RSSURL",
-        existing_type=sa.String(length=512),
-        type_=sa.Text(),
-        existing_nullable=True,
-    )
+    if not has_table("CONFIG_SITE"):
+        return
+    dialect = op.get_bind().dialect.name
+    if dialect == "sqlite":
+        # SQLite 不支持 ALTER COLUMN，需 batch 重建表
+        with op.batch_alter_table("CONFIG_SITE") as batch_op:
+            batch_op.alter_column(
+                "RSSURL",
+                existing_type=sa.String(length=512),
+                type_=sa.Text(),
+                existing_nullable=True,
+            )
+    else:
+        op.alter_column(
+            "CONFIG_SITE",
+            "RSSURL",
+            existing_type=sa.String(length=512),
+            type_=sa.Text(),
+            existing_nullable=True,
+        )
 
 
 def downgrade() -> None:
-    op.alter_column(
-        "CONFIG_SITE",
-        "RSSURL",
-        existing_type=sa.Text(),
-        type_=sa.String(length=512),
-        existing_nullable=True,
-    )
+    if not has_table("CONFIG_SITE"):
+        return
+    dialect = op.get_bind().dialect.name
+    if dialect == "sqlite":
+        with op.batch_alter_table("CONFIG_SITE") as batch_op:
+            batch_op.alter_column(
+                "RSSURL",
+                existing_type=sa.Text(),
+                type_=sa.String(length=512),
+                existing_nullable=True,
+            )
+    else:
+        op.alter_column(
+            "CONFIG_SITE",
+            "RSSURL",
+            existing_type=sa.Text(),
+            type_=sa.String(length=512),
+            existing_nullable=True,
+        )

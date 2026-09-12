@@ -32,23 +32,23 @@ def has_column(table_name, column_name):
     return any(col["name"] == column_name for col in columns)
 
 
+def _alter_rule_columns(target_type, existing_type):
+    cols = [c for c in ("RSS_RULE", "REMOVE_RULE") if has_column("SITE_BRUSH_TASK", c)]
+    if not cols:
+        return
+    # SQLite 不支持 ALTER COLUMN，batch 会重建表；其余库直接改
+    if op.get_bind().dialect.name == "sqlite":
+        with op.batch_alter_table("SITE_BRUSH_TASK") as batch:
+            for col in cols:
+                batch.alter_column(col, existing_type=existing_type, type_=target_type, existing_nullable=True)
+        return
+    for col in cols:
+        op.alter_column("SITE_BRUSH_TASK", col, existing_type=existing_type, type_=target_type, existing_nullable=True)
+
+
 def upgrade():
-    if has_table("SITE_BRUSH_TASK") and has_column("SITE_BRUSH_TASK", "RSS_RULE"):
-        op.alter_column(
-            "SITE_BRUSH_TASK", "RSS_RULE", existing_type=sa.String(255), type_=sa.Text, existing_nullable=True
-        )
-    if has_table("SITE_BRUSH_TASK") and has_column("SITE_BRUSH_TASK", "REMOVE_RULE"):
-        op.alter_column(
-            "SITE_BRUSH_TASK", "REMOVE_RULE", existing_type=sa.String(255), type_=sa.Text, existing_nullable=True
-        )
+    _alter_rule_columns(sa.Text(), sa.String(255))
 
 
 def downgrade():
-    if has_table("SITE_BRUSH_TASK") and has_column("SITE_BRUSH_TASK", "RSS_RULE"):
-        op.alter_column(
-            "SITE_BRUSH_TASK", "RSS_RULE", existing_type=sa.Text, type_=sa.String(255), existing_nullable=True
-        )
-    if has_table("SITE_BRUSH_TASK") and has_column("SITE_BRUSH_TASK", "REMOVE_RULE"):
-        op.alter_column(
-            "SITE_BRUSH_TASK", "REMOVE_RULE", existing_type=sa.Text, type_=sa.String(255), existing_nullable=True
-        )
+    _alter_rule_columns(sa.String(255), sa.Text())

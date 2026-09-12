@@ -34,23 +34,31 @@ def has_column(table_name, column_name):
     return any(col["name"] == column_name for col in columns)
 
 
+def _alter_enclosure_default(server_default) -> None:
+    if not (has_table("SEARCH_RESULT_INFO") and has_column("SEARCH_RESULT_INFO", "ENCLOSURE")):
+        return
+    # SQLite 不支持 ALTER COLUMN ... SET DEFAULT，batch 模式会重建表并保留数据
+    if op.get_bind().dialect.name == "sqlite":
+        with op.batch_alter_table("SEARCH_RESULT_INFO") as batch:
+            batch.alter_column(
+                "ENCLOSURE",
+                existing_type=sa.String(8192),
+                server_default=server_default,
+                existing_nullable=False,
+            )
+        return
+    op.alter_column(
+        "SEARCH_RESULT_INFO",
+        "ENCLOSURE",
+        existing_type=sa.String(8192),
+        server_default=server_default,
+        existing_nullable=False,
+    )
+
+
 def upgrade() -> None:
-    if has_table("SEARCH_RESULT_INFO") and has_column("SEARCH_RESULT_INFO", "ENCLOSURE"):
-        op.alter_column(
-            "SEARCH_RESULT_INFO",
-            "ENCLOSURE",
-            existing_type=sa.String(8192),
-            server_default="",
-            existing_nullable=False,
-        )
+    _alter_enclosure_default("")
 
 
 def downgrade() -> None:
-    if has_table("SEARCH_RESULT_INFO") and has_column("SEARCH_RESULT_INFO", "ENCLOSURE"):
-        op.alter_column(
-            "SEARCH_RESULT_INFO",
-            "ENCLOSURE",
-            existing_type=sa.String(8192),
-            server_default=None,
-            existing_nullable=False,
-        )
+    _alter_enclosure_default(None)

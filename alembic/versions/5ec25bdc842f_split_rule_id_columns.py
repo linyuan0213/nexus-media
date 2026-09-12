@@ -40,38 +40,54 @@ def upgrade() -> None:
         op.add_column("SITE_BRUSH_TASK", sa.Column("REMOVE_RULE_ID", sa.Integer(), nullable=True))
     if has_table("SITE_BRUSH_TASK") and not has_column("SITE_BRUSH_TASK", "STOP_RULE_ID"):
         op.add_column("SITE_BRUSH_TASK", sa.Column("STOP_RULE_ID", sa.Integer(), nullable=True))
-    if has_table("SITE_BRUSH_TASK"):
-        op.create_foreign_key(
-            "fk_site_brush_task_rss_rule_id",
-            "SITE_BRUSH_TASK",
-            "SITE_BRUSH_RULE",
-            ["RSS_RULE_ID"],
-            ["ID"],
-        )
-        op.create_foreign_key(
-            "fk_site_brush_task_remove_rule_id",
-            "SITE_BRUSH_TASK",
-            "SITE_BRUSH_RULE",
-            ["REMOVE_RULE_ID"],
-            ["ID"],
-        )
-        op.create_foreign_key(
-            "fk_site_brush_task_stop_rule_id",
-            "SITE_BRUSH_TASK",
-            "SITE_BRUSH_RULE",
-            ["STOP_RULE_ID"],
-            ["ID"],
-        )
+    if not has_table("SITE_BRUSH_TASK"):
+        return
+    existing = {
+        tuple(fk.get("constrained_columns") or [])
+        for fk in sa.inspect(op.get_bind()).get_foreign_keys("SITE_BRUSH_TASK")
+    }
+    fks = [
+        ("fk_site_brush_task_rss_rule_id", ["RSS_RULE_ID"]),
+        ("fk_site_brush_task_remove_rule_id", ["REMOVE_RULE_ID"]),
+        ("fk_site_brush_task_stop_rule_id", ["STOP_RULE_ID"]),
+    ]
+    missing = [(name, cols) for name, cols in fks if tuple(cols) not in existing]
+    if not missing:
+        return
+    # SQLite 不支持 ALTER TABLE ADD CONSTRAINT，batch 会重建表；其余库直接加
+    if op.get_bind().dialect.name == "sqlite":
+        with op.batch_alter_table("SITE_BRUSH_TASK") as batch:
+            for name, cols in missing:
+                batch.create_foreign_key(name, "SITE_BRUSH_RULE", cols, ["ID"])
+        return
+    for name, cols in missing:
+        op.create_foreign_key(name, "SITE_BRUSH_TASK", "SITE_BRUSH_RULE", cols, ["ID"])
 
 
 def downgrade() -> None:
-    if has_table("SITE_BRUSH_TASK"):
-        op.drop_constraint("fk_site_brush_task_stop_rule_id", "SITE_BRUSH_TASK", type_="foreignkey")
-        op.drop_constraint("fk_site_brush_task_remove_rule_id", "SITE_BRUSH_TASK", type_="foreignkey")
-        op.drop_constraint("fk_site_brush_task_rss_rule_id", "SITE_BRUSH_TASK", type_="foreignkey")
-    if has_table("SITE_BRUSH_TASK") and has_column("SITE_BRUSH_TASK", "STOP_RULE_ID"):
+    if not has_table("SITE_BRUSH_TASK"):
+        return
+    existing = {fk["name"] for fk in sa.inspect(op.get_bind()).get_foreign_keys("SITE_BRUSH_TASK")}
+    names = [
+        n
+        for n in (
+            "fk_site_brush_task_stop_rule_id",
+            "fk_site_brush_task_remove_rule_id",
+            "fk_site_brush_task_rss_rule_id",
+        )
+        if n in existing
+    ]
+    if names:
+        if op.get_bind().dialect.name == "sqlite":
+            with op.batch_alter_table("SITE_BRUSH_TASK") as batch:
+                for n in names:
+                    batch.drop_constraint(n, type_="foreignkey")
+        else:
+            for n in names:
+                op.drop_constraint(n, "SITE_BRUSH_TASK", type_="foreignkey")
+    if has_column("SITE_BRUSH_TASK", "STOP_RULE_ID"):
         op.drop_column("SITE_BRUSH_TASK", "STOP_RULE_ID")
-    if has_table("SITE_BRUSH_TASK") and has_column("SITE_BRUSH_TASK", "REMOVE_RULE_ID"):
+    if has_column("SITE_BRUSH_TASK", "REMOVE_RULE_ID"):
         op.drop_column("SITE_BRUSH_TASK", "REMOVE_RULE_ID")
-    if has_table("SITE_BRUSH_TASK") and has_column("SITE_BRUSH_TASK", "RSS_RULE_ID"):
+    if has_column("SITE_BRUSH_TASK", "RSS_RULE_ID"):
         op.drop_column("SITE_BRUSH_TASK", "RSS_RULE_ID")
