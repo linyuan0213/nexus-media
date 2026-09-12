@@ -4,7 +4,7 @@
 （被 stamp 或中断），导致 USER_ID 缺列报错。这里幂等补齐列与索引，重复执行安全。
 
 Revision ID: 35165c5e40c2
-Revises: 8599a96d1abd
+Revises: d8e9f0a1b2c4
 Create Date: 2026-09-12T00:00:00.000000
 
 """
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "35165c5e40c2"
-down_revision = "8599a96d1abd"
+down_revision = "d8e9f0a1b2c4"
 branch_labels = None
 depends_on = None
 
