@@ -263,6 +263,36 @@ class TestQbittorrentAddTorrent:
         assert result == []
         assert error is True
 
+    def test_properties_403_reauthenticates_and_retries(self, client):
+        import qbittorrentapi
+
+        qb, mock_qbc = client
+        mock_qbc.torrents_properties.side_effect = [
+            qbittorrentapi.Forbidden403Error("Forbidden"),
+            {"up_speed_avg": 5.0},
+        ]
+        mock_qbc.auth_log_in.return_value = None
+        assert qb._get_torrent_generic_properties("hash1") == {"up_speed_avg": 5.0}
+        mock_qbc.auth_log_in.assert_called_once()
+
+    def test_properties_403_relogin_failure_returns_none(self, client):
+        import qbittorrentapi
+
+        qb, mock_qbc = client
+        mock_qbc.torrents_properties.side_effect = qbittorrentapi.Forbidden403Error("Forbidden")
+        mock_qbc.auth_log_in.side_effect = Exception("temporarily banned")
+        assert qb._get_torrent_generic_properties("hash1") is None
+
+    def test_fallback_403_reauthenticates(self, client):
+        import qbittorrentapi
+
+        qb, mock_qbc = client
+        mock_qbc.torrents_info.side_effect = [qbittorrentapi.Forbidden403Error("Forbidden"), []]
+        mock_qbc.auth_log_in.return_value = None
+        result, error = qb._fallback_get_torrents()
+        assert result == []
+        assert error is False
+
 
 class TestGetDownloadingTorrents:
     def test_get_downloading_excludes_completed(self):
