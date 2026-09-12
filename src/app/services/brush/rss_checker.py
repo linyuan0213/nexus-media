@@ -148,6 +148,17 @@ class BrushRssChecker:
         site_id = site_info.get("id")
         site_name = site_info.get("name")
         site_proxy = site_info.get("proxy")
+        # 任务快照可能过期（如 CookieCloud 同步后才更新站点 cookie）：优先用实时站点凭证，
+        # 避免用旧/空 cookie 抓详情页导致"种子详情页抓取为空"
+        cookie = site_info.get("cookie") or cookie
+        api_key = site_info.get("api_key") or api_key
+        bearer_token = site_info.get("bearer_token") or bearer_token
+        ua = site_info.get("ua") or ua
+        live_headers = site_info.get("headers")
+        if live_headers and JsonUtils.is_valid_json(live_headers):
+            headers.update(JsonUtils.loads(live_headers))
+        if ua:
+            headers.update({"User-Agent": ua})
         if not site_info.get("brush_enable"):
             log.error(f"[Brush]站点 {site_name} 未开启刷流功能，无法刷流！")
             return
