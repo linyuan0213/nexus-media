@@ -1,5 +1,15 @@
 # 版本历史
 
+## v4.20.12 (2026-09-12)
+
+### 修复
+
+- 新增位于最末的幂等自愈迁移 `247c67bf34f5`：只要库版本低于它，启动/升级执行 `alembic upgrade head` 即自动补齐缺失结构
+  - USER_ID（订阅四表、CONFIG_USER_RSS、USERRSS_TASK_HISTORY、DOWNLOAD_HISTORY、SEARCH_RESULT_INFO）及索引
+  - RBAC 授权/绑定三表（RBAC_ROLE_SITES / RBAC_USER_SITES / RBAC_USER_CHANNELS）
+  - 订阅唯一索引、ADD_DATE、TRANSFER_HISTORY.DST_BACKEND、SEARCH_RESULT_INFO.SEEDS_*
+- 修复"库 alembic 版本已在 head 但历史加列未执行"导致的启动报错，用户更新镜像后自动修复，无需手动迁移
+
 ## v4.20.11 (2026-09-12)
 
 ### 修复
