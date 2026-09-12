@@ -461,7 +461,11 @@ class MediaInfo(BaseModel):
                 genre_ids = [str(genre_ids).upper()]
             if set(genre_ids).intersection(set(ANIME_GENREIDS)):
                 self.type = MediaType.ANIME
-            else:
+            elif genre_ids:
+                self.type = MediaType.TV
+            elif self.type not in (MediaType.ANIME, MediaType.TV):
+                # 无类型信息时保留已推断的结果（站点分类/文件名），
+                # 避免把 ANIME 误降级为 TV 而入错媒体库目录
                 self.type = MediaType.TV
         elif media_type:
             self.type = media_type
