@@ -40,23 +40,31 @@ def _insp():
     return sa.inspect(op.get_bind())
 
 
-def _has_table(table: str) -> bool:
-    return table in _insp().get_table_names()
+def _table_names() -> dict[str, str]:
+    # PostgreSQL 会把未加引号的标识符折叠为小写：建立 小写->实际名 映射，兼容 MySQL/PG/SQLite
+    return {n.lower(): n for n in _insp().get_table_names()}
+
+
+def _actual_table_name(table: str) -> str | None:
+    return _table_names().get(table.lower())
 
 
 def _has_column(table: str, column: str) -> bool:
-    return column in [c["name"] for c in _insp().get_columns(table)]
+    actual = _actual_table_name(table)
+    if not actual:
+        return False
+    return column.lower() in {c["name"].lower() for c in _insp().get_columns(actual)}
 
 
 def upgrade() -> None:
     for table, columns in REQUIRED_COLUMNS.items():
-        if not _has_table(table):
+        actual = _actual_table_name(table)
+        if not actual:
             continue
         for name, column_type in columns:
             if _has_column(table, name):
                 continue
-            with op.batch_alter_table(table) as batch_op:
-                batch_op.add_column(sa.Column(name, column_type, nullable=True))
+            op.add_column(actual, sa.Column(name, column_type, nullable=True))
 
 
 def downgrade() -> None:
