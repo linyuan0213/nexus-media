@@ -3,6 +3,7 @@
 import re
 
 from app.infrastructure.http.auth import CookieAuth
+from app.sites.utils import is_logged_in
 from app.utils import StringUtils
 
 from .base import SigninResult, SiteSigninContext, SiteSigninHandler
@@ -40,6 +41,8 @@ class HttpSigninHandler(SiteSigninHandler):
         self._already_absent_markers = config.get("already_absent_markers", [])
 
     def signin(self, ctx: SiteSigninContext) -> SigninResult:
+        if self._config.get("mode") == "login":
+            return self._login_refresh(ctx)
         if not ctx.site_url:
             return SigninResult.custom(True, "")
 
@@ -85,6 +88,32 @@ class HttpSigninHandler(SiteSigninHandler):
     @staticmethod
     def _match_absent_markers(text: str, markers: list[str]) -> bool:
         return bool(markers and not any(re.search(marker, text) for marker in markers))
+
+    def _login_refresh(self, ctx: SiteSigninContext) -> SigninResult:
+        """登录模式：只请求站点首页刷新登录态，不访问签到接口/点击签到按钮."""
+        if not ctx.site_url:
+            return SigninResult.custom(True, "")
+        site_def = self._plugin_ctx.site_engine.get_by_id(ctx.site_id)
+        url = self._resolve_base_url(site_def, ctx)
+        headers = self._build_headers(ctx)
+        auth = self._resolve_auth(ctx)
+        if isinstance(auth, SigninResult):
+            self._plugin_ctx.debug(f"{ctx.site} 登录模式凭据解析失败: {auth.msg}")
+            return auth
+
+        self._plugin_ctx.debug(f"{ctx.site} 登录模式刷新首页: GET {url}")
+        client = self._http_client(ctx)
+        try:
+            res = client.get(url=url, headers=headers, auth=auth)
+        except Exception as e:
+            self._plugin_ctx.warn(f"{ctx.site} 登录模式请求异常: {e}")
+            return SigninResult.fail(ctx.site, SigninResult.SITE_UNREACHABLE)
+
+        if cookie_result := self._check_cookie(res.text, ctx.site):
+            return cookie_result
+        if not is_logged_in(res.text):
+            return SigninResult.fail(ctx.site, SigninResult.COOKIE_EXPIRED)
+        return SigninResult.login_refresh(ctx.site)
 
     def _resolve_base_url(self, site_def, ctx: SiteSigninContext) -> str:
         if site_def and site_def.domain:

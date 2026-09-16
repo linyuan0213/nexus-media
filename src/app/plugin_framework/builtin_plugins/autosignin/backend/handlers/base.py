@@ -69,6 +69,7 @@ class SigninResult:
     SUCCESS = "签到成功"
     ALREADY = "已签到"
     LOGIN_OK = "登录成功"
+    LOGIN_REFRESH = "登录态已刷新"
     COOKIE_EXPIRED = "cookie失效"
     SITE_UNREACHABLE = "请检查站点连通性"
     REQUEST_FAILED = "签到接口请求失败"
@@ -85,6 +86,11 @@ class SigninResult:
     @classmethod
     def already(cls, site: str) -> "SigninResult":
         return cls(True, f"[{site}]今日{cls.ALREADY}")
+
+    @classmethod
+    def login_refresh(cls, site: str) -> "SigninResult":
+        """登录模式：仅访问首页刷新登录态，不执行签到。"""
+        return cls(True, f"[{site}]{cls.LOGIN_REFRESH}")
 
     @classmethod
     def fail(cls, site: str, reason: str) -> "SigninResult":

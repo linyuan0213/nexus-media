@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers._browser import BrowserSigninHandler
-from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import SiteSigninContext
+from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import SigninResult, SiteSigninContext
 from app.plugin_framework.builtin_plugins.autosignin.backend.registry import HandlerRegistry
 from app.utils.browser_mode import get_chrome_server_url
 
@@ -40,9 +40,14 @@ class SigninEngine:
         sign_sites_cfg = config.get("sign_sites", [])
         special_sites = config.get("special_sites") or []
         browser_sites = config.get("browser_sites") or []
+        login_sites = config.get("login_sites") or []
+        login_browser_sites = config.get("login_browser_sites") or []
         retry_keyword = config.get("retry_keyword")
         queue_cnt = config.get("queue_cnt", 10)
         notify = config.get("notify", False)
+
+        # 登录模式站点始终参与调度（仅刷新登录态，不写入已签名单）
+        selected_cfg = list(dict.fromkeys([*sign_sites_cfg, *login_sites, *login_browser_sites]))
 
         today = datetime.today()
         yesterday_str = (today - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -52,12 +57,12 @@ class SigninEngine:
         today_history = get_history(key=today_str)
 
         if not today_history:
-            sign_sites = sign_sites_cfg
+            sign_sites = selected_cfg
             self.ctx.info(f"今日 {today_str} 未签到，开始签到已选站点")
         else:
             retry_sites_hist = today_history.get("retry", [])
             already_sign_sites = today_history.get("sign", [])
-            no_sign_sites = [s for s in sign_sites_cfg if s not in already_sign_sites]
+            no_sign_sites = [s for s in selected_cfg if s not in already_sign_sites]
             sign_sites = list(set(retry_sites_hist + no_sign_sites + special_sites))
             if sign_sites:
                 self.ctx.info(f"今日 {today_str} 已签到，开始重签重试站点、特殊站点、未签站点")
@@ -66,6 +71,8 @@ class SigninEngine:
                 return
 
         browser_set = set(str(s) for s in browser_sites)
+        login_set = set(str(s) for s in login_sites)
+        login_browser_set = set(str(s) for s in login_browser_sites)
         sign_sites = copy.deepcopy(self._site_cache.get_sites(siteids=sign_sites))  # type: ignore
         if not sign_sites:
             self.ctx.info("没有可签到站点，停止运行")
@@ -76,7 +83,13 @@ class SigninEngine:
             if site.get("public"):
                 self.ctx.info(f"站点 {site.get('name')} 是BT站点，跳过签到")
                 continue
-            if str(site.get("id")) in browser_set or str(site.get("id", "")) in browser_set:
+            sid = str(site.get("id", ""))
+            if sid in login_browser_set:
+                site["signin_mode"] = "login"
+                site["is_browser"] = True
+            elif sid in login_set:
+                site["signin_mode"] = "login"
+            elif sid in browser_set:
                 site["is_browser"] = True
             new_sign_sites.append(site)
 
@@ -113,7 +126,12 @@ class SigninEngine:
         self.ctx.debug(f"站点 {site_ctx.site} 命中 handler: {handler_name}")
 
         handler = None
-        if dedicated:
+        signin_mode = site_info.get("signin_mode")
+        if signin_mode == "login":
+            # 登录模式：强制走「仅刷新首页」处理器，绕过站点专用签到 handler，绝不执行签到
+            self.ctx.debug(f"站点 {site_ctx.site} 登录模式，仅刷新登录态")
+            handler = self._registry.get_login_browser()() if site_ctx.is_browser else self._registry.get_login()()
+        elif dedicated:
             handler = dedicated()
         elif site_ctx.is_browser:
             # 配置了浏览器自动化且无专用 handler → 直接走浏览器自动化，
@@ -134,7 +152,12 @@ class SigninEngine:
             result = handler.signin(site_ctx)
             self.ctx.debug(f"站点 {site_ctx.site} 结果: {result.msg}")
             msg = result.msg or ""
-            if not used_browser and _should_browser_fallback(msg) and get_chrome_server_url():
+            if (
+                signin_mode != "login"
+                and not used_browser
+                and _should_browser_fallback(msg)
+                and get_chrome_server_url()
+            ):
                 self.ctx.info(f"站点 {site_ctx.site} HTTP 签到疑似需要浏览器，自动回退")
                 br_ctx = SiteSigninContext.from_site_info(site_info, self._site_engine)
                 br_ctx.is_browser = True
@@ -143,7 +166,12 @@ class SigninEngine:
         except Exception as e:
             self.ctx.warn(f"站点 {site_ctx.site} 签到异常: {e}")
             # 异常也可能是浏览器相关（403/Cloudflare），尝试回退
-            if not used_browser and _should_browser_fallback(str(e)) and get_chrome_server_url():
+            if (
+                signin_mode != "login"
+                and not used_browser
+                and _should_browser_fallback(str(e))
+                and get_chrome_server_url()
+            ):
                 self.ctx.info(f"站点 {site_ctx.site} 异常疑似需要浏览器，自动回退")
                 br_ctx = SiteSigninContext.from_site_info(site_info, self._site_engine)
                 br_ctx.is_browser = True
@@ -167,6 +195,7 @@ class SigninEngine:
         retry_sites: list = []
         retry_msg: list = []
         login_success_msg: list = []
+        login_refresh_msg: list = []
         sign_success_msg: list = []
         already_sign_msg: list = []
         fz_sign_msg: list = []
@@ -180,7 +209,9 @@ class SigninEngine:
             if re.search(r"9点(?:前|后开放)|9:00后", s):
                 self.ctx.debug(f"{s}，跳过本次统计，等待后续调度补签")
                 continue
-            if "登录成功" in s:
+            if SigninResult.LOGIN_REFRESH in s:
+                login_refresh_msg.append(s)
+            elif "登录成功" in s:
                 login_success_msg.append(s)
             elif "浏览器签到成功" in s:
                 fz_sign_msg.append(s)
@@ -217,7 +248,8 @@ class SigninEngine:
 
         self.ctx.debug(
             f"签到结果统计: 成功={len(sign_success_msg)}, 已签={len(already_sign_msg)}, "
-            f"登录={len(login_success_msg)}, 浏览器={len(fz_sign_msg)}, 失败={len(failed_msg)}, 重试={len(retry_sites)}"
+            f"登录刷新={len(login_refresh_msg)}, 登录={len(login_success_msg)}, "
+            f"浏览器={len(fz_sign_msg)}, 失败={len(failed_msg)}, 重试={len(retry_sites)}"
         )
         self.ctx.debug(f"失败详情:\n{failed_detail}")
         self.ctx.debug(f"下次签到重试站点 {retry_names}")
@@ -231,7 +263,9 @@ class SigninEngine:
         update_history(today_str, today_history)
 
         if notify:
-            signin_message = login_success_msg + sign_success_msg + already_sign_msg + fz_sign_msg + failed_msg
+            signin_message = (
+                login_success_msg + sign_success_msg + already_sign_msg + fz_sign_msg + login_refresh_msg + failed_msg
+            )
             if retry_msg:
                 signin_message.append("——————命中重试—————")
                 signin_message += retry_msg

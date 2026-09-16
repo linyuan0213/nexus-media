@@ -43,10 +43,36 @@ class BrowserSigninHandler(SiteSigninHandler):
         if not server_url:
             return SigninResult.fail(site, "Chrome 服务器未配置")
 
-        self._plugin_ctx.info(f"开始浏览器签到：{site}")
+        login_mode = self._config.get("mode") == "login"
+        self._plugin_ctx.info(f"开始浏览器{'登录刷新' if login_mode else '签到'}：{site}")
         try:
             with _BROWSER_SIGNIN_LOCK:
+                if login_mode:
+                    return self._do_login_refresh(ctx, site, home_url, server_url)
                 return self._do_signin(ctx, site, site_def, home_url, server_url)
+        except Exception as e:
+            ExceptionUtils.exception_traceback(e)
+            return SigninResult.fail(site, str(e))
+
+    def _do_login_refresh(self, ctx, site, home_url, server_url) -> SigninResult:
+        """登录模式（浏览器自动化）：只打开站点首页刷新登录态/过盾，不触碰签到页与按钮."""
+        try:
+            lab = settings.get("laboratory") or {}
+            fp_profile_id = str(lab.get("chrome_fp_profile_id") or "") or None
+            with BrowserSession(site_key=site, server_url=server_url, fp_profile_id=fp_profile_id) as session:
+                result = session.navigate(home_url, cookie=ctx.cookie)
+                html_text = result.get("html", "") or ""
+                if not html_text:
+                    return SigninResult.fail(site, "无法打开网站")
+                html_text = self._wait_cloudflare(session, post_navigate=html_text)
+                if CHALLENGE_INDICATORS.search(html_text):
+                    return SigninResult.fail(site, f"挑战未通过: {html_text[:100]}")
+                html_text = self._wait_embedded_turnstile(session, html_text)
+                if has_pending_turnstile(html_text):
+                    return SigninResult.fail(site, "人机验证未完成（Cloudflare Turnstile 未通过），请稍后重试")
+                if not is_logged_in(html_text):
+                    return SigninResult.fail(site, SigninResult.COOKIE_EXPIRED)
+                return SigninResult.login_refresh(site)
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
             return SigninResult.fail(site, str(e))

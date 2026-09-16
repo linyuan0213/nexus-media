@@ -83,5 +83,13 @@ class HandlerRegistry:
     def get_browser(self) -> HandlerFactory:
         return lambda: BrowserSigninHandler(self._plugin_ctx, self._rate_limiter, {})
 
+    def get_login(self) -> HandlerFactory:
+        """登录模式（HTTP）：仅刷新站点首页登录态，不执行签到."""
+        return lambda: HttpSigninHandler(self._plugin_ctx, self._rate_limiter, {"mode": "login"})
+
+    def get_login_browser(self) -> HandlerFactory:
+        """登录模式（浏览器自动化）：仅打开首页刷新登录态/过盾，不执行签到."""
+        return lambda: BrowserSigninHandler(self._plugin_ctx, self._rate_limiter, {"mode": "login"})
+
     def __len__(self) -> int:
         return len(self._handlers)

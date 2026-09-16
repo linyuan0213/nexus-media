@@ -2,12 +2,15 @@
   "manifest_version": "1.0",
   "id": "autosignin",
   "name": "站点自动签到",
-  "version": "1.0",
+  "version": "1.1",
   "author": "linyuan0213",
   "author_url": "https://github.com/linyuan0213",
-  "description": "站点自动签到保号，支持重试。",
+  "description": "站点自动签到保号，支持重试；支持仅登录保活（不签到）。",
   "category": "site",
-  "tags": ["签到", "站点"],
+  "tags": [
+    "签到",
+    "站点"
+  ],
   "icon": "lucide:check-circle",
   "color": "#3b82f6",
   "min_app_version": "3.0.0",
@@ -101,6 +104,22 @@
           "source": "sites",
           "default": [],
           "help": "需要使用浏览器自动化签到的站点"
+        },
+        {
+          "key": "login_sites",
+          "type": "multi_select",
+          "label": "登录模式站点",
+          "source": "sites",
+          "default": [],
+          "help": "仅刷新登录态：访问站点首页保活，不执行签到；每次调度都会刷新"
+        },
+        {
+          "key": "login_browser_sites",
+          "type": "multi_select",
+          "label": "登录模式站点（浏览器）",
+          "source": "sites",
+          "default": [],
+          "help": "使用浏览器自动化刷新登录态（过盾/人机验证），不执行签到"
         }
       ]
     },
