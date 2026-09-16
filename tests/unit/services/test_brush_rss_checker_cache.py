@@ -57,3 +57,31 @@ class TestMarkOrSkipProcessed:
         )
         checker._mark_or_skip_processed(1, "enc-1")
         assert "1:enc-1" in shared
+
+
+def test_torrent_attr_passes_chrome_flags(monkeypatch):
+    """刷流属性抓取必须透传站点的 chrome/browser_persistent（否则 Cloudflare 站无法过盾）."""
+    import app.services.brush.rss_checker as mod
+
+    checker = _make_checker()
+    monkeypatch.setattr(checker, "_rss_rule_needs_torrent_attr", lambda _rule: True)
+    monkeypatch.setattr(mod, "cached_torrent_attr", lambda _url: None)
+    monkeypatch.setattr(mod, "store_torrent_attr", lambda _url, _attr: None)
+    captured: dict = {}
+    monkeypatch.setattr(checker._siteconf, "check_torrent_attr", lambda **kwargs: captured.update(kwargs) or {})  # type: ignore[attr-defined]
+
+    checker._check_torrent_attr_if_needed(
+        rss_rule={},
+        page_url="https://totheglory.im/details.php?id=1",
+        cookie="c",
+        api_key=None,
+        bearer_token=None,
+        ua="UA",
+        headers={},
+        site_proxy=False,
+        chrome=True,
+        browser_persistent=True,
+    )
+
+    assert captured["chrome"] is True
+    assert captured["browser_persistent"] is True

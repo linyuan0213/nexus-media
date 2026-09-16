@@ -762,9 +762,13 @@ class SiteEngine:
                     detail_url = f"{self._base_from_url(torrent_url).rstrip('/')}/{detail_url.lstrip('/')}"
             else:
                 detail_url = torrent_url
-            html_txt = self._fetch_page(detail_url, user_config)
+            html_txt, final_url = self._fetch_page_ex(detail_url, user_config)
+            if "login" in (final_url or "").lower():
+                raise TorrentAttrFetchError(f"种子详情页被重定向到登录页（cookie 失效/未登录）, url={detail_url[:120]}")
             if not html_txt:
                 raise TorrentAttrFetchError(f"种子详情页抓取为空, url={detail_url[:120]}")
+            if not is_logged_in(html_txt):
+                raise TorrentAttrFetchError(f"种子详情页未登录（cookie 可能失效）, url={detail_url[:120]}")
             attrs = self._eval_html_conf(html_txt, conf)
             if attrs is None:
                 raise TorrentAttrFetchError(f"种子详情页解析失败, url={detail_url[:120]}")
@@ -817,7 +821,15 @@ class SiteEngine:
     def _fetch_page_ex(self, url, user_config) -> tuple[str | None, str]:
         """抓取页面，返回 (text, final_url)；final_url 供调用方检测登录重定向."""
         ua = user_config.get("ua", "")
-        headers = {"User-Agent": ua} if ua else {}
+        raw_headers = user_config.get("headers")
+        if isinstance(raw_headers, str):
+            try:
+                raw_headers = JsonUtils.loads(raw_headers)
+            except Exception:  # noqa: BLE001
+                raw_headers = {}
+        headers = dict(raw_headers) if isinstance(raw_headers, dict) else {}
+        if ua:
+            headers.setdefault("User-Agent", ua)
         proxies = get_proxies() if user_config.get("proxy") else None
         proxy_url = proxies.get("http") if proxies else None
         site = self.get_by_url(url)

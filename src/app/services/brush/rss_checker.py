@@ -86,6 +86,8 @@ class BrushRssChecker:
         ua: str | None,
         headers: dict,
         site_proxy: bool,
+        chrome: bool = False,
+        browser_persistent: bool = False,
     ) -> dict:
         """仅在规则需要时解析种子详情页属性，避免无意义请求。"""
         if not self._rss_rule_needs_torrent_attr(rss_rule):
@@ -108,6 +110,8 @@ class BrushRssChecker:
                 ua=ua,
                 headers=headers,
                 proxy=site_proxy,
+                chrome=chrome,
+                browser_persistent=browser_persistent,
             )
         except TorrentAttrFetchError as e:
             # 详情抓取失败 → 视为无此属性（规则如 free=FREE 将判为不满足，不下载，宁可不选不误下）
@@ -243,6 +247,8 @@ class BrushRssChecker:
                             ua=ua,
                             headers=headers,
                             site_proxy=bool(site_proxy),
+                            chrome=bool((site_info or {}).get("chrome")),
+                            browser_persistent=bool((site_info or {}).get("browser_persistent")),
                         )
                     except Exception:  # noqa: BLE001, S110
                         pass  # 抓取失败由下游按“未知”处理

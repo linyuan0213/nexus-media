@@ -3,6 +3,7 @@
 import json
 from unittest.mock import MagicMock
 
+import pytest
 from lxml import etree
 
 import app.sites.engine as engine_mod
@@ -216,8 +217,9 @@ class TestGetTidByUrlHostDigits:
         from app.sites.engine import SiteEngine, get_tid_by_url
 
         engine = SiteEngine(definitions_dir="/nonexistent")
-        site = SiteDefinition(id="u2", name="幼儿园", domain="u2.dmhy.org", tid_pattern=r"\d+",
-                              detail_page_url="/details.php?id={tid}")
+        site = SiteDefinition(
+            id="u2", name="幼儿园", domain="u2.dmhy.org", tid_pattern=r"\d+", detail_page_url="/details.php?id={tid}"
+        )
         engine.register(site)
         assert get_tid_by_url("https://u2.dmhy.org/details.php?id=66055", site_engine=engine) == "66055"
 
@@ -251,9 +253,11 @@ class TestHtmlPubdateExtract:
         return engine
 
     def test_pubdate_attr_extracted(self, monkeypatch):
-        html = ("<html><body><a href='logout.php'>退出</a>"
-                "<td class='rowfollow'>发布时间: <time title='2026-09-07 12:34:56'>2026-09-07</time></td>"
-                "<div id='peercount'><b>1个做种者</b></div></body></html>")
+        html = (
+            "<html><body><a href='logout.php'>退出</a>"
+            "<td class='rowfollow'>发布时间: <time title='2026-09-07 12:34:56'>2026-09-07</time></td>"
+            "<div id='peercount'><b>1个做种者</b></div></body></html>"
+        )
         engine = self._engine(monkeypatch, html)
         stats = engine.html_selector_stats("https://u2.dmhy.org/details.php?id=1", {})
         assert stats.get("pubdate") == "2026-09-07 12:34:56"
@@ -285,8 +289,10 @@ class TestHtmlSelectorStats:
 
     def test_normal_page_selector_hits(self, monkeypatch):
         """正常详情页：各选择器命中数正确统计"""
-        html = ("<html><body><a href='logout.php'>退出</a>"
-                "<b class='free'>免费</b><span id='seeders'><span>12</span></span></body></html>")
+        html = (
+            "<html><body><a href='logout.php'>退出</a>"
+            "<b class='free'>免费</b><span id='seeders'><span>12</span></span></body></html>"
+        )
         engine = self._engine(monkeypatch, html)
         ret = engine.html_selector_stats("https://example.com/d/1", {})
         assert ret.get("fetched") is True
@@ -299,10 +305,17 @@ class TestApiFreeValueZero:
     """free_value 为 0（数值判免费，如朱雀 downloadRate==0）不得因真值判断漏判"""
 
     def test_free_when_value_zero(self, monkeypatch):
-        torrent_attr = {"method": "GET", "path": "/api/torrent/info", "params": {"id": "{tid}"},
-                        "response": {"free_key": "data.torrent.downloadRate", "free_value": 0}}
+        torrent_attr = {
+            "method": "GET",
+            "path": "/api/torrent/info",
+            "params": {"id": "{tid}"},
+            "response": {"free_key": "data.torrent.downloadRate", "free_value": 0},
+        }
         site = SiteDefinition(
-            id="tnode", name="朱雀", domain="zhuque.in", detail_page_url="/torrent/info/{tid}",
+            id="tnode",
+            name="朱雀",
+            domain="zhuque.in",
+            detail_page_url="/torrent/info/{tid}",
             api=SiteApiConfig(
                 base_url="https://zhuque.in", auth={"type": "api_key", "header_name": "x-api-key"}, endpoints={}
             ),
@@ -317,10 +330,17 @@ class TestApiFreeValueZero:
         assert ret["free"] is True
 
     def test_not_free_when_value_one(self, monkeypatch):
-        torrent_attr = {"method": "GET", "path": "/api/torrent/info", "params": {"id": "{tid}"},
-                        "response": {"free_key": "data.torrent.downloadRate", "free_value": 0}}
+        torrent_attr = {
+            "method": "GET",
+            "path": "/api/torrent/info",
+            "params": {"id": "{tid}"},
+            "response": {"free_key": "data.torrent.downloadRate", "free_value": 0},
+        }
         site = SiteDefinition(
-            id="tnode2", name="朱雀", domain="zhuque2.in", detail_page_url="/torrent/info/{tid}",
+            id="tnode2",
+            name="朱雀",
+            domain="zhuque2.in",
+            detail_page_url="/torrent/info/{tid}",
             api=SiteApiConfig(
                 base_url="https://zhuque2.in", auth={"type": "api_key", "header_name": "x-api-key"}, endpoints={}
             ),
@@ -413,3 +433,76 @@ class TestSiteRuleTimeParse:
 
         dt = SiteEngine._parse_rule_time("1780272000")
         assert int(dt.timestamp()) == 1780272000
+
+
+class TestHtmlTorrentAttrAuthDetection:
+    """HTML 详情页抓取：登录态必须显式识别，避免把登录页当成"确定非免费"."""
+
+    @staticmethod
+    def _engine(monkeypatch, html: str, final_url: str):
+        engine = SiteEngine(definitions_dir="/nonexistent")
+        site = MagicMock()
+        site.id = "ttg"
+        site.api = None
+        site.torrent_attr = None
+        site.html = MagicMock()
+        site.html.conf = {"FREE": ["//img[@class='topic']"], "2XFREE": [], "HR": [], "PEER_COUNT": []}
+        site.html.torrents = None
+        site.detail_page_url = None
+        monkeypatch.setattr(engine, "get_by_url", lambda _url: site)
+        monkeypatch.setattr(engine, "_fetch_page_ex", lambda _url, _cfg: (html, final_url))
+        return engine
+
+    def test_login_redirect_raises(self, monkeypatch):
+        engine = self._engine(monkeypatch, "<html>login</html>", "https://totheglory.im/login.php")
+        with pytest.raises(TorrentAttrFetchError) as err:
+            engine.resolve_torrent_attr("https://totheglory.im/details.php?id=1")
+        assert "登录页" in str(err.value)
+
+    def test_not_logged_in_raises(self, monkeypatch):
+        engine = self._engine(monkeypatch, "<html>请登录</html>", "https://totheglory.im/details.php?id=1")
+        monkeypatch.setattr(engine_mod, "is_logged_in", lambda _html: False)
+        with pytest.raises(TorrentAttrFetchError) as err:
+            engine.resolve_torrent_attr("https://totheglory.im/details.php?id=1")
+        assert "未登录" in str(err.value)
+
+    def test_logged_in_parses_attrs(self, monkeypatch):
+        engine = self._engine(monkeypatch, "<html>ok</html>", "https://totheglory.im/details.php?id=1")
+        monkeypatch.setattr(engine_mod, "is_logged_in", lambda _html: True)
+        attrs = engine.resolve_torrent_attr("https://totheglory.im/details.php?id=1")
+        assert attrs["free"] is False
+        assert attrs["hr"] is False
+
+
+class TestFetchPageHeaders:
+    """_fetch_page_ex 需合并站点维护的 headers（此前只发 UA，导致自定义头丢失）."""
+
+    def test_merges_site_headers_and_ua(self, monkeypatch):
+        engine = SiteEngine(definitions_dir="/nonexistent")
+        captured: dict = {}
+
+        class _Resp:
+            is_success = True
+            text = "<html>ok</html>"
+            url = "https://totheglory.im/details.php?id=1"
+
+        class _Client:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def get(self, **kwargs):
+                captured.update(kwargs.get("headers") or {})
+                return _Resp()
+
+            def close(self):
+                pass
+
+        monkeypatch.setattr(engine_mod, "HttpClient", lambda *a, **k: _Client())
+
+        engine._fetch_page_ex(
+            "https://totheglory.im/details.php?id=1",
+            {"ua": "UA-1", "headers": '{"Referer": "https://totheglory.im/"}', "cookie": "a=1"},
+        )
+
+        assert captured["Referer"] == "https://totheglory.im/"
+        assert captured["User-Agent"] == "UA-1"

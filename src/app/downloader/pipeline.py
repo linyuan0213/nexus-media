@@ -277,6 +277,7 @@ class DownloadPipeline:
                             ua=site_info.get("ua"),
                             headers=headers,
                             proxy=proxy if proxy is not None else site_info.get("proxy") or False,
+                            chrome=bool(site_info.get("chrome")),
                             browser_persistent=bool(site_info.get("browser_persistent")),
                         )
                     except Exception as e:  # noqa: BLE001
