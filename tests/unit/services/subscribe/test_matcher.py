@@ -343,3 +343,57 @@ class TestMultiUserFanout:
         match_flag, _, match_info = self._match(matcher, media_info, rss_tvs)
         assert match_flag is True
         assert match_info.get("sibling_rssids") is None
+
+
+class TestSubscribeMediaTypePropagation:
+    """订阅类型需在匹配阶段透传：动漫订阅→anime，且识别的动漫不被 tv 订阅降级."""
+
+    def _match(self, matcher, media_type, rss_info):
+        media_info = _make_media_info(media_type, "克雷瓦提斯", "2025")
+        match_flag, _msg, _info = matcher.match(
+            media_info=media_info,
+            rss_movies={},
+            rss_tvs={1: rss_info},
+            site_id="test_site",
+            site_filter_rule=None,
+            site_cookie="",
+            site_parse=False,
+            site_ua="",
+            site_headers={},
+            site_proxy=False,
+        )
+        return match_flag, media_info
+
+    def test_anime_subscription_sets_anime(self, matcher):
+        flag, media_info = self._match(
+            matcher,
+            MediaType.TV,
+            {
+                "name": "克雷瓦提斯",
+                "year": "2025",
+                "season": "S01",
+                "tmdbid": None,
+                "fuzzy_match": False,
+                "type": "anime",
+            },
+        )
+        assert flag is True
+        assert media_info.type == MediaType.ANIME
+
+    def test_identified_anime_not_downgraded_by_tv_subscription(self, matcher):
+        flag, media_info = self._match(
+            matcher,
+            MediaType.ANIME,
+            {"name": "克雷瓦提斯", "year": "2025", "season": "S01", "tmdbid": None, "fuzzy_match": False, "type": "tv"},
+        )
+        assert flag is True
+        assert media_info.type == MediaType.ANIME
+
+    def test_tv_subscription_keeps_tv(self, matcher):
+        flag, media_info = self._match(
+            matcher,
+            MediaType.TV,
+            {"name": "克雷瓦提斯", "year": "2025", "season": "S01", "tmdbid": None, "fuzzy_match": False, "type": "tv"},
+        )
+        assert flag is True
+        assert media_info.type == MediaType.TV

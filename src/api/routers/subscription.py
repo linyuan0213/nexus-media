@@ -21,6 +21,7 @@ from api.deps import (
 from app.core.error_codes import ErrorCode
 from app.core.system_config import SystemConfig
 from app.domain.enums import SystemConfigKey
+from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
 from app.media import meta_info
 from app.schemas.auth import UserContext
@@ -138,8 +139,14 @@ class GetSubscribeHistoryRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _resolve_mtype(type_str: str | None) -> MediaType:
+    """保留 电影/电视剧/动漫 三类；未知时回退电视剧（兼容旧前端只传 movie/tv）."""
+    parsed = MediaType.from_string(type_str or "")
+    return parsed if parsed in (MediaType.MOVIE, MediaType.TV, MediaType.ANIME) else MediaType.TV
+
+
 def _build_add_kwargs(req: AddRssMediaRequest) -> dict:
-    mtype = MediaType.MOVIE if MediaType.from_string(req.type or "") == MediaType.MOVIE else MediaType.TV
+    mtype = _resolve_mtype(req.type)
     channel = "R" if req.in_form == "manual" else "D"
     return {
         "mtype": mtype,
@@ -165,7 +172,7 @@ def _build_add_kwargs(req: AddRssMediaRequest) -> dict:
 
 
 def _build_update_kwargs(req: AddRssMediaRequest) -> dict:
-    mtype = MediaType.MOVIE if MediaType.from_string(req.type or "") == MediaType.MOVIE else MediaType.TV
+    mtype = _resolve_mtype(req.type)
     return {
         "mtype": mtype,
         "rssid": req.rssid,
@@ -367,7 +374,8 @@ def re_rss_history(
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
     parsed = MediaType.from_string(req.type or "")
-    rtype = MediaType.MOVIE.value if parsed == MediaType.MOVIE else MediaType.TV.value
+    # 动漫订阅历史存于电视剧表：按 to_tmdb 映射（ANIME -> tv），避免误判为电影
+    rtype = MediaTypeMapper.to_tmdb(parsed) or MediaType.TV.value
     code, msg = svc.redo(rssid=req.rssid, rtype=rtype, user=user)
     if code == 0:
         return success(message=msg)
@@ -407,7 +415,8 @@ def remove_rss_media(
             tmdbid=tmdbid,
             user=user,
         )
-    elif mtype == MediaType.TV:
+    elif mtype in (MediaType.TV, MediaType.ANIME):
+        # 动漫订阅存于电视剧表，删除同样走 TV
         svc.delete_subscribe(
             mtype=MediaType.TV,
             title=name or "",

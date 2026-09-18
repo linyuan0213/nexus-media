@@ -16,7 +16,13 @@ def gen_rss_note(media: Any) -> str:
     """生成订阅的JSON备注信息"""
     if not media:
         return "{}"
-    note = {"poster": media.get_poster_image(), "release_date": media.release_date, "vote": media.vote_average}
+    note = {
+        "poster": media.get_poster_image(),
+        "release_date": media.release_date,
+        "vote": media.vote_average,
+        # 订阅媒体类型（movie/tv/anime）：动漫需与电视剧区分，避免入库到电视剧库
+        "media_type": str(getattr(media, "type", "") or ""),
+    }
     return JsonUtils.dumps(note, separators=(", ", ": "))
 
 

@@ -166,8 +166,12 @@ class SubscribeMatcher:
             if media_info.type != MediaType.MOVIE:
                 if rss_info.get("tmdbid") and media_info.tmdb_id and int(rss_info["tmdbid"]) == media_info.tmdb_id:
                     media_info.tmdb_id = int(rss_info["tmdbid"])
-                if rss_info.get("type"):
-                    media_info.type = MediaType(rss_info["type"])
+                sub_type = MediaType.from_string(rss_info.get("type") or "")
+                # 订阅声明动漫时以动漫为准；已识别为动漫不因订阅属于电视剧表而降级
+                if sub_type != MediaType.UNKNOWN and not (
+                    media_info.type == MediaType.ANIME and sub_type == MediaType.TV
+                ):
+                    media_info.type = sub_type
                 if rss_info.get("year") and not media_info.year:
                     media_info.year = rss_info["year"]
             # 兄弟订阅 id 挂到主匹配上，供下载完成后联动记账。

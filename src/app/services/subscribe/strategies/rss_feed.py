@@ -14,6 +14,7 @@ from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryA
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SearchType, SystemConfigKey
+from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
 from app.media.service import MediaService
 from app.message import Message
@@ -314,7 +315,8 @@ class RssFeedStrategy:
 
                 if not match_flag:
                     if match_info and any("站点属性解析失败" in m for m in match_msg):
-                        rtype = "tv" if media_info.type == MediaType.TV else "movie"
+                        # ANIME 存于电视剧表：按 to_tmdb 映射，避免误写电影表
+                        rtype = MediaTypeMapper.to_tmdb(media_info.type) or MediaType.MOVIE.value
                         self.subscribe.update_rss_state(rtype, match_info.get("id"), SubscribeState.ERROR.value)
                         log.warn(f"[RssFeedStrategy] {match_info.get('name')} 站点属性解析失败，标记为错误状态")
                     continue

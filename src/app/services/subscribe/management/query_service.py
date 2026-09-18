@@ -9,6 +9,14 @@ from app.services.subscribe.management.utils import parse_rss_desc
 from app.utils.json_utils import JsonUtils
 
 
+def _resolve_subscribe_type(value) -> str:
+    """订阅媒体类型归一化：movie/tv/anime，缺省 tv（兼容历史订阅无 media_type）."""
+    parsed = MediaType.from_string(str(value or ""))
+    if parsed in (MediaType.MOVIE, MediaType.ANIME):
+        return parsed.value
+    return MediaType.TV.value
+
+
 class SubscribeQueryService:
     """订阅查询服务"""
 
@@ -100,6 +108,7 @@ class SubscribeQueryService:
                 "release_date": note_info.get("release_date"),
                 "vote": note_info.get("vote"),
                 "keyword": keyword,
+                "type": MediaType.MOVIE.value,
                 "add_date": rss_movie.ADD_DATE,
             }
         return ret_dict
@@ -187,6 +196,7 @@ class SubscribeQueryService:
                 "release_date": note_info.get("release_date"),
                 "vote": note_info.get("vote"),
                 "keyword": keyword,
+                "type": _resolve_subscribe_type(note_info.get("media_type")),
                 "add_date": rss_tv.ADD_DATE,
             }
         return ret_dict
