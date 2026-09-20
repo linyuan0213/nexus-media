@@ -35,8 +35,7 @@ class BrushTorrentLifecycle:
         if not remove_rule:
             return False
         return any(
-            remove_rule.get(key) not in ("#", "N", None, "")
-            for key in ("freestatus", "hr", "hr_time", "pubdate")
+            remove_rule.get(key) not in ("#", "N", None, "") for key in ("freestatus", "hr", "hr_time", "pubdate")
         )
 
     def remove_task_torrents(self, taskid: int | None, taskinfo: dict) -> None:
@@ -373,6 +372,18 @@ class BrushTorrentLifecycle:
         site_info,
         torrent_page_url_maps=None,
     ):
+        # 免费恢复同样受活跃星期/时段约束：非活跃时段不自动启动，避免窗口外跑流量
+        time_range = (taskinfo or {}).get("time_range") or ""
+        active_weekdays = (taskinfo or {}).get("active_weekdays") or ""
+        if not self._helper.is_in_time_range(time_range=time_range) or not self._helper.is_in_active_weekdays(
+            active_weekdays=active_weekdays
+        ):
+            log.info(
+                f"[Brush]任务 {task_name} 不在活跃时段"
+                f"（{time_range or '全天'}/{active_weekdays or '每天'}），跳过免费恢复启动"
+            )
+            return
+
         all_torrents = self._downloader.get_torrents(downloader_id, list(torrent_id_maps.keys()))
         if not all_torrents:
             return
