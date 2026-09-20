@@ -1,5 +1,6 @@
 import hashlib
 import threading
+import time
 from typing import cast
 
 import log
@@ -19,6 +20,10 @@ from app.utils import ExceptionUtils
 from app.utils.json_utils import JsonUtils
 
 lock = threading.Lock()
+
+# "已入库"实时检查缓存：(mtype, title, year, season) -> (expire_ts, exists)
+_LIVE_LIBRARY_TTL = 300
+_LIVE_LIBRARY_CACHE: dict[tuple, tuple[float, bool]] = {}
 server_lock = threading.Lock()
 
 
@@ -278,6 +283,11 @@ class MediaServer:
                 self.progress.update(ptype=ProgressKey.MediaSync, text="请稍候...")
                 # 获取需同步的媒体库
                 librarys = self.systemconfig.get(SystemConfigKey.SyncLibrary) or []
+                if not librarys:
+                    # 未选择任何媒体库时直接返回：避免清空登记薄后写入为空，导致"已入库"判定全部失效
+                    log.warn("[MediaServer]未选择需要同步的媒体库，跳过本次同步（不清空登记薄）")
+                    self.progress.end(ProgressKey.MediaSync)
+                    return
                 # 清空登记薄
                 self.mediadb.empty(server_type=self._server_type)
 
@@ -331,6 +341,32 @@ class MediaServer:
             log.info(f"[MediaServer]媒体库数据同步完成，同步数量：{total_count}")
         finally:
             dist_lock.release()
+
+    def check_library_present(self, mtype, title=None, year=None, tmdbid=None, season=None) -> bool:
+        """实时检查媒体库是否存在该条目（用于"已入库"标识，不依赖同步登记薄）.
+
+        仅在需要展示状态时调用；结果带短 TTL 缓存，避免列表页每项都打媒体服务器。
+        """
+        if not self.server or not title:
+            return False
+        key = (str(mtype).lower(), str(title), str(year or ""), str(season or ""))
+        now = time.time()
+        cached = _LIVE_LIBRARY_CACHE.get(key)
+        if cached and cached[0] > now:
+            return cached[1]
+        result = False
+        try:
+            numeric_tmdb = str(tmdbid) if tmdbid and str(tmdbid).isdigit() else None
+            if str(mtype).lower() == "movie":
+                result = bool(self.server.get_movies(title, year))
+            else:
+                episodes = self.server.get_tv_episodes(title=title, year=year, tmdbid=numeric_tmdb, season=season or 1)
+                result = bool(episodes)
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[MediaServer]实时检查媒体库存在性失败 {title}: {e!s}")
+            result = False
+        _LIVE_LIBRARY_CACHE[key] = (now + _LIVE_LIBRARY_TTL, result)
+        return result
 
     def check_item_exists(self, mtype, title=None, year=None, tmdbid=None, season=None, episode=None):
         """
