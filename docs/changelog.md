@@ -1,5 +1,16 @@
 # 版本历史
 
+## v4.21.1 (2026-09-21)
+
+### 修复
+
+- Gemini provider 补传 `system_prompt`：改由 `GenerateContentConfig.system_instruction` 传递，修复 Gemini 下 Agent 工具调用完全失效（工具指令依赖 system_prompt，此前被丢弃）
+- Gemini provider 支持自定义 `api_url`、代理与超时：经 `HttpOptions` 注入 `base_url`（自动剥离 `/v1beta`、`/v1` 后缀，避免与 SDK 拼接的 api_version 重复导致 404）、`proxy` 与 `timeout`
+
+### 其他
+
+- 合并上游 PR #174（Benature）：Gemini provider 配置与工具调用修复
+
 ## v4.21.0 (2026-09-20)
 
 ### 新增
