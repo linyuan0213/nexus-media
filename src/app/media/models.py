@@ -450,6 +450,11 @@ class MediaInfo(BaseModel):
                 rule_map[mt][ent.name] = ent.rules if not ent.is_default else {}
 
         media_type = info.get("media_type")
+        if media_type is not None and not isinstance(media_type, MediaType):
+            # 兼容字符串（"tv"/"movie"）：否则会被直接赋值为字符串并跳过动漫判定
+            parsed_media_type = MediaType.from_string(str(media_type))
+            if parsed_media_type != MediaType.UNKNOWN:
+                media_type = parsed_media_type
         if media_type == MediaType.TV:
             genre_ids = info.get("genre_ids") or []
             # TMDB detail 返回 genres（数组）而非 genre_ids，需兼容提取

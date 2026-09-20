@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from types import SimpleNamespace
 
 import log
+from app.core.constants import ANIME_GENREIDS
 from app.core.settings import settings
 from app.domain.enums import IdentifyStatus, MatchMode
 from app.domain.mediatypes import MediaType
@@ -24,6 +25,33 @@ from app.media.parser.episode_mapper import EpisodeMapper
 from app.media.parser.regex import RegexParser
 from app.storage.backends.base import StorageBackend
 from app.utils import EpisodeFormat, PathUtils, StringUtils
+
+
+def _promote_tmdb_anime_type(info) -> None:
+    """批量识别路径按 TMDB genre 16 提升为动漫.
+
+    单条 identify()/identify_files() 经 MediaInfo.set_tmdb_info 已具备该判定；
+    批量路径手工拼 tmdb_info，需在此补齐，否则 RSS/搜索得到的动漫会被当作 tv。
+    仅做 tv -> anime 提升，不会降级已判定的 anime。
+    """
+    tmdb_info = getattr(info, "tmdb_info", None)
+    if not isinstance(tmdb_info, dict) or info.type == MediaType.ANIME:
+        return
+    media_type = tmdb_info.get("media_type")
+    if not isinstance(media_type, MediaType):
+        media_type = MediaType.from_string(str(media_type or ""))
+    if media_type != MediaType.TV:
+        return
+    genres = tmdb_info.get("genre_ids") or tmdb_info.get("genres") or []
+    genre_ids = set()
+    for genre in genres:
+        if isinstance(genre, dict):
+            if genre.get("id"):
+                genre_ids.add(str(genre["id"]))
+        else:
+            genre_ids.add(str(genre))
+    if genre_ids.intersection(set(ANIME_GENREIDS)):
+        info.type = MediaType.ANIME
 
 
 class MediaService:
@@ -609,6 +637,7 @@ class MediaService:
                         "genres": looked_up.genres,
                         "external_ids": looked_up.external_ids,
                     }
+                    _promote_tmdb_anime_type(info)
             info.site = item.get("site")
             info.enclosure = item.get("enclosure")
             info.size = item.get("size", 0)
@@ -800,6 +829,7 @@ class MediaService:
                 "genres": looked_up.genres,
                 "external_ids": looked_up.external_ids,
             }
+            _promote_tmdb_anime_type(info)
             return IdentifyStatus.HIT, info
         return IdentifyStatus.NOT_FOUND, info
 

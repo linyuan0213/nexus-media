@@ -42,3 +42,19 @@ class TestSetTmdbInfoType:
             m = _media(MediaType.MOVIE)
             m.set_tmdb_info({"media_type": MediaType.TV, "id": 2})
         assert m.type == MediaType.TV
+
+
+class TestStringMediaTypeNormalization:
+    """TMDB 缓存/批量路径的 media_type 为字符串时也应按 genre 判定动漫."""
+
+    def test_string_tv_with_anime_genre_promotes(self):
+        with _patch_categories():
+            m = _media(MediaType.TV)
+            m.set_tmdb_info({"media_type": "tv", "id": 9, "genre_ids": [16]})
+        assert m.type == MediaType.ANIME
+
+    def test_string_tv_without_anime_genre_stays_tv(self):
+        with _patch_categories():
+            m = _media(MediaType.TV)
+            m.set_tmdb_info({"media_type": "tv", "id": 10, "genre_ids": [35]})
+        assert m.type == MediaType.TV

@@ -67,3 +67,35 @@ class TestIdentifyBatchKeyConsistency:
         results = svc.identify_batch([{"title": "完全不存在的作品标题 XYZ 1080p"}])
 
         assert results[0].tmdb_id == 0
+
+
+class TestIdentifyBatchAnimePromotion:
+    """批量识别必须按 TMDB genre 16 提升为动漫（此前只走 tv）."""
+
+    def test_anime_genre_promotes_to_anime(self):
+        svc = _service(
+            LookupResult(
+                tmdb_id=258348,
+                title="克雷瓦提斯",
+                media_type=MediaType.TV,
+                genres=[{"id": 16, "name": "Animation"}],
+            )
+        )
+
+        info = svc.identify_batch([{"title": "Clevatess 2025 S01E01 1080p WEB-DL"}])[0]
+
+        assert info.type == MediaType.ANIME
+
+    def test_non_anime_genre_stays_tv(self):
+        svc = _service(
+            LookupResult(
+                tmdb_id=1,
+                title="普通剧集",
+                media_type=MediaType.TV,
+                genres=[{"id": 35, "name": "Comedy"}],
+            )
+        )
+
+        info = svc.identify_batch([{"title": "Some Show 2025 S01E01 1080p WEB-DL"}])[0]
+
+        assert info.type == MediaType.TV
