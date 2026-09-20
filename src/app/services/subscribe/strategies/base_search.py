@@ -492,10 +492,12 @@ class BaseSearchStrategy:
             # en_name 为空或非拉丁时补全英文名，避免日语原名导致英文标题匹配失败
             if self._media_service:
                 self._media_service.enrich_en_name(media_info)
-            if not (hasattr(media_info, "get_poster_image") and media_info.get_poster_image()):
-                log.debug(f"[BaseSearchStrategy] 缓存缺少海报，重新识别: {name} ({year})")
+            if not media_info.tmdb_info or not (
+                hasattr(media_info, "get_poster_image") and media_info.get_poster_image()
+            ):
+                log.debug(f"[BaseSearchStrategy] 缺少 TMDB 信息，重新识别: {name} ({year})")
                 identified = self._media_service.identify(title=f"{name} {year}".strip(), mtype=mtype)
-                if identified and hasattr(identified, "get_poster_image") and identified.get_poster_image():
+                if identified and getattr(identified, "tmdb_info", None):
                     media_info = identified
         else:
             media_info = self._media_service.identify(title=f"{name} {year}".strip(), mtype=mtype)

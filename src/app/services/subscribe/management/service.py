@@ -1,5 +1,7 @@
 """Subscribe service - 订阅业务 Facade."""
 
+import re
+import time
 from typing import Any
 
 import log
@@ -15,6 +17,14 @@ from app.services.subscribe.management.refresh_service import SubscribeRefreshSe
 from app.services.subscribe.management.update_service import SubscribeUpdateService
 from app.services.subscribe.management.utils import tv_filter_signature
 from app.services.web.utils import WebUtils
+
+_ALIAS_MAP_TTL = 1800
+_ALIAS_MAP_CACHE: dict[str, tuple[float, dict[str, int]]] = {}
+
+
+def _norm_title(value) -> str:
+    """标题归一化：去空白/常见标点并小写，便于别名比对."""
+    return re.sub(r"""[\s~～\-—–:：·・,，.。!！?？'"“”()（）\[\]【】]""", "", str(value or "")).lower()
 
 
 class SubscribeService:
@@ -127,6 +137,51 @@ class SubscribeService:
 
     def delete_subscribe(self, mtype, title=None, year=None, season=None, rssid=None, tmdbid=None, user=None):
         return self._query_svc.delete_subscribe(mtype, title, year, season, rssid, tmdbid, user=user)
+
+    def get_subscribe_id_by_alias(self, title: str, mtype=None) -> int | None:
+        """按 TMDB 别名（正名/原名/译名/别名）匹配订阅 ID.
+
+        用于 BGM/豆瓣等外部榜单名称与订阅名不一致的场景（如 BGM「画完这个再去死」
+        对应订阅「描绘直至生命尽头」）。别名映射带 30 分钟缓存。
+        """
+        norm = _norm_title(title)
+        if not norm:
+            return None
+        for sub_type in (mtype,) if mtype else (MediaType.TV, MediaType.MOVIE):
+            mapping = self._build_alias_map(sub_type)
+            rid = mapping.get(norm)
+            if rid:
+                return rid
+            for alias, alias_rid in mapping.items():
+                if alias in norm or norm in alias:
+                    return alias_rid
+        return None
+
+    def _build_alias_map(self, mtype) -> dict[str, int]:
+        cache_key = mtype.value if hasattr(mtype, "value") else str(mtype)
+        cached = _ALIAS_MAP_CACHE.get(cache_key)
+        if cached and cached[0] > time.time():
+            return cached[1]
+        mapping: dict[str, int] = {}
+        subs = self.get_subscribe_movies() if mtype == MediaType.MOVIE else self.get_subscribe_tvs()
+        for rid, info in (subs or {}).items():
+            tmdbid = (info or {}).get("tmdbid")
+            if not tmdbid or not str(tmdbid).isdigit():
+                continue
+            try:
+                names = self._media.get_all_names(int(tmdbid), mtype) or []
+            except Exception as e:  # noqa: BLE001
+                log.debug(f"[Subscribe]获取 TMDB 别名失败 {tmdbid}: {e!s}")
+                continue
+            for name in names:
+                key = _norm_title(name)
+                if key:
+                    mapping.setdefault(key, int(rid))
+        _ALIAS_MAP_CACHE[cache_key] = (time.time() + _ALIAS_MAP_TTL, mapping)
+        return mapping
+
+    def get_history_id(self, mtype, title, year=None, tmdbid=None):
+        return self._query_svc.get_history_id(mtype, title, year, tmdbid)
 
     def get_subscribe_id(self, mtype, title, year=None, season=None, tmdbid=None):
         return self._query_svc.get_subscribe_id(mtype, title, year, season, tmdbid)

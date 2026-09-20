@@ -5,6 +5,8 @@ Handles RSS movies, TV shows, episodes and history related database operations.
 
 from __future__ import annotations
 
+import difflib
+import re
 import time
 from typing import TYPE_CHECKING
 
@@ -75,7 +77,9 @@ class SubscribeRepository(BaseRepository):
             if year:
                 query = query.filter(str(year) == SubscribeMovies.YEAR)
             ret = query.first()
-            return ret[0] if ret else None
+            if ret:
+                return ret[0]
+            return self._fuzzy_subscribe_id(db, SubscribeMovies, title, year)
 
     def get_rss_tv_id(
         self, title: str, year: str | None = None, season: str | None = None, tmdbid: str | None = None
@@ -99,7 +103,45 @@ class SubscribeRepository(BaseRepository):
             if year:
                 query = query.filter(str(year) == SubscribeTvs.YEAR)
             ret = query.first()
-            return ret[0] if ret else None
+            if ret:
+                return ret[0]
+            return self._fuzzy_subscribe_id(db, SubscribeTvs, title, year)
+
+    @staticmethod
+    def _normalize_title(value) -> str:
+        """标题归一化：去空白与常见标点，便于豆瓣/探索页标题与订阅名比对."""
+        return re.sub(r"""[\s~～\-—–:：·・,，.。!！?？'"“”()（）\[\]【】]""", "", str(value or "")).lower()
+
+    @classmethod
+    def _titles_match(cls, candidate, target) -> bool:
+        """标题匹配：归一化后互为子串，或相似度足够高（覆盖 我不是/我是不 之类差异）."""
+        left, right = cls._normalize_title(candidate), cls._normalize_title(target)
+        if not left or not right:
+            return False
+        if left in right or right in left:
+            return True
+        return difflib.SequenceMatcher(None, left, right).ratio() >= 0.85
+
+    @classmethod
+    def _fuzzy_subscribe_id(cls, db, model, title: str, year: str | None = None):
+        """精确标题未命中时的模糊回退（豆瓣/探索页标题与订阅名常不一致）.
+
+        先按年份优先做标题匹配，避免同名不同年误判。
+        """
+        base_title = str(title or "").split(" (")[0].strip()
+        if not base_title:
+            return None
+        ret = db.query(model.ID).filter(model.NAME.contains(base_title, autoescape=True)).first()
+        if ret:
+            return ret[0]
+        rows = db.query(model.ID, model.NAME, model.YEAR).all()
+        for year_first in (True, False):
+            for rid, name, row_year in rows:
+                if year_first and year and str(row_year) != str(year):
+                    continue
+                if cls._titles_match(name, base_title):
+                    return rid
+        return None
 
     def get_subscribe_id(self, mtype, title, year, tmdbid) -> int | None:
         """
@@ -913,6 +955,26 @@ class SubscribeRepository(BaseRepository):
             if user is not None:
                 query = apply_owner_scope(query, SubscribeHistory, user)
             return query.order_by(SubscribeHistory.FINISH_TIME.desc()).all()
+
+    def get_rss_history_id(self, rtype: str | None, title: str, year: str | None = None, tmdbid: str | None = None):
+        """按 TMDB/标题查询已完成的订阅历史 ID（用于展示"订阅完成"状态）."""
+        if not title:
+            return None
+        with self.session() as db:
+            query = db.query(SubscribeHistory.ID)
+            if rtype:
+                query = query.filter(rtype == SubscribeHistory.TYPE)
+            if tmdbid:
+                ret = query.filter(str(tmdbid) == SubscribeHistory.TMDBID).first()
+                if ret:
+                    return ret[0]
+            ret = query.filter(title == SubscribeHistory.NAME)
+            if year:
+                ret = ret.filter(str(year) == SubscribeHistory.YEAR)
+            row = ret.first()
+            if row:
+                return row[0]
+            return self._fuzzy_subscribe_id(db, SubscribeHistory, title, year)
 
     def is_exists_rss_history(self, rssid: int | None) -> bool:
         """

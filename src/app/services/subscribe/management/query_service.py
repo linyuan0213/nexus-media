@@ -3,17 +3,43 @@
 import re
 from typing import Any
 
+import log
+from app.core.constants import ANIME_GENREIDS
 from app.domain.mediatypes import MediaType
+from app.infrastructure.cache_system.caches import TMDBCache
 from app.schemas.auth import UserContext
 from app.services.subscribe.management.utils import parse_rss_desc
 from app.utils.json_utils import JsonUtils
 
 
-def _resolve_subscribe_type(value) -> str:
-    """订阅媒体类型归一化：movie/tv/anime，缺省 tv（兼容历史订阅无 media_type）."""
+def _resolve_subscribe_type(value, tmdbid=None) -> str:
+    """订阅媒体类型归一化：movie/tv/anime.
+
+    历史订阅未把 media_type 写入 NOTE 时，回退用 TMDB 缓存 genres 判断是否为动漫，
+    避免"全部是动漫却有部分显示电视剧"。
+    """
     parsed = MediaType.from_string(str(value or ""))
     if parsed in (MediaType.MOVIE, MediaType.ANIME):
         return parsed.value
+    if parsed == MediaType.TV:
+        return MediaType.TV.value
+    if tmdbid:
+        try:
+            info = TMDBCache().get_tmdb_info(mtype=MediaType.TV, tmdbid=tmdbid)
+            # 缓存值可能是 tmdbv3api 的 AsObj（非 dict 但支持 .get）
+            genres = None
+            if info is not None:
+                genres = info.get("genres") if hasattr(info, "get") else getattr(info, "genres", None)
+            # genres 元素也可能是 tmdbv3api 的 AsObj，需兼容 .get / 属性访问
+            genre_ids = set()
+            for genre in genres or []:
+                genre_id = genre.get("id") if hasattr(genre, "get") else getattr(genre, "id", None)
+                if genre_id:
+                    genre_ids.add(str(genre_id))
+            if genre_ids.intersection(ANIME_GENREIDS):
+                return MediaType.ANIME.value
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[Subscribe]推断订阅类型失败 {tmdbid}: {e!s}")
     return MediaType.TV.value
 
 
@@ -196,7 +222,7 @@ class SubscribeQueryService:
                 "release_date": note_info.get("release_date"),
                 "vote": note_info.get("vote"),
                 "keyword": keyword,
-                "type": _resolve_subscribe_type(note_info.get("media_type")),
+                "type": _resolve_subscribe_type(note_info.get("media_type"), tmdbid),
                 "add_date": rss_tv.ADD_DATE,
             }
         return ret_dict
@@ -259,6 +285,11 @@ class SubscribeQueryService:
             return self._movie_repo.delete(title=title, year=year, rssid=rssid, tmdbid=tmdbid, user=user)
         else:
             return self._tv_repo.delete(title=title, season=season, rssid=rssid, tmdbid=tmdbid, user=user)
+
+    def get_history_id(self, mtype, title, year=None, tmdbid=None):
+        """查询已完成的订阅历史 ID（用于"订阅完成"标识）."""
+        rtype = mtype.value if hasattr(mtype, "value") else str(mtype or "")
+        return self._history_repo.get_rss_history_id(rtype, title, year, tmdbid)
 
     def get_subscribe_id(
         self,
