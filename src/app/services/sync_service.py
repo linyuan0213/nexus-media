@@ -218,7 +218,7 @@ class SyncService:
                     )
                 tmdb_info = None
                 if tmdbid:
-                    tmdb_info = self._media_cache.get_tmdb_info(mtype=media_type or MediaType.MOVIE, tmdbid=tmdbid)
+                    tmdb_info, media_type = self._resolve_manual_tmdb_info(media_type, tmdbid)
                     if not tmdb_info:
                         return ManualTransferResultDTO(success=False, message="识别失败，无法查询到TMDB信息")
                 self._submit_manual_transfer(
@@ -251,7 +251,7 @@ class SyncService:
 
         tmdb_info = None
         if tmdbid:
-            tmdb_info = self._media_cache.get_tmdb_info(mtype=media_type or MediaType.MOVIE, tmdbid=tmdbid)
+            tmdb_info, media_type = self._resolve_manual_tmdb_info(media_type, tmdbid)
             if not tmdb_info:
                 return ManualTransferResultDTO(success=False, message="识别失败，无法查询到TMDB信息")
 
@@ -261,6 +261,21 @@ class SyncService:
         return self._submit_manual_transfer(
             inpath, syncmod, outpath, media_type, episode, min_filesize, tmdb_info, season, dst_backend
         )
+
+    def _resolve_manual_tmdb_info(self, media_type, tmdbid):
+        """手动转移解析 TMDB 信息；类型选错（如电视剧按电影）时回退另一类型.
+
+        返回 (tmdb_info, media_type)；回退命中时返回纠正后的类型，避免入库到错误目录。
+        """
+        primary = media_type or MediaType.MOVIE
+        info = self._media_cache.get_tmdb_info(mtype=primary, tmdbid=tmdbid)
+        if info:
+            return info, primary
+        alt = MediaType.TV if primary == MediaType.MOVIE else MediaType.MOVIE
+        info = self._media_cache.get_tmdb_info(mtype=alt, tmdbid=tmdbid)
+        if info:
+            return info, alt
+        return None, primary
 
     def _submit_manual_transfer(
         self,
