@@ -54,6 +54,7 @@ class GeminiProvider(BaseProvider):
                 contents.append(m.get("content", ""))
 
         config = types.GenerateContentConfig(
+            system_instruction=system_prompt or None,
             response_mime_type="application/json" if response_format else None,
             temperature=temperature,
         )
