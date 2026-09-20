@@ -16,12 +16,27 @@ from app.agent.providers.base import BaseEmbeddingProvider, BaseProvider, Provid
 _THINKING_BUDGET = {"low": 1024, "high": 4096, "max": 16384}
 
 
+def _build_http_options(config: ProviderConfig) -> types.HttpOptions | None:
+    """组装 HttpOptions：自定义 base_url（中转/反代）、代理；timeout 单位毫秒
+
+    base_url 需剥离 /v1beta、/v1 后缀 — SDK 会自行拼接 api_version，重复会导致 404
+    """
+    if not (config.api_url or config.proxy):
+        return None
+    base_url = (config.api_url or "").rstrip("/").removesuffix("/v1beta").removesuffix("/v1") or None
+    return types.HttpOptions(
+        base_url=base_url,
+        timeout=config.timeout * 1000 if config.timeout else None,
+        client_args={"proxy": config.proxy} if config.proxy else None,
+    )
+
+
 class GeminiProvider(BaseProvider):
     """Google Gemini 提供商"""
 
     def __init__(self, config: ProviderConfig):
         super().__init__(config)
-        self._client = genai.Client(api_key=config.api_key)
+        self._client = genai.Client(api_key=config.api_key, http_options=_build_http_options(config))
         # 已确认不支持 thinking_config 的模型（剥离重试成功时记录）
         self._thinking_unsupported: set[str] = set()
 
@@ -88,7 +103,7 @@ class GeminiEmbeddingProvider(BaseEmbeddingProvider):
 
     def __init__(self, config: ProviderConfig, model: str):
         super().__init__(config, model)
-        self._client = genai.Client(api_key=config.api_key)
+        self._client = genai.Client(api_key=config.api_key, http_options=_build_http_options(config))
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
