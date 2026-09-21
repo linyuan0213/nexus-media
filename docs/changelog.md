@@ -1,5 +1,17 @@
 # 版本历史
 
+## v4.21.3 (2026-09-21)
+
+### 新增
+
+- TMDB 识别兜底：整名（中文名 → 英文名）无结果时自动裁剪标题尾部词重试（最多 3 个尾词，每个变体只发 1 次查询），修复解析残留标签（`MA`/`TX`/未知名）导致整名直接 0 结果的问题；候选需名称相近且年份偏差 ≤1 年，严格模式不启用
+
+### 修复
+
+- 片名不再误删常见片名词：`End`/`Final`/`Game`/`Max`/`Movie`/`TV`/`DC` 等语义歧义 token 仅在其位于已消费元数据（分辨率/来源/编码/季集/年份）之后时才按标签剥离；修复 `The End of Oak Street`、`Game of Thrones`、`Mad Max Fury Road`、`Final Destination` 被削成 `The Of Oak Street` / `Of Thrones` / `Mad Fury Road` / `Destination`
+- 平台 token 补 `MA`（Movies Anywhere）/`moviesanywhere`/`itunes`，修复 `…2160p.MA.WEB-DL…` 这类命名把 `MA` 并入片名
+- 2 字符英文片名不再被短标题守卫丢弃：`It`/`Up`/`Ma`/`Pi` 等可正常识别（实测 It→346364、Up→14160、Ma→502416）
+
 ## v4.21.2 (2026-09-21)
 
 ### 修复
