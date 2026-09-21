@@ -303,6 +303,70 @@ class TestRegressionIdentify:
         assert result.year == year
 
 
+class TestGenericTitleWordsPreserved:
+    """常见片名词（End/Game/Max/Final/MA…）不应被当作发布标签剥离"""
+
+    @pytest.mark.parametrize(
+        ("title", "expected", "year"),
+        [
+            (
+                "The.End.of.Oak.Street.2026.2160p.MA.WEB-DL.DDP5.1.Atmos.DV.HDR.H.265-TheEndOfTheFuckingWorld.mkv",
+                "The End Of Oak Street",
+                "2026",
+            ),
+            ("Game.of.Thrones.S01E01.1080p.BluRay.x264-GRP", "Game Of Thrones", None),
+            ("Mad.Max.Fury.Road.2015.1080p.BluRay.x264-GRP", "Mad Max Fury Road", "2015"),
+            ("Final.Destination.2000.1080p.BluRay.x264-GRP", "Final Destination", "2000"),
+            ("The.End.2024.1080p.WEB-DL-GRP", "The End", "2024"),
+        ],
+    )
+    def test_generic_title_words_preserved(self, parser, title, expected, year):
+        """位于元数据之前的歧义 token 属于片名，不应被剥离"""
+        result = parser.parse(title)
+        assert result is not None
+        assert result.title_en == expected
+        assert result.year == year
+
+    @pytest.mark.parametrize(
+        "title",
+        [
+            "Some.Show.S01.1080p.WEB-DL.Movie.MA-GRP",
+            "Show.Name.S01.1080p.WEB-DL.TV.MA-GRP",
+        ],
+    )
+    def test_tag_after_metadata_still_stripped(self, parser, title):
+        """元数据之后的同类 token（Movie/TV/MA）仍按标签剥离"""
+        result = parser.parse(title)
+        assert result is not None
+        assert result.title_en in ("Some Show", "Show Name")
+        assert result.season == 1
+
+
+class TestShortTitles:
+    """2 字符英文片名不应被短标题守卫丢弃"""
+
+    @pytest.mark.parametrize(
+        ("title", "expected", "year"),
+        [
+            ("It.2017.1080p.BluRay.x264-GRP", "It", "2017"),
+            ("Up.2009.1080p.BluRay.x264-GRP", "Up", "2009"),
+            ("Ma.2019.1080p.WEB-DL.H264-GRP", "Ma", "2019"),
+            ("Pi.1998.1080p.BluRay-GRP", "Pi", "1998"),
+        ],
+    )
+    def test_two_char_title_kept(self, parser, title, expected, year):
+        result = parser.parse(title)
+        assert result is not None
+        assert result.title_en == expected
+        assert result.year == year
+
+    @pytest.mark.parametrize("title", ["1080p.WEB-DL-GRP", "HD.1080p-GRP"])
+    def test_short_metadata_only_not_title(self, parser, title):
+        """纯元数据短串不应被识别为片名"""
+        result = parser.parse(title)
+        assert result is None or result.title_en is None
+
+
 class TestSiteMarkerStripping:
     """公开站种子中的站点/发布站标记不应抢占片名"""
 
