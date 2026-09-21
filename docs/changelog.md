@@ -1,5 +1,14 @@
 # 版本历史
 
+## v4.21.2 (2026-09-21)
+
+### 修复
+
+- 片名解析剥离平台缩写与帧率噪声：`TX`（腾讯）加入平台 token 表，`HFR`/`VFR` 加入噪声 token 表，避免「…2160p.TX.WEB-DL.AAC2.0.HDR.HFR.H.265」这类命名把 `Tx`/`Hfr` 并入片名
+- 音频「编码+声道」整体识别：点号转空格前先移除 `AAC2.0`/`DDP5.1`/`EAC3 2.0`/`TrueHD7.1`/`DTS-HD.MA5.1` 与裸声道布局（`2.0`/`5.1`/`7.1`），修复声道数字残留成标题词（如 `AAC2.0` → 孤立 `0` 被当作标题数字保留）
+- 修复上述场景导致 TMDB 搜索无结果、入库报「无法识别媒体信息」（实测 `Against.the.Current.S01.2160p.TX.WEB-DL.AAC2.0.HDR.HFR.H.265-MWeb` 解析由 `Against The Current Tx 0 Hfr` 修正为 `Against The Current`，TMDB 可命中）
+- 搜索引擎兜底的关键词清洗同步补充 `aac\d*\.?\d*`、`hfr\d*`、`vfr`、`tx`
+
 ## v4.21.1 (2026-09-21)
 
 ### 修复
