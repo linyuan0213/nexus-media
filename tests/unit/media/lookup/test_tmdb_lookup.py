@@ -9,6 +9,7 @@ from app.infrastructure.cache_system import get_cache_manager
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
 from app.media.parser import RegexParser
+from app.media.parser.base import ParserResult
 
 
 class TestNegativeLookupCache:
@@ -53,6 +54,105 @@ class TestNegativeLookupCache:
             lookup._lookup_cache.set(key, False, ttl=0)
             assert lookup.lookup(parsed) is None
             assert mock_lookup.call_count > first_call_count
+
+
+class TestTrimmedTailRetry:
+    """标题尾部残留标签导致整名搜不到时，应裁剪尾词重试."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_cache(self):
+        cache = get_cache_manager().get("tmdb_lookup")
+        if cache is not None:
+            cache.clear()
+
+    @staticmethod
+    def _parsed(title_en, year="2026", mtype=MediaType.MOVIE):
+        return ParserResult(title_en=title_en, year=year, type=mtype)
+
+    def test_trim_tail_finds_match(self):
+        lookup = TmdbLookup(client=MagicMock())
+        parsed = self._parsed("The Of Oak Street Ma")
+        searched: list[str] = []
+
+        def fake_search_movie(name, year=None):
+            searched.append(name)
+            if name == "The Of Oak Street":
+                return {
+                    "id": 1101383,
+                    "title": "The Of Oak Street",
+                    "release_date": "2026-01-01",
+                    "media_type": MediaType.MOVIE,
+                    "genres": [{"id": 18}],
+                }
+            return {}
+
+        with (
+            patch.object(lookup, "_lookup_tmdb", return_value=None),
+            patch.object(lookup.search, "search_movie", side_effect=fake_search_movie),
+        ):
+            result = lookup.lookup(parsed)
+
+        assert result is not None
+        assert result.tmdb_id == 1101383
+        assert searched == ["The Of Oak Street"]
+
+    def test_trim_tail_rejects_name_mismatch(self):
+        lookup = TmdbLookup(client=MagicMock())
+        parsed = self._parsed("Unrelated Query Title Ma")
+
+        def fake_search_movie(name, year=None):
+            return {
+                "id": 7,
+                "title": "Completely Different Movie",
+                "release_date": "2026-01-01",
+                "media_type": MediaType.MOVIE,
+                "genres": [{"id": 18}],
+            }
+
+        with (
+            patch.object(lookup, "_lookup_tmdb", return_value=None),
+            patch.object(lookup.search, "search_movie", side_effect=fake_search_movie),
+            patch.object(lookup.search, "search_tv", return_value={}),
+            patch.object(lookup.search, "search_multi", return_value={}),
+        ):
+            assert lookup.lookup(parsed) is None
+
+    def test_trim_tail_rejects_year_conflict(self):
+        lookup = TmdbLookup(client=MagicMock())
+        parsed = self._parsed("Some Real Title Ma")
+
+        def fake_search_movie(name, year=None):
+            return {
+                "id": 8,
+                "title": "Some Real Title",
+                "release_date": "1995-01-01",
+                "media_type": MediaType.MOVIE,
+                "genres": [{"id": 18}],
+            }
+
+        with (
+            patch.object(lookup, "_lookup_tmdb", return_value=None),
+            patch.object(lookup.search, "search_movie", side_effect=fake_search_movie),
+            patch.object(lookup.search, "search_tv", return_value={}),
+            patch.object(lookup.search, "search_multi", return_value={}),
+        ):
+            assert lookup.lookup(parsed) is None
+
+    def test_strict_mode_skips_trim_tail(self):
+        lookup = TmdbLookup(client=MagicMock())
+        parsed = self._parsed("Strict Mode Title Ma")
+        searched: list[str] = []
+
+        def fake_search_movie(name, year=None):
+            searched.append(name)
+            return {}
+
+        with (
+            patch.object(lookup, "_lookup_tmdb", return_value=None),
+            patch.object(lookup.search, "search_movie", side_effect=fake_search_movie),
+        ):
+            assert lookup.lookup(parsed, strict=True) is None
+        assert searched == []
 
 
 class TestMergeMediaInfo:

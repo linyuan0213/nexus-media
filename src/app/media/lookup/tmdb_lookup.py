@@ -18,6 +18,11 @@ from app.utils import StringUtils
 
 _BATCH_KEYWORDS_RE = re.compile(r"(?i)\b(COMPLETE|全集|合集|全季|BATCH|PACK|COLLECTION|SEASON)\b")
 
+# 尾词裁剪重试：解析残留标签（MA/TX/HFR、未知平台码等）会让 TMDB 直接 0 结果，
+# 此时逐个裁掉标题尾部词再查（TMDB 搜索对多余词不容错，多一个词就搜不到）
+_TRIM_RETRY_MAX = 3
+_TRIM_MIN_TOKENS = 3
+
 # 识别结果缓存：redis 持久化（重启不丢），7 天；未命中结果缓存 1 天，避免新入库条目长期被负缓存
 _LOOKUP_CACHE_TTL = 7 * 24 * 3600
 _NEGATIVE_CACHE_TTL = 24 * 3600
@@ -94,6 +99,13 @@ class TmdbLookup(BaseLookup):
             except HttpRateLimitError as err:
                 log.warn(f"[Meta]{parsed.title_cn or parsed.title_en} 查询被限流，中止降级链: {err}")
                 result = None
+            # 尾词裁剪重试：整名搜不到时依次裁掉尾部词（残留标签会让 TMDB 0 结果）
+            if not result:
+                try:
+                    result = self._lookup_trimmed_tail(parsed, search_type, strict) or None
+                except HttpRateLimitError as err:
+                    log.warn(f"[Meta]{parsed.title_cn or parsed.title_en} 裁剪重试被限流: {err}")
+                    result = None
             if not result:
                 if language:
                     self.client.set_language()
@@ -107,6 +119,69 @@ class TmdbLookup(BaseLookup):
             final = self._to_lookup_result(result)
             self._lookup_cache.set(cache_key, final)
             return final
+
+    def _lookup_trimmed_tail(self, parsed, search_type, strict: bool | None) -> dict:
+        """标题尾部残留标签导致无结果时，逐个裁掉尾词重试。
+
+        TMDB 搜索对多余词不容错（如解析残留的 `Ma`/`Tx`/平台码），
+        整个查询会直接 0 结果；此处对解析出的名称做有限次数尾部裁剪，
+        命中后仍要求候选名称相近且年份不冲突，避免裁出错误匹配。
+        """
+        if strict:
+            return {}
+        for name in (parsed.title_cn, parsed.title_en):
+            tokens = str(name or "").split()
+            if len(tokens) < _TRIM_MIN_TOKENS:
+                continue
+            for cut in range(1, _TRIM_RETRY_MAX + 1):
+                if len(tokens) - cut < 2:
+                    break
+                variant = " ".join(tokens[:-cut]).strip()
+                if len(variant) < 3:
+                    break
+                info = self._search_variant(variant, search_type, parsed)
+                if not info or not info.get("id"):
+                    continue
+                if not self._trim_candidate_ok(variant, info, parsed):
+                    continue
+                log.info(
+                    "[Meta]{} 裁剪尾词「{}」后识别到：TMDBID={}, 名称={}".format(
+                        name, variant, info.get("id"), info.get("title") or info.get("name")
+                    )
+                )
+                return info
+        return {}
+
+    def _search_variant(self, name: str, search_type, parsed) -> dict:
+        """裁剪重试用单次搜索（不走完整降级链，控制 TMDB 请求量）"""
+        if search_type == MediaType.MOVIE:
+            info = self.search.search_movie(name, parsed.year)
+            if info and info.get("id"):
+                info["media_type"] = MediaType.MOVIE
+            return info or {}
+        if search_type == MediaType.TV:
+            info = self.search.search_tv(name, parsed.year, parsed.season, parsed.episode)
+            if info and info.get("id"):
+                info["media_type"] = MediaType.TV
+            return info or {}
+        return self.search.search_multi(name) or {}
+
+    @staticmethod
+    def _trim_candidate_ok(name: str, info: dict, parsed) -> bool:
+        """裁剪候选校验：名称需相近，且年份（若双方都有）不得偏差超过 1 年"""
+        candidates = [
+            info.get("title"),
+            info.get("original_title"),
+            info.get("name"),
+            info.get("original_name"),
+        ]
+        if not any(compare_tmdb_names(name, candidate) for candidate in candidates if candidate):
+            return False
+        year = parsed.year
+        info_year = (info.get("release_date") or info.get("first_air_date") or "")[:4]
+        if year and info_year and str(year).isdigit() and info_year.isdigit():
+            return abs(int(year) - int(info_year)) <= 1
+        return True
 
     def _match_tmdb_candidate(self, name: str, item: dict, mtype) -> bool:
         """判断种子标题是否匹配 TMDB 候选：中文名/原名/全部别名/英文名."""
