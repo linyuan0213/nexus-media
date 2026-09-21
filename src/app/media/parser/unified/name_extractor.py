@@ -16,9 +16,21 @@ _CHINESE_META_CLEAN = frozenset("粤日英简繁国台港双多单语字幕音�
 _EP_TITLE_META_RE = re.compile(
     r"(?i)\b(?:mkv|mp4|avi|ts|m2ts|1080p|2160p|720p|480p|web-?dl|webrip|bluray|bdrip|hdtv|"
     r"h\.?26[45]|x\.?26[45]|hevc|avc|av1|aac|ac3|ddp?\d*\.?\d*|dts|flac|atmos|truehd|hdr\d*|"
-    r"dv|sdr|hlg|remux|repack|proper|internal|extended|uncut|theatrical|unrated|rerelease|"
+    r"hfr\d*|vfr|dv|sdr|hlg|remux|repack|proper|internal|extended|uncut|theatrical|unrated|rerelease|"
     r"remastered|upscaled|ep\d*|s\d{1,2})\b"
 )
+
+# 音频编码 + 声道组合（AAC2.0 / DDP5.1 / EAC3 2.0 / TrueHD7.1 / DTS-HD.MA5.1）
+# 必须在点号转空格前整体移除，否则声道数字被拆成独立词残留进标题（AAC2.0 → "0"）
+_AUDIO_CODEC_CHANNEL_RE = re.compile(
+    r"(?i)(?<![\w])"
+    r"(?:e[-]?ac[-]?3|ac[-]?3|aac|dd\+?p?|dts(?:[-. ]?hd(?:[-. ]?ma)?)?|truehd|atmos|"
+    r"flac|alac|lpcm|pcm|opus|mp3)"
+    r"(?:[-. ]?\d+(?:\.\d+)?)?"
+    r"(?![\w])"
+)
+# 裸声道布局（2.0 / 5.1 / 7.1）— 无编码名时的残留
+_CHANNEL_LAYOUT_RE = re.compile(r"(?<![\w.])(?:2|5|6|7|9)\.(?:0|1|2)(?![\d\w])")
 
 
 def _split_episode_title(ctx: ParseContext) -> str | None:
@@ -55,13 +67,13 @@ _META_TOKEN_RE = re.compile(
     r"|(?:hevc|avc|h\.?26[45]|x\.?26[45])[-\d]*bit?"
     r"|av1|vp[89]|mpeg[-]?2|vc[-]?1|wmv[hd]?|xvid|divx|realvideo"
     # --- 音频编码 ---
-    r"|aac\d*|ac[-]?3|e[-]?ac[-]?3|ddp?\d*(\.\d+)?|dd\+"
+    r"|aac\d*(\.\d+)?|ac[-]?3|e[-]?ac[-]?3|ddp?\d*(\.\d+)?|dd\+"
     r"|flac|alac|ape|wav|wavpack|dsd"
     r"|dts[-]?(hd[-]?ma|hd|x)?|truehd|atmos"
     r"|mp3|mp2|opus|ogg|vorbis|wma"
     r"|lpcm|pcm|dolby[-\s]?digital"
-    # --- HDR/色彩 ---
-    r"|hdr\d*|hdr10\+?|dv|sdr|10[-]?bit|8[-]?bit|hi10p"
+    # --- HDR/色彩/帧率 ---
+    r"|hdr\d*|hdr10\+?|hfr\d*|vfr|dv|sdr|10[-]?bit|8[-]?bit|hi10p"
     # --- 来源/平台 ---
     r"|web[-]?(dl|rip|dlr|dlmux|dlrip)?|webcast|webtv"
     r"|blu[-]?ray|bluray|bd(rip|mv|remux|iso|25|50|66|100)?|bd[-]?rip|bdmv"
@@ -74,7 +86,7 @@ _META_TOKEN_RE = re.compile(
     r"|pcok|peacock|pmtp|paramount|shdr|showtime|appletv|vudu|fandango"
     r"|mubi|criterion|shoutfactory|arrow|radiance|capelight|kino|cocp|eureka|bfi"
     r"|baha|cr|crunchyroll|abema|ani-one|ani|b-global|bilibili|viutv|myvideo"
-    r"|friday|kktv|linetv|catchplay|iqiyi|youku|tencent|mgtv|wetv|galaxy|gimy"
+    r"|friday|kktv|linetv|catchplay|iqiyi|youku|tencent|tx|mgtv|wetv|galaxy|gimy"
     # --- 地区代码 ---
     r"|eur|gbr|ger|kor|jpn|usa|fra|ita|esp|deu|aus|can|chn|hkg|twn|sgp|ind|tha|nld|bel|dnk|swe|nor|fin|prt|bra|mex|arg"
     # --- 发布组 ---
@@ -142,6 +154,10 @@ def extract_name(ctx: ParseContext, original_text: str) -> None:
         _title_remaining = _split_episode_title(ctx)
         if _title_remaining:
             remaining = _title_remaining
+
+    # 音频编码+声道与裸声道布局先整体移除（点号转空格后会残留数字词）
+    remaining = _AUDIO_CODEC_CHANNEL_RE.sub(" ", remaining)
+    remaining = _CHANNEL_LAYOUT_RE.sub(" ", remaining)
 
     # 剩余文本中的点号为文件名分隔符 → 转空格以便名称提取
     remaining = remaining.replace(".", " ")

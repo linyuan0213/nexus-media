@@ -228,7 +228,6 @@ class TestEdgeCases:
         assert result is not None
         assert result.episode == 5
 
-
     def test_no_episode(self, parser):
         result = parser.parse("Movie Title 2008 1080p BluRay")
         assert result is not None
@@ -274,6 +273,34 @@ class TestRegressionIdentify:
         assert result.title_en == "Kaiju Girl Caramelise"
         assert result.year == "2026"
         assert result.season == 1
+
+    def test_platform_framerate_and_audio_channel_not_in_name(self, parser):
+        """TX/HFR 标记与 AAC2.0 的声道数字不应并入片名（2026-09 报告：无法识别媒体信息）"""
+        result = parser.parse("Against.the.Current.S01.2160p.TX.WEB-DL.AAC2.0.HDR.HFR.H.265-MWeb")
+        assert result is not None
+        assert result.title_en == "Against The Current"
+        assert result.season == 1
+        assert result.type == MediaType.TV
+        assert result.resource_pix == "2160p"
+        assert result.resource_team == "MWeb"
+
+    @pytest.mark.parametrize(
+        ("title", "expected", "season", "year"),
+        [
+            ("Show.Name.S02.1080p.WEB-DL.5.1.H.264-GRP", "Show Name", 2, None),
+            ("Show Name S01 2160p WEB-DL DDP5.1 HDR-GRP", "Show Name", 1, None),
+            ("Show Name S01 1080p BluRay TrueHD7.1 VFR-GRP", "Show Name", 1, None),
+            ("Some Show S03 1080p WEB-DL EAC3 2.0 H.264-NTb", "Some Show", 3, None),
+            ("Blue.Orbit.2024.2160p.WEB-DL.HDR.HFR.H.265-GRP", "Blue Orbit", None, "2024"),
+        ],
+    )
+    def test_channel_layout_and_framerate_tokens_stripped(self, parser, title, expected, season, year):
+        """声道布局（5.1/2.0/7.1）、帧率（HFR/VFR）与音频编码不应残留进片名"""
+        result = parser.parse(title)
+        assert result is not None
+        assert result.title_en == expected
+        assert result.season == season
+        assert result.year == year
 
 
 class TestSiteMarkerStripping:

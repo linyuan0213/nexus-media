@@ -1149,8 +1149,8 @@ class MediaService:
         cleaned = re.sub(r"\d{4}[-\s]*\d{2}[-\s]*\d{2}", " ", cleaned)
         cleaned = re.sub(r"\b\d{3,}p?\b", " ", cleaned, flags=re.IGNORECASE)
         cleaned = re.sub(
-            r"\b(?:hdtv|bluray|web-dl|webrip|brrip|dvdrip|x264|x265|hevc|avc|av1|aac|ac3|dts|"
-            r"ddp?\d*\.?\d*|flac|atmos|truehd|hdr\d*|dv|sdr|hlg|remux|imax|repack|proper|"
+            r"\b(?:hdtv|bluray|web-dl|webrip|brrip|dvdrip|x264|x265|hevc|avc|av1|aac\d*\.?\d*|ac3|dts|"
+            r"ddp?\d*\.?\d*|flac|atmos|truehd|hdr\d*|hfr\d*|vfr|tx|dv|sdr|hlg|remux|imax|repack|proper|"
             r"internal|extended|uncut|directors\s*cut|theatrical|unrated|rerelease|remastered|"
             r"upscaled)\b",
             " ",
