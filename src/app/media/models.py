@@ -209,18 +209,38 @@ class MediaInfo(BaseModel):
             self.begin_episode = int(ep)
             self.end_episode = None
 
+    def get_episode_bit(self) -> int:
+        """集号补齐位数：单季超过 99 集时用 3 位，否则 2 位，避免 2/3 位混排导致排序错乱。"""
+        candidates = [
+            num for num in (self.begin_episode, self.end_episode, self.total_episodes) if isinstance(num, int)
+        ]
+        candidates.append(self._get_tmdb_season_episode_count())
+        return 3 if max(candidates) > 99 else 2
+
+    def _get_tmdb_season_episode_count(self) -> int:
+        """从 TMDB 详情读取当前季集数，缺失时返回 0。"""
+        seasons = self.tmdb_info.get("seasons") if isinstance(self.tmdb_info, dict) else None
+        if not seasons or self.begin_season is None:
+            return 0
+        for season in seasons:
+            if isinstance(season, dict) and season.get("season_number") == self.begin_season:
+                return int(season.get("episode_count") or 0)
+        return 0
+
     def get_episode_string(self) -> str:
         if self.begin_episode is not None:
+            bit = self.get_episode_bit()
             b = self.begin_episode
             e = self.end_episode
             if e is None or (isinstance(b, int) and isinstance(e, int) and e == b):
-                return "E{}".format(str(b).rjust(2, "0"))
-            return "E{}-E{}".format(str(b).rjust(2, "0"), str(e).rjust(2, "0"))
+                return "E{}".format(str(b).rjust(bit, "0"))
+            return "E{}-E{}".format(str(b).rjust(bit, "0"), str(e).rjust(bit, "0"))
         return ""
 
     def get_episode_items(self) -> str:
         """返回集的并列表达方式，用于支持单文件多集"""
-        return "E{}".format("E".join(str(episode).rjust(2, "0") for episode in self.get_episode_list()))
+        bit = self.get_episode_bit()
+        return "E{}".format("E".join(str(episode).rjust(bit, "0") for episode in self.get_episode_list()))
 
     def get_episode_list(self) -> list:
         if self.begin_episode is None:
@@ -233,9 +253,12 @@ class MediaInfo(BaseModel):
         episodes = self.get_episode_list()
         if not episodes:
             return ""
+        # 单季不超过 99 集时保持原有不补零输出；超过 99 集统一补足 3 位
+        bit = self.get_episode_bit()
+        pad = bit if bit > 2 else 0
         if len(episodes) == 1:
-            return str(episodes[0])
-        return f"{episodes[0]}-{episodes[-1]}"
+            return str(episodes[0]).rjust(pad, "0")
+        return f"{str(episodes[0]).rjust(pad, '0')}-{str(episodes[-1]).rjust(pad, '0')}"
 
     def get_episode_seq(self) -> str:
         """兼容旧接口 — 同 get_episode_seqs"""

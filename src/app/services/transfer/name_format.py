@@ -40,9 +40,9 @@ _FIELDS: list[tuple[str, str, str, str, bool]] = [
     ("media_type", "媒体类型", "movie / tv / anime", "both", False),
     ("category", "分类", "分类名称", "both", False),
     ("season", "季号", "季数（电影为空）", "tv", False),
-    ("episode", "集号", "集数（电影为空）", "tv", False),
+    ("episode", "集号", "集数（电影为空；单季超 99 集时补 3 位）", "tv", False),
     ("episode_title", "集标题", "集标题，需媒体服务取 TMDB", "tv", True),
-    ("season_episode", "季集", "如 S08E07", "tv", False),
+    ("season_episode", "季集", "如 S08E07（单季超 99 集时为 S08E007）", "tv", False),
     ("part", "分集", "分集部分标识", "both", False),
 ]
 
