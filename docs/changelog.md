@@ -1,5 +1,11 @@
 # 版本历史
 
+## v4.24.6 (2026-10-09)
+
+### 修复
+
+- 数据库连接池泄漏（#197）：`ThreadExecutor` 通过 `contextvars.copy_context()` 会把事务共享 Session（`db_tx_session`）复制到子线程，子线程复用后 `session_scope()` 命中共享不 commit/close，连接永不归还 → 逐步耗尽 PostgreSQL 连接。现事务 Session 绑定属主线程，跨线程不复用
+
 ## v4.24.5 (2026-10-09)
 
 ### 修复
