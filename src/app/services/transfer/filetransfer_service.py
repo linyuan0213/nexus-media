@@ -1045,6 +1045,15 @@ class FileTransferService:
                 return os.path.exists(path)
         return os.path.exists(path)
 
+    @classmethod
+    def _history_dest_exists(cls, history, dst_backend) -> bool:
+        """转移历史的目标文件是否仍存在（目标被删则记录不再可信，需重新转移/重新硬链接）"""
+        dest_path = str(getattr(history, "dest_path", "") or "")
+        dest_filename = str(getattr(history, "dest_filename", "") or "")
+        if not dest_path or not dest_filename:
+            return False
+        return cls._target_exists(os.path.join(dest_path, dest_filename), dst_backend)
+
     @staticmethod
     def _episode_in_history(history, episode) -> bool:
         """判断某集是否已存在于转移历史（支持 S01E01 与 S01E01-E05 格式）."""
@@ -1098,7 +1107,9 @@ class FileTransferService:
                 valid_history = [
                     h
                     for h in history
-                    if getattr(h, "source_path", "") and os.path.exists(str(getattr(h, "source_path", "")))
+                    if getattr(h, "source_path", "")
+                    and os.path.exists(str(getattr(h, "source_path", "")))
+                    and self._history_dest_exists(h, dst_backend)
                 ]
                 if valid_history and self._episode_in_history(valid_history, media.begin_episode):
                     log.warn(

@@ -283,8 +283,51 @@ class SyncEngine:
         except Exception as e:
             log.error(f"[Sync]{event_path} 同步失败：{e}")
 
+    def _resolve_dst_backend(self, cfg: SyncPathConfig) -> StorageBackend | None:
+        """解析同步目标后端；本地返回 None（由本地存在性判断兜底）."""
+        try:
+            if cfg.dst_backend_id and cfg.dst_backend_id != "local":
+                return self._resolve_backend(cfg.dst_backend_id)
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[Sync]解析目标后端失败，回退本地判断: {e}")
+        return None
+
+    def _history_dest_exists(self, rec: Any, dst_backend: StorageBackend | None) -> bool:
+        """转移历史记录的目标文件是否仍实际存在."""
+        dest_path = str(getattr(rec, "dest_path", "") or "")
+        dest_filename = str(getattr(rec, "dest_filename", "") or "")
+        if not dest_path or not dest_filename:
+            return False
+        return self._sync_target_exists(os.path.join(dest_path, dest_filename), dst_backend)
+
+    def _directory_destination_exists(self, source_dir: str, cfg: SyncPathConfig) -> bool:
+        """据转移历史逐源文件校验目录来源的目标是否仍存在（任一目标缺失即返回 False）.
+
+        目录同步批量传入的可能是种子目录（文件直接在其中），也可能是分类目录
+        （媒体文件在更深层），因此按目录及其子目录下的全部历史记录，逐个源文件取
+        最近一次转移核对目标：全部仍在才视为已同步，避免删除目标后不再重建。
+        """
+        try:
+            records = self._history_repo.get_by_source_dir(source_dir)
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[Sync]查询目录转移历史失败，回退按存在处理: {e}")
+            return True
+        valid = [r for r in records if getattr(r, "dest_path", "") and getattr(r, "dest_filename", "")]
+        if not valid:
+            return True
+        latest: dict[str, Any] = {}
+        for rec in valid:
+            key = os.path.join(str(getattr(rec, "source_path", "")), str(getattr(rec, "source_filename", "")))
+            prev = latest.get(key)
+            if prev is None or str(getattr(rec, "date", "")) >= str(getattr(prev, "date", "")):
+                latest[key] = rec
+        dst_backend = self._resolve_dst_backend(cfg)
+        return all(self._history_dest_exists(rec, dst_backend) for rec in latest.values())
+
     def _destination_exists_for_source(self, source_path: str, cfg: SyncPathConfig) -> bool:
-        """据转移历史校验该源文件的目标是否仍实际存在（目标被删则返回 False）。"""
+        """据转移历史校验该源（文件/目录）的目标是否仍实际存在（目标被删则返回 False）。"""
+        if os.path.isdir(source_path):
+            return self._directory_destination_exists(source_path, cfg)
         try:
             rec = self._history_repo.get_by_source(source_path)
         except Exception as e:  # noqa: BLE001
@@ -292,31 +335,34 @@ class SyncEngine:
             return True
         if not rec:
             return False
-        dest_path = str(getattr(rec, "dest_path", "") or "")
-        dest_filename = str(getattr(rec, "dest_filename", "") or "")
-        if not dest_path or not dest_filename:
-            return False
-        dst_backend = None
-        try:
-            if cfg.dst_backend_id and cfg.dst_backend_id != "local":
-                dst_backend = self._resolve_backend(cfg.dst_backend_id)
-        except Exception as e:  # noqa: BLE001
-            log.debug(f"[Sync]解析目标后端失败，回退本地判断: {e}")
-        return self._sync_target_exists(os.path.join(dest_path, dest_filename), dst_backend)
+        return self._history_dest_exists(rec, self._resolve_dst_backend(cfg))
+
+    def _clear_dir_blacklist(self, source_dir: str) -> None:
+        """清理目录来源（含内部文件）的转移黑名单，避免流水线按黑名单过滤掉需重建的文件."""
+        self._transfer._blacklist.delete(source_dir)
+        for path in PathUtils.get_dir_files(source_dir):
+            self._transfer._blacklist.delete(path)
 
     def _do_transfer(self, event_path: str, cfg: SyncPathConfig) -> None:
-        # 已转移过的路径（同步历史 / 转移黑名单）在目标仍存在时跳过，避免每个扫描周期重复处理；
-        # 目标已被删除（如清空媒体目录）时清理记录并重新同步（重新硬链接）
-        if self._history_repo.is_sync_in_history(event_path, cfg.dest):
-            if os.path.isdir(event_path) or self._destination_exists_for_source(event_path, cfg):
+        # 已转移记录（同步历史 / 转移黑名单）在目标仍存在时跳过，避免每个扫描周期重复处理；
+        # 目标已被删除（直接 rm / 前端删除 / 清空媒体目录）时清理记录并重新同步（重新硬链接）。
+        # 目录来源还需核对目录内文件的目标：黑名单可能只落在文件上，否则流水线会过滤掉需重建的文件。
+        in_history = self._history_repo.is_sync_in_history(event_path, cfg.dest)
+        in_blacklist = self._transfer._blacklist.is_exists(event_path)
+        is_dir = os.path.isdir(event_path)
+        if in_history or in_blacklist or is_dir:
+            target_exists = self._destination_exists_for_source(event_path, cfg)
+            if target_exists and (in_history or in_blacklist):
                 return
-            log.info(f"[Sync]{event_path} 目标已不存在，清理同步历史并重新同步")
-            self._history_repo.delete_sync_history(event_path, cfg.dest)
-        if self._transfer._blacklist.is_exists(event_path):
-            if os.path.isdir(event_path) or self._destination_exists_for_source(event_path, cfg):
-                return
-            log.info(f"[Sync]{event_path} 目标已不存在，清理黑名单并重新同步")
-            self._transfer._blacklist.delete(event_path)
+            if not target_exists:
+                if in_history:
+                    log.info(f"[Sync]{event_path} 目标已不存在，清理同步历史并重新同步")
+                    self._history_repo.delete_sync_history(event_path, cfg.dest)
+                if in_blacklist:
+                    log.info(f"[Sync]{event_path} 目标已不存在，清理黑名单并重新同步")
+                    self._transfer._blacklist.delete(event_path)
+                if is_dir:
+                    self._clear_dir_blacklist(event_path)
         if os.path.isdir(event_path):
             # 目录：仅当包含真实媒体文件时才交给转移流水线，
             # 避免空目录/仍在下载（仅 .part/.!qb）的目录每周期反复报错

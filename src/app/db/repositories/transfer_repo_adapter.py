@@ -70,6 +70,12 @@ class TransferHistoryRepositoryAdapter:
             return None
         return TransferHistoryEntity.from_orm(row)
 
+    def get_by_source_dir(self, source_dir: str) -> list[TransferHistoryEntity]:
+        rows = self._repo.get_transfer_history_by_source_dir(source_dir)
+        if not rows:
+            return []
+        return [e for e in [TransferHistoryEntity.from_orm(r) for r in rows] if e is not None]
+
     # 兼容旧Repository方法名
     def get_transfer_info_by(
         self, tmdbid: int | None, season: str | None = None, season_episode: str | None = None
