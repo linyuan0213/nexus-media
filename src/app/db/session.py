@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 import log
 from app.core.root_path import get_project_root
 from app.core.settings import settings
+from app.db.connection_scheduler import get_connection_scheduler
 from app.db.engine import (
     get_engine,
     get_engine_override,
@@ -85,20 +86,23 @@ class SessionManager:
 
         处于 transaction_scope() 内时复用共享 Session 且不提交/关闭（由外层统一处理），
         从而让多个仓储操作真正处于同一事务。
+        非共享时先经全局连接调度器排队取得许可，close 后再归还：保证全进程在途连接
+        数不超过预算、等待者按 FIFO 有序获取（issue #197）。
         """
         shared = _tx_session.get()
         if shared is not None:
             yield shared
             return
-        sess = self._resolve_factory()()
-        try:
-            yield sess
-            sess.commit()
-        except Exception:
-            sess.rollback()
-            raise
-        finally:
-            sess.close()
+        with get_connection_scheduler().acquire():
+            sess = self._resolve_factory()()
+            try:
+                yield sess
+                sess.commit()
+            except Exception:
+                sess.rollback()
+                raise
+            finally:
+                sess.close()
 
     @contextmanager
     def transaction_scope(self):
@@ -106,18 +110,20 @@ class SessionManager:
         显式事务上下文管理器。
         供 Service 层组合多个 Repository 操作，保证原子性：
         期间仓储的 session/session_scope 均复用本 Session，仅在退出时统一提交。
+        整个事务持有一个连接许可，退出（提交/回滚并关闭）后归还。
         """
-        sess = self._resolve_factory()()
-        token = _tx_session.set(sess)
-        try:
-            yield sess
-            sess.commit()
-        except Exception:
-            sess.rollback()
-            raise
-        finally:
-            _tx_session.reset(token)
-            sess.close()
+        with get_connection_scheduler().acquire():
+            sess = self._resolve_factory()()
+            token = _tx_session.set(sess)
+            try:
+                yield sess
+                sess.commit()
+            except Exception:
+                sess.rollback()
+                raise
+            finally:
+                _tx_session.reset(token)
+                sess.close()
 
     def remove(self):
         """

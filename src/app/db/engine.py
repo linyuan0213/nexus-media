@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy import Engine
 from sqlalchemy.orm import sessionmaker
 
+from app.db.connection_scheduler import configure_connection_scheduler
 from app.db.database_factory import DatabaseFactory
 
 # =============================================================================
@@ -35,12 +36,23 @@ _SchedulerSessionFactory: Any | None = None
 _db_override: ContextVar[tuple[Any, Any] | None] = ContextVar("db_pool_override", default=None)
 
 
+def _configure_connection_scheduler() -> None:
+    """按配置装配全局连接调度器（每进程一次），作为所有引擎统一的连接准入闸门."""
+    configure_connection_scheduler(
+        capacity=DatabaseFactory._get_int_config("max_connections", DatabaseFactory.DEFAULT_MAX_CONNECTIONS),
+        acquire_timeout=DatabaseFactory._get_int_config(
+            "connection_acquire_timeout", DatabaseFactory.DEFAULT_CONNECTION_ACQUIRE_TIMEOUT
+        ),
+    )
+
+
 def _init_engine():
     """延迟初始化引擎和 session 工厂（线程安全）"""
     global _Engine, _SessionFactory
     if _Engine is None:
         with _engine_lock:
             if _Engine is None:
+                _configure_connection_scheduler()
                 _Engine = DatabaseFactory.create_engine()
                 _SessionFactory = sessionmaker(
                     bind=_Engine,

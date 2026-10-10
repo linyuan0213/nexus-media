@@ -23,6 +23,8 @@ from sqlalchemy.pool import NullPool, QueuePool, StaticPool
 
 import log
 from app.core.settings import settings
+from app.db.connection_scheduler import DEFAULT_ACQUIRE_TIMEOUT as _DEFAULT_ACQUIRE_TIMEOUT
+from app.db.connection_scheduler import DEFAULT_MAX_CONNECTIONS as _DEFAULT_MAX_CONNECTIONS
 
 # 环境变量名称映射
 ENV_VAR_MAP = {
@@ -39,6 +41,8 @@ ENV_VAR_MAP = {
     "scheduler_pool_size": "DATABASE__SCHEDULER_POOL_SIZE",
     "scheduler_max_overflow": "DATABASE__SCHEDULER_MAX_OVERFLOW",
     "scheduler_pool_timeout": "DATABASE__SCHEDULER_POOL_TIMEOUT",
+    "max_connections": "DATABASE__MAX_CONNECTIONS",
+    "connection_acquire_timeout": "DATABASE__CONNECTION_ACQUIRE_TIMEOUT",
 }
 
 
@@ -58,6 +62,9 @@ class DatabaseFactory:
     DEFAULT_SCHEDULER_POOL_SIZE = 10
     DEFAULT_SCHEDULER_MAX_OVERFLOW = 10
     DEFAULT_SCHEDULER_POOL_TIMEOUT = 15
+    # 全局连接调度预算：跨 API/调度池的在途连接总数上限，及取用许可的等待超时
+    DEFAULT_MAX_CONNECTIONS = _DEFAULT_MAX_CONNECTIONS
+    DEFAULT_CONNECTION_ACQUIRE_TIMEOUT = _DEFAULT_ACQUIRE_TIMEOUT
 
     @staticmethod
     def get_database_url(

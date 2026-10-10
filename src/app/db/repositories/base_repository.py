@@ -10,6 +10,7 @@ Base Repository Class
 
 from contextlib import contextmanager
 
+from app.db.connection_scheduler import get_connection_scheduler
 from app.db.session import Database
 
 
@@ -44,17 +45,21 @@ class BaseRepository:
 
     @contextmanager
     def readonly(self):
-        """只读 session 上下文（不自动提交）。处于显式事务中时复用共享 Session。"""
+        """只读 session 上下文（不自动提交）。处于显式事务中时复用共享 Session。
+
+        非共享时经全局连接调度器排队取得连接许可，关闭后归还，确保连接有序获取与释放。
+        """
         shared = self._session_manager.current_tx_session()
         if shared is not None:
             yield shared
             return
-        session = self._session_manager.session
-        try:
-            yield session
-        finally:
-            session.close()
-            self._session_manager.remove()
+        with get_connection_scheduler().acquire():
+            session = self._session_manager.session
+            try:
+                yield session
+            finally:
+                session.close()
+                self._session_manager.remove()
 
     def _paginate(self, query, page: int, rownum: int):
         """

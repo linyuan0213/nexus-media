@@ -34,6 +34,7 @@ class BackupRestoreService:
         data_path = settings.data_path
         file_path = temp_manager.get_temp_path(filename)
         temp_dir = None
+        target_engine = None
 
         try:
             # 1. 解压到临时目录
@@ -56,13 +57,14 @@ class BackupRestoreService:
                 import_from_file(target_engine, json_backup)
             elif os.path.exists(sqlite_backup):
                 source_engine = create_engine(f"sqlite:///{sqlite_backup}?check_same_thread=False")
-                migrate_data = export_database(source_engine)
-                import_database(target_engine, migrate_data)
-                source_engine.dispose()
+                try:
+                    migrate_data = export_database(source_engine)
+                    import_database(target_engine, migrate_data)
+                finally:
+                    source_engine.dispose()
             else:
                 return BackupRestoreResultDTO(success=False, message="备份文件中未找到数据库文件")
 
-            target_engine.dispose()
             return BackupRestoreResultDTO(success=True, message="恢复成功")
 
         except (ServiceError, RepositoryError, DomainError):
@@ -72,6 +74,9 @@ class BackupRestoreService:
             return BackupRestoreResultDTO(success=False, message=str(e))
 
         finally:
+            # 恢复用临时引擎必须释放，避免异常路径残留整个连接池
+            if target_engine is not None:
+                target_engine.dispose()
             if os.path.exists(file_path):
                 os.remove(file_path)
             if temp_dir and os.path.exists(temp_dir):
@@ -97,10 +102,13 @@ def backup(full_backup=False, bk_path=None):
 
         db_type = DatabaseFactory._get_config_db_type()
         engine = DatabaseFactory.create_engine()
-        if db_type == DatabaseFactory.SQLITE:
-            shutil.copy(f"{data_path}/user.db", backup_path)
-        export_to_file(engine, str(backup_path / "user_db_export.json"))
-        engine.dispose()
+        try:
+            if db_type == DatabaseFactory.SQLITE:
+                shutil.copy(f"{data_path}/user.db", backup_path)
+            export_to_file(engine, str(backup_path / "user_db_export.json"))
+        finally:
+            # 备份用临时引擎必须释放，避免异常路径残留整个连接池
+            engine.dispose()
 
         zip_file = str(backup_path) + ".zip"
         if os.path.exists(zip_file):
