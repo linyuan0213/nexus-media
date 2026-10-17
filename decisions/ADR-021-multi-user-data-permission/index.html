@@ -1,0 +1,2485 @@
+<!DOCTYPE html><html lang="zh" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Nexus Media 多功能媒体库管理工具使用文档">
+      
+      
+      
+        <link rel="canonical" href="https://linyuan0213.github.io/nexus-media/decisions/ADR-021-multi-user-data-permission/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>ADR-021: 多用户数据权限与站点访问控制 - Nexus Media 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-021-多用户数据权限与站点访问控制" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="Nexus Media 文档" class="md-header__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Nexus Media 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-021: 多用户数据权限与站点访问控制
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到深色模式" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换到深色模式" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到浅色模式" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换到浅色模式" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Nexus Media 文档" class="md-nav__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    Nexus Media 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装部署
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    使用指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    使用指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    基础配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    资源搜索与探索
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sites/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    站点配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../filter_rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    过滤规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../download_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../downloaders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体服务器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../directory_sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    目录同步
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_organization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体整理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rss/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RSS 订阅
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../indexers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    索引器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通知渠道配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../message_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    消息通知模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务与调度
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    存储后端
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    用户与权限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    插件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件使用
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugin_development_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发者
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    开发者
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    本地开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent-mvp-detailed-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    常见问题
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    更新日志
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#date" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-权限模型分层" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 权限模型分层
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-共享-vs-用户独有总览" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 共享 vs 用户独有总览
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-角色码与权限码分工" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 角色码与权限码分工
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-usercontext-扩展" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. UserContext 扩展
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-l3-站点访问控制" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. L3 站点访问控制
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. L3 站点访问控制">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-站点授权表角色--用户两级" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 站点授权表（角色 + 用户两级）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-可见性规则" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 可见性规则
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-拦截点" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 拦截点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-站点凭据" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 站点凭据
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-l2-数据归属行级隔离" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. L2 数据归属（行级隔离）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. L2 数据归属（行级隔离）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-加-user_id-列的表" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 加 USER_ID 列的表
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-统一查询过滤" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 统一查询过滤
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-后台任务兼容" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 后台任务兼容
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-多用户订阅同一媒体的进度与去重" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 多用户订阅同一媒体的进度与去重
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#55-无用户上下文路径后台任务--遗留-token" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 无用户上下文路径（后台任务 / 遗留 Token）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#56-通知路由" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.6 通知路由
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#57-用户删除级联" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.7 用户删除级联
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#58-消息渠道身份绑定" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.8 消息渠道身份绑定
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-保持全局共享不做隔离的领域" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 保持全局共享、不做隔离的领域
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. 保持全局共享、不做隔离的领域">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-共享资源保护规则审查补充" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 共享资源保护规则（审查补充）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-其他补全项" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 其他补全项
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-数据库迁移" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 数据库迁移
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-api-变更" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. API 变更
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-落地顺序" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. 落地顺序
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-phase-2后续阶段不在本-adr-范围" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Phase 2（后续阶段，不在本 ADR 范围）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#实施记录2026-09-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        实施记录（2026-09-10）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="实施记录（2026-09-10）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#已交付" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        已交付
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#与设计的偏差有意简化功能正确" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        与设计的偏差（有意简化，功能正确）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#已知残留" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        已知残留
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Consequences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#正面" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        正面
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#代价" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        代价
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#风险" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        风险
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/linyuan0213/nexus-media/edit/master/docs/decisions/ADR-021-multi-user-data-permission.md" title="编辑此页" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="adr-021-多用户数据权限与站点访问控制">ADR-021: 多用户数据权限与站点访问控制<a class="headerlink" href="#adr-021-多用户数据权限与站点访问控制" title="Permanent link">¶</a></h1>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">¶</a></h2>
+<p>Accepted（已实施，见文末「实施记录」）</p>
+<h2 id="date">Date<a class="headerlink" href="#date" title="Permanent link">¶</a></h2>
+<p>2026-09-08</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">¶</a></h2>
+<p>Nexus Media 已具备基于 RBAC 的<strong>功能权限</strong>体系（<code>require_permission("x:view|manage")</code>，见 <code>src/api/deps.py:166</code>），但所有业务数据全局共享，属于"单实例多账号无隔离"模型：</p>
+<ul>
+<li><strong>站点</strong>：站点启用状态（<code>INDEXERSITECONFIG</code>）与凭据（<code>CONFIG_SITE</code>）全局共享，任何用户可搜索全部启用站点。搜索站点过滤在 <code>IndexerService._filter_indexers()</code>（<code>src/app/indexer/indexer.py:273</code>）无任何用户维度。</li>
+<li><strong>订阅</strong>：<code>SUBSCRIBE_MOVIES</code> / <code>SUBSCRIBE_TVS</code> / <code>SUBSCRIBE_HISTORY</code> / <code>CONFIG_USER_RSS</code> 均无 <code>USER_ID</code>，A 用户可见可改 B 用户的订阅。</li>
+<li><strong>搜索结果</strong>：<code>SEARCH_RESULT_INFO</code> 仅靠 <code>SEARCH_SESSION_ID</code> 间接隔离；<code>SearchRepository.get_search_results()</code>（<code>src/app/db/repositories/search_repository.py:185</code>）的 <code>user_id</code> 参数存在但未参与过滤。</li>
+<li><strong>下载历史</strong>：<code>DOWNLOAD_HISTORY</code> 无归属字段，下载中任务列表实时取自下载器客户端，为全局视图。</li>
+<li><strong>AI 助手</strong>：<code>src/app/agent/tools/handlers/</code> 的搜索/订阅/下载工具不透传用户上下文，是当前最大的权限绕过通道。</li>
+<li>已按用户隔离的例外：<code>AGENT_CONVERSATION</code> / <code>AGENT_WEB_MESSAGE</code>（agent_memory.py）、<code>PUSH_SUBSCRIPTION</code>（push_subscription.py）。</li>
+</ul>
+<p>核心需求：</p>
+<ol>
+<li>站点级授权：A 用户只能搜索/使用被授权的站点，其余不开放。</li>
+<li>订阅行级隔离：A/B 用户订阅互不可见，管理员（superadmin）可见全部。</li>
+<li>订阅需记录归属用户。</li>
+</ol>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">¶</a></h2>
+<h3 id="1-权限模型分层">1. 权限模型分层<a class="headerlink" href="#1-权限模型分层" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>L1 功能权限（已有）：能做什么操作     → require_permission("subscription:manage")
+L2 数据归属（新增）：能看哪些数据行   → USER_ID 行级过滤
+L3 资源访问（新增）：能用哪些站点     → 角色/用户站点授权表 + PUBLIC 白名单
+</code></pre></div>
+<p><strong>与标准模型对应</strong>：L1 = RBAC0/1（<code>ROLE_LEVEL</code> 数值层级）；L2 = DAC 属主模型 + 应用层 RLS；L3 = 资源级 ACL（subject-resource-action）。与 GitLab/Grafana 等成熟多用户系统同构，无自创机制。RBAC2（职责分离）与 ABAC 超出本场景需求，不采用。</p>
+<p><strong>默认策略开关</strong>：<code>PUBLIC=1</code> 默认全开放是兼容单用户实例的妥协，非 fail-closed。提供系统级配置 <code>站点授权默认策略: open|closed</code>，安全敏感部署可一键切 closed（新站点默认需显式授权）。</p>
+<h3 id="11-共享-vs-用户独有总览">1.1 共享 vs 用户独有总览<a class="headerlink" href="#11-共享-vs-用户独有总览" title="Permanent link">¶</a></h3>
+<p>一句话规则：<strong>"内容"全部共享，"行为与偏好"全部归属用户</strong>。</p>
+<p><strong>用户独有（行级隔离）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>数据</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>订阅四表（电影/剧集/历史/剧集进度）</td>
+<td>互不可见，superadmin 看全部</td>
+</tr>
+<tr>
+<td>自定义 RSS 及任务历史</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>搜索结果</td>
+<td>按用户隔离</td>
+</tr>
+<tr>
+<td>下载历史（手动）</td>
+<td>归属发起人；订阅触发的全局下载记 NULL，全局可见</td>
+</tr>
+<tr>
+<td>API Key</td>
+<td>按 <code>CREATED_BY</code> 隔离</td>
+</tr>
+<tr>
+<td>站点授权 / 渠道绑定</td>
+<td>角色级+用户级站点授权、每用户渠道绑定（三张新表）</td>
+</tr>
+<tr>
+<td>AI 会话/消息、Web 消息、Web Push</td>
+<td>现状已隔离</td>
+</tr>
+<tr>
+<td>站点可见性</td>
+<td>PUBLIC 白名单 ∪ 个人授权</td>
+</tr>
+</tbody>
+</table>
+<p><strong>全局共享（无隔离）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>资源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>站点凭据/定义</td>
+<td>一站一 Cookie 全站共用（用户级凭据 = Phase 2）</td>
+</tr>
+<tr>
+<td>下载器/下载预设/存储/媒体库路径/媒体服务器</td>
+<td>全局基础设施</td>
+</tr>
+<tr>
+<td><strong>媒体库内容本身</strong></td>
+<td>已下载内容所有人可见（明确不隔离内容）</td>
+</tr>
+<tr>
+<td>下载/洗版执行</td>
+<td>全局唯一物理下载，<code>SUBSCRIBE_TORRENTS</code> 全局去重</td>
+</tr>
+<tr>
+<td>转移历史</td>
+<td>全局物理行为记录</td>
+</tr>
+<tr>
+<td>刷流全链路</td>
+<td>管理员专属，不下放</td>
+</tr>
+<tr>
+<td>过滤规则/分类/识别词/同步路径/插件/通知渠道配置/系统字典</td>
+<td>全局配置</td>
+</tr>
+<tr>
+<td>聚合统计</td>
+<td>全局（普通用户按可见站点过滤站点维度）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-角色码与权限码分工">2. 角色码与权限码分工<a class="headerlink" href="#2-角色码与权限码分工" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>机制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>接口级功能权限</td>
+<td>权限码（现状不变）</td>
+</tr>
+<tr>
+<td>跨用户数据全量可见（管理员）</td>
+<td>角色码 <code>superadmin</code> 判定（复用 <code>src/app/services/rbac/user_service.py:10</code> 的 <code>SUPERADMIN_ROLE_CODE</code> 约定，与 <code>src/api/routers/auth.py:138</code>、<code>src/app/db/models/rbac.py:123</code> 一致）</td>
+</tr>
+<tr>
+<td>站点可用性</td>
+<td><code>RBAC_ROLE_SITES</code> ∪ <code>RBAC_USER_SITES</code> + <code>INDEXERSITECONFIG.PUBLIC</code> 白名单；superadmin 全量</td>
+</tr>
+<tr>
+<td>给用户分配站点/角色</td>
+<td>权限码 <code>site:assign</code> / <code>role:update</code> + <code>ROLE_LEVEL</code> 防越权</td>
+</tr>
+</tbody>
+</table>
+<p><strong>不引入</strong> <code>is_admin</code> 用户属性，<strong>不新增</strong> <code>data:all</code> / <code>site:view-all</code> 权限码。管理员全量可见是角色码语义，不是可授予的权限点。</p>
+<h3 id="3-usercontext-扩展">3. UserContext 扩展<a class="headerlink" href="#3-usercontext-扩展" title="Permanent link">¶</a></h3>
+<p><code>src/app/schemas/auth.py:32</code> 的 <code>UserContext</code> 新增 <code>role_codes</code>：</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">UserContext</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">username</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">nickname</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">level</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">permissions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">role_codes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>   <span class="c1"># 新增</span>
+</code></pre></div>
+<ul>
+<li>登录/刷新签发 JWT 时（<code>src/app/services/auth_service.py</code>）payload 可附带 <code>role_codes</code> 供前端展示用，但<strong>后端判定不信任 JWT 内嵌副本</strong>。</li>
+<li><strong>即时生效要求</strong>：<code>permissions</code> / <code>role_codes</code> <strong>不信任 JWT 内嵌副本</strong>——<code>require_permission</code> 与 <code>apply_owner_scope</code> 判定改从服务端短 TTL 缓存读取（<code>RBACCheckService.get_user_permissions</code> 扩展返回 role_codes，角色/权限变更时主动失效），JWT 只承载身份认证。否则角色被回收后到 token 过期前，superadmin 仍全量可见所有用户数据（比功能权限滞后更危险，属数据泄露面）。</li>
+<li>API Key 认证（<code>src/api/deps.py:85</code>）继承创建者权限时同步继承 <code>role_codes</code>。</li>
+<li>旧 Token 兼容路径（deps.py:470）<code>role_codes</code> 为空列表，映射系统上下文（见 5.5）。</li>
+</ul>
+<h3 id="4-l3-站点访问控制">4. L3 站点访问控制<a class="headerlink" href="#4-l3-站点访问控制" title="Permanent link">¶</a></h3>
+<h4 id="41-站点授权表角色--用户两级">4.1 站点授权表（角色 + 用户两级）<a class="headerlink" href="#41-站点授权表角色--用户两级" title="Permanent link">¶</a></h4>
+<p><strong>角色级 <code>RBAC_ROLE_SITES</code></strong>（主）与<strong>用户级 <code>RBAC_USER_SITES</code></strong>（例外补充），结构相同：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ID</code></td>
+<td>Integer PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ROLE_ID</code> / <code>USER_ID</code></td>
+<td>Integer FK → RBAC_ROLES.ID / RBAC_USERS.ID，CASCADE</td>
+<td>授权对象</td>
+</tr>
+<tr>
+<td><code>SITE_NAME</code></td>
+<td>String(128)</td>
+<td>站点名，对齐 <code>INDEXERSITECONFIG.SITE_NAME</code>；第三方索引器用 <code>jackett:&lt;站点id&gt;</code> / <code>prowlarr:&lt;id&gt;</code> 精确授权，或 <code>jackett:*</code> / <code>prowlarr:*</code> 整体授权</td>
+</tr>
+<tr>
+<td><code>PERMISSIONS</code></td>
+<td>JSON</td>
+<td>用途粒度：<code>["search", "rss"]</code>（search=索引器搜索可用，rss=订阅 RSS 源可选；刷流不下放，无 brush 用途）</td>
+</tr>
+<tr>
+<td><code>GRANTED_BY</code></td>
+<td>Integer</td>
+<td>授权人 user_id</td>
+</tr>
+<tr>
+<td><code>CREATED_AT</code> / <code>UPDATED_AT</code></td>
+<td>DateTime</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>唯一索引：角色表 <code>(ROLE_ID, SITE_NAME)</code>，用户表 <code>(USER_ID, SITE_NAME)</code>。</p>
+<p><strong>设计取舍</strong>：站点可见性挂角色与现有 RBAC（权限/菜单都挂角色）一致，便于按用户组批量管理（如"普通组 3 站 / VIP 组 10 站"）；用户级表处理个体例外。<strong>纯并集、无拒绝语义</strong>——同一站点角色级给 <code>["search"]</code>、用户级给 <code>["rss"]</code> 合并为 <code>["search","rss"]</code>；要让某用户少一个站，就不把该站放进他的角色，而非做 deny。</p>
+<h4 id="42-可见性规则">4.2 可见性规则<a class="headerlink" href="#42-可见性规则" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code>superadmin      → 全部站点（不查授权表）
+普通用户        → (PUBLIC=1 的站点 ∪ 角色级授权 ∪ 用户级授权)，再按 PERMISSIONS 用途粒度过滤
+</code></pre></div>
+<p><strong>索引器站点与 RSS 站点是同一套站点实体</strong>（同以 <code>SITE_NAME</code> 为键），按用途分别生效：</p>
+<table>
+<thead>
+<tr>
+<th>用途</th>
+<th>控制范围</th>
+<th>执行点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>search</code></td>
+<td>搜索时可用站点（索引器维度）</td>
+<td><code>_filter_indexers</code> 过滤（4.3）</td>
+</tr>
+<tr>
+<td><code>rss</code></td>
+<td>订阅 <code>RSS_SITES</code> 可选站点、后台 RSS 刷新是否为该用户匹配</td>
+<td>订阅保存校验 + 执行时兜底（4.3）</td>
+</tr>
+</tbody>
+</table>
+<p>示例：授权 <code>{站点X: ["search"], 站点Y: ["search","rss"]}</code> → 用户能搜 X、Y，但订阅 RSS 源只能选 Y。</p>
+<p><strong>自定义 RSS 源</strong>（<code>CONFIG_USER_RSS</code>）不属于站点授权体系：用户自有数据，地址用户自己填，无需授权。</p>
+<p>复用 <code>INDEXERSITECONFIG.PUBLIC</code> 现有字段作为开放白名单：默认全部站点 <code>PUBLIC=1</code>（兼容现有单用户/全开放行为，迁移零成本），管理员将需管控的站点置 <code>PUBLIC=0</code> 后逐用户授权。</p>
+<h4 id="43-拦截点">4.3 拦截点<a class="headerlink" href="#43-拦截点" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>核心</strong>：<code>IndexerService._filter_indexers()</code>（indexer.py:273）注入用户可见站点集合。</li>
+<li><code>SearchContext</code>（<code>src/app/services/search_context.py:25</code>）已有 <code>user_id</code> 字段，从路由透传。</li>
+<li>站点列表 API（<code>src/api/routers/site.py</code>）：普通用户列表按可见性过滤；<code>site:manage</code> 管理接口不受限。</li>
+<li>RSS 刷新匹配用户订阅时按订阅归属用户的可见站点过滤；用户订阅的 <code>SEARCH_SITES</code>/<code>RSS_SITES</code> 保存时校验 ⊂ 可见站点集合（刷流为管理员专属，走系统上下文，不参与用户过滤）。</li>
+<li><strong>执行时兜底</strong>：保存时校验不够（管理员可事后回收授权或关闭 <code>PUBLIC</code>），后台 RSS/订阅任务<strong>每次执行时</strong>按当前可见站点集合重新过滤，已回收站点自动跳过并记操作日志。</li>
+<li><strong>默认站点求交</strong>：全局默认搜索站点（<code>DefaultSubscribeSettingTV/MOV.search_sites</code>）对用户生效时 = 系统默认 ∩ 用户可见站点；交集为空时搜索直接返回空并提示联系管理员授权，不回落到全量站点。</li>
+<li><strong>缓存与失效</strong>：两级站点授权表查询走短 TTL（≤60s）缓存，授权/回收/<code>PUBLIC</code> 变更时主动失效。站点可见性在每次执行时从 DB/缓存判定而非 JWT，授权变更即时生效（与第 3 节的权限/角色服务端缓存一致，全链路无 JWT 滞后）。</li>
+<li><strong>AI 助手</strong>：工具 handler 强制接收 <code>UserContext</code>，搜索走站点过滤，订阅写入带 <code>USER_ID</code>——消除权限绕过通道。</li>
+</ul>
+<h4 id="44-站点凭据">4.4 站点凭据<a class="headerlink" href="#44-站点凭据" title="Permanent link">¶</a></h4>
+<p>站点 Cookie/API Key 属敏感共享凭据，站点管理（<code>site:manage</code>）保持管理员专属；普通用户只能获得搜索结果，任何接口不向其暴露凭据。</p>
+<h3 id="5-l2-数据归属行级隔离">5. L2 数据归属（行级隔离）<a class="headerlink" href="#5-l2-数据归属行级隔离" title="Permanent link">¶</a></h3>
+<h4 id="51-加-user_id-列的表">5.1 加 <code>USER_ID</code> 列的表<a class="headerlink" href="#51-加-user_id-列的表" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>表</th>
+<th>模型位置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SUBSCRIBE_MOVIES</code></td>
+<td>models/subscribe.py:35</td>
+<td>电影订阅</td>
+</tr>
+<tr>
+<td><code>SUBSCRIBE_TVS</code></td>
+<td>models/subscribe.py:81</td>
+<td>剧集订阅</td>
+</tr>
+<tr>
+<td><code>SUBSCRIBE_HISTORY</code></td>
+<td>models/subscribe.py:14</td>
+<td>订阅历史</td>
+</tr>
+<tr>
+<td><code>SUBSCRIBE_TV_EPISODES</code></td>
+<td>models/subscribe.py:118</td>
+<td>订阅剧集进度，通过 RSSID 挂在订阅上，必须跟随隔离</td>
+</tr>
+<tr>
+<td><code>CONFIG_USER_RSS</code></td>
+<td>models/config.py:90</td>
+<td>自定义 RSS</td>
+</tr>
+<tr>
+<td><code>USER_RSS_TASK_HISTORY</code></td>
+<td>models/plugin.py:56</td>
+<td>自定义 RSS 处理历史，跟随 <code>CONFIG_USER_RSS</code> 归属</td>
+</tr>
+<tr>
+<td><code>SEARCH_RESULT_INFO</code></td>
+<td>models/search.py:14</td>
+<td>搜索结果（同时启用 <code>get_search_results</code> 已有的 <code>user_id</code> 参数）</td>
+</tr>
+<tr>
+<td><code>DOWNLOAD_HISTORY</code></td>
+<td>models/download.py:29</td>
+<td>下载历史：手动下载归属发起人；订阅触发的全局下载记 <code>NULL</code>（系统行，见 5.4）</td>
+</tr>
+</tbody>
+</table>
+<p>统一为 <code>USER_ID = Column(Integer, ForeignKey("RBAC_USERS.ID"), index=True, nullable=True)</code>。</p>
+<p><strong>API Key 行级过滤</strong>（不加列）：<code>API_KEY</code> 表已有 <code>CREATED_BY</code>（apikey.py:31），持 <code>user:self</code> 的普通用户只能查看/吊销 <code>CREATED_BY == 自己</code> 的 Key，superadmin 看全部。</p>
+<p><strong>明确保持全局的例外</strong>：</p>
+<ul>
+<li><code>SUBSCRIBE_TORRENTS</code>（订阅已下载去重表，subscribe.py:67）：<strong>保持纯全局、不加列</strong>。下载器/存储/媒体库全局共享，物理下载全局唯一，"存在即跳过"语义不变；多用户进度问题由 5.4 节的记账分离解决，不靠重复下载。</li>
+<li><code>TRANSFER_HISTORY</code>（转移历史）：转移是全局物理行为，一次共享下载只产生一条转移记录，无法归属单一用户；且文件入共享媒体库后内容本身对所有用户可见，隔离无隐私收益。<strong>不加列，仅 <code>transfer:view</code>（管理员）可见</strong>。</li>
+<li>刷流相关（<code>SITE_BRUSH_TASK</code> / <code>SITE_BRUSH_TORRENTS</code> / <code>BRUSH_EVENT_LOG</code>）：刷流消耗 <code>CONFIG_SITE</code> 共享凭据账号的流量与 H&amp;R 考核，开放给普通用户的风险不可控。<strong>刷流整体维持 <code>brush:manage</code> 管理员专属，不做隔离也不下放</strong>。</li>
+<li>站点用户数据（<code>SITE_USER_INFO_STATS</code> / <code>SITE_USER_SEEDING_INFO</code> 等）：数据源是 <code>CONFIG_SITE</code> 全站共享凭据，属站点维度而非用户维度（见第 11 节 Phase 2）。</li>
+</ul>
+<p><code>NULL</code> 语义：<strong>系统/后台任务自动创建的行</strong>。订阅类 NULL 行仅 superadmin 可见；搜索/下载历史 NULL 行全局可见（兼容未归属的存量行为，且与共享媒体库语义一致——订阅触发的全局下载所有用户都受益）。</p>
+<blockquote>
+<p><strong>隔离目标声明</strong>：本方案隔离的是"愿望单 / 进度 / 行为发起记录"，<strong>不隔离内容可见性</strong>——媒体库、下载器、存储全局共享，任何用户都能在媒体服务器上看到全部已下载内容。需要内容级隔离时应部署多实例，而非本方案。</p>
+</blockquote>
+<h4 id="52-统一查询过滤">5.2 统一查询过滤<a class="headerlink" href="#52-统一查询过滤" title="Permanent link">¶</a></h4>
+<p>新增 helper（放 <code>src/app/db/repositories/base.py</code>）：</p>
+<div class="highlight"><pre><span></span><code><span class="n">SUPERADMIN_ROLE_CODE</span> <span class="o">=</span> <span class="s2">"superadmin"</span>  <span class="c1"># 引用 user_service 常量</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_owner_scope</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">user</span><span class="p">:</span> <span class="n">UserContext</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">SUPERADMIN_ROLE_CODE</span> <span class="ow">in</span> <span class="n">user</span><span class="o">.</span><span class="n">role_codes</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">query</span>
+    <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">USER_ID</span> <span class="o">==</span> <span class="n">user</span><span class="o">.</span><span class="n">user_id</span><span class="p">)</span>
+</code></pre></div>
+<ul>
+<li>所有订阅/搜索/下载历史 repository 的读查询统一过此 helper。</li>
+<li>写操作（更新/删除）校验 <code>row.USER_ID == ctx.user_id</code>（superadmin 除外），越权返回 <strong>404</strong> 而非 403，避免资源存在性探测。</li>
+<li>superadmin 的列表 API 支持 <code>?user_id=</code> 参数查看指定用户数据。</li>
+</ul>
+<h4 id="53-后台任务兼容">5.3 后台任务兼容<a class="headerlink" href="#53-后台任务兼容" title="Permanent link">¶</a></h4>
+<ul>
+<li>RSS 定时刷新、订阅补全等后台任务按 <code>USER_ID</code> 分组执行。</li>
+<li>订阅命中的搜索结果落库时带上订阅归属的 <code>USER_ID</code>。</li>
+<li>订阅触发的全局下载在 <code>DOWNLOAD_HISTORY</code> 只记<strong>一行</strong> <code>USER_ID=NULL</code> 的系统记录（一次物理下载服务多个用户订阅，不产生重复行）；手动下载记录发起人。</li>
+<li>通知事件携带 <code>user_id</code>，路由规则见 5.6。</li>
+</ul>
+<h4 id="54-多用户订阅同一媒体的进度与去重">5.4 多用户订阅同一媒体的进度与去重<a class="headerlink" href="#54-多用户订阅同一媒体的进度与去重" title="Permanent link">¶</a></h4>
+<p>前提：下载器、存储空间、媒体库全部全局共享，<strong>物理下载全局唯一</strong>，不存在"每用户各下一份"。</p>
+<p>进度字段（<code>CURRENT_EP</code> / <code>LACK</code> / <code>SUBSCRIBE_TV_EPISODES</code>）在用户各自的订阅行上，天然独立。需要解决的是：<strong>纯全局去重会让后订阅的用户命中已下载种子时被跳过、进度卡死</strong>。因此把"下载执行"与"用户记账"分离：</p>
+<ol>
+<li><strong>调度分组</strong>：同一媒体（TMDBID+季）的多个用户订阅合并为一次搜索/RSS 匹配，结果 fan-out 到每个用户的订阅行，各自过各自的过滤规则。</li>
+<li><strong>下载判定看全局库</strong>：命中后先查全局去重表（<code>SUBSCRIBE_TORRENTS</code>）与下载历史——</li>
+<li>内容已存在且满足该用户的过滤规则 → <strong>零下载</strong>，直接给该用户记"已满足"（更新自己的 <code>TV_EPISODES</code> / <code>CURRENT_EP</code> / <code>LACK</code> + 归属通知）。</li>
+<li>内容不存在 → 发起全局下载，写入全局去重表；下载完成后<strong>所有等待该内容的用户订阅一起记账</strong>。</li>
+<li>内容已存在但质量不满足（如库内 1080p、该用户要 4K）→ 走现有洗版机制（<code>OVER_EDITION</code>）全局升级下载一次，完成后相关用户进度全部推进。不产生第二份物理副本。</li>
+<li><strong><code>SAVE_PATH</code> 不构成隔离维度</strong>：订阅保存路径始终落在全局分类目录体系内，文件入共享媒体库后对所有用户可见，不做用户目录隔离、不做 hardlink。</li>
+<li><strong>并发去重加锁</strong>：fan-out 记账与手动下载可能并发命中同一种子，发起下载前用现有 <code>DISTRIBUTEDLOCK</code> 按 <code>torrent:{enclosure_hash}</code> 加锁，防止全局去重表插入竞态导致重复下载。</li>
+<li><strong>订阅唯一约束</strong>：<code>SUBSCRIBE_TVS</code> 加 <code>(USER_ID, TMDBID, SEASON)</code> 唯一索引、<code>SUBSCRIBE_MOVIES</code> 加 <code>(USER_ID, TMDBID)</code> 唯一索引，防止同用户重复订阅；跨用户订阅同媒体合法。</li>
+<li><strong>插件/自动化创建的订阅归属</strong>：<code>doubansync</code>、<code>autosub</code>、<code>doubanrank</code> 等插件自动创建的订阅记 <code>USER_ID=NULL</code>（系统归属，仅 superadmin 可见）；如插件配置支持指定归属用户，按配置归属。豆瓣同步等绑定的是全站共享账号，不设为用户级功能。</li>
+</ol>
+<p>即：<strong>下载/洗版是全局系统行为，订阅行只是每个用户的"愿望单 + 进度账本"</strong>。是否触发下载由全局库状态决定，用户维度只负责记账与通知。</p>
+<h4 id="55-无用户上下文路径后台任务--遗留-token">5.5 无用户上下文路径（后台任务 / 遗留 Token）<a class="headerlink" href="#55-无用户上下文路径后台任务--遗留-token" title="Permanent link">¶</a></h4>
+<p>行级过滤引入后，所有无 <code>UserContext</code> 的调用路径必须显式处理，否则会突然"零数据零站点"：</p>
+<ul>
+<li><strong>系统上下文</strong>：定义 <code>SYSTEM_USER_CONTEXT</code>（<code>user_id=0</code>，<code>role_codes=["superadmin"]</code>），后台调度、事件 handler、启动初始化统一使用。</li>
+<li><strong>APIv1 旧 Token 路径</strong>（deps.py:470）：<code>role_codes=[]</code> 会导致过滤后无数据。该路径直接映射为 <code>SYSTEM_USER_CONTEXT</code>（旧 API 本就是管理员粒度，保持行为不变）。</li>
+<li><strong>实施时审计</strong>：grep 所有调用订阅/搜索/下载 repository 的位置，确保每条路径要么透传真实 <code>UserContext</code>，要么显式使用系统上下文，禁止隐式缺省。</li>
+</ul>
+<h4 id="56-通知路由">5.6 通知路由<a class="headerlink" href="#56-通知路由" title="Permanent link">¶</a></h4>
+<p>通知渠道配置（<code>MESSAGE_CLIENT</code>）全局共享，必须防止用户事件经外部渠道广播泄漏：</p>
+<ul>
+<li><strong>用户归属事件</strong>（订阅命中、下载完成等带 <code>user_id</code>）：推 Web 消息通道（<code>AGENT_WEB_MESSAGE</code> 已有 USER_ID 隔离，agent_memory.py:56）；外部渠道若该用户已绑定（5.8），经绑定表取该用户的渠道目标（chat_id / 推送 Key）后<strong>定向单发</strong>；未绑定则仅 Web。</li>
+<li><strong>系统事件 + superadmin 归属事件</strong>（<code>user_id</code> 为 NULL 或 superadmin）：可推全局外部渠道（配置的群/频道 chat_id）。</li>
+<li>发送侧在 dispatcher 层做 <code>user_id → chat_id</code> 翻译（当前 <code>Telegram.send_msg</code> 的 <code>user_id</code> 参数语义即 chat_id，telegram.py:174）。</li>
+</ul>
+<h4 id="57-用户删除级联">5.7 用户删除级联<a class="headerlink" href="#57-用户删除级联" title="Permanent link">¶</a></h4>
+<ul>
+<li>业务行（订阅四表、<code>CONFIG_USER_RSS</code>、<code>SEARCH_RESULT_INFO</code>、API Key、<code>RBAC_USER_SITES</code>、渠道绑定 <code>RBAC_USER_CHANNELS</code>）：<code>ON DELETE CASCADE</code>，随用户删除；<code>RBAC_ROLE_SITES</code> 随角色删除 CASCADE。</li>
+<li>审计/日志类（<code>RBAC_OPERATION_LOG</code> / <code>RBAC_USER_LOGIN_LOG</code> / <code>DOWNLOAD_HISTORY</code> / <code>USER_RSS_TASK_HISTORY</code>）：<code>USER_ID</code> 置 NULL（<code>ON DELETE SET NULL</code>），保留审计痕迹。</li>
+<li><strong>存量已隔离表</strong>：<code>AGENT_CONVERSATION</code> / <code>AGENT_WEB_MESSAGE</code> / <code>PUSH_SUBSCRIPTION</code>（现状已有 USER_ID）删除用户时须一并 CASCADE——实施时确认现有 user_service 已处理，避免删用户留孤儿数据。</li>
+<li>删除用户的服务层需显式处理上述各类，并复用现有"禁止删除最后一个 superadmin"检查（user_service.py:83）。</li>
+</ul>
+<h4 id="58-消息渠道身份绑定">5.8 消息渠道身份绑定<a class="headerlink" href="#58-消息渠道身份绑定" title="Permanent link">¶</a></h4>
+<p>现状问题：交互渠道入站是"渠道级信任"——白名单 + 直接授予全部权限码（<code>system/message.py:240</code> 的 <code>_TRUSTED_CHANNEL_PERMISSIONS</code>），无渠道身份 → 系统用户映射。多用户模型下 IM 发起的订阅无归属、权限失控。</p>
+<p><strong>渠道分类</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>渠道</th>
+<th>身份问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>交互渠道（有入站）</td>
+<td>Telegram、企业微信（内置）；Slack、SynologyChat（插件，走 <code>InteractiveCallbackMixin</code>）</td>
+<td>入站需识别"是谁"</td>
+</tr>
+<tr>
+<td>纯推送渠道（无入站）</td>
+<td>Bark、Ntfy、Gotify、Server酱、PushPlus、PushDeer、钉钉、Chanify、IYUU、Webhook、飞书</td>
+<td>入站无问题；出站定向需每用户目标 Key</td>
+</tr>
+<tr>
+<td>Web 通道</td>
+<td>内置 <code>WebMessage</code></td>
+<td>天然系统用户身份，无需绑定</td>
+</tr>
+</tbody>
+</table>
+<p><strong>新表 <code>RBAC_USER_CHANNELS</code></strong>（一张表统一两类渠道）：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ID</code> / <code>USER_ID</code></td>
+<td>FK → RBAC_USERS，CASCADE</td>
+</tr>
+<tr>
+<td><code>CHANNEL</code></td>
+<td><code>telegram</code> / <code>wechat</code> / <code>slack</code> / <code>synologychat</code> / <code>bark</code> / <code>ntfy</code> / ...</td>
+</tr>
+<tr>
+<td><code>CHANNEL_USER_ID</code></td>
+<td>渠道侧身份或推送目标（见下）</td>
+</tr>
+<tr>
+<td><code>STATUS</code> / <code>CREATED_AT</code></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>唯一索引 <code>(CHANNEL, CHANNEL_USER_ID)</code>，一个渠道账号只能绑一个系统用户。</p>
+<p><strong><code>CHANNEL_USER_ID</code> 取值</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>渠道</th>
+<th>取值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Telegram</td>
+<td>消息 <code>from.id</code></td>
+</tr>
+<tr>
+<td>企业微信</td>
+<td>消息 <code>FromUserName</code></td>
+</tr>
+<tr>
+<td>Slack</td>
+<td>事件 <code>user</code> id</td>
+</tr>
+<tr>
+<td>SynologyChat</td>
+<td>webhook <code>user_id</code></td>
+</tr>
+<tr>
+<td>Bark / Ntfy / Server酱 等推送渠道</td>
+<td>用户的推送 Key / Token / 设备标识</td>
+</tr>
+</tbody>
+</table>
+<p><strong>两种绑定模式</strong>：</p>
+<ol>
+<li><strong>入站码绑定</strong>（交互渠道）：Web 端 <code>POST /user/channel-bindings/code</code> 生成 6 位绑定码（TTL 10 分钟，存 TokenCache，限 5 次校验失败即失效防爆破）→ 用户在 IM 向 Bot 发送 <code>/bind 123456</code> → 校验后写入绑定表。<code>/unbind</code> 自助解绑。</li>
+<li><strong>Web 手动登记</strong>（纯推送渠道，无入站发不了绑定码）：用户在 Web 设置页粘贴自己的推送 Key，直接写入绑定表——顺带实现"用户级外部通知渠道"。</li>
+</ol>
+<p>管理员可在用户管理页查看/强制解绑任意绑定。</p>
+<p><strong>入站识别改造</strong>（<code>message_webhook.py</code> 及各渠道回调入口）：</p>
+<div class="highlight"><pre><span></span><code>渠道身份查 RBAC_USER_CHANNELS
+  ├─ 命中 → 从 RBAC 实时构造 UserContext（user_id + permissions + role_codes）
+  │        → 与 Web 渠道同一链路：订阅写 USER_ID、搜索走站点过滤
+  └─ 未命中 → 拒绝交互，回复绑定指引
+</code></pre></div>
+<p><strong><code>_TRUSTED_CHANNEL_PERMISSIONS</code> 退役</strong>（行为变更）：升级后未绑定的 IM 用户失去交互能力。迁移时把现有 Telegram <code>admin_ids</code> 中的 chat_id 自动绑定到第一个 superadmin，单用户实例行为不变；企业微信等其他交互渠道的存量受信 ID 同理迁移。</p>
+<p><strong>会话隔离</strong>：搜索/订阅的分页选择缓存（<code>MessageSearchService</code> 单例）键从 <code>(channel, chat_id)</code> 改为 <code>(channel, user_id)</code>，多用户不串会话。群聊中按渠道身份识别个人，未绑定成员消息忽略。</p>
+<h3 id="6-保持全局共享不做隔离的领域">6. 保持全局共享、不做隔离的领域<a class="headerlink" href="#6-保持全局共享不做隔离的领域" title="Permanent link">¶</a></h3>
+<p>以下为全局基础设施配置，维持 <code>manage</code> 权限管理员专属，<strong>不加行级隔离</strong>（隔离无意义且破坏后台任务）：</p>
+<ul>
+<li>过滤规则 / 分类（<code>CONFIG_FILTER_*</code> / <code>CONFIG_CATEGORY_*</code>）</li>
+<li>下载器实例 / 下载预设（<code>DOWNLOADER</code> / <code>DOWNLOAD_SETTING</code>）</li>
+<li>媒体服务器 / 媒体库路径 / 存储后端</li>
+<li>通知渠道配置（<code>MESSAGE_CLIENT</code>）、插件、识别词、同步路径、系统字典</li>
+<li>转移历史（<code>TRANSFER_HISTORY</code>）、刷流全链路（见 5.1 例外说明）</li>
+<li>聚合统计（<code>INDEXERSTATISTICS</code> / 站点统计）：管理员视角的全局数据；普通用户仪表盘若展示，按可见站点过滤站点维度数据</li>
+</ul>
+<p>进行中下载任务列表（实时取自下载器客户端）为全局视图，仅 <code>download:view</code> 以上可见；普通用户的下载可见性通过 <code>DOWNLOAD_HISTORY.USER_ID</code> 体现。</p>
+<p><strong>权限码拆分（审查发现）</strong>：<code>download.py</code> 当前把下载器基础设施管理（<code>/downloaders/update|delete</code>、<code>/settings</code>、删种任务、清空转移黑名单）与用户下载操作（<code>/tasks/add|add_torrent|start|stop|remove</code>）全挂同一 <code>download:manage</code>。若普通用户获得"发起下载"能力即获得下载器配置管理权，属越权。</p>
+<ul>
+<li>新增 <code>download:create</code>：普通用户发起/控制下载任务（add/start/stop/remove）。</li>
+<li><code>download:manage</code> 收窄为基础设施管理（下载器配置、下载预设、删种任务），保持管理员专属。</li>
+<li>搜索结果页"下载"按钮走 <code>download:create</code>；AI/IM 工具链的下载动作同样按 <code>download:create</code> 校验（system context 除外）。</li>
+</ul>
+<p><strong>交互搜索入口权限</strong>：<code>POST /search</code>（system.py:552）现误用 <code>setting:view/update</code>，应改为已有 <code>search:execute</code>（constants.py:33），否则开 Web 手动搜索会连带暴露设置页。搜索结果仍按 5.1 的 <code>SEARCH_RESULT_INFO.USER_ID</code> 隔离。</p>
+<p><strong>资源消耗兜底</strong>：Phase 1 所有下载都消耗共享站点账号与全局带宽/磁盘。普通用户下载能力通过 <code>download:create</code> 授予（授予即信任发起下载），但不能触及下载器/预设等基础设施；如需每用户配额、下载审批，作为后续增强单独设计，不在本 ADR 范围。</p>
+<h4 id="61-共享资源保护规则审查补充">6.1 共享资源保护规则（审查补充）<a class="headerlink" href="#61-共享资源保护规则审查补充" title="Permanent link">¶</a></h4>
+<p>共享资源的消耗与故障是<strong>全局的</strong>，用户维度操作不得反向作用于共享资源。硬性规则：</p>
+<ol>
+<li><strong>用户操作单向性</strong>：用户维度只增（愿望单/进度/记账），共享资源只由系统收敛（去重/洗版/清理/重试）。用户删除订阅<strong>不停</strong>进行中的共享下载、<strong>不删</strong>已入库文件；用户修改质量/保存路径只影响其本人满足判定，不触发已有内容的洗版回退或删除——否则 A 删订阅会误伤 B 等待中的下载。</li>
+<li><strong>共享站点账号请求闸门</strong>：M 用户并发搜索会以 <code>搜索线程 × 站点 × 用户</code> 放大对共享凭据账号的请求。站点级限流器（ADR-008）必须<strong>全局键控</strong>（键=站点，跨用户、进程级），搜索并发闸门与 RSS 轮询在站点维度共享同一额度池；RSS 过期/站点请求失败告警属全局事件，推管理员。</li>
+<li><strong>RSS 刷新站点级聚合</strong>：保持现状形态（rss_feed.py:150 每站一次拉取 + 全部订阅匹配），调度入口全局唯一，用户订阅只是匹配集合，禁止按用户各触发一轮全站轮询（请求量 ×N）。</li>
+<li><strong>全局下载闸门</strong>：磁盘水位、下载器同时种子上限、连接数等全局闸门统一收敛到 <code>download:create</code> 服务入口，任何用户的下载都过同一闸门，防止单个用户占满共享磁盘影响全体。</li>
+<li><strong>事件路由分流</strong>：成功类事件按归属用户定向推送（5.6）；失败/人工介入类（转移失败、<code>TRANSFER_UNKNOWN</code>、种子红种）属共享资源故障，推系统/管理员渠道。</li>
+<li><strong>全局默认设置快照</strong>：用户新建订阅继承全局默认（<code>DefaultSubscribeSettingTV/MOV</code>、默认保存路径）时落库固化快照并在 UI 明示，避免管理员后续改全局配置导致存量订阅行为漂移。</li>
+<li><strong>插件约束</strong>：插件 handler 必须透传 <code>UserContext</code>；插件代码禁止绕过 repository 直连 ORM 读写订阅/下载/搜索数据（owner-scope 不可旁路）。该约束加入插件开发规范。</li>
+<li><strong>站点账号数据按可见站点过滤</strong>（已实施）：站点活跃度/历史/日统计/做种/用户统计接口对非超管按站点授权裁剪，只返回用户被授权站点的共享账号数据；<code>open</code> 策略、superadmin、<code>builtin:*</code> 通配不受限。媒体库路径、TMDB 黑名单收敛为 <code>library:manage</code>。</li>
+</ol>
+<h3 id="7-其他补全项">7. 其他补全项<a class="headerlink" href="#7-其他补全项" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>方案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API Key 数据权限</td>
+<td>已继承创建者功能权限（deps.py:85），同步继承 <code>role_codes</code> 后行级过滤天然生效</td>
+</tr>
+<tr>
+<td>用户自助</td>
+<td>新增权限码 <code>user:self</code>，改自己密码/头像、管理自己的 API Key，路由校验 <code>user_id == ctx.user_id</code></td>
+</tr>
+<tr>
+<td>角色防越权</td>
+<td>授权/改角色时校验操作者角色 <code>ROLE_LEVEL</code> ≤ 目标角色 level（数字越小级别越高），防止普通 admin 授予 superadmin</td>
+</tr>
+<tr>
+<td>操作审计</td>
+<td><code>RBAC_OPERATION_LOG</code> 已有 USER_ID，站点授权/回收、越权访问尝试纳入审计</td>
+</tr>
+</tbody>
+</table>
+<p>新增权限码：<code>site:assign</code>、<code>user:self</code>、<code>download:create</code>（第 6 节）；并修正 <code>POST /search</code> 使用已有 <code>search:execute</code>。以上追加到 <code>DEFAULT_PERMISSIONS</code>（<code>src/app/services/rbac/init/constants.py:3</code>）；superadmin 角色靠现有 <code>all_permissions</code> 启动补齐机制（role_init.py:40）自动获得。</p>
+<h3 id="8-数据库迁移">8. 数据库迁移<a class="headerlink" href="#8-数据库迁移" title="Permanent link">¶</a></h3>
+<p>一个 Alembic 迁移包含：</p>
+<ol>
+<li>新建 <code>RBAC_ROLE_SITES</code>、<code>RBAC_USER_SITES</code>、<code>RBAC_USER_CHANNELS</code> 三张表。</li>
+<li>第 5.1 节各表加 <code>USER_ID</code> 列 + 索引。</li>
+<li>存量数据归属：订阅相关四张表与自定义 RSS 的存量行 <code>USER_ID</code> 置为第一个 superadmin 用户 ID；<code>SEARCH_RESULT_INFO</code> 有 24h 概率清理（search_repository.py:167）可直接清空；<code>DOWNLOAD_HISTORY</code> 存量留 NULL；现有 Telegram <code>admin_ids</code> 中的 chat_id 自动生成到第一个 superadmin 的渠道绑定（5.8）。</li>
+<li><code>INDEXERSITECONFIG.PUBLIC</code> 存量全部保持 <code>1</code>（行为不变）；新增系统配置项 <code>site_grant_default_policy</code>（open/closed，默认 open），决定新建站点时 PUBLIC 默认值。</li>
+<li>订阅唯一索引（5.4 第 5 条）：建索引前需先合并同用户重复订阅行。</li>
+</ol>
+<p><strong>SQLite 注意</strong>：既有表加 FK 列需用 Alembic <code>batch_alter_table</code>（SQLite 不支持 ALTER ADD CONSTRAINT），并确认连接开启 <code>PRAGMA foreign_keys=ON</code>。</p>
+<p><strong>单用户实例零感知</strong>：唯一用户为 superadmin 时所有过滤短路，行为与现状完全一致。</p>
+<h3 id="9-api-变更">9. API 变更<a class="headerlink" href="#9-api-变更" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>接口</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET /rbac/roles/{id}/sites</code> / <code>PUT /rbac/roles/{id}/sites</code></td>
+<td>角色站点授权（<code>site:assign</code>）</td>
+</tr>
+<tr>
+<td><code>GET /rbac/users/{id}/sites</code> / <code>PUT /rbac/users/{id}/sites</code></td>
+<td>用户站点授权（<code>site:assign</code>）</td>
+</tr>
+<tr>
+<td><code>GET /sites/visible</code></td>
+<td>当前用户可见站点列表（供搜索/订阅 UI）</td>
+</tr>
+<tr>
+<td><code>POST /user/channel-bindings/code</code></td>
+<td>生成渠道绑定码（<code>user:self</code>，交互渠道用）</td>
+</tr>
+<tr>
+<td><code>POST /user/channel-bindings</code></td>
+<td>手动登记推送渠道 Key（<code>user:self</code>，纯推送渠道用）</td>
+</tr>
+<tr>
+<td><code>GET/DELETE /user/channel-bindings</code></td>
+<td>查看/解绑自己的渠道身份（<code>user:self</code>）</td>
+</tr>
+<tr>
+<td>订阅/下载历史列表</td>
+<td>增加 <code>?user_id=</code>（仅 superadmin 生效）</td>
+</tr>
+<tr>
+<td><code>/auth/me</code></td>
+<td><code>role_codes</code> 已有 roles 返回，无需变更</td>
+</tr>
+</tbody>
+</table>
+<h3 id="10-落地顺序">10. 落地顺序<a class="headerlink" href="#10-落地顺序" title="Permanent link">¶</a></h3>
+<ol>
+<li><strong>基础</strong>：<code>UserContext.role_codes</code> + <code>RBACCheckService</code> 服务端缓存改造（权限/角色即时生效，不依赖 JWT 副本）+ <code>apply_owner_scope</code> helper。</li>
+<li><strong>订阅隔离</strong>：订阅四表 + 自定义 RSS 加列，repository / API / 后台任务接入（含 5.4 调度分组与记账分离、5.5 系统上下文改造）。</li>
+<li><strong>站点授权</strong>：角色/用户两级授权表 + indexer 过滤 + 授权管理 API + 站点可见性接口。</li>
+<li><strong>搜索/下载归属</strong>：<code>SEARCH_RESULT_INFO</code> / <code>DOWNLOAD_HISTORY</code> 接入。</li>
+<li><strong>AI 工具链 + IM 绑定</strong>：handler 透传 <code>UserContext</code>；<code>RBAC_USER_CHANNELS</code> 与入站身份改造（5.8），通知按归属路由（5.6）。</li>
+<li><strong>前端</strong>：站点授权管理页、订阅/下载页"我的/全部"切换（superadmin）、搜索站点选择器按可见站点渲染、用户设置页渠道绑定码生成。</li>
+</ol>
+<p><strong>上线门禁</strong>：步骤 1-4 完成后才允许创建普通用户；步骤 5（AI 工具透传 + IM 绑定）完成前，普通用户不得授予 <code>agent:*</code> 权限、交互渠道保持仅绑定 superadmin——否则 <code>_TRUSTED_CHANNEL_PERMISSIONS</code> 与 agent 工具链是两个完整的权限绕过通道。步骤 6 可与后端并行。</p>
+<h3 id="11-phase-2后续阶段不在本-adr-范围">11. Phase 2（后续阶段，不在本 ADR 范围）<a class="headerlink" href="#11-phase-2后续阶段不在本-adr-范围" title="Permanent link">¶</a></h3>
+<p><strong>用户级站点凭据</strong>：<code>CONFIG_SITE</code> 目前一站一 Cookie 全局共享，多用户实际共用管理员一个人的 PT 账号搜索/下载，做种量与 H&amp;R 考核都挂在该账号上。若需每个用户使用自己的站点账号，则 <code>CONFIG_SITE</code> 加 <code>USER_ID</code> 做用户级凭据覆盖（用户凭据优先，缺省回落全局凭据），站点用户数据/做种统计随之按凭据归属。此项与行级隔离正交，单独设计。</p>
+<h2 id="实施记录2026-09-10">实施记录（2026-09-10）<a class="headerlink" href="#实施记录2026-09-10" title="Permanent link">¶</a></h2>
+<p>分支 <code>feature/multi-user-permission</code>（后端 + 前端 <code>nexus-media-web</code> 同名分支），3036 测试通过，ruff/pyright 全绿。</p>
+<h3 id="已交付">已交付<a class="headerlink" href="#已交付" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>基础设施</td>
+<td><code>UserContext.role_codes</code>/<code>is_superadmin</code>、<code>system_user_context()</code>、<code>RBACSnapshotCache</code> 权限快照（TTL 60s + 变更主动失效，判定走服务端不信任 JWT 副本）、<code>data_scope.apply_owner_scope/is_owner</code></td>
+</tr>
+<tr>
+<td>数据模型</td>
+<td>8 张业务表加 <code>USER_ID</code>（订阅四表/自定义RSS及其历史/下载历史；搜索结果沿用既有 String(64) 列），新增 <code>RBAC_ROLE_SITES</code>/<code>RBAC_USER_SITES</code>/<code>RBAC_USER_CHANNELS</code>；Alembic 迁移 <code>d8e9f0a1b2c4</code>（含存量归属首个 superadmin、重复订阅去重、具名外键 CASCADE/SET NULL、可回滚）</td>
+</tr>
+<tr>
+<td>站点授权</td>
+<td>角色级 ∪ 用户级授权（<code>search</code>/<code>rss</code> 用途粒度）、<code>site_grant_default_policy</code> 开关、索引器搜索过滤、RSS 执行时兜底、订阅保存白名单、授权管理 API + <code>/sites/visible</code>、站点统计数据按可见站点过滤</td>
+</tr>
+<tr>
+<td>数据隔离</td>
+<td>订阅/自定义RSS/搜索/下载历史全链路归属过滤与越权守卫（越权为无操作）；通知按归属用户定向（Web 隔离 + 绑定渠道单发）</td>
+</tr>
+<tr>
+<td>账号链路</td>
+<td>JWT 仅认证、API Key 继承创建者快照、IM 渠道绑定（绑定码/身份解析/未绑定拒绝）、系统上下文</td>
+</tr>
+<tr>
+<td>权限码</td>
+<td>新增 <code>site:assign</code>/<code>user:self</code>/<code>download:create</code>/<code>transfer:view</code>；<code>POST /search</code> 改用 <code>search:execute</code>；默认 <code>user</code> 角色移除 <code>site:view</code>/<code>service:view</code> 及站点管理/服务面板菜单</td>
+</tr>
+<tr>
+<td>生命周期</td>
+<td>删除用户/角色时 <code>OwnedDataCleaner</code> 显式清理归属数据（SQLite 未启用外键级联，服务层兜底）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="与设计的偏差有意简化功能正确">与设计的偏差（有意简化，功能正确）<a class="headerlink" href="#与设计的偏差有意简化功能正确" title="Permanent link">¶</a></h3>
+<ol>
+<li><strong>5.4 fan-out 落法更轻</strong>：RSS 刷新本就是站点级一次拉取，"搜索一次"天然成立。实现为 matcher 收集全部命中订阅 + 下载完成后联动完成兄弟订阅；<strong>仅联动过滤签名一致且未开洗版</strong>的兄弟订阅（避免高要求用户被低清副本满足）。部分季集的逐集进度联动未做，兄弟订阅待下一轮匹配推进（最终一致）。</li>
+<li><strong>任务队列仍为全局视图</strong>：<code>download:view</code> 可见进行中下载列表（ADR 5/6 有意设计，共享下载器），保留原状。</li>
+<li><strong>转移历史管理员专属</strong>：原由 <code>library:view</code> 守卫导致越权可见，已改为 <code>transfer:view</code>/<code>library:manage</code>；无 owner 字段，故不支持"只看自己的"。</li>
+<li><strong>搜索结果 USER_ID 为既有 String(64) 列</strong>：模型与读写对齐既有类型，避免 Integer/String 漂移。</li>
+<li><strong>Telegram 轮询不再按 <code>admin_ids</code> 拦截</strong>：多用户由绑定层鉴权（<code>admin_ids</code> 仅存量迁移为绑定）。</li>
+</ol>
+<h3 id="已知残留">已知残留<a class="headerlink" href="#已知残留" title="Permanent link">¶</a></h3>
+<ul>
+<li>存量安装的默认角色权限不会自动同步（角色权限仅首次创建时分配）；新权限码需管理员在角色管理中手动授予，或将 <code>user</code> 角色的 <code>site:view</code>/<code>service:view</code> 手动移除。</li>
+<li>钉钉个人主动推送依赖短期 sessionWebhook，主动推送不可靠（平台限制），入站命令正常。</li>
+<li>前端入口（站点授权抽屉、渠道绑定页、聚合视图、按用户筛选）已实现；<code>?user_id=</code> 下载历史筛选后端就绪、前端暂无独立页面。</li>
+</ul>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">¶</a></h2>
+<h3 id="正面">正面<a class="headerlink" href="#正面" title="Permanent link">¶</a></h3>
+<ul>
+<li>站点、订阅、搜索、下载形成完整的三层权限模型，且与现有 RBAC 权限码体系正交，无侵入。</li>
+<li>superadmin 语义收敛到单一角色码常量，无 <code>is_admin</code> 死代码与 <code>*</code> 通配的歧义。</li>
+<li>权限/角色判定走服务端缓存，授权回收即时生效（消除 JWT 内嵌权限的滞后面）。</li>
+<li>单用户/全开放实例迁移后行为不变。</li>
+<li>AI 助手与 IM 全权信任两个权限绕过通道被堵上。</li>
+</ul>
+<h3 id="代价">代价<a class="headerlink" href="#代价" title="Permanent link">¶</a></h3>
+<ul>
+<li>8 张表加列（订阅 4 + 自定义 RSS 2 + 搜索结果 1 + 下载历史 1）+ 3 张新表（角色站点、用户站点、渠道绑定），repository 层需全面过 <code>apply_owner_scope</code>，遗漏即泄漏——需配套测试覆盖（每表至少：本人可见、他人不可见、superadmin 全量、越权写 404 四类用例）。</li>
+<li>后台任务需携带归属上下文，签名有改动；无上下文路径必须显式用系统上下文（5.5）。</li>
+<li>服务端权限/角色缓存引入失效与一致性成本；角色/权限变更点需统一触发失效，遗漏会导致权限不生效（向安全侧偏）。</li>
+</ul>
+<h3 id="风险">风险<a class="headerlink" href="#风险" title="Permanent link">¶</a></h3>
+<ul>
+<li>站点名作为授权键（<code>SITE_NAME</code>）在站点改名时需级联更新授权表——站点改名属低频管理操作，在站点更新服务中处理。</li>
+<li>角色级站点授权收回影响整组用户，属预期语义；授权/回收操作已纳入审计（第 7 节），执行时兜底过滤（4.3）保证收回即时生效。</li>
+<li>第三方索引器（Jackett/Prowlarr）站点命名与内置不一致（见 ADR-016），授权表用 <code>jackett:&lt;id&gt;</code> / <code>prowlarr:&lt;id&gt;</code> 精确授权或 <code>jackett:*</code> / <code>prowlarr:*</code> 整体授权（4.1）。</li>
+<li>共享凭据下普通用户的下载/订阅行为都消耗管理员站点账号（做种、H&amp;R）——通过功能权限码谨慎授予缓解，根本解在 Phase 2 用户级凭据。</li>
+<li>并发下载竞态依赖 <code>DISTRIBUTEDLOCK</code> 按种子加锁（5.4 第 4 条），单实例部署下退化为进程内锁，可接受。</li>
+<li>IM 渠道"全权信任"退役（5.8）是行为变更：升级后未绑定的 TG 用户失去交互能力，需发版说明中明确提示先完成绑定。</li>
+<li>APIv1 旧 Token 映射系统上下文（5.5）等于全权通道：若旧 API 仍对外开放（移动端/第三方脚本），会绕过全部隔离——实施时确认其暴露面，必要时下线或限内网。</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "content.action.edit", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
