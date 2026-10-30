@@ -689,6 +689,7 @@ class MetadataService:
                         # 只有 fanart/截图时仍视为不完整：海报是媒体库卡片的核心图。
                         cached_ok = False
                     if cached_ok:
+                        self._attach_source_hints(cached_metadata, media_info)
                         return cached_metadata
                     log.debug("[Metadata]旧快照缺少标题/图片，重新合成")
                 except Exception as exc:  # noqa: BLE001 - 旧快照结构不兼容时重新合成
@@ -707,6 +708,8 @@ class MetadataService:
             locked=locked,
         )
         metadata = result.metadata
+        if metadata is not None:
+            self._attach_source_hints(metadata, media_info)
         if with_episodes and metadata is not None and media_type in {MediaType.TV, MediaType.ANIME}:
             target_seasons = [season] if season else [item.season_number for item in metadata.seasons] or [1]
             for target_season in target_seasons:
@@ -732,6 +735,20 @@ class MetadataService:
         if result.errors:
             record_degraded()
         return metadata
+
+    @staticmethod
+    def _attach_source_hints(metadata: MediaMetadata, media_info: Any) -> None:
+        """把下载站点携带的标签/描述送入快照，供插件判断版本性质。"""
+        labels = getattr(media_info, "labels", None)
+        if isinstance(labels, str):
+            labels = [item for item in labels.replace("，", ",").replace("|", ",").split(",") if item.strip()]
+        if isinstance(labels, (list, tuple, set)):
+            values = [str(item).strip() for item in labels if str(item).strip()]
+            if values:
+                metadata.extra["source.labels"] = values
+        description = getattr(media_info, "description", None) or getattr(media_info, "org_string", None)
+        if description:
+            metadata.extra["source.description"] = str(description)
 
     def _refs_support_images(self, refs: list[ProviderRef]) -> bool:
         """判断引用中的 provider 是否本应提供图片，用于识别旧空快照."""

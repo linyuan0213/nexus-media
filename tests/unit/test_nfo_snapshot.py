@@ -243,3 +243,19 @@ def test_movie_nfo_appends_real_streamdetails(tmp_path):
     assert "<streamdetails>" in xml
     assert "<video>" in xml
     assert "<codec>" in xml
+
+
+def test_movie_nfo_marks_external_subtitle_as_chinese(tmp_path):
+    downloader = _FakeDownloader()
+    generator = NfoGenerator(downloader)
+    (tmp_path / "movie.chi.zh-cn.srt").write_text("1\n00:00:00,000 --> 00:00:01,000\n字幕", encoding="utf-8")
+
+    generator.gen_movie_nfo_from_snapshot(
+        _snapshot(),
+        {"basic": True, "credits": True},
+        str(tmp_path),
+        "movie",
+    )
+
+    xml, _ = downloader.saved[0]
+    assert "<tag>中字</tag>" in xml

@@ -51,11 +51,7 @@ class SearchResultService:
             if parsed_mtype != MediaType.MOVIE:
                 se_key = infer_episode_key(se_key, item.TORRENT_NAME)
             media_type = parsed_mtype.value if parsed_mtype != MediaType.UNKNOWN else mtype
-            labels = [
-                label
-                for label in str(item.NOTE).split("|")
-                if label in ["官方", "官组", "中字", "国语", "粤语", "国配", "特效", "特效字幕"]
-            ]
+            labels = [label.strip() for label in str(item.NOTE).split("|") if label.strip()]
             torrent_item = {
                 "id": item.ID,
                 "seeders": item.SEEDERS,

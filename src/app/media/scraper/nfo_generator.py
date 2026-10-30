@@ -18,6 +18,24 @@ def _create_document():
     return xml.dom.minidom.getDOMImplementation().createDocument(None, None, None)
 
 
+_SUBTITLE_EXTENSIONS = (".srt", ".ass", ".ssa", ".sub", ".vtt")
+
+
+def _has_external_subtitle(out_path: str, file_name: str) -> bool:
+    try:
+        names = os.listdir(out_path)
+    except OSError:
+        return False
+    prefix = str(file_name or "").lower()
+    return any(name.lower().startswith(prefix) and name.lower().endswith(_SUBTITLE_EXTENSIONS) for name in names)
+
+
+def _add_tag_once(doc, root, tag: str) -> None:
+    existing = {str(node.firstChild.nodeValue if node.firstChild else "") for node in root.getElementsByTagName("tag")}
+    if tag not in existing:
+        DomUtils.add_node(doc, root, "tag", tag)
+
+
 class NfoGenerator:
     """NFO 文件生成器 — 负责生成电影/电视剧/季/集的 NFO XML"""
 
@@ -174,6 +192,8 @@ class NfoGenerator:
             DomUtils.add_node(doc, root, "premiered", release)
             DomUtils.add_node(doc, root, "year", _snapshot_value(snapshot, "year") or str(release)[:4])
         self._append_fileinfo(doc, root, out_path, file_name)
+        if _has_external_subtitle(out_path, file_name):
+            _add_tag_once(doc, root, "中字")
         self._downloader.save_nfo(doc, os.path.join(out_path, f"{file_name}.nfo"))
 
     def _append_fileinfo(self, doc, root, out_path, file_name):
