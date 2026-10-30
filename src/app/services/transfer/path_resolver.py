@@ -8,7 +8,6 @@ from typing import Any
 import log
 from app.core.constants import DEFAULT_MOVIE_FORMAT, DEFAULT_TV_FORMAT
 from app.core.settings import settings
-from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.domain.mediatypes import MediaType
 from app.media.metadata.naming import (
@@ -23,6 +22,17 @@ from app.storage.backends.base import StorageConfig, StorageType
 from app.storage.backends.local import LocalStorageBackend
 from app.storage.config_models import LocalStorageConfig
 from app.utils import NumberUtils, PathUtils, StringUtils, SystemUtils
+
+
+def safe_category_name(value: Any) -> str:
+    """分类目录只允许单段相对名称，避免子目录/路径穿越."""
+    category = str(value or "").strip()
+    if not category or category in {".", ".."}:
+        return ""
+    if "/" in category or "\\" in category or ":" in category:
+        log.warn(f"[TransferPathResolver]忽略非法分类目录名: {category!r}")
+        return ""
+    return category
 
 
 class TransferPathResolver:
@@ -77,12 +87,10 @@ class TransferPathResolver:
         storage_backend_repo: StorageBackendRepositoryAdapter | None = None,
     ) -> "TransferPathResolver":
         """从全局配置构造解析器."""
-        adapter = CategoryConfigRepositoryAdapter()
-        entities = adapter.get_all()
-        movie_flag = any(e.media_type == "movie" for e in entities)
-        tv_flag = any(e.media_type == "tv" for e in entities)
-        anime_flag = any(e.media_type == "anime" for e in entities)
         media_cfg = media_config_service.get_config()
+        movie_flag = media_cfg.get("movie_layout") == MediaConfigService.LAYOUT_CATEGORY
+        tv_flag = media_cfg.get("tv_layout") == MediaConfigService.LAYOUT_CATEGORY
+        anime_flag = media_cfg.get("anime_layout") == MediaConfigService.LAYOUT_CATEGORY
         media = settings.get("media")
 
         movie_path = media_cfg.get("movie_path") or []
@@ -206,6 +214,18 @@ class TransferPathResolver:
     @property
     def anime_category_flag(self):
         return self._anime_category_flag
+
+    @property
+    def movie_layout(self) -> str:
+        return MediaConfigService.LAYOUT_CATEGORY if self._movie_category_flag else MediaConfigService.LAYOUT_FLAT
+
+    @property
+    def tv_layout(self) -> str:
+        return MediaConfigService.LAYOUT_CATEGORY if self._tv_category_flag else MediaConfigService.LAYOUT_FLAT
+
+    @property
+    def anime_layout(self) -> str:
+        return MediaConfigService.LAYOUT_CATEGORY if self._anime_category_flag else MediaConfigService.LAYOUT_FLAT
 
     # ---------- 路径判断 ----------
 
@@ -494,25 +514,20 @@ class TransferPathResolver:
         """拼装转移重命名后的新文件地址."""
         if not dest or not meta_info:
             return None
+        category = safe_category_name(getattr(meta_info, "category", ""))
         if meta_info.type == MediaType.MOVIE:
             dir_name, _ = self.get_movie_dest_path(meta_info, media_service, snapshot)
-            if self._movie_category_flag:
-                return os.path.join(dest, meta_info.category, dir_name)
-            else:
-                return os.path.join(dest, dir_name)
-        else:
-            dir_name, season_name, _ = self.get_tv_dest_path(meta_info, media_service, snapshot)
-            if meta_info.type == MediaType.TV:
-                if self._tv_category_flag:
-                    return os.path.join(dest, meta_info.category, dir_name, season_name)
-                return os.path.join(dest, dir_name, season_name)
-            # 动漫：专用动漫目录时不加分类子目录；回退 TV 目录时按分类进子目录
-            is_dedicated_anime = any(PathUtils.is_path_in_path(p, dest) for p in self._anime_path)
-            if is_dedicated_anime:
-                return os.path.join(dest, dir_name, season_name)
-            if self._tv_category_flag:
-                return os.path.join(dest, meta_info.category, dir_name, season_name)
+            if self._movie_category_flag and category:
+                return os.path.join(dest, category, dir_name)
+            return os.path.join(dest, dir_name)
+        dir_name, season_name, _ = self.get_tv_dest_path(meta_info, media_service, snapshot)
+        if meta_info.type == MediaType.TV:
+            if self._tv_category_flag and category:
+                return os.path.join(dest, category, dir_name, season_name)
             return os.path.join(dest, dir_name, season_name)
+        if self._anime_category_flag and category:
+            return os.path.join(dest, category, dir_name, season_name)
+        return os.path.join(dest, dir_name, season_name)
 
 
 def _media_provider(media) -> tuple[str | None, str | None]:

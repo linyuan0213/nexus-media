@@ -916,6 +916,9 @@ class ConfigRepository(BaseRepository):
         tv_backend: str = "",
         anime_backend: str = "",
         unknown_backend: str = "",
+        movie_layout: str = "category",
+        tv_layout: str = "category",
+        anime_layout: str = "flat",
     ) -> None:
         """设置媒体库路径配置（单条记录）"""
         with self.session() as db:
@@ -929,6 +932,9 @@ class ConfigRepository(BaseRepository):
                 existing.TV_BACKEND = tv_backend or existing.TV_BACKEND or ""
                 existing.ANIME_BACKEND = anime_backend or existing.ANIME_BACKEND or ""
                 existing.UNKNOWN_BACKEND = unknown_backend or existing.UNKNOWN_BACKEND or ""
+                existing.MOVIE_LAYOUT = movie_layout
+                existing.TV_LAYOUT = tv_layout
+                existing.ANIME_LAYOUT = anime_layout
             else:
                 config = CONFIGMEDIA(
                     MOVIE_PATH=movie_path or "",
@@ -939,8 +945,27 @@ class ConfigRepository(BaseRepository):
                     TV_BACKEND=tv_backend or "",
                     ANIME_BACKEND=anime_backend or "",
                     UNKNOWN_BACKEND=unknown_backend or "",
+                    MOVIE_LAYOUT=movie_layout,
+                    TV_LAYOUT=tv_layout,
+                    ANIME_LAYOUT=anime_layout,
                 )
                 db.add(config)
+
+    def set_media_layouts(self, movie_layout: str, tv_layout: str, anime_layout: str) -> None:
+        """只更新媒体库目录结构，不动路径和后端配置."""
+        with self.session() as db:
+            existing = db.query(CONFIGMEDIA).first()
+            if existing is None:
+                existing = CONFIGMEDIA(
+                    MOVIE_LAYOUT=movie_layout,
+                    TV_LAYOUT=tv_layout,
+                    ANIME_LAYOUT=anime_layout,
+                )
+                db.add(existing)
+                return
+            existing.MOVIE_LAYOUT = movie_layout
+            existing.TV_LAYOUT = tv_layout
+            existing.ANIME_LAYOUT = anime_layout
 
     # ==================== Category Config ====================
 

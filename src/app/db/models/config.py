@@ -141,6 +141,9 @@ class CONFIGMEDIA(Base):
     TV_BACKEND: Mapped[str | None] = mapped_column(Text, nullable=True)
     ANIME_BACKEND: Mapped[str | None] = mapped_column(Text, nullable=True)
     UNKNOWN_BACKEND: Mapped[str | None] = mapped_column(Text, nullable=True)
+    MOVIE_LAYOUT: Mapped[str] = mapped_column(String(20), default="category")
+    TV_LAYOUT: Mapped[str] = mapped_column(String(20), default="category")
+    ANIME_LAYOUT: Mapped[str] = mapped_column(String(20), default="flat")
     NOTE: Mapped[str] = mapped_column(Text, default="")
 
 

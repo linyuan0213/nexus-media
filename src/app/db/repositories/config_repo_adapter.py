@@ -559,7 +559,23 @@ class MediaConfigRepositoryAdapter:
         tv_backend: str = "",
         anime_backend: str = "",
         unknown_backend: str = "",
+        movie_layout: str = "category",
+        tv_layout: str = "category",
+        anime_layout: str = "flat",
     ) -> None:
         self._repo.set_media_config(
-            movie_path, tv_path, anime_path, unknown_path, movie_backend, tv_backend, anime_backend, unknown_backend
+            movie_path,
+            tv_path,
+            anime_path,
+            unknown_path,
+            movie_backend,
+            tv_backend,
+            anime_backend,
+            unknown_backend,
+            movie_layout,
+            tv_layout,
+            anime_layout,
         )
+
+    def set_media_layouts(self, movie_layout: str, tv_layout: str, anime_layout: str) -> None:
+        self._repo.set_media_layouts(movie_layout, tv_layout, anime_layout)

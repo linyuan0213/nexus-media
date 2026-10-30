@@ -1691,6 +1691,12 @@ class MediaPathUpdateRequest(BaseModel):
     backend: str = "local"
 
 
+class MediaLayoutRequest(BaseModel):
+    movie_layout: str = "category"
+    tv_layout: str = "category"
+    anime_layout: str = "flat"
+
+
 @router.post("/library/path", response_model=CommonResponse, summary="获取媒体库配置")
 def get_media_library_config(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
@@ -1698,6 +1704,17 @@ def get_media_library_config(
 ):
     """获取媒体库路径配置（DB 优先，YAML 回退）"""
     return success(data=svc.get_config())
+
+
+@router.post("/library/layout", response_model=CommonResponse, summary="更新媒体库目录结构")
+def update_media_layout(
+    req: MediaLayoutRequest,
+    current_user=Depends(require_permission("library:manage")),
+    svc: MediaConfigService = Depends(get_media_config_service),
+):
+    """更新电影/电视剧/动漫的目录结构；动漫默认平铺."""
+    svc.set_layouts(req.movie_layout, req.tv_layout, req.anime_layout)
+    return success()
 
 
 @router.post("/library/path/add", response_model=CommonResponse, summary="添加媒体库路径")
