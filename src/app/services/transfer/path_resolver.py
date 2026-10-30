@@ -506,11 +506,8 @@ class TransferPathResolver:
                 if self._tv_category_flag:
                     return os.path.join(dest, meta_info.category, dir_name, season_name)
                 return os.path.join(dest, dir_name, season_name)
-            # 动漫：专用动漫目录时不加分类子目录；回退 TV 目录时按分类进子目录
-            is_dedicated_anime = any(PathUtils.is_path_in_path(p, dest) for p in self._anime_path)
-            if is_dedicated_anime:
-                return os.path.join(dest, dir_name, season_name)
-            if self._tv_category_flag:
+            # 动漫：配置了二级分类时按分类分目录，未配置或分类为空时直接使用动漫目录
+            if self._anime_category_flag and str(getattr(meta_info, "category", "") or "").strip():
                 return os.path.join(dest, meta_info.category, dir_name, season_name)
             return os.path.join(dest, dir_name, season_name)
 
