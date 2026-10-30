@@ -1,6 +1,7 @@
 """基础设施 Builder — 创建 Layer 1 对象。"""
 
 import log
+from app.db.database_factory import DatabaseFactory
 from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.db.repositories.plugin_framework_repo_adapter import PluginLogRepositoryAdapter
@@ -33,6 +34,7 @@ def build_infrastructure() -> InfrastructureObjects:
     """创建 Layer 1 基础设施对象。"""
     plugin_registry = PluginRegistry()
     thread_executor = ThreadExecutor.named("default")
+    transfer_sync_executor = ThreadExecutor.named("transfer_sync", max_workers=DatabaseFactory.get_sync_workers())
     scheduler_core = SchedulerCore()
     apikey_service = APIKeyService(
         key_repo=APIKeyRepositoryAdapter(),
@@ -89,6 +91,7 @@ def build_infrastructure() -> InfrastructureObjects:
     return InfrastructureObjects(
         event_bus=event_bus,
         thread_executor=thread_executor,
+        transfer_sync_executor=transfer_sync_executor,
         scheduler_core=scheduler_core,
         message=message,
         message_queue=message_queue,

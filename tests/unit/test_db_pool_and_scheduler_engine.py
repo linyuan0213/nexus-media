@@ -4,6 +4,7 @@ import threading
 from unittest.mock import MagicMock
 
 from app.db import engine as db_engine
+from app.db.connection_budget import ConnectionBudget, load_connection_budget
 from app.db.database_factory import DatabaseFactory
 from app.services import sync_engine as se
 
@@ -36,12 +37,14 @@ def test_is_connection_slot_exhausted_ignores_unrelated_errors():
 
 
 def test_describe_pool_budget_mentions_total(monkeypatch):
+    DatabaseFactory.reset_connection_budget()
     monkeypatch.setenv("DATABASE__POOL_SIZE", "5")
     monkeypatch.setenv("DATABASE__MAX_OVERFLOW", "5")
     monkeypatch.setenv("DATABASE__SCHEDULER_POOL_SIZE", "2")
     monkeypatch.setenv("DATABASE__SCHEDULER_MAX_OVERFLOW", "2")
     text = DatabaseFactory.describe_pool_budget()
-    assert "14 条" in text
+    assert "主池 5+5=10 条" in text
+    assert "调度池 2+2=4 条" in text
 
 
 def test_get_int_config_reads_env(monkeypatch):
@@ -58,6 +61,7 @@ def test_get_int_config_falls_back_to_default(monkeypatch):
 
 
 def test_create_engine_applies_pool_env(monkeypatch):
+    DatabaseFactory.reset_connection_budget()
     monkeypatch.setenv("DATABASE__POOL_SIZE", "33")
     monkeypatch.setenv("DATABASE__MAX_OVERFLOW", "7")
     monkeypatch.setenv("DATABASE__POOL_TIMEOUT", "9")
@@ -113,11 +117,13 @@ def test_session_manager_uses_scheduler_factory(monkeypatch):
     mgr._factory.assert_not_called()
 
 
-def test_sync_reports_slot_exhausted_once_per_round(monkeypatch):
-    """连接槽位耗尽应汇总为一条可操作告警，不能每个文件刷一条."""
+def test_sync_reports_slot_exhausted_once_per_window(monkeypatch):
+    """连接槽位耗尽按时间窗口汇总，不能每个文件刷一条."""
     engine = se.SyncEngine.__new__(se.SyncEngine)
     engine._slot_exhausted_lock = threading.Lock()
-    engine._slot_exhausted_count = 0
+    engine._slot_exhausted_last = 0.0
+    now = [1000.0]
+    monkeypatch.setattr(se.time, "monotonic", lambda: now[0])
 
     errors: list[str] = []
     monkeypatch.setattr(se.log, "error", lambda msg: errors.append(msg))
@@ -128,10 +134,50 @@ def test_sync_reports_slot_exhausted_once_per_round(monkeypatch):
         engine._report_transfer_error(f"/video/{i}", exc)
 
     assert len(errors) == 1
-    assert "DATABASE__POOL_SIZE" in errors[0]
+    assert "max_connections" in errors[0]
 
-    # 一轮结束重置计数后，下一轮仍会报告一次
-    engine._slot_exhausted_count = 0
-    engine._report_transfer_error("/video/x", exc)
+    now[0] += 61
+    engine._report_transfer_error("/video/after-window", exc)
     assert len(errors) == 2
 
+
+def test_connection_budget_clamps_to_low_server_capacity(monkeypatch):
+    for key in (
+        "DATABASE__POOL_SIZE",
+        "DATABASE__MAX_OVERFLOW",
+        "DATABASE__SCHEDULER_POOL_SIZE",
+        "DATABASE__SCHEDULER_MAX_OVERFLOW",
+        "DATABASE__SYNC_WORKERS",
+        "DATABASE__MAX_CONNECTIONS",
+        "DATABASE__CONNECTION_RESERVE",
+        "DATABASE__EXTERNAL_CONNECTION_RESERVE",
+        "DATABASE__API_CONNECTION_RESERVE",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    budget = load_connection_budget("postgresql", server_max_connections=20)
+    assert budget.total_capacity <= budget.available_connections
+    assert budget.main_pool_size + budget.main_max_overflow >= 1
+    assert budget.scheduler_pool_size + budget.scheduler_max_overflow >= 1
+    assert 1 <= budget.sync_workers <= budget.main_capacity
+
+
+def test_connection_budget_keeps_defaults_when_server_has_room():
+    budget = load_connection_budget("postgresql", server_max_connections=100)
+    assert budget.main_capacity == 20
+    assert budget.scheduler_capacity == 10
+    assert budget.sync_workers == 4
+    assert budget.is_valid is True
+
+
+def test_connection_budget_never_exceeds_available():
+    budget = ConnectionBudget(
+        main_pool_size=20,
+        main_max_overflow=20,
+        scheduler_pool_size=10,
+        scheduler_max_overflow=10,
+        sync_workers=10,
+        server_max_connections=30,
+        reserved_connections=3,
+        external_reserve=5,
+    ).resolve()
+    assert budget.total_capacity <= budget.available_connections

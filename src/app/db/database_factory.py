@@ -23,6 +23,7 @@ from sqlalchemy.pool import NullPool, QueuePool, StaticPool
 
 import log
 from app.core.settings import settings
+from app.db.connection_budget import ConnectionBudget, load_connection_budget
 
 # 环境变量名称映射
 ENV_VAR_MAP = {
@@ -40,6 +41,9 @@ ENV_VAR_MAP = {
     "scheduler_max_overflow": "DATABASE__SCHEDULER_MAX_OVERFLOW",
     "scheduler_pool_timeout": "DATABASE__SCHEDULER_POOL_TIMEOUT",
 }
+
+
+_connection_budget: ConnectionBudget | None = None
 
 
 class DatabaseFactory:
@@ -161,7 +165,7 @@ class DatabaseFactory:
 
                 # 连接到 MySQL 服务器（不指定数据库）
                 server_url = f"mysql+pymysql://{quote_plus(str(username))}:{quote_plus(str(password))}@{host}:{port}"
-                engine = sa_create_engine(server_url)
+                engine = sa_create_engine(server_url, poolclass=NullPool)
 
                 with engine.connect() as conn:
                     # 创建数据库（如果不存在）
@@ -180,7 +184,7 @@ class DatabaseFactory:
 
                 # 连接到 PostgreSQL 服务器（使用 postgres 数据库）
                 server_url = f"postgresql+psycopg2://{quote_plus(str(username))}:{quote_plus(str(password))}@{host}:{port}/postgres"
-                engine = sa_create_engine(server_url, isolation_level="AUTOCOMMIT")
+                engine = sa_create_engine(server_url, isolation_level="AUTOCOMMIT", poolclass=NullPool)
 
                 with engine.connect() as conn:
                     # 检查数据库是否存在
@@ -249,11 +253,15 @@ class DatabaseFactory:
         else:
             # MySQL/PostgreSQL 连接池配置
             engine_kwargs["poolclass"] = QueuePool
-            engine_kwargs["pool_size"] = kwargs.get("pool_size") or DatabaseFactory._get_int_config(
-                "pool_size", DatabaseFactory.DEFAULT_POOL_SIZE
+            budget = DatabaseFactory.get_connection_budget()
+            is_scheduler = "scheduler" in str(kwargs.get("application_name") or "")
+            default_pool_size = budget.scheduler_pool_size if is_scheduler else budget.main_pool_size
+            default_max_overflow = budget.scheduler_max_overflow if is_scheduler else budget.main_max_overflow
+            engine_kwargs["pool_size"] = (
+                kwargs["pool_size"] if kwargs.get("pool_size") is not None else default_pool_size
             )
-            engine_kwargs["max_overflow"] = kwargs.get("max_overflow") or DatabaseFactory._get_int_config(
-                "max_overflow", DatabaseFactory.DEFAULT_MAX_OVERFLOW
+            engine_kwargs["max_overflow"] = (
+                kwargs["max_overflow"] if kwargs.get("max_overflow") is not None else default_max_overflow
             )
             engine_kwargs["pool_timeout"] = kwargs.get("pool_timeout") or DatabaseFactory._get_int_config(
                 "pool_timeout", DatabaseFactory.DEFAULT_POOL_TIMEOUT
@@ -341,28 +349,66 @@ class DatabaseFactory:
         return any(marker in message for marker in DatabaseFactory.SLOT_EXHAUSTED_MARKERS)
 
     @staticmethod
+    def prepare_connection_budget() -> ConnectionBudget:
+        """检测服务端容量并生成本进程统一连接预算."""
+        global _connection_budget
+        if _connection_budget is not None:
+            return _connection_budget
+        db_type = DatabaseFactory._get_config_db_type()
+        server_max: int | None = None
+        if db_type != DatabaseFactory.SQLITE:
+            engine: Engine | None = None
+            try:
+                engine = sa_create_engine(
+                    DatabaseFactory.get_main_db_url(),
+                    poolclass=NullPool,
+                    connect_args={"application_name": "nexus_media-budget-probe"}
+                    if db_type == DatabaseFactory.POSTGRESQL
+                    else {},
+                )
+                with engine.connect() as conn:
+                    if db_type == DatabaseFactory.POSTGRESQL:
+                        server_max = int(conn.execute(text("SHOW max_connections")).scalar() or 0)
+                    elif db_type == DatabaseFactory.MYSQL:
+                        row = conn.execute(text("SHOW VARIABLES LIKE 'max_connections'")).first()
+                        server_max = int(row[1]) if row else None
+            except Exception as exc:  # noqa: BLE001 - 探测失败时使用保守默认值
+                log.warn(f"[DatabaseFactory]无法探测服务端 max_connections，使用默认预算: {exc}")
+            finally:
+                if engine is not None:
+                    engine.dispose()
+        _connection_budget = load_connection_budget(db_type, server_max)
+        if not _connection_budget.is_valid:
+            log.error(f"[DatabaseFactory]连接预算超出服务端可用槽位: {_connection_budget.describe()}")
+        else:
+            log.info(f"[DatabaseFactory]连接预算: {_connection_budget.describe()}")
+        return _connection_budget
+
+    @staticmethod
+    def get_connection_budget() -> ConnectionBudget:
+        return DatabaseFactory.prepare_connection_budget()
+
+    @staticmethod
+    def reset_connection_budget() -> None:
+        """测试用：清除已探测预算."""
+        global _connection_budget
+        _connection_budget = None
+
+    @staticmethod
     def get_main_pool_capacity() -> int:
-        """主连接池的连接上限（pool_size + max_overflow）."""
-        return DatabaseFactory._get_int_config("pool_size", DatabaseFactory.DEFAULT_POOL_SIZE) + (
-            DatabaseFactory._get_int_config("max_overflow", DatabaseFactory.DEFAULT_MAX_OVERFLOW)
-        )
+        return DatabaseFactory.get_connection_budget().main_capacity
 
     @staticmethod
     def get_scheduler_pool_capacity() -> int:
-        """调度连接池的连接上限，也是调度任务允许的最大并发线程数."""
-        return DatabaseFactory._get_int_config(
-            "scheduler_pool_size", DatabaseFactory.DEFAULT_SCHEDULER_POOL_SIZE
-        ) + DatabaseFactory._get_int_config("scheduler_max_overflow", DatabaseFactory.DEFAULT_SCHEDULER_MAX_OVERFLOW)
+        return DatabaseFactory.get_connection_budget().scheduler_capacity
+
+    @staticmethod
+    def get_sync_workers() -> int:
+        return DatabaseFactory.get_connection_budget().sync_workers
 
     @staticmethod
     def describe_pool_budget() -> str:
-        """返回主池/调度池连接上限摘要（启动日志与排障用）。"""
-        main_max = DatabaseFactory.get_main_pool_capacity()
-        sched_max = DatabaseFactory.get_scheduler_pool_capacity()
-        return (
-            f"主池上限 {main_max} 条 + 调度池上限 {sched_max} 条 = 进程最多占用 {main_max + sched_max} 条连接，"
-            f"请确保数据库 max_connections 扣除 superuser_reserved_connections 与其他客户端后仍有余量"
-        )
+        return DatabaseFactory.get_connection_budget().describe()
 
     @staticmethod
     def _get_env_value(key: str, default: Any = None) -> Any:

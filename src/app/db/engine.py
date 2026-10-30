@@ -42,6 +42,7 @@ def _init_engine():
     if _Engine is None:
         with _engine_lock:
             if _Engine is None:
+                DatabaseFactory.prepare_connection_budget()
                 _Engine = DatabaseFactory.create_engine()
                 _SessionFactory = sessionmaker(
                     bind=_Engine,
@@ -49,7 +50,6 @@ def _init_engine():
                     autocommit=False,
                     expire_on_commit=False,
                 )
-                # 连接预算一次性打到启动日志，便于比对数据库实际可用槽位
                 log.info(f"[DB]连接预算：{DatabaseFactory.describe_pool_budget()}")
 
 
@@ -59,13 +59,10 @@ def _init_scheduler_engine():
     if _SchedulerEngine is None:
         with _engine_lock:
             if _SchedulerEngine is None:
+                budget = DatabaseFactory.get_connection_budget()
                 _SchedulerEngine = DatabaseFactory.create_engine(
-                    pool_size=DatabaseFactory._get_int_config(
-                        "scheduler_pool_size", DatabaseFactory.DEFAULT_SCHEDULER_POOL_SIZE
-                    ),
-                    max_overflow=DatabaseFactory._get_int_config(
-                        "scheduler_max_overflow", DatabaseFactory.DEFAULT_SCHEDULER_MAX_OVERFLOW
-                    ),
+                    pool_size=budget.scheduler_pool_size,
+                    max_overflow=budget.scheduler_max_overflow,
                     pool_timeout=DatabaseFactory._get_int_config(
                         "scheduler_pool_timeout", DatabaseFactory.DEFAULT_SCHEDULER_POOL_TIMEOUT
                     ),

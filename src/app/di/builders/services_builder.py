@@ -46,7 +46,6 @@ from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.indexer import Indexer
 from app.infrastructure.image_proxy import ImageProxy
 from app.infrastructure.progress.tracker import ProgressTracker
-from app.infrastructure.thread import ThreadExecutor
 from app.media import MediaCache
 from app.media.external.bangumi import Bangumi
 from app.media.external.douban import DouBan
@@ -280,17 +279,13 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         event_bus=event_bus,
     )
 
-    # 目录同步使用独立线程池：并发度必须与数据库连接池容量匹配。
-    # 复用共享 default 池(50 worker)时一轮同步会同时提交几十个文件任务、各自占一条 DB 连接，
-    # 池被撑爆后 overflow 新建连接会被数据库直接拒绝（remaining connection slots）。
-    sync_workers = 4
+    # 目录同步使用由连接预算推导的独立线程池，避免共享池放大并发。
     sync_engine = SyncEngine(
         transfer_engine=transfer_engine,
         transfer_pipeline=transfer_pipeline,
         sync_path_repo=SyncPathRepositoryAdapter(),
         storage_backend_repo=StorageBackendRepositoryAdapter(),
-        thread_executor=ThreadExecutor.named("transfer_sync", max_workers=sync_workers),
-        sync_workers=sync_workers,
+        thread_executor=infra.transfer_sync_executor,
     )
 
     sync_service = SyncService(

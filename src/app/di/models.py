@@ -49,6 +49,7 @@ class InfrastructureObjects:
 
     event_bus: EventBus
     thread_executor: ThreadExecutor
+    transfer_sync_executor: ThreadExecutor
     scheduler_core: SchedulerCore
     message: Message
     message_queue: MessageQueue

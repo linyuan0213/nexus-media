@@ -1,10 +1,13 @@
 """SyncEngine 单元测试."""
 
+import threading
+import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.infrastructure.thread import ThreadExecutor
 from app.services.sync_engine import FileMonitorHandler, SyncEngine, SyncPathConfig, _synced_lock
 from app.storage.backends.local import LocalStorageBackend
 
@@ -428,7 +431,6 @@ class TestSyncEngine:
         mock_executor = MagicMock()
         mock_executor.submit.side_effect = fake_submit
         eng._thread_executor = mock_executor
-        eng._sync_workers = 4
 
         with patch("app.services.sync_engine.get_lock_manager") as mock_lock_mgr:
             lock = MagicMock()
@@ -578,3 +580,28 @@ def test_do_transfer_skips_when_transfer_history_target_exists(engine, tmp_path)
     with patch.object(eng, "_history_dest_exists", return_value=True):
         eng._do_transfer(str(media), cfg)
     eng._pipeline.process.assert_not_called()
+
+
+def test_run_parallel_respects_executor_worker_limit():
+    executor = ThreadExecutor(max_workers=2, name="test-transfer-sync-bound")
+    engine = SyncEngine.__new__(SyncEngine)
+    engine._thread_executor = executor
+    active = 0
+    peak = 0
+    lock = threading.Lock()
+
+    def work(_item):
+        nonlocal active, peak
+        with lock:
+            active += 1
+            peak = max(peak, active)
+        time.sleep(0.02)
+        with lock:
+            active -= 1
+
+    try:
+        engine._run_parallel([str(i) for i in range(8)], work)
+    finally:
+        executor.shutdown(wait=True)
+    assert peak <= 2
+    assert peak >= 1
