@@ -683,6 +683,36 @@ class TestFileTransferService:
         mock_service._event_bus.publish.assert_called()
         mock_service.message.send_transfer_fail_message.assert_called_once()
 
+    def test_transfer_post_process_fills_missing_reason(self, mock_service):
+        """失败分支未写 error_message 时用 alert_messages 兜底，避免上游日志出现空原因."""
+        result = {
+            "total_count": 2,
+            "failed_count": 2,
+            "alert_count": 2,
+            "alert_messages": ["无法识别媒体信息", "无法识别媒体信息"],
+            "message_medias": {},
+            "success_flag": False,
+            "error_message": "",
+        }
+        ok, msg = mock_service._transfer_post_process(result, SyncType.MAN, "/src", "link", False)
+        assert ok is False
+        assert msg == "无法识别媒体信息"
+
+    def test_transfer_post_process_reason_fallback_without_alerts(self, mock_service):
+        """既无 error_message 也无 alert_messages 时，仍给出可读的失败原因."""
+        result = {
+            "total_count": 3,
+            "failed_count": 3,
+            "alert_count": 0,
+            "alert_messages": [],
+            "message_medias": {},
+            "success_flag": False,
+            "error_message": "",
+        }
+        ok, msg = mock_service._transfer_post_process(result, SyncType.MAN, "/src", "link", False)
+        assert ok is False
+        assert msg == "3 个文件转移失败"
+
     def test_transfer_post_process_success_move_cleanup(self, mock_service):
         result = {
             "total_count": 1,

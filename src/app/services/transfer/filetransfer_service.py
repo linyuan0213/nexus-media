@@ -1815,6 +1815,13 @@ class FileTransferService:
         success_flag = result["success_flag"]
         error_message = result["error_message"]
 
+        # 兜底：部分失败分支只把原因写进 alert_messages，未写 error_message，
+        # 会让上游日志出现「转移失败：」（原因为空），无法定位问题
+        if not success_flag and not error_message:
+            error_message = (
+                "、".join(dict.fromkeys(alert_messages)) if alert_messages else f"{failed_count} 个文件转移失败"
+            )
+
         log.info(f"[Rmt]{in_path} 处理完成，总数：{total_count}，失败：{failed_count}")
         if alert_count > 0:
             reason = "、".join(alert_messages)
