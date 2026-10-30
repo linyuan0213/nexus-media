@@ -50,17 +50,33 @@ class DatabaseFactory:
     MYSQL = "mysql"
     POSTGRESQL = "postgresql"
 
-    # 连接池默认值（MySQL/PostgreSQL）：API 与调度任务叠加时避免池耗尽
-    DEFAULT_POOL_SIZE = 20
-    DEFAULT_MAX_OVERFLOW = 20
+    # 连接池默认值（MySQL/PostgreSQL）。
+    # 进程连接上限 = 主池(pool_size + max_overflow) + 调度池(scheduler_*)，默认合计 30 条。
+    # 取值依据：PostgreSQL 官方默认 max_connections=100（另保留 superuser_reserved_connections=3），
+    # 但数据库实例常被多个服务共用（同机的 odoo、备份工具等），且不少部署会把它收紧到 40~60。
+    # 应用默认只占 30%（主池 20 + 调度池 10），给同实例的其他客户端留出空间，避免 nexus 的
+    # overflow 新建连接被服务端 FATAL 拒绝（remaining connection slots are reserved）。
+    # 注意 pool_size 只决定常驻连接数、max_overflow 提供峰值弹性，因此「常驻 10 + 溢出 10」
+    # 比原来「常驻 20」在同等峰值下少占一半空闲槽位。
+    # 实例容量更大时可用 DATABASE__POOL_SIZE / DATABASE__MAX_OVERFLOW 等环境变量放大，
+    # 但必须保证「主池 + 调度池 + 其他客户端」不超过 max_connections。
+    DEFAULT_POOL_SIZE = 10
+    DEFAULT_MAX_OVERFLOW = 10
     DEFAULT_POOL_TIMEOUT = 15
     # 调度任务独立连接池（比 API 小，隔离同时不使总连接数翻倍）
-    DEFAULT_SCHEDULER_POOL_SIZE = 10
-    DEFAULT_SCHEDULER_MAX_OVERFLOW = 10
+    DEFAULT_SCHEDULER_POOL_SIZE = 5
+    DEFAULT_SCHEDULER_MAX_OVERFLOW = 5
     DEFAULT_SCHEDULER_POOL_TIMEOUT = 15
 
     # PostgreSQL 连接标识（pg_stat_activity.application_name）
     PG_APPLICATION_NAME = "nexus_media"
+
+    # 服务端连接槽位耗尽的特征串（PostgreSQL / MySQL）
+    SLOT_EXHAUSTED_MARKERS = (
+        "remaining connection slots are reserved",
+        "too many clients already",
+        "too many connections",
+    )
 
     @staticmethod
     def get_database_url(
@@ -244,6 +260,13 @@ class DatabaseFactory:
             )
             engine_kwargs["pool_recycle"] = kwargs.get("pool_recycle", 1800)
             engine_kwargs["pool_pre_ping"] = True
+            # LIFO 让连接尽快自然过期，空闲池不会长期占满 pool_size 条槽位
+            engine_kwargs["pool_use_lifo"] = True
+            log.info(
+                f"[DatabaseFactory]连接池 {kwargs.get('application_name') or DatabaseFactory.PG_APPLICATION_NAME}: "
+                f"pool_size={engine_kwargs['pool_size']} max_overflow={engine_kwargs['max_overflow']} "
+                f"上限={engine_kwargs['pool_size'] + engine_kwargs['max_overflow']} 条"
+            )
             if db_type == DatabaseFactory.POSTGRESQL:
                 # 标明连接归属，便于在 pg_stat_activity 中区分主池/调度池/临时引擎。
                 # 合并调用方 connect_args，避免覆盖 sslmode 等驱动参数。
@@ -303,6 +326,43 @@ class DatabaseFactory:
     def is_postgresql(engine: Engine) -> bool:
         """检查是否是PostgreSQL数据库"""
         return "postgresql" in engine.url.drivername.lower()
+
+    @staticmethod
+    def is_connection_slot_exhausted(exc: BaseException | None) -> bool:
+        """判断异常是否由数据库服务端连接槽位耗尽引起。
+
+        PostgreSQL 报 "remaining connection slots are reserved for roles with the SUPERUSER attribute"，
+        MySQL 报 "Too many connections"。这类错误说明进程连接池上限超出了服务端可用槽位，
+        属于配置问题，重试同一时刻无法解决，需要区分出来避免逐条刷屏。
+        """
+        if exc is None:
+            return False
+        message = str(getattr(exc, "orig", exc)).lower()
+        return any(marker in message for marker in DatabaseFactory.SLOT_EXHAUSTED_MARKERS)
+
+    @staticmethod
+    def get_main_pool_capacity() -> int:
+        """主连接池的连接上限（pool_size + max_overflow）."""
+        return DatabaseFactory._get_int_config("pool_size", DatabaseFactory.DEFAULT_POOL_SIZE) + (
+            DatabaseFactory._get_int_config("max_overflow", DatabaseFactory.DEFAULT_MAX_OVERFLOW)
+        )
+
+    @staticmethod
+    def get_scheduler_pool_capacity() -> int:
+        """调度连接池的连接上限，也是调度任务允许的最大并发线程数."""
+        return DatabaseFactory._get_int_config(
+            "scheduler_pool_size", DatabaseFactory.DEFAULT_SCHEDULER_POOL_SIZE
+        ) + DatabaseFactory._get_int_config("scheduler_max_overflow", DatabaseFactory.DEFAULT_SCHEDULER_MAX_OVERFLOW)
+
+    @staticmethod
+    def describe_pool_budget() -> str:
+        """返回主池/调度池连接上限摘要（启动日志与排障用）。"""
+        main_max = DatabaseFactory.get_main_pool_capacity()
+        sched_max = DatabaseFactory.get_scheduler_pool_capacity()
+        return (
+            f"主池上限 {main_max} 条 + 调度池上限 {sched_max} 条 = 进程最多占用 {main_max + sched_max} 条连接，"
+            f"请确保数据库 max_connections 扣除 superuser_reserved_connections 与其他客户端后仍有余量"
+        )
 
     @staticmethod
     def _get_env_value(key: str, default: Any = None) -> Any:

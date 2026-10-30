@@ -58,6 +58,17 @@ database:
   username:
   password:
   database: nexus_media
+  # 【连接池】：MySQL/PostgreSQL 生效。默认主池 10+10、调度池 5+5，进程最多占用 30 条连接，
+  # 其中常驻不超过 15 条（pool_size 决定常驻，max_overflow 提供峰值弹性）。
+  # PostgreSQL 官方默认 max_connections=100（另保留 3 条给超级用户），但实例常被多个服务共用，
+  # 也可能被收紧到 40~60；调大前请确认「主池 + 调度池 + 其他客户端」仍有余量，
+  # 否则会报 remaining connection slots are reserved for roles with the SUPERUSER attribute
+  # pool_size: 10
+  # max_overflow: 10
+  # pool_timeout: 15
+  # scheduler_pool_size: 5
+  # scheduler_max_overflow: 5
+  # scheduler_pool_timeout: 15
 log:
   # 【日志记录类型】：file、console
   # 如果是使用Docker安装建议设置为console，通过Docker管理器查看日志

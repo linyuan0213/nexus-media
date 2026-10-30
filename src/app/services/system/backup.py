@@ -107,7 +107,7 @@ def backup(full_backup=False, bk_path=None):
                 shutil.copy(f"{data_path}/user.db", backup_path)
             export_to_file(engine, str(backup_path / "user_db_export.json"))
         finally:
-            # 备份失败也必须释放连接池，否则每次失败都会叠一层 20+20 槽位的池
+            # 备份失败也必须释放连接池，否则每次失败都会叠一层完整连接池（pool_size + max_overflow 条槽位）
             engine.dispose()
 
         zip_file = str(backup_path) + ".zip"

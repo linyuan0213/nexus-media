@@ -6,6 +6,42 @@ from app.db import engine as db_engine
 from app.db.database_factory import DatabaseFactory
 
 
+def test_default_pool_budget_leaves_room_for_other_clients():
+    """默认连接预算不应独占 PostgreSQL 官方默认的 100 个槽位.
+
+    回归防护：曾用 20+20 与 10+10 合计 60，占 PG 默认 max_connections=100 的六成，
+    同实例再跑 odoo 等客户端就会把槽位挤爆，overflow 新建连接被 FATAL 拒绝。
+    """
+    main_max = DatabaseFactory.DEFAULT_POOL_SIZE + DatabaseFactory.DEFAULT_MAX_OVERFLOW
+    scheduler_max = DatabaseFactory.DEFAULT_SCHEDULER_POOL_SIZE + DatabaseFactory.DEFAULT_SCHEDULER_MAX_OVERFLOW
+    # 总上限不超过 PG 官方默认 100 的 30%
+    assert main_max + scheduler_max <= 30
+    # 常驻连接（pool_size 之和）不超过总上限的一半，空闲时不会长期占住槽位
+    assert DatabaseFactory.DEFAULT_POOL_SIZE + DatabaseFactory.DEFAULT_SCHEDULER_POOL_SIZE <= 15
+
+
+def test_is_connection_slot_exhausted_detects_pg_fatal():
+    exc = Exception(
+        '(psycopg2.OperationalError) connection to server at "postgres" (172.21.0.4), port 5432 failed: '
+        "FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute"
+    )
+    assert DatabaseFactory.is_connection_slot_exhausted(exc) is True
+
+
+def test_is_connection_slot_exhausted_ignores_unrelated_errors():
+    assert DatabaseFactory.is_connection_slot_exhausted(None) is False
+    assert DatabaseFactory.is_connection_slot_exhausted(Exception("duplicate key value")) is False
+
+
+def test_describe_pool_budget_mentions_total(monkeypatch):
+    monkeypatch.setenv("DATABASE__POOL_SIZE", "5")
+    monkeypatch.setenv("DATABASE__MAX_OVERFLOW", "5")
+    monkeypatch.setenv("DATABASE__SCHEDULER_POOL_SIZE", "2")
+    monkeypatch.setenv("DATABASE__SCHEDULER_MAX_OVERFLOW", "2")
+    text = DatabaseFactory.describe_pool_budget()
+    assert "14 条" in text
+
+
 def test_get_int_config_reads_env(monkeypatch):
     monkeypatch.setenv("DATABASE__POOL_SIZE", "33")
     assert DatabaseFactory._get_int_config("pool_size", 20) == 33
@@ -39,6 +75,8 @@ def test_create_engine_applies_pool_env(monkeypatch):
     assert captured["pool_size"] == 33
     assert captured["max_overflow"] == 7
     assert captured["pool_timeout"] == 9
+    # LIFO 让空闲连接自然过期，池不会长期驻留满 pool_size 条槽位
+    assert captured["pool_use_lifo"] is True
 
 
 def test_scheduler_engine_context_overrides_and_resets(monkeypatch):
@@ -71,3 +109,6 @@ def test_session_manager_uses_scheduler_factory(monkeypatch):
             assert session is fake_sess
 
     mgr._factory.assert_not_called()
+
+
+

@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy import Engine
 from sqlalchemy.orm import sessionmaker
 
+import log
 from app.db.database_factory import DatabaseFactory
 
 # =============================================================================
@@ -48,6 +49,8 @@ def _init_engine():
                     autocommit=False,
                     expire_on_commit=False,
                 )
+                # 连接预算一次性打到启动日志，便于比对数据库实际可用槽位
+                log.info(f"[DB]连接预算：{DatabaseFactory.describe_pool_budget()}")
 
 
 def _init_scheduler_engine():
