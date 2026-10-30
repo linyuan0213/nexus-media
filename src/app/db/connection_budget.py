@@ -17,6 +17,7 @@ _ENV_MAP = {
     "scheduler_pool_size": "DATABASE__SCHEDULER_POOL_SIZE",
     "scheduler_max_overflow": "DATABASE__SCHEDULER_MAX_OVERFLOW",
     "sync_workers": "DATABASE__SYNC_WORKERS",
+    "sync_workers_max": "DATABASE__SYNC_WORKERS_MAX",
     "max_connections": "DATABASE__MAX_CONNECTIONS",
     "connection_reserve": "DATABASE__CONNECTION_RESERVE",
     "external_reserve": "DATABASE__EXTERNAL_CONNECTION_RESERVE",
@@ -29,6 +30,7 @@ _DEFAULTS = {
     "scheduler_pool_size": 5,
     "scheduler_max_overflow": 5,
     "sync_workers": 4,
+    "sync_workers_max": 8,
     "max_connections": 100,
     "connection_reserve": 3,
     "external_reserve": 5,
@@ -122,7 +124,10 @@ class ConnectionBudget:
 
         api_reserve = max(1, _config_int("api_connection_reserve", _DEFAULTS["api_connection_reserve"]))
         sync_limit = max(1, main_pool + main_overflow - api_reserve)
-        sync_workers = max(1, min(self.sync_workers, sync_limit))
+        # 数据库预算只能约束连接数，不能代表磁盘/网络承载能力；
+        # 再叠加一个显式的安全上限，避免调大连接池后同步并发被无限放大。
+        sync_max = max(1, _config_int("sync_workers_max", _DEFAULTS["sync_workers_max"]))
+        sync_workers = max(1, min(self.sync_workers, sync_limit, sync_max))
 
         return replace(
             self,

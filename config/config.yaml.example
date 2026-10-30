@@ -75,6 +75,7 @@ database:
   # external_reserve: 5
   # api_connection_reserve: 8
   # sync_workers: 4
+  # sync_workers_max: 8
 log:
   # 【日志记录类型】：file、console
   # 如果是使用Docker安装建议设置为console，通过Docker管理器查看日志

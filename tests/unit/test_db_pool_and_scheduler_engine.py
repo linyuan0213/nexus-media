@@ -181,3 +181,11 @@ def test_connection_budget_never_exceeds_available():
         external_reserve=5,
     ).resolve()
     assert budget.total_capacity <= budget.available_connections
+
+
+def test_sync_workers_have_absolute_safety_cap(monkeypatch):
+    DatabaseFactory.reset_connection_budget()
+    monkeypatch.setenv("DATABASE__SYNC_WORKERS", "20")
+    monkeypatch.setenv("DATABASE__SYNC_WORKERS_MAX", "8")
+    budget = load_connection_budget("postgresql", server_max_connections=100)
+    assert budget.sync_workers == 8
