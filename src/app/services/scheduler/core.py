@@ -19,6 +19,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 import log
 from app.core.exceptions import RepositoryError, ServiceError
+from app.db.database_factory import DatabaseFactory
 from app.services.scheduler.cron_parser import CronParser
 from app.services.scheduler.event_handler import EventHandler
 from app.services.scheduler.job_registry import JobRegistry
@@ -47,9 +48,6 @@ class SchedulerCore:
         "plugin": MemoryJobStore(),
     }
 
-    # 默认执行器配置（线程数与连接池匹配，防止线程过多耗尽连接）
-    DEFAULT_EXECUTORS = {"default": ThreadPoolExecutor(20)}
-
     # 默认任务默认配置
     DEFAULT_JOB_DEFAULTS = {"coalesce": True, "max_instances": 1, "misfire_grace_time": 300}
 
@@ -58,6 +56,15 @@ class SchedulerCore:
 
     # 重试延迟（秒）
     RETRY_DELAY = 60
+
+    @staticmethod
+    def _resolve_executor_workers() -> int:
+        """执行器线程数与调度连接池容量保持一致.
+
+        worker 数超过池容量时，超出的任务只会卡在 pool_timeout 上再失败；
+        按池上限收敛后，多余任务在 APScheduler 侧排队等待，不会额外索取连接。
+        """
+        return DatabaseFactory.get_scheduler_pool_capacity()
 
     def __init__(self):
         self._instance_id: str = os.environ.get("SERVER_INSTANCE", "")
@@ -106,7 +113,7 @@ class SchedulerCore:
                     "download": MemoryJobStore(),
                     "plugin": MemoryJobStore(),
                 },
-                executors=self.DEFAULT_EXECUTORS.copy(),
+                executors={"default": ThreadPoolExecutor(self._resolve_executor_workers())},
                 job_defaults=self.DEFAULT_JOB_DEFAULTS.copy(),
             )
 
