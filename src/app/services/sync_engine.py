@@ -16,6 +16,7 @@ import log
 from app.core.constants import RMT_MEDIAEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
+from app.db.database_factory import DatabaseFactory
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
@@ -108,6 +109,9 @@ class SyncEngine:
         self._synced_files: OrderedDict[str, None] = OrderedDict()
         self._synced_files_max_size = 10000
         self._backend_cache: dict[str, StorageBackend] = {}
+        # 连接槽位耗尽计数：一轮批量任务里只报告一次，避免同一配置问题刷出几十条相同报错
+        self._slot_exhausted_lock = threading.Lock()
+        self._slot_exhausted_count = 0
         self._reload()
 
     def init(self) -> None:
@@ -400,7 +404,24 @@ class SyncEngine:
         except (ServiceError, RepositoryError, DomainError):
             raise
         except Exception as e:
-            log.error(f"[Sync]{event_path} 转移异常：{e}")
+            self._report_transfer_error(event_path, e)
+
+    def _report_transfer_error(self, path: str, exc: Exception, action: str = "转移") -> None:
+        """记录转移失败。连接槽位耗尽属于配置问题，一轮只报告一次并给出处置建议。"""
+        if not DatabaseFactory.is_connection_slot_exhausted(exc):
+            log.error(f"[Sync]{path} {action}异常：{exc}")
+            return
+        with self._slot_exhausted_lock:
+            self._slot_exhausted_count += 1
+            should_report = self._slot_exhausted_count == 1
+        if should_report:
+            log.error(
+                f"[Sync]数据库连接槽位耗尽，{action}任务无法获取连接：{str(exc).strip().splitlines()[0]}。"
+                f"请调小 DATABASE__POOL_SIZE / DATABASE__MAX_OVERFLOW 或提高数据库 max_connections；"
+                f"当前{DatabaseFactory.describe_pool_budget()}"
+            )
+        else:
+            log.debug(f"[Sync]{path} {action}跳过：数据库连接槽位耗尽")
 
     def transfer_sync(self, sid: str | None = None) -> None:
         lock_key = f"sync:transfer_sync:{sid or 'all'}"
@@ -431,6 +452,9 @@ class SyncEngine:
         finally:
             with _synced_lock:
                 self._synced_files.clear()
+            # 每轮结束后重置告警计数，下一轮仍能报告一次
+            with self._slot_exhausted_lock:
+                self._slot_exhausted_count = 0
             lock.release()
 
     def _batch_link(self, cfg: SyncPathConfig, src_backend: StorageBackend, dst_backend: StorageBackend) -> None:
@@ -450,7 +474,7 @@ class SyncEngine:
             except (ServiceError, RepositoryError, DomainError):
                 raise
             except Exception as e:
-                log.error(f"[Sync]{path} 同步失败：{e}")
+                self._report_transfer_error(path, e, action="同步")
 
         self._run_parallel(pending, _link_one)
 

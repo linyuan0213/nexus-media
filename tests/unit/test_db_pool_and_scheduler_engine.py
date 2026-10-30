@@ -1,9 +1,11 @@
 """DB 连接池配置与调度任务独立连接池测试."""
 
+import threading
 from unittest.mock import MagicMock
 
 from app.db import engine as db_engine
 from app.db.database_factory import DatabaseFactory
+from app.services import sync_engine as se
 
 
 def test_default_pool_budget_leaves_room_for_other_clients():
@@ -111,4 +113,25 @@ def test_session_manager_uses_scheduler_factory(monkeypatch):
     mgr._factory.assert_not_called()
 
 
+def test_sync_reports_slot_exhausted_once_per_round(monkeypatch):
+    """连接槽位耗尽应汇总为一条可操作告警，不能每个文件刷一条."""
+    engine = se.SyncEngine.__new__(se.SyncEngine)
+    engine._slot_exhausted_lock = threading.Lock()
+    engine._slot_exhausted_count = 0
+
+    errors: list[str] = []
+    monkeypatch.setattr(se.log, "error", lambda msg: errors.append(msg))
+    monkeypatch.setattr(se.log, "debug", lambda msg: None)
+
+    exc = Exception("FATAL:  remaining connection slots are reserved for roles with the SUPERUSER attribute")
+    for i in range(5):
+        engine._report_transfer_error(f"/video/{i}", exc)
+
+    assert len(errors) == 1
+    assert "DATABASE__POOL_SIZE" in errors[0]
+
+    # 一轮结束重置计数后，下一轮仍会报告一次
+    engine._slot_exhausted_count = 0
+    engine._report_transfer_error("/video/x", exc)
+    assert len(errors) == 2
 
