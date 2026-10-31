@@ -20,7 +20,7 @@ def register_category_contribution(contribution: CategoryContribution, plugin_id
         raise ValueError("分类贡献 namespace 只能包含小写字母、数字、_ 和 -")
     with _LOCK:
         existing = _CONTRIBUTIONS.get(namespace)
-        if existing is not None and existing != contribution:
+        if existing is not None and _OWNERS.get(namespace) != plugin_id:
             raise ValueError(f"分类贡献 namespace 已被注册: {namespace} (plugin={plugin_id})")
         _CONTRIBUTIONS[namespace] = contribution
         _OWNERS[namespace] = plugin_id

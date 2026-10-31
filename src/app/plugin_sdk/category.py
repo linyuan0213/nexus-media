@@ -28,8 +28,8 @@ class CategoryContribution:
             raise ValueError("分类贡献 scope 必须是 core 或 extension")
         if not self.media_types:
             raise ValueError("分类贡献 media_types 不能为空")
-        if not isinstance(self.categories, dict) or not self.categories:
-            raise ValueError("分类贡献 categories 不能为空")
+        if not isinstance(self.categories, dict):
+            raise ValueError("分类贡献 categories 必须是字典")
 
 
 @dataclass
