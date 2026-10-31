@@ -84,7 +84,7 @@ class TestDatabaseFactory:
                 journal_mode = conn.execute(text("PRAGMA journal_mode;")).scalar()
                 assert journal_mode and journal_mode.lower() == "wal"
                 assert conn.execute(text("PRAGMA synchronous;")).scalar() == 1
-                assert conn.execute(text("PRAGMA busy_timeout;")).scalar() == 30000
+                assert conn.execute(text("PRAGMA busy_timeout;")).scalar() == 5000
                 assert conn.execute(text("PRAGMA wal_autocheckpoint;")).scalar() == 1000
         finally:
             engine.dispose()

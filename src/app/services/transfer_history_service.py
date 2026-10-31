@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from typing import Callable
 from urllib.parse import quote
 
+import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import get_cache_manager
@@ -269,8 +270,21 @@ class TransferHistoryService:
             "dst_backend": self._filetransfer.get_sync_backend_by_dest(path_to),
         }
 
+    def _prune_missing_unknown(self) -> None:
+        """刷新时清理硬盘上已不存在的未识别记录."""
+        try:
+            records = self._filetransfer.get_transfer_unknown_paths() or []
+            missing = [int(rec.ID) for rec in records if rec.PATH and not os.path.exists(str(rec.PATH))]
+            if missing:
+                self._filetransfer.delete_transfer_unknowns(missing)
+                self._cache.clear()
+                log.info(f"[TransferHistory]清理已不存在的未识别记录: {len(missing)}")
+        except Exception as e:  # noqa: BLE001 - 清理失败不影响列表读取
+            log.warn(f"[TransferHistory]检查未识别文件失败: {e}")
+
     def get_unknown_list(self) -> list[dict]:
         """获取未识别记录列表（带缓存）"""
+        self._prune_missing_unknown()
         cache_key = self._cache_key("unknown_list")
         cached = self._cache.get(cache_key)
         if cached is not None:
@@ -285,6 +299,7 @@ class TransferHistoryService:
 
     def get_unknown_list_by_page(self, search_str, page, page_num) -> UnknownListPageDTO:
         """分页查询未识别记录（带缓存）"""
+        self._prune_missing_unknown()
         if not page_num:
             page_num = 30
         if not page:
