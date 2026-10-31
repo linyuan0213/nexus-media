@@ -114,7 +114,9 @@ class DiscoveryService:
             if getattr(discovery_item, "backdrop", None):
                 discovery_item.backdrop = transform_display_image(profile, str(discovery_item.backdrop))
         self._library_presence.annotate(result.items)
-        self._cache_put(cache_key, result)
+        # 错误页不进入 5 分钟缓存，否则预热完成后用户仍会看到旧错误。
+        if not result.error:
+            self._cache_put(cache_key, result)
         return result
 
     @staticmethod

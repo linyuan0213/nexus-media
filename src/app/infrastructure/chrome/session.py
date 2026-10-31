@@ -189,8 +189,9 @@ class BrowserSession(_BaseBrowserSession):
             except Exception as e:
                 log.warn(f"[BrowserSession] 关闭会话 {self.session_id} 失败: {e}")
         else:
-            # 持久会话保留 Cookie/clearance，但必须释放标签页，避免浏览器卡死。
-            self.close_tabs()
+            # 持久会话必须保留活动标签页；关闭全部标签页会让下一次 navigate
+            # 返回 500（与页面的连接已断开），即使 cf_clearance 还在也会重新过盾。
+            return
         self._client.close()
 
 
