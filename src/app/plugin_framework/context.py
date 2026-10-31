@@ -13,6 +13,11 @@ import log
 from app.core.settings import settings
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter, PluginLogRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
+from app.media.category_contributions import (
+    register_category_contribution,
+    unregister_category_contribution,
+    unregister_plugin_contributions,
+)
 from app.media.display_image_policy import (
     register_display_image_transformer,
     unregister_display_image_transformer,
@@ -63,6 +68,7 @@ class PluginContext:
         self._discovery_service = discovery_service
         self._metadata_cleanups: list[Callable[[], None]] = []
         self._scraper_processors: list[str] = []
+        self._category_contributions: list[str] = []
         self._metadata_visibility = (
             getattr(manifest_metadata, "visibility", "public") if manifest_metadata else "public"
         )
@@ -330,6 +336,19 @@ class PluginContext:
     def register_naming_profile(self, key: str, profile: Any) -> None:
         self.register_metadata_profile("naming", key, profile)
 
+    def register_category_contribution(self, contribution: Any) -> None:
+        """注册插件分类贡献；scope=core 时参与核心分类."""
+        register_category_contribution(contribution, self._plugin_id)
+        namespace = str(contribution.namespace).strip()
+        if namespace not in self._category_contributions:
+            self._category_contributions.append(namespace)
+        self.info(f"分类贡献已注册: {namespace}")
+
+    def unregister_category_contribution(self, namespace: str) -> None:
+        unregister_category_contribution(namespace, self._plugin_id)
+        if namespace in self._category_contributions:
+            self._category_contributions.remove(namespace)
+
     def register_metadata_cleanup(self, cleanup: Callable[[], None]) -> None:
         """注册 provider 缓存/限流清理回调，卸载时自动执行."""
         self._metadata_cleanups.append(cleanup)
@@ -351,6 +370,8 @@ class PluginContext:
             with contextlib.suppress(Exception):
                 cleanup()
         metadata_registry.unregister_plugin(self._plugin_id)
+        unregister_plugin_contributions(self._plugin_id)
+        self._category_contributions.clear()
 
     def _assert_metadata_declared(self, field: str, key: str) -> None:
         manifest = self._metadata_manifest

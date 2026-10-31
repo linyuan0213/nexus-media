@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .category_context import CategoryContext
+from .category_contributions import core_category_rules
 from .category_rules import match_rule_group
 from .category_taxonomy import Taxonomy, load_taxonomy
 
@@ -135,6 +136,10 @@ def get_category(categorys, tmdb_info, media_type: str | None = None):
     if not taxonomy.available:
         return _legacy_get_category(categorys, tmdb_info)
     context = CategoryContext.from_info(tmdb_info, media_type=media_type)
+    if media_type:
+        contributions = core_category_rules(str(media_type))
+        if contributions:
+            categorys = {**categorys, **contributions}
     fallback = ""
     for key, rules in (categorys or {}).items():
         if not rules:
