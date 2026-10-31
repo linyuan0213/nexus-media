@@ -191,7 +191,7 @@ class BrowserSession(_BaseBrowserSession):
         else:
             # 持久会话必须保留活动标签页；关闭全部标签页会让下一次 navigate
             # 返回 500（与页面的连接已断开），即使 cf_clearance 还在也会重新过盾。
-            return
+            pass
         self._client.close()
 
 

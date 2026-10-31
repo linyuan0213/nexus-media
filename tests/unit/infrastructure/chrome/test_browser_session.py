@@ -24,7 +24,7 @@ def test_enter_releases_slot_when_ensure_session_fails(monkeypatch):
     assert session._slot is None
 
 
-def test_persistent_session_close_tabs_without_deleting_session():
+def test_persistent_session_keeps_active_tab_without_deleting_session():
     session = BrowserSession.__new__(BrowserSession)
     session._persist = True
     session._sid = "sid"
@@ -33,6 +33,7 @@ def test_persistent_session_close_tabs_without_deleting_session():
 
     session.close()
 
-    session.close_tabs.assert_called_once()
+    # 持久会话必须保留活动标签页，否则下一次 navigate 会 500。
+    session.close_tabs.assert_not_called()
     session._client.delete.assert_not_called()
     session._client.close.assert_called_once()
