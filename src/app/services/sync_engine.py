@@ -475,10 +475,22 @@ class SyncEngine:
 
         self._run_parallel(pending, _link_one)
 
+    def _expand_downloader_roots(self, paths: list[str]) -> list[str]:
+        """展开迅雷等下载器根目录，避免一个 .xltd 阻断整个下载器目录."""
+        expanded: list[str] = []
+        for path in paths:
+            nested = os.path.join(path, "downloads")
+            if os.path.isdir(nested):
+                expanded.extend(PathUtils.get_dir_level1_medias(nested, RMT_MEDIAEXT))
+            else:
+                expanded.append(path)
+        return expanded
+
     def _batch_transfer(self, cfg: SyncPathConfig, src_backend: StorageBackend) -> None:
         paths = PathUtils.get_dir_level1_medias(cfg.source, RMT_MEDIAEXT)
         if not paths:
             return
+        paths = self._expand_downloader_roots(paths)
         pending = [p for p in paths if not PathUtils.is_invalid_path(p)]
         pending = self._filter_pending(pending)
         if not pending:

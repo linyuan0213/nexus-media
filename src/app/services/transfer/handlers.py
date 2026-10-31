@@ -1,5 +1,6 @@
 """转移领域事件处理器."""
 
+import os
 from typing import Any
 
 import log
@@ -52,6 +53,7 @@ def handle_download_completed(
     transfer_pipeline: TransferPipeline | None = None,
     download_history_repo: Any = None,
     media_cache: Any = None,
+    sync_path_repo: Any = None,
 ) -> None:
     """下载完成事件处理器 — 触发文件转移."""
     payload = event.payload
@@ -96,6 +98,27 @@ def handle_download_completed(
 
         name = downloader_conf.get("name", "")
         operation = str(downloader_conf.get("rmt_mode") or "")
+        target_dir = None
+        unknown_dir = None
+        # 下载器完成事件也必须遵循同步目录配置，否则会按媒体类型
+        # 落入默认媒体库，而不是同步配置指定的目标库。
+        if sync_path_repo is not None:
+            try:
+                path_norm = os.path.normpath(str(payload.path))
+                candidates = [
+                    cfg
+                    for cfg in sync_path_repo.get_all()
+                    if getattr(cfg, "enabled", False)
+                    and path_norm.startswith(os.path.normpath(str(cfg.source)).rstrip(os.sep) + os.sep)
+                ]
+                if candidates:
+                    cfg = max(candidates, key=lambda c: len(str(c.source)))
+                    target_dir = str(cfg.dest or "") or None
+                    unknown_dir = str(cfg.unknown or "") or None
+                    if cfg.operation:
+                        operation = str(cfg.operation)
+            except Exception as e:  # noqa: BLE001 - 配置解析失败仍可按默认路径转移
+                log.debug(f"[Event]解析同步目录失败: {e}")
         client = client_factory.get_client(payload.downloader_id)
 
         def _post_process(task: TransferTask, success: bool, msg: str) -> None:
@@ -119,6 +142,8 @@ def handle_download_completed(
             source_id=name,
             file_paths=[payload.path],
             operation=operation,
+            target_dir=target_dir,
+            unknown_dir=unknown_dir,
             provider_data=tmdb_info,
             media_type=media_type,
             season=season,
@@ -140,6 +165,7 @@ def register_download_completed_handler(
     download_client_factory: DownloadClientFactory | None = None,
     download_history_repo: Any = None,
     media_cache: Any = None,
+    sync_path_repo: Any = None,
 ) -> None:
     """注册下载完成事件处理器，外部显式注入依赖。"""
 
@@ -150,6 +176,7 @@ def register_download_completed_handler(
             transfer_pipeline=transfer_pipeline,
             download_history_repo=download_history_repo,
             media_cache=media_cache,
+            sync_path_repo=sync_path_repo,
         )
 
     event_bus.subscribe(DOWNLOAD_COMPLETED, _handler)
