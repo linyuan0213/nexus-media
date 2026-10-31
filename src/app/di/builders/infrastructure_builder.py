@@ -1,5 +1,6 @@
 """基础设施 Builder — 创建 Layer 1 对象。"""
 
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 import log
@@ -57,7 +58,14 @@ def build_infrastructure() -> InfrastructureObjects:
     )
     site_engine.site_limiter = site_rate_limiter
     message_queue = MessageQueueFactory.create()
-    plugin_hook_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="plugin-hook")
+    try:
+        hook_workers = int(os.environ.get("PLUGIN_HOOK_WORKERS", "8"))
+    except ValueError:
+        hook_workers = 8
+    plugin_hook_executor = ThreadPoolExecutor(
+        max_workers=max(1, min(hook_workers, 32)),
+        thread_name_prefix="plugin-hook",
+    )
     hook_system = HookSystem(plugin_sandbox=None, executor=plugin_hook_executor)
     indexer_helper = IndexerHelper()
 
