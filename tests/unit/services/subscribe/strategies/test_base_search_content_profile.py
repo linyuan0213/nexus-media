@@ -27,19 +27,25 @@ _TMDB_TV = {
 
 
 def _make_strategy(tmdb_info=None):
-    """构造仅含 _get_media_info 所需依赖的策略实例（绕开 __init__ 的仓储初始化）。"""
+    """构造仅含 _get_media_info 所需依赖的策略实例（绕开 __init__ 的仓储初始化）。
+
+    返回 (strategy, media_cache, media_service)，便于用局部变量做 mock 断言
+    （直接访问 strategy._media_cache 会触发 pyright 的 MethodType 误报）。
+    """
     s = object.__new__(BaseSearchStrategy)
     s._ident_cache = MagicMock()
     s._ident_cache.get.return_value = None
-    s._media_cache = MagicMock()
-    s._media_cache.get_tmdb_info.return_value = tmdb_info
-    s._media_service = MagicMock()
+    media_cache = MagicMock()
+    media_cache.get_tmdb_info.return_value = tmdb_info
+    s._media_cache = media_cache
+    media_service = MagicMock()
     # identify 兜底在缺少海报时触发；返回 None 表示无需替换，保持被测路径纯净
-    s._media_service.identify.return_value = None
-    s._media_service.enrich_en_name.side_effect = lambda mi: setattr(
+    media_service.identify.return_value = None
+    media_service.enrich_en_name.side_effect = lambda mi: setattr(
         mi, "en_name", mi.en_name or "A Record Of A Mortals Journey To Immortality"
     )
-    return s
+    s._media_service = media_service
+    return s, media_cache, media_service
 
 
 @pytest.fixture(autouse=True)
@@ -57,7 +63,7 @@ class TestGetMediaInfoContentProfile:
 
     def test_anime_profile_queries_tmdb(self):
         """anime 画像必须查询 TMDB，并写入 tmdb_id 与 provider_data。"""
-        strategy = _make_strategy(dict(_TMDB_TV))
+        strategy, media_cache, _ = _make_strategy(dict(_TMDB_TV))
 
         info = strategy._get_media_info(
             tmdbid="106449",
@@ -71,11 +77,11 @@ class TestGetMediaInfoContentProfile:
         assert info is not None
         assert str(info.tmdb_id) == "106449"
         assert info.provider_data
-        strategy._media_cache.get_tmdb_info.assert_called_once()
+        media_cache.get_tmdb_info.assert_called_once()
 
     def test_anime_profile_gets_english_name(self):
         """anime 画像应补全英文名，避免 quick_name_match 因缺英文名拒绝种子。"""
-        strategy = _make_strategy(dict(_TMDB_TV))
+        strategy, _, media_service = _make_strategy(dict(_TMDB_TV))
 
         info = strategy._get_media_info(
             tmdbid="106449",
@@ -87,11 +93,11 @@ class TestGetMediaInfoContentProfile:
 
         assert info is not None
         assert info.en_name
-        strategy._media_service.enrich_en_name.assert_called_once()
+        media_service.enrich_en_name.assert_called_once()
 
     def test_default_profile_queries_tmdb(self):
         """default 画像保持原有行为（查询 TMDB）。"""
-        strategy = _make_strategy(dict(_TMDB_TV))
+        strategy, _, _ = _make_strategy(dict(_TMDB_TV))
 
         info = strategy._get_media_info(
             tmdbid="106449",
@@ -107,7 +113,7 @@ class TestGetMediaInfoContentProfile:
 
     def test_empty_profile_queries_tmdb(self):
         """空画像等同 default，查询 TMDB。"""
-        strategy = _make_strategy(dict(_TMDB_TV))
+        strategy, _, _ = _make_strategy(dict(_TMDB_TV))
 
         info = strategy._get_media_info(
             tmdbid="106449",
@@ -122,7 +128,7 @@ class TestGetMediaInfoContentProfile:
 
     def test_custom_profile_skips_tmdb(self):
         """插件自定义画像不查询 TMDB，由插件提供元数据。"""
-        strategy = _make_strategy(dict(_TMDB_TV))
+        strategy, media_cache, _ = _make_strategy(dict(_TMDB_TV))
 
         info = strategy._get_media_info(
             tmdbid="106449",
@@ -135,12 +141,12 @@ class TestGetMediaInfoContentProfile:
         assert info is not None
         # 自定义画像分支会清空 tmdb_id，且不调用 TMDB
         assert info.tmdb_id == ""
-        strategy._media_cache.get_tmdb_info.assert_not_called()
+        media_cache.get_tmdb_info.assert_not_called()
 
     @pytest.mark.parametrize("profile", ["Anime", "ANIME"])
     def test_anime_profile_case_insensitive(self, profile):
         """画像名大小写不影响判定（Anime / ANIME 均视为核心画像）。"""
-        strategy = _make_strategy(dict(_TMDB_TV))
+        strategy, media_cache, _ = _make_strategy(dict(_TMDB_TV))
 
         info = strategy._get_media_info(
             tmdbid="106449",
@@ -152,4 +158,4 @@ class TestGetMediaInfoContentProfile:
 
         assert info is not None
         assert str(info.tmdb_id) == "106449"
-        strategy._media_cache.get_tmdb_info.assert_called_once()
+        media_cache.get_tmdb_info.assert_called_once()
