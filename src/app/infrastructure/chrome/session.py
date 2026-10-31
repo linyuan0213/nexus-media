@@ -121,10 +121,9 @@ class BrowserSession(_BaseBrowserSession):
     def html(self) -> str:
         return str(self.current_page().get("html") or "")
 
-    def current_page(self, tab: str | None = None) -> dict[str, Any]:
-        """读取活动页或指定标签页 URL/HTML，不触发导航."""
-        params = {"tab": tab} if tab else None
-        response = self._client.get(self._session_url(f"/sessions/{self._sid}/html"), params=params)
+    def current_page(self) -> dict[str, Any]:
+        """读取当前活动页 URL/HTML，不触发导航."""
+        response = self._client.get(self._session_url(f"/sessions/{self._sid}/html"))
         response.raise_for_status()
         data = (response.json() or {}).get("data") or {}
         return data if isinstance(data, dict) else {}
@@ -173,7 +172,10 @@ class BrowserSession(_BaseBrowserSession):
     def close_tabs(self) -> None:
         """关闭会话内全部标签页，保留会话（Cookie/clearance 仍可复用）."""
         try:
-            for name in self.list_tabs():
+            for tab in self.list_tabs():
+                name = tab.get("name") if isinstance(tab, dict) else str(tab)
+                if not name:
+                    continue
                 self._client.delete(self._session_url(f"/sessions/{self._sid}/tabs/{quote(str(name), safe='')}"))
         except Exception as e:  # noqa: BLE001
             log.debug(f"[BrowserSession] 关闭标签页失败: {e}")

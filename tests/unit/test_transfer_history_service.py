@@ -1,6 +1,6 @@
 """TransferHistoryService 单元测试."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -295,7 +295,8 @@ class TestTransferHistoryServiceCache:
         first = service.get_unknown_list()
         second = service.get_unknown_list()
         assert first == second
-        mock_filetransfer.get_transfer_unknown_paths.assert_called_once()
+        # 每次刷新都要检查文件存在性，因此会重复读取一次记录。
+        mock_filetransfer.get_transfer_unknown_paths.assert_has_calls([call(), call()])
 
     def test_get_unknown_list_by_page_uses_cache(self, service, mock_filetransfer):
         mock_filetransfer.get_transfer_unknown_paths_by_page.return_value = (1, [_UnknownMock()])
@@ -313,4 +314,4 @@ class TestTransferHistoryServiceCache:
         mock_filetransfer.get_transfer_unknown_paths.return_value = []
         result = service.get_unknown_list()
         assert result == []
-        assert mock_filetransfer.get_transfer_unknown_paths.call_count == 2
+        assert mock_filetransfer.get_transfer_unknown_paths.call_count == 4
