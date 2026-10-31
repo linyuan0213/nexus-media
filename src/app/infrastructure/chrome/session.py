@@ -173,6 +173,22 @@ class BrowserSession(_BaseBrowserSession):
         except Exception as e:  # noqa: BLE001
             log.debug(f"[BrowserSession] 关闭标签页失败: {e}")
 
+    def close_inactive_tabs(self) -> None:
+        """保留活动标签页，只关闭历史标签，避免会话内标签累计."""
+        try:
+            response = self._client.get(self._session_url(f"/sessions/{self._sid}/tabs"))
+            response.raise_for_status()
+            data = (response.json() or {}).get("data") or {}
+            active = data.get("active")
+            tabs = data.get("tabs") or []
+            for tab in tabs:
+                name = tab.get("name") if isinstance(tab, dict) else str(tab)
+                if not name or name == active:
+                    continue
+                self._client.delete(self._session_url(f"/sessions/{self._sid}/tabs/{quote(str(name), safe='')}"))
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[BrowserSession] 清理非活动标签页失败: {e}")
+
     def screenshot(self, tab_name: str | None = None, full_page: bool = False) -> dict[str, Any]:
         """对指定（或活动）标签页截图，返回 {png_base64, size, ...}"""
         payload = {"tab_name": tab_name, "full_page": full_page}
@@ -189,9 +205,9 @@ class BrowserSession(_BaseBrowserSession):
             except Exception as e:
                 log.warn(f"[BrowserSession] 关闭会话 {self.session_id} 失败: {e}")
         else:
-            # 持久会话必须保留活动标签页；关闭全部标签页会让下一次 navigate
-            # 返回 500（与页面的连接已断开），即使 cf_clearance 还在也会重新过盾。
-            pass
+            # 持久会话保留活动标签页，只清理历史标签；全部关闭会导致下一次
+            # navigate 返回 500（与页面的连接已断开）。
+            self.close_inactive_tabs()
         self._client.close()
 
 

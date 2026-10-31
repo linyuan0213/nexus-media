@@ -30,10 +30,12 @@ def test_persistent_session_keeps_active_tab_without_deleting_session():
     session._sid = "sid"
     session._client = MagicMock()
     session.close_tabs = MagicMock()
+    session.close_inactive_tabs = MagicMock()
 
     session.close()
 
-    # 持久会话必须保留活动标签页，否则下一次 navigate 会 500。
+    # 持久会话保留活动标签页，只清理历史标签，否则下一次 navigate 会 500。
     session.close_tabs.assert_not_called()
+    session.close_inactive_tabs.assert_called_once()
     session._client.delete.assert_not_called()
     session._client.close.assert_called_once()
