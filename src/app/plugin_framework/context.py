@@ -228,8 +228,20 @@ class PluginContext:
         return False
 
     def remove_schedule(self, job_id: str) -> None:
-        """移除定时任务"""
-        self._scheduler.remove_job(job_id=f"plugin_{self._plugin_id}_{job_id}", jobstore="plugin")
+        """移除基础任务及其派生的 _t*/_1 任务."""
+        base_id = f"plugin_{self._plugin_id}_{job_id}"
+        try:
+            jobs = self._scheduler.get_jobs("plugin")
+        except Exception:  # noqa: BLE001 - 调度器未启动时保持幂等
+            jobs = []
+        removed = False
+        for job in jobs:
+            current = str(getattr(job, "id", ""))
+            if current == base_id or current.startswith(f"{base_id}_"):
+                if self._scheduler.remove_job(job_id=current, jobstore="plugin"):
+                    removed = True
+        if not removed:
+            self._scheduler.remove_job(job_id=base_id, jobstore="plugin")
 
     @property
     def site_engine(self) -> Any:

@@ -55,7 +55,9 @@ class PluginFrameworkService:
             os.makedirs(self._plugins_dir)
 
     def _get_hook_system(self):
-        return self._hook_system or self._get_hook_system()
+        if self._hook_system is None:
+            raise RuntimeError("插件钩子系统尚未初始化")
+        return self._hook_system
 
     def _get_plugin_parent_menu(self):
         """获取 Plugin 父菜单"""
@@ -419,10 +421,16 @@ class PluginFrameworkService:
         return fields
 
     def save_config(self, plugin_id: str, config: dict) -> None:
-        """保存插件配置"""
+        """保存插件配置；插件重载不阻塞保存接口."""
         entity = PluginConfigEntity(plugin_id=plugin_id, config=config)
         self._repo.save_config(entity)
-        self._get_hook_system().emit("plugin.config_changed", {"plugin_id": plugin_id, "config": config})
+        hook_system = self._get_hook_system()
+        threading.Thread(
+            target=hook_system.emit,
+            args=("plugin.config_changed", {"plugin_id": plugin_id, "config": config}),
+            daemon=True,
+            name=f"plugin-config-changed-{plugin_id}",
+        ).start()
 
     def install(self, zip_path: str, expected_sha256: str | None = None) -> PluginManifest:
         """安装插件包（多实例部署时通过分布式锁保证只有一个实例执行安装）"""

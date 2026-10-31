@@ -7,11 +7,12 @@ import os
 import re
 import subprocess
 import sys
+from importlib.metadata import PackageNotFoundError, distribution
 
 import log
 
 # 依赖说明符白名单：仅允许 包名+版本运算符 形式，拒绝 -/URL/git+/file:// 等注入
-_DEPENDENCY_RE = re.compile(r"^[\w\-.]+(==|>=|<=|~=)[\w.\-]+$")
+_DEPENDENCY_RE = re.compile(r"^[\w.\-]+(?:(?:==|>=|<=|~=|!=|>|<)[\w.\-]+)?$")
 
 
 class PluginDependencyManager:
@@ -108,13 +109,20 @@ class PluginDependencyManager:
 
     @staticmethod
     def check_dependency(package_spec: str) -> bool:
-        """检查单个依赖是否已安装"""
-        pkg_name = package_spec.split("[")[0].split("=")[0].split("<")[0].split(">")[0].strip()
-        try:
-            __import__(pkg_name.replace("-", "_"))
-            return True
-        except ImportError:
+        """按发行包名检查依赖，兼容 pillow/PyYAML/opencv-python 等导入名不同的包."""
+        pkg_name = re.split(r"[<>=!~\[ ]", package_spec.strip(), maxsplit=1)[0]
+        if not pkg_name:
             return False
+        try:
+            distribution(pkg_name)
+            return True
+        except PackageNotFoundError:
+            # 少数纯本地/标准库模块没有 distribution，再尝试导入名。
+            try:
+                __import__(pkg_name.replace("-", "_"))
+                return True
+            except ImportError:
+                return False
 
     @staticmethod
     def check_dependencies(dependencies: list[str]) -> dict[str, bool]:
