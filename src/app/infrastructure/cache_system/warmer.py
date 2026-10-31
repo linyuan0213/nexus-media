@@ -66,7 +66,7 @@ class ConfigCacheWarmer(CacheWarmer):
                 adapter = CategoryConfigRepositoryAdapter()
                 entities = adapter.get_all()
                 if entities:
-                    data: dict[str, dict[str, dict[str, str]]] = {"movie": {}, "tv": {}, "anime": {}}
+                    data: dict[str, dict[str, Any]] = {"movie": {}, "tv": {}, "anime": {}}
                     for ent in entities:
                         mt = ent.media_type
                         if mt in data:

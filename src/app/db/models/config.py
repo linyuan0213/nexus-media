@@ -168,3 +168,4 @@ class CONFIGCATEGORYRULE(Base):
     CATEGORY_ID: Mapped[int] = mapped_column(Integer, ForeignKey("CONFIG_CATEGORY.ID"), index=True)
     FIELD: Mapped[str] = mapped_column(String(100))
     VALUE: Mapped[str] = mapped_column(Text)
+    RULE_JSON: Mapped[str | None] = mapped_column(Text, nullable=True)

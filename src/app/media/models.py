@@ -477,7 +477,7 @@ class MediaInfo(BaseModel):
             return
         adapter = CategoryConfigRepositoryAdapter()
         entities = adapter.get_all()
-        rule_map: dict[str, dict[str, dict[str, str]]] = {"movie": {}, "tv": {}, "anime": {}}
+        rule_map: dict[str, dict[str, Any]] = {"movie": {}, "tv": {}, "anime": {}}
         for ent in entities:
             mt = ent.media_type
             if mt in rule_map:

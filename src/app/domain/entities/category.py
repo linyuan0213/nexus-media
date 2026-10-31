@@ -13,10 +13,14 @@ class CategoryConfigEntity:
     name: str
     sort_order: int
     is_default: bool
-    rules: dict[str, str]
+    rules: dict[str, str] | list[dict[str, Any]]
 
     @classmethod
-    def from_orm(cls, orm_model, rules: dict[str, str] | None = None) -> Optional["CategoryConfigEntity"]:
+    def from_orm(
+        cls,
+        orm_model,
+        rules: dict[str, str] | list[dict[str, Any]] | None = None,
+    ) -> Optional["CategoryConfigEntity"]:
         if orm_model is None:
             return None
         return cls(

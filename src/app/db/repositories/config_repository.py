@@ -4,7 +4,9 @@ Handles configuration related database operations.
 Includes: Message Client, Torrent Remove Task, Downloader, User RSS, Filter Rules
 """
 
+import json
 import time
+from typing import Any
 
 from sqlalchemy import Integer, cast, text
 
@@ -978,7 +980,12 @@ class ConfigRepository(BaseRepository):
             return db.query(CONFIGCATEGORYRULE).all()
 
     def save_category_config(
-        self, media_type: str, name: str, sort_order: int, is_default: int, rules: dict[str, str]
+        self,
+        media_type: str,
+        name: str,
+        sort_order: int,
+        is_default: int,
+        rules: dict[str, str] | list[dict[str, Any]],
     ) -> int:
         with self.session() as db:
             existing = (
@@ -1000,8 +1007,21 @@ class ConfigRepository(BaseRepository):
                 cid = cat.ID
 
             db.query(CONFIGCATEGORYRULE).filter(CONFIGCATEGORYRULE.CATEGORY_ID == cid).delete()
-            for field, value in rules.items():
-                db.add(CONFIGCATEGORYRULE(CATEGORY_ID=cid, FIELD=field, VALUE=value))
+            if isinstance(rules, list):
+                for rule in rules:
+                    if not isinstance(rule, dict):
+                        continue
+                    db.add(
+                        CONFIGCATEGORYRULE(
+                            CATEGORY_ID=cid,
+                            FIELD=str(rule.get("field") or ""),
+                            VALUE=json.dumps(rule.get("value"), ensure_ascii=False),
+                            RULE_JSON=json.dumps(rule, ensure_ascii=False),
+                        )
+                    )
+            else:
+                for field, value in rules.items():
+                    db.add(CONFIGCATEGORYRULE(CATEGORY_ID=cid, FIELD=field, VALUE=value))
             return int(cid)
 
     def delete_category_config(self, cid: int) -> None:

@@ -1,6 +1,6 @@
 """分类配置领域 Repository 接口"""
 
-from typing import Protocol
+from typing import Any, Protocol
 
 from app.domain.entities.category import CategoryConfigEntity
 
@@ -12,7 +12,14 @@ class ICategoryConfigRepository(Protocol):
         """获取所有分类配置"""
         ...
 
-    def save(self, media_type: str, name: str, sort_order: int, is_default: int, rules: dict[str, str]) -> int:
+    def save(
+        self,
+        media_type: str,
+        name: str,
+        sort_order: int,
+        is_default: int,
+        rules: dict[str, str] | list[dict[str, Any]],
+    ) -> int:
         """保存分类配置，返回分类ID"""
         ...
 
