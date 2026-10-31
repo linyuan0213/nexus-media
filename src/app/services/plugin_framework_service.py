@@ -15,7 +15,6 @@ import log
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import (
     PluginError,
-    PluginHotReloadError,
     PluginInstallingError,
     PluginManifestInvalidError,
     PluginNotInstalledError,
@@ -283,7 +282,7 @@ class PluginFrameworkService:
         """列出所有已安装插件"""
         # 先扫描内置插件（热新增）
 
-        self._plugin_registry.scan()
+        self._plugin_registry.scan_async()
         orm_list = self._repo.get_all_manifests()
         plugins = []
         for orm_model in orm_list:
@@ -809,16 +808,24 @@ class PluginFrameworkService:
         return self._plugin_registry.get_plugin_path(plugin_id)
 
     def run_plugin(self, plugin_id: str) -> None:
-        """立即运行插件（临时加载并调用 run 方法）"""
+        """异步运行插件，避免 sandbox.load 占用请求线程."""
+        threading.Thread(
+            target=self._run_plugin_background,
+            args=(plugin_id,),
+            daemon=True,
+            name=f"plugin-run-{plugin_id}",
+        ).start()
+
+    def _run_plugin_background(self, plugin_id: str) -> None:
         lock_key = f"plugin:run:{plugin_id}"
         lock = get_lock_manager().create_lock(lock_key, ttl_seconds=300)
-        acquired = lock.acquire()
-        if not acquired:
+        if not lock.acquire():
             log.info(f"[Plugin]插件 {plugin_id} 正在运行中，跳过")
             return
-
         try:
             self._do_run_plugin(plugin_id)
+        except Exception as e:  # noqa: BLE001 - 后台任务失败写入日志
+            log.error(f"[Plugin]插件 {plugin_id} 运行失败: {e}")
         finally:
             lock.release()
 
@@ -841,11 +848,20 @@ class PluginFrameworkService:
         log.info(f"[PluginFrameworkService] 插件 {plugin_id} 立即运行任务已启动")
 
     def reload_plugin(self, plugin_id: str) -> None:
-        """热重载插件（清理缓存后重新加载）"""
+        """异步热重载插件，避免 sandbox.load 占用请求线程."""
         orm_model = self._repo.get_manifest_by_id(plugin_id)
         if not orm_model:
             raise PluginNotInstalledError(f"插件未安装: {plugin_id}")
+        threading.Thread(
+            target=self._reload_plugin_background,
+            args=(plugin_id,),
+            daemon=True,
+            name=f"plugin-reload-{plugin_id}",
+        ).start()
 
-        sandbox = self._plugin_sandbox
-        if not sandbox.reload(plugin_id):
-            raise PluginHotReloadError(f"插件 {plugin_id} 热重载失败")
+    def _reload_plugin_background(self, plugin_id: str) -> None:
+        try:
+            if not self._plugin_sandbox.reload(plugin_id):
+                log.error(f"[Plugin]插件 {plugin_id} 热重载失败")
+        except Exception as e:  # noqa: BLE001 - 后台任务失败写入日志
+            log.error(f"[Plugin]插件 {plugin_id} 热重载异常: {e}")

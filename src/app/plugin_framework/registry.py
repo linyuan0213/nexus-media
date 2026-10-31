@@ -5,6 +5,7 @@ Plugin Registry - 插件注册表
 
 import os
 import shutil
+import threading
 import time
 from typing import Any
 
@@ -33,6 +34,8 @@ class PluginRegistry:
         self._manifest_cache: dict[str, PluginManifest] = {}
         self._state_cache: dict[str, PluginState] = {}
         self._last_builtin_scan: float = 0.0
+        self._scanning = False
+        self._scan_lock = threading.Lock()
         self._load_all()
         self._scan_builtin_plugins()
 
@@ -68,6 +71,29 @@ class PluginRegistry:
             self._scan_builtin_plugins()
             self._last_builtin_scan = now
         return list(self._manifest_cache.values())
+
+    def scan_async(self) -> list[PluginManifest]:
+        """返回当前缓存，并在后台触发到期扫描，不阻塞请求线程."""
+        if not self._manifest_cache:
+            self._load_all()
+        now = time.time()
+        with self._scan_lock:
+            due = now - self._last_builtin_scan > 60 and not self._scanning
+            if due:
+                self._last_builtin_scan = now
+                self._scanning = True
+        if due:
+            threading.Thread(target=self._background_scan, daemon=True, name="plugin-registry-scan").start()
+        return list(self._manifest_cache.values())
+
+    def _background_scan(self) -> None:
+        try:
+            self._scan_builtin_plugins()
+        except Exception as e:  # noqa: BLE001 - 后台扫描失败保留现有缓存
+            log.warn(f"[PluginRegistry]后台扫描失败: {e}")
+        finally:
+            with self._scan_lock:
+                self._scanning = False
 
     def get(self, plugin_id: str) -> PluginManifest | None:
         """获取指定插件的清单"""

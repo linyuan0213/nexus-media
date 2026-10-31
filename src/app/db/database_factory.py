@@ -303,7 +303,7 @@ class DatabaseFactory:
             dbapi_conn.execute("PRAGMA cache_size=-64000;")
             dbapi_conn.execute("PRAGMA temp_store=MEMORY;")
             dbapi_conn.execute("PRAGMA mmap_size=268435456;")
-            dbapi_conn.execute("PRAGMA busy_timeout=30000;")
+            dbapi_conn.execute("PRAGMA busy_timeout=5000;")
             dbapi_conn.execute("PRAGMA wal_autocheckpoint=1000;")
 
     @staticmethod
