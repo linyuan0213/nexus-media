@@ -248,9 +248,9 @@ class HtmlSiteSearcher:
                         session.navigate(search_url, cookie=cookie)
                         return _accept_results(session.html())
                 finally:
-                    # 保留会话（clearance/Cookie 复用），仅关闭标签页，
-                    # 避免同一 Chrome 实例标签页长期堆积导致卡死
-                    session.close_tabs()
+                    # 保留会话（clearance/Cookie 复用）。标签页归会话/用户所有，
+                    # 这里不能 close_tabs()：会误删并发请求或用户正在看的页面。
+                    pass
         except Exception as e:  # noqa: BLE001
             log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器搜索失败: {e}")
             return None

@@ -27,7 +27,7 @@ EMBEDDED_TURNSTILE = re.compile(
 )
 
 # 雷池（SafeLine）等 WAF：仅页面标题命中才算（与 nexus-chrome leichi.py 口径一致）
-CHALLENGE_TITLES = ("雷池", "安全拦截", "访问验证")
+CHALLENGE_TITLES = ("雷池", "安全拦截", "访问验证", "Just a moment", "请稍候", "Checking your browser")
 
 CHALLENGE_WAIT_TIMEOUT = 60
 CHALLENGE_POLL_INTERVAL = 2
@@ -56,14 +56,19 @@ def has_pending_turnstile(html_text: str) -> bool:
     return bool(html_text) and bool(EMBEDDED_TURNSTILE.search(html_text))
 
 
-def wait_challenge_clear(session, initial_html: str = "", timeout: int = CHALLENGE_WAIT_TIMEOUT) -> str:
-    """等待人机验证通过：挑战页特征消失即视为通过；返回最终页面 HTML"""
+def wait_challenge_clear(
+    session,
+    initial_html: str = "",
+    timeout: int = CHALLENGE_WAIT_TIMEOUT,
+    tab_name: str | None = None,
+) -> str:
+    """等待指定标签页的人机验证通过；tab_name 为空时才读活动页."""
     html_text = initial_html
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if _is_challenge(html_text):
             time.sleep(CHALLENGE_POLL_INTERVAL)
-            html_text = session.html()
+            html_text = session.html(tab_name) if tab_name else session.html()
             continue
         return html_text
     return html_text
