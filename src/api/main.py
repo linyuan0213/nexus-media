@@ -150,6 +150,10 @@ async def lifespan(app: FastAPI):
             log.error(f"[FastAPI]服务关闭异常: {e}")
         log.info("[FastAPI]后台服务已关闭")
 
+    hook_system = getattr(getattr(app.state, "context", None), "hook_system", None)
+    if hook_system is not None:
+        hook_system.close()
+
     ThreadExecutor.shutdown_all()
 
 

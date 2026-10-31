@@ -112,6 +112,11 @@ class HookSystem:
         except Exception as e:
             log.error(f"[HookSystem] 插件 {plugin_id} 处理事件 {event} 失败: {e}")
 
+    def close(self) -> None:
+        """停止插件钩子线程池."""
+        if self._executor is not None:
+            self._executor.shutdown(wait=False, cancel_futures=True)
+
     @property
     def EVENTS(self) -> list[str]:
         """列出所有已注册的事件名"""

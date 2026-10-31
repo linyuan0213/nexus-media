@@ -423,13 +423,7 @@ class PluginFrameworkService:
         """保存插件配置；插件重载不阻塞保存接口."""
         entity = PluginConfigEntity(plugin_id=plugin_id, config=config)
         self._repo.save_config(entity)
-        hook_system = self._get_hook_system()
-        threading.Thread(
-            target=hook_system.emit,
-            args=("plugin.config_changed", {"plugin_id": plugin_id, "config": config}),
-            daemon=True,
-            name=f"plugin-config-changed-{plugin_id}",
-        ).start()
+        self._get_hook_system().emit("plugin.config_changed", {"plugin_id": plugin_id, "config": config})
 
     def install(self, zip_path: str, expected_sha256: str | None = None) -> PluginManifest:
         """安装插件包（多实例部署时通过分布式锁保证只有一个实例执行安装）"""

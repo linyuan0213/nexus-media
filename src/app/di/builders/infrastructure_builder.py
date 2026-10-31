@@ -1,5 +1,7 @@
 """基础设施 Builder — 创建 Layer 1 对象。"""
 
+from concurrent.futures import ThreadPoolExecutor
+
 import log
 from app.db.database_factory import DatabaseFactory
 from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
@@ -55,7 +57,8 @@ def build_infrastructure() -> InfrastructureObjects:
     )
     site_engine.site_limiter = site_rate_limiter
     message_queue = MessageQueueFactory.create()
-    hook_system = HookSystem(plugin_sandbox=None)
+    plugin_hook_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="plugin-hook")
+    hook_system = HookSystem(plugin_sandbox=None, executor=plugin_hook_executor)
     indexer_helper = IndexerHelper()
 
     plugin_sandbox = PluginSandbox(
