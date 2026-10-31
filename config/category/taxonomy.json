@@ -1,0 +1,811 @@
+{
+  "version": 1,
+  "genres": {
+    "action": {
+      "labels": {
+        "zh": "动作",
+        "en": "Action"
+      },
+      "tmdb": {
+        "movie": [
+          28
+        ]
+      },
+      "aliases": [
+        "动作",
+        "Action",
+        "動作"
+      ]
+    },
+    "adventure": {
+      "labels": {
+        "zh": "冒险",
+        "en": "Adventure"
+      },
+      "tmdb": {
+        "movie": [
+          12
+        ]
+      },
+      "aliases": [
+        "冒险",
+        "Adventure",
+        "冒險"
+      ]
+    },
+    "animation": {
+      "labels": {
+        "zh": "动画",
+        "en": "Animation"
+      },
+      "tmdb": {
+        "movie": [
+          16
+        ],
+        "tv": [
+          16
+        ]
+      },
+      "aliases": [
+        "动画",
+        "Animation",
+        "動畫",
+        "动画片",
+        "卡通",
+        "Anime"
+      ]
+    },
+    "comedy": {
+      "labels": {
+        "zh": "喜剧",
+        "en": "Comedy"
+      },
+      "tmdb": {
+        "movie": [
+          35
+        ],
+        "tv": [
+          35
+        ]
+      },
+      "aliases": [
+        "喜剧",
+        "Comedy",
+        "喜劇"
+      ]
+    },
+    "crime": {
+      "labels": {
+        "zh": "犯罪",
+        "en": "Crime"
+      },
+      "tmdb": {
+        "movie": [
+          80
+        ],
+        "tv": [
+          80
+        ]
+      },
+      "aliases": [
+        "犯罪",
+        "Crime"
+      ]
+    },
+    "documentary": {
+      "labels": {
+        "zh": "纪录片",
+        "en": "Documentary"
+      },
+      "tmdb": {
+        "movie": [
+          99
+        ],
+        "tv": [
+          99
+        ]
+      },
+      "aliases": [
+        "纪录片",
+        "Documentary",
+        "紀錄片",
+        "纪录"
+      ]
+    },
+    "drama": {
+      "labels": {
+        "zh": "剧情",
+        "en": "Drama"
+      },
+      "tmdb": {
+        "movie": [
+          18
+        ],
+        "tv": [
+          18
+        ]
+      },
+      "aliases": [
+        "剧情",
+        "Drama",
+        "劇情"
+      ]
+    },
+    "family": {
+      "labels": {
+        "zh": "家庭",
+        "en": "Family"
+      },
+      "tmdb": {
+        "movie": [
+          10751
+        ],
+        "tv": [
+          10751
+        ]
+      },
+      "aliases": [
+        "家庭",
+        "Family"
+      ]
+    },
+    "fantasy": {
+      "labels": {
+        "zh": "奇幻",
+        "en": "Fantasy"
+      },
+      "tmdb": {
+        "movie": [
+          14
+        ],
+        "tv": [
+          14
+        ]
+      },
+      "aliases": [
+        "奇幻",
+        "Fantasy"
+      ]
+    },
+    "history": {
+      "labels": {
+        "zh": "历史",
+        "en": "History"
+      },
+      "tmdb": {
+        "movie": [
+          36
+        ]
+      },
+      "aliases": [
+        "历史",
+        "History",
+        "歷史"
+      ]
+    },
+    "horror": {
+      "labels": {
+        "zh": "恐怖",
+        "en": "Horror"
+      },
+      "tmdb": {
+        "movie": [
+          27
+        ]
+      },
+      "aliases": [
+        "恐怖",
+        "Horror"
+      ]
+    },
+    "music": {
+      "labels": {
+        "zh": "音乐",
+        "en": "Music"
+      },
+      "tmdb": {
+        "movie": [
+          10402
+        ]
+      },
+      "aliases": [
+        "音乐",
+        "Music",
+        "音樂"
+      ]
+    },
+    "mystery": {
+      "labels": {
+        "zh": "悬疑",
+        "en": "Mystery"
+      },
+      "tmdb": {
+        "movie": [
+          9648
+        ],
+        "tv": [
+          9648
+        ]
+      },
+      "aliases": [
+        "悬疑",
+        "Mystery",
+        "懸疑",
+        "推理"
+      ]
+    },
+    "romance": {
+      "labels": {
+        "zh": "爱情",
+        "en": "Romance"
+      },
+      "tmdb": {
+        "movie": [
+          10749
+        ]
+      },
+      "aliases": [
+        "爱情",
+        "Romance",
+        "愛情"
+      ]
+    },
+    "science_fiction": {
+      "labels": {
+        "zh": "科幻",
+        "en": "Science Fiction"
+      },
+      "tmdb": {
+        "movie": [
+          878
+        ]
+      },
+      "aliases": [
+        "科幻",
+        "Science Fiction",
+        "Sci-Fi"
+      ]
+    },
+    "tv_movie": {
+      "labels": {
+        "zh": "电视电影",
+        "en": "TV Movie"
+      },
+      "tmdb": {
+        "movie": [
+          10770
+        ]
+      },
+      "aliases": [
+        "电视电影",
+        "TV Movie",
+        "電視電影"
+      ]
+    },
+    "thriller": {
+      "labels": {
+        "zh": "惊悚",
+        "en": "Thriller"
+      },
+      "tmdb": {
+        "movie": [
+          53
+        ]
+      },
+      "aliases": [
+        "惊悚",
+        "Thriller",
+        "驚悚"
+      ]
+    },
+    "war": {
+      "labels": {
+        "zh": "战争",
+        "en": "War"
+      },
+      "tmdb": {
+        "movie": [
+          10752
+        ]
+      },
+      "aliases": [
+        "战争",
+        "War",
+        "戰爭"
+      ]
+    },
+    "western": {
+      "labels": {
+        "zh": "西部",
+        "en": "Western"
+      },
+      "tmdb": {
+        "movie": [
+          37
+        ],
+        "tv": [
+          37
+        ]
+      },
+      "aliases": [
+        "西部",
+        "Western"
+      ]
+    },
+    "action_adventure": {
+      "labels": {
+        "zh": "动作冒险",
+        "en": "Action & Adventure"
+      },
+      "tmdb": {
+        "tv": [
+          10759
+        ]
+      },
+      "aliases": [
+        "动作冒险",
+        "Action & Adventure",
+        "動作冒險"
+      ]
+    },
+    "kids": {
+      "labels": {
+        "zh": "儿童",
+        "en": "Kids"
+      },
+      "tmdb": {
+        "tv": [
+          10762
+        ]
+      },
+      "aliases": [
+        "儿童",
+        "Kids",
+        "兒童",
+        "儿童片",
+        "亲子"
+      ]
+    },
+    "news": {
+      "labels": {
+        "zh": "新闻",
+        "en": "News"
+      },
+      "tmdb": {
+        "tv": [
+          10763
+        ]
+      },
+      "aliases": [
+        "新闻",
+        "News",
+        "新聞"
+      ]
+    },
+    "reality": {
+      "labels": {
+        "zh": "真人秀",
+        "en": "Reality"
+      },
+      "tmdb": {
+        "tv": [
+          10764
+        ]
+      },
+      "aliases": [
+        "真人秀",
+        "Reality"
+      ]
+    },
+    "sci_fi_fantasy": {
+      "labels": {
+        "zh": "科幻奇幻",
+        "en": "Sci-Fi & Fantasy"
+      },
+      "tmdb": {
+        "tv": [
+          10765
+        ]
+      },
+      "aliases": [
+        "科幻奇幻",
+        "Sci-Fi & Fantasy"
+      ]
+    },
+    "soap": {
+      "labels": {
+        "zh": "肥皂剧",
+        "en": "Soap"
+      },
+      "tmdb": {
+        "tv": [
+          10766
+        ]
+      },
+      "aliases": [
+        "肥皂剧",
+        "Soap",
+        "肥皂劇"
+      ]
+    },
+    "talk": {
+      "labels": {
+        "zh": "脱口秀",
+        "en": "Talk"
+      },
+      "tmdb": {
+        "tv": [
+          10767
+        ]
+      },
+      "aliases": [
+        "脱口秀",
+        "Talk",
+        "脫口秀"
+      ]
+    },
+    "war_politics": {
+      "labels": {
+        "zh": "战争政治",
+        "en": "War & Politics"
+      },
+      "tmdb": {
+        "tv": [
+          10768
+        ]
+      },
+      "aliases": [
+        "战争政治",
+        "War & Politics",
+        "戰爭政治"
+      ]
+    }
+  },
+  "languages": {
+    "zh": {
+      "labels": {
+        "zh": "汉语",
+        "en": "Chinese"
+      },
+      "aliases": [
+        "汉语",
+        "Chinese",
+        "中文",
+        "華語",
+        "zh",
+        "cn"
+      ]
+    },
+    "ja": {
+      "labels": {
+        "zh": "日语",
+        "en": "Japanese"
+      },
+      "aliases": [
+        "日语",
+        "Japanese",
+        "日本語",
+        "日語",
+        "ja",
+        "jp"
+      ]
+    },
+    "ko": {
+      "labels": {
+        "zh": "韩语",
+        "en": "Korean"
+      },
+      "aliases": [
+        "韩语",
+        "Korean",
+        "韓語",
+        "韓国語",
+        "ko",
+        "kr"
+      ]
+    },
+    "en": {
+      "labels": {
+        "zh": "英语",
+        "en": "English"
+      },
+      "aliases": [
+        "英语",
+        "English",
+        "英語",
+        "en"
+      ]
+    },
+    "fr": {
+      "labels": {
+        "zh": "法语",
+        "en": "French"
+      },
+      "aliases": [
+        "法语",
+        "French",
+        "法語",
+        "fr"
+      ]
+    },
+    "de": {
+      "labels": {
+        "zh": "德语",
+        "en": "German"
+      },
+      "aliases": [
+        "德语",
+        "German",
+        "德語",
+        "de"
+      ]
+    },
+    "es": {
+      "labels": {
+        "zh": "西班牙语",
+        "en": "Spanish"
+      },
+      "aliases": [
+        "西班牙语",
+        "Spanish",
+        "西班牙語",
+        "es"
+      ]
+    },
+    "it": {
+      "labels": {
+        "zh": "意大利语",
+        "en": "Italian"
+      },
+      "aliases": [
+        "意大利语",
+        "Italian",
+        "意大利語",
+        "it"
+      ]
+    },
+    "ru": {
+      "labels": {
+        "zh": "俄语",
+        "en": "Russian"
+      },
+      "aliases": [
+        "俄语",
+        "Russian",
+        "俄語",
+        "ru"
+      ]
+    },
+    "th": {
+      "labels": {
+        "zh": "泰语",
+        "en": "Thai"
+      },
+      "aliases": [
+        "泰语",
+        "Thai",
+        "泰語",
+        "th"
+      ]
+    },
+    "pt": {
+      "labels": {
+        "zh": "葡萄牙语",
+        "en": "Portuguese"
+      },
+      "aliases": [
+        "葡萄牙语",
+        "Portuguese",
+        "葡萄牙語",
+        "pt"
+      ]
+    }
+  },
+  "countries": {
+    "CN": {
+      "labels": {
+        "zh": "中国",
+        "en": "China"
+      },
+      "aliases": [
+        "中国",
+        "China",
+        "中國",
+        "CN",
+        "CHN"
+      ]
+    },
+    "HK": {
+      "labels": {
+        "zh": "中国香港",
+        "en": "Hong Kong"
+      },
+      "aliases": [
+        "中国香港",
+        "Hong Kong",
+        "香港",
+        "HK",
+        "HKG"
+      ]
+    },
+    "TW": {
+      "labels": {
+        "zh": "中国台湾",
+        "en": "Taiwan"
+      },
+      "aliases": [
+        "中国台湾",
+        "Taiwan",
+        "台湾",
+        "台灣",
+        "TW",
+        "TWN"
+      ]
+    },
+    "JP": {
+      "labels": {
+        "zh": "日本",
+        "en": "Japan"
+      },
+      "aliases": [
+        "日本",
+        "Japan",
+        "JP",
+        "JPN"
+      ]
+    },
+    "KR": {
+      "labels": {
+        "zh": "韩国",
+        "en": "South Korea"
+      },
+      "aliases": [
+        "韩国",
+        "South Korea",
+        "韓國",
+        "KR",
+        "KOR"
+      ]
+    },
+    "US": {
+      "labels": {
+        "zh": "美国",
+        "en": "United States"
+      },
+      "aliases": [
+        "美国",
+        "United States",
+        "美國",
+        "US",
+        "USA"
+      ]
+    },
+    "GB": {
+      "labels": {
+        "zh": "英国",
+        "en": "United Kingdom"
+      },
+      "aliases": [
+        "英国",
+        "United Kingdom",
+        "英國",
+        "GB",
+        "UK",
+        "GBR"
+      ]
+    },
+    "FR": {
+      "labels": {
+        "zh": "法国",
+        "en": "France"
+      },
+      "aliases": [
+        "法国",
+        "France",
+        "法國",
+        "FR",
+        "FRA"
+      ]
+    },
+    "DE": {
+      "labels": {
+        "zh": "德国",
+        "en": "Germany"
+      },
+      "aliases": [
+        "德国",
+        "Germany",
+        "德國",
+        "DE",
+        "DEU"
+      ]
+    },
+    "IT": {
+      "labels": {
+        "zh": "意大利",
+        "en": "Italy"
+      },
+      "aliases": [
+        "意大利",
+        "Italy",
+        "IT",
+        "ITA"
+      ]
+    },
+    "ES": {
+      "labels": {
+        "zh": "西班牙",
+        "en": "Spain"
+      },
+      "aliases": [
+        "西班牙",
+        "Spain",
+        "ES",
+        "ESP"
+      ]
+    },
+    "RU": {
+      "labels": {
+        "zh": "俄罗斯",
+        "en": "Russia"
+      },
+      "aliases": [
+        "俄罗斯",
+        "Russia",
+        "俄羅斯",
+        "RU",
+        "RUS"
+      ]
+    },
+    "IN": {
+      "labels": {
+        "zh": "印度",
+        "en": "India"
+      },
+      "aliases": [
+        "印度",
+        "India",
+        "IN",
+        "IND"
+      ]
+    },
+    "TH": {
+      "labels": {
+        "zh": "泰国",
+        "en": "Thailand"
+      },
+      "aliases": [
+        "泰国",
+        "Thailand",
+        "泰國",
+        "TH",
+        "THA"
+      ]
+    },
+    "CA": {
+      "labels": {
+        "zh": "加拿大",
+        "en": "Canada"
+      },
+      "aliases": [
+        "加拿大",
+        "Canada",
+        "CA",
+        "CAN"
+      ]
+    },
+    "AU": {
+      "labels": {
+        "zh": "澳大利亚",
+        "en": "Australia"
+      },
+      "aliases": [
+        "澳大利亚",
+        "Australia",
+        "澳洲",
+        "AU",
+        "AUS"
+      ]
+    }
+  }
+}
