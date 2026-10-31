@@ -1,0 +1,3054 @@
+<!DOCTYPE html><html lang="zh" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Nexus Media 多功能媒体库管理工具使用文档">
+      
+      
+      
+        <link rel="canonical" href="https://linyuan0213.github.io/nexus-media/decisions/ADR-025-metadata-provider-and-naming-architecture/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>ADR-025: 多源元数据订阅与刮削架构（Provider / Composition / Naming Profile） - Nexus Media 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-025-多源元数据订阅与刮削架构provider--composition--naming-profile" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="Nexus Media 文档" class="md-header__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Nexus Media 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-025: 多源元数据订阅与刮削架构（Provider / Composition / Naming Profile）
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到深色模式" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换到深色模式" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到浅色模式" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换到浅色模式" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Nexus Media 文档" class="md-nav__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    Nexus Media 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装部署
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    使用指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    使用指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    基础配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    资源搜索与探索
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sites/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    站点配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../filter_rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    过滤规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../download_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../downloaders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体服务器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../directory_sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    目录同步
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_organization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体整理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rss/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RSS 订阅
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../indexers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    索引器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通知渠道配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../message_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    消息通知模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务与调度
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    存储后端
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    用户与权限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    插件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件使用
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugin_development_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发者
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    开发者
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    本地开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent-mvp-detailed-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    常见问题
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    更新日志
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#date" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#现状tmdb-是事实上的唯一元数据主键" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        现状：TMDB 是事实上的唯一元数据主键
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#根因" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        根因
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#与既有-adr-的关系" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        与既有 ADR 的关系
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#目标" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        目标
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#体验验收标准好用的判据" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        体验验收标准（"好用"的判据）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="体验验收标准（&quot;好用&quot;的判据）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#非目标" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        非目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#核心设计" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        核心设计
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="核心设计">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-分层" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 分层
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-规范元数据模型" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 规范元数据模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-provider-协议" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Provider 协议
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#31-providercontext-与错误语义" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 ProviderContext 与错误语义
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-人员实体" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 人员实体
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-provider-注册与插件扩展点" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Provider 注册与插件扩展点
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-合成策略composition-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 合成策略（Composition Policy）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#51-数据源能力基线" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 数据源能力基线
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-稳定身份与订阅模型" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 稳定身份与订阅模型
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. 稳定身份与订阅模型">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#61-本地身份" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.1 本地身份
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#62-订阅表扩展" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.2 订阅表扩展
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#63-豆瓣订阅不再强制桥接-tmdb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.3 豆瓣订阅不再强制桥接 TMDB
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#64-订阅锚点跟随卡片来源" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.4 订阅锚点：跟随卡片来源
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#65-匹配链插件化matchprofile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6.5 匹配链插件化（MatchProfile）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-刮削管线" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 刮削管线
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#71-图片解析与代理" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 图片解析与代理
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-命名规则扩展" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 命名规则扩展
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. 命名规则扩展">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#81-字段目录扩展" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 字段目录扩展
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#82-namingprofile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 NamingProfile
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#83-parserprofile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3 ParserProfile
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-discovery--feed-扩展探索页" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Discovery / Feed 扩展（探索页）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Discovery / Feed 扩展（探索页）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#91-内置-feed-基线" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 内置 feed 基线
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#92-探索页信息架构排行榜重构" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 探索页信息架构（排行榜重构）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-api-变更" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. API 变更
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-数据库与迁移" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. 数据库与迁移
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-缓存限流与可观测性" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. 缓存、限流与可观测性
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-安全与插件边界" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. 安全与插件边界
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-实施阶段" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. 实施阶段
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-测试策略" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. 测试策略
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#备选方案" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        备选方案
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="备选方案">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#方案-a继续以-tmdb-为主豆瓣只做展示层补充" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方案 A：继续以 TMDB 为主，豆瓣只做展示层补充
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#方案-b为每个-provider-增加一套独立字段和分支" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方案 B：为每个 provider 增加一套独立字段和分支
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#方案-c外部微服务统一刮削核心只存结果" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        方案 C：外部微服务统一刮削，核心只存结果
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#风险与缓解" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        风险与缓解
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#决策" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        决策
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/linyuan0213/nexus-media/edit/master/docs/decisions/ADR-025-metadata-provider-and-naming-architecture.md" title="编辑此页" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="adr-025-多源元数据订阅与刮削架构provider--composition--naming-profile">ADR-025: 多源元数据订阅与刮削架构（Provider / Composition / Naming Profile）<a class="headerlink" href="#adr-025-多源元数据订阅与刮削架构provider--composition--naming-profile" title="Permanent link">¶</a></h1>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">¶</a></h2>
+<p>Proposed</p>
+<h2 id="date">Date<a class="headerlink" href="#date" title="Permanent link">¶</a></h2>
+<p>2026-10-19</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">¶</a></h2>
+<h3 id="现状tmdb-是事实上的唯一元数据主键">现状：TMDB 是事实上的唯一元数据主键<a class="headerlink" href="#现状tmdb-是事实上的唯一元数据主键" title="Permanent link">¶</a></h3>
+<p>当前搜索、订阅、刮削、转移、重命名共享同一条隐式假设：<strong>作品身份 = TMDB ID</strong>。</p>
+<ul>
+<li><code>MediaInfo</code> 只有 <code>tmdb_id</code> / <code>tmdb_info</code> 能承载完整详情，豆瓣、Bangumi 只作为查询或兜底。
+  （<code>src/app/media/models.py</code>）</li>
+<li><code>Scraper</code> 没有 <code>tmdb_info</code> 直接判定无法识别并跳过。
+  （<code>src/app/media/scraper/__init__.py</code>）</li>
+<li><code>NfoGenerator</code> 的所有字段直接读取 TMDB 字典；<code>uniqueid</code> 固定为 <code>tmdb</code>。
+  （<code>src/app/media/scraper/nfo_generator.py</code>）</li>
+<li>添加订阅时，拿不到 TMDB 信息即返回「TMDB无法查询到媒体信息」；豆瓣订阅刷新时会被强制转换成 TMDB。
+  （<code>src/app/services/subscribe/management/add_service.py</code>、<code>refresh_service.py</code>）</li>
+<li>订阅表以 <code>TMDBID</code> 为事实主键，<code>SUBSCRIBE_MOVIES</code> / <code>SUBSCRIBE_TVS</code> 的唯一约束也围绕它。
+  （<code>src/app/db/models/subscribe.py</code>）</li>
+<li>重命名字段目录硬编码为 <code>tmdbid</code> / <code>imdbid</code>，渲染字典只从 <code>MediaInfo.tmdb_id</code> 取值。
+  （<code>src/app/services/transfer/name_format.py</code>、<code>path_resolver.py</code>）</li>
+<li><code>MediaType</code> 只有 <code>movie</code> / <code>tv</code> / <code>anime</code> / <code>unknown</code>，无法表达垂直内容需要的内容形态与命名体系。
+  （<code>src/app/domain/mediatypes.py</code>）</li>
+</ul>
+<p>这套模型在只有一个主数据源时最简，但无法满足以下新需求：</p>
+<ol>
+<li>豆瓣可以独立作为订阅与刮削主源，TMDB 只补缺失字段；</li>
+<li>TMDB 作为主源时，豆瓣补充中文标题、简介、评分等本地化字段；</li>
+<li>后续可接入 Bangumi、TVDB、Fanart、垂直内容 provider 等；</li>
+<li>不同内容形态可以使用不同的命名规则与 NFO 约定；</li>
+<li>新增 provider 与命名规则应通过插件完成，而不是继续修改核心枚举和 <code>if provider == ...</code>。</li>
+</ol>
+<h3 id="根因">根因<a class="headerlink" href="#根因" title="Permanent link">¶</a></h3>
+<p><strong>元数据来源、作品身份、字段合成、命名渲染四件事被混在了 <code>MediaInfo.tmdb_info</code> 一个结构里。</strong>
+只要引入第二个主源，任何直接读 <code>tmdb_info</code> 的代码都会成为阻塞点。</p>
+<h3 id="与既有-adr-的关系">与既有 ADR 的关系<a class="headerlink" href="#与既有-adr-的关系" title="Permanent link">¶</a></h3>
+<ul>
+<li>本 ADR 复用 ADR-014 的 <code>Work / Alias / Franchise / EditionGraph</code> 作为识别层，不重新实现匹配算法。</li>
+<li>本 ADR 在 ADR-014 之上新增<strong>跨 provider 的稳定身份</strong>、<strong>字段级合成</strong>、<strong>命名/NFO 扩展点</strong>。</li>
+<li>本 ADR 遵循 ADR-021：provider 缓存与合成快照属于全局资源，用户订阅只保存引用与策略。</li>
+</ul>
+<h2 id="目标">目标<a class="headerlink" href="#目标" title="Permanent link">¶</a></h2>
+<ol>
+<li><strong>来源无关</strong>：订阅、刮削、转移、重命名不再要求 TMDB；任何已注册 provider 都可以作为主源。</li>
+<li><strong>字段级合成</strong>：支持 <code>豆瓣为主 + TMDB 补齐</code>、<code>TMDB 为主 + 豆瓣补齐</code>、<code>单源直出</code>、<code>多源按字段优先级合成</code>。</li>
+<li><strong>身份稳定</strong>：本地作品身份不依赖任何单一外部 ID；外部 ID 是一等多值属性。</li>
+<li><strong>可插件化</strong>：provider、命名 profile、解析 profile、NFO profile 均可由插件贡献，核心不感知垂直内容细节。</li>
+<li><strong>可兼容</strong>：现有 TMDB 数据、订阅、下载历史、NFO、命名模板在迁移期继续可用。</li>
+<li><strong>可解释</strong>：每个字段都能追溯来源、置信度与抓取时间，冲突可预览、可手动锁定。</li>
+</ol>
+<h2 id="体验验收标准好用的判据">体验验收标准（"好用"的判据）<a class="headerlink" href="#体验验收标准好用的判据" title="Permanent link">¶</a></h2>
+<p>架构的正确性最终体现在用户可感知的结果上。本 ADR 的落地以以下体验指标为验收线：</p>
+<ol>
+<li><strong>中文优先</strong>：默认 <code>tmdb_primary</code> 下，卡片/订阅/NFO 的中文标题、中文简介、豆瓣评分由
+   豆瓣字段级补充；从豆瓣卡片发起的订阅自动使用 <code>douban_primary</code>，所见即所得；</li>
+<li><strong>无感兜底</strong>：豆瓣有条目但 TMDB 没有时，订阅和刮削照常工作（单源直出）；
+   TMDB 有条目豆瓣没有时亦然；用户不需要知道背后有几个源。</li>
+<li><strong>剧集完整</strong>：豆瓣订阅的电视剧，NFO 与媒体服务器里的分集名/日期/剧照完整
+   （TMDB api tier + 豆瓣 html tier 补中文分集名），不出现「整季只有一集 NFO」。</li>
+<li><strong>探索即订阅</strong>：探索页任何卡片一键订阅/搜索，不强制跳详情页填写来源；
+   来源 tab 动态出现，装了插件就多一个，卸了就少一个；
+   排行榜按来源分区，不再出现豆瓣/TMDB 条目混排的页面。</li>
+<li><strong>可修正</strong>：识别错了能一键换匹配、按字段选来源、锁定后不被刷新覆盖；
+   误识别可回退，不产生「改不了」的脏数据。</li>
+<li><strong>命名可控</strong>：模板预览所见即所得，新字段有目录可查，非法模板保存前就报错。</li>
+<li><strong>不降级旧体验</strong>：纯 TMDB 用户升级后，搜索、订阅、刮削、重命名的结果与升级前一致
+   （回归测试 + 双写对比验证）。</li>
+<li><strong>性能不劣化</strong>：探索页首屏 P95 &lt; 2s（feed 缓存命中），订阅添加不引入额外串行请求，
+   刮削批量任务按 provider 并发上限执行。</li>
+</ol>
+<h3 id="非目标">非目标<a class="headerlink" href="#非目标" title="Permanent link">¶</a></h3>
+<ul>
+<li>不在本 ADR 内实现具体第三方站点适配。</li>
+<li>不改变 ADR-014 的匹配算法与 EditionGraph 语义。</li>
+<li>不把 provider 原始 JSON 长期写入订阅表。</li>
+<li>不在核心仓库内维护垂直内容目录、站点名单或专用命名规则；此类能力通过独立插件包分发。</li>
+</ul>
+<h2 id="核心设计">核心设计<a class="headerlink" href="#核心设计" title="Permanent link">¶</a></h2>
+<h3 id="1-分层">1. 分层<a class="headerlink" href="#1-分层" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>订阅来源 / 文件名 / 媒体服务器 / 手动选择
+              │
+              ▼
+       ReleaseParser（ADR-014）
+              │ ParsedRelease
+              ▼
+       IdentityResolver（ADR-014）
+              │ WorkCluster / MediaIdentity
+              ▼
+     MetadataOrchestrator（并行取数、限流、熔断）
+              │ ProviderRecord[]
+              ▼
+      MetadataComposer（字段级合并 + 来源追踪）
+              │ MediaMetadataSnapshot
+              ├──────────────► Scraper → NFO / 图片 / 演员
+              ├──────────────► NamingProfile → 目录与文件名
+              └──────────────► API 预览 / 手动修正
+</code></pre></div>
+<p>四个边界必须分离：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>职责</th>
+<th>不做什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Provider</td>
+<td>把某个外部源转换为统一 DTO</td>
+<td>不决定最终标题、不写数据库</td>
+</tr>
+<tr>
+<td>Composer</td>
+<td>按策略合并字段、记录 provenance</td>
+<td>不发请求、不做身份匹配</td>
+</tr>
+<tr>
+<td>Identity</td>
+<td>判断「是不是同一部作品」</td>
+<td>不决定字段优先级</td>
+</tr>
+<tr>
+<td>Naming / NFO</td>
+<td>消费已合成的规范数据</td>
+<td>不直接访问 provider</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2-规范元数据模型">2. 规范元数据模型<a class="headerlink" href="#2-规范元数据模型" title="Permanent link">¶</a></h3>
+<p>核心不再使用 <code>tmdb_info</code> 作为数据载体，而是使用 provider 无关的 <code>MediaMetadata</code>。</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ProviderRef</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span>                 <span class="c1"># tmdb / douban / bangumi / &lt;plugin&gt;</span>
+    <span class="n">external_id</span><span class="p">:</span> <span class="nb">str</span>              <span class="c1"># 统一字符串，避免各源 ID 类型不一</span>
+    <span class="n">media_type</span><span class="p">:</span> <span class="n">MediaType</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"default"</span>        <span class="c1"># 同一 provider 下的命名空间，如 tv/movie/person</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">confidence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">FieldValue</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">value</span><span class="p">:</span> <span class="n">Any</span>
+    <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">external_id</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">confidence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">locale</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">fetched_at</span><span class="p">:</span> <span class="n">datetime</span>
+    <span class="n">locked</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>          <span class="c1"># 用户手动锁定，合成时最高优先级</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MediaMetadata</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">schema_version</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>       <span class="c1"># 规范模型版本，跨版本迁移时必须校验</span>
+    <span class="n">identity_id</span><span class="p">:</span> <span class="nb">str</span>              <span class="c1"># 本地稳定 ID（ULID）</span>
+    <span class="n">media_type</span><span class="p">:</span> <span class="n">MediaType</span>
+    <span class="c1"># 内容形态：决定 provider 候选、解析 profile、命名/NFO profile；</span>
+    <span class="c1"># 不改变 media_type 的粗粒度语义（movie/tv/anime），插件可注册新值</span>
+    <span class="n">content_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"default"</span>
+    <span class="n">refs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ProviderRef</span><span class="p">]</span>
+    <span class="n">fields</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FieldValue</span><span class="p">]</span>       <span class="c1"># 标量规范字段 → 值 + 来源</span>
+    <span class="n">ratings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>           <span class="c1"># {douban: 8.7, tmdb: 7.2}</span>
+    <span class="n">aliases</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Alias</span><span class="p">]</span>
+    <span class="n">credits</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Credit</span><span class="p">]</span>
+    <span class="n">seasons</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SeasonMetadata</span><span class="p">]</span>
+    <span class="n">episodes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">EpisodeMetadata</span><span class="p">]</span>
+    <span class="n">images</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">ImageAsset</span><span class="p">]]</span>
+    <span class="n">extra</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>               <span class="c1"># provider 扩展字段，命名空间隔离</span>
+    <span class="n">snapshot_hash</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">fetched_at</span><span class="p">:</span> <span class="n">datetime</span>
+</code></pre></div>
+<p>规范字段（核心最小集）：</p>
+<div class="highlight"><pre><span></span><code>title, original_title, sort_title, aliases
+year, release_date, end_date, runtime
+overview, tagline, original_language, countries, spoken_languages
+genres, tags, networks, studios, labels, series
+poster, backdrop, logo, thumb, fanart
+ratings.&lt;provider&gt;
+external refs
+credits: director / actor / writer / producer / composer
+seasons / episodes
+</code></pre></div>
+<p>约束：</p>
+<ul>
+<li><strong>ID 一律字符串</strong>：TMDB 数字、豆瓣数字、ISBN、内容编号、UUID 都能承载。</li>
+<li><strong>评分按 provider 命名空间保存</strong>，不再把豆瓣分写进 <code>vote_average</code> 冒充 TMDB 分；旧接口的 <code>vote_average</code> 只映射策略主源的评分，并显式标注来源。</li>
+<li><strong>扩展字段不得污染核心字段</strong>：插件字段只能写入 <code>extra["&lt;provider&gt;.&lt;field&gt;"]</code> 或已注册的 profile 字段。</li>
+<li><strong>快照不可变</strong>：每次抓取生成新 hash，订阅只引用 identity；旧快照可回溯。</li>
+<li><strong>schema 必须版本化</strong>：provider 返回的原始缓存、发现项、规范快照都带 <code>schema_version</code>；缓存 key 与快照 hash 包含版本，模型演进时不混读旧结构。</li>
+</ul>
+<h3 id="3-provider-协议">3. Provider 协议<a class="headerlink" href="#3-provider-协议" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ProviderCapability</span><span class="p">(</span><span class="n">StrEnum</span><span class="p">):</span>
+    <span class="n">SEARCH</span> <span class="o">=</span> <span class="s2">"search"</span>
+    <span class="n">DETAIL</span> <span class="o">=</span> <span class="s2">"detail"</span>
+    <span class="n">EXTERNAL_IDS</span> <span class="o">=</span> <span class="s2">"external_ids"</span>
+    <span class="n">SEASONS</span> <span class="o">=</span> <span class="s2">"seasons"</span>
+    <span class="n">EPISODES</span> <span class="o">=</span> <span class="s2">"episodes"</span>
+    <span class="n">CREDITS</span> <span class="o">=</span> <span class="s2">"credits"</span>
+    <span class="n">IMAGES</span> <span class="o">=</span> <span class="s2">"images"</span>
+    <span class="n">RELEASE_DATES</span> <span class="o">=</span> <span class="s2">"release_dates"</span>
+    <span class="n">CONTENT_ID</span> <span class="o">=</span> <span class="s2">"content_id"</span>       <span class="c1"># 以内容编号为锚点的垂直源</span>
+    <span class="n">ACTOR_DETAIL</span> <span class="o">=</span> <span class="s2">"actor_detail"</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MetadataProvider</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="n">descriptor</span><span class="p">:</span> <span class="n">ProviderDescriptor</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">search</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="n">SearchQuery</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProviderContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SearchHit</span><span class="p">]:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">detail</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="n">ProviderRef</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProviderContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProviderRecord</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">map_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="n">ProviderRef</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProviderContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ProviderRef</span><span class="p">]:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">seasons</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="n">ProviderRef</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProviderContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">SeasonRecord</span><span class="p">]:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">episodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ref</span><span class="p">:</span> <span class="n">ProviderRef</span><span class="p">,</span> <span class="n">season</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProviderContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">EpisodeRecord</span><span class="p">]:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">health</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProviderContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProviderHealth</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<p><code>ProviderDescriptor</code> 至少包含：</p>
+<div class="highlight"><pre><span></span><code><span class="n">provider_key</span><span class="p">:</span> <span class="nb">str</span>
+<span class="n">display_name</span><span class="p">:</span> <span class="nb">str</span>
+<span class="n">capabilities</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="n">ProviderCapability</span><span class="p">]</span>
+<span class="n">media_types</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="n">MediaType</span><span class="p">]</span>
+<span class="n">content_profiles</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>      <span class="c1"># 空 = 通用</span>
+<span class="n">default_priority</span><span class="p">:</span> <span class="nb">int</span>                 <span class="c1"># 仅在策略未显式指定时使用</span>
+<span class="n">visibility</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"public"</span><span class="p">,</span> <span class="s2">"private"</span><span class="p">]</span>
+<span class="n">result_schema_version</span><span class="p">:</span> <span class="nb">int</span>
+<span class="n">source_tiers</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="s2">"api"</span><span class="p">,</span> <span class="s2">"html"</span><span class="p">,</span> <span class="s2">"scraping"</span><span class="p">]]</span>   <span class="c1"># 实现层级</span>
+<span class="n">requires_auth</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>        <span class="c1"># 需要 Cookie/Token 才可达的能力</span>
+</code></pre></div>
+<p>能力需要区分<strong>实现层级</strong>（<code>source_tier</code>）：同一能力（如 <code>EPISODES</code>）可以是官方 API
+直出（稳定、高并发），也可以是 HTML 刮取（Cookie 风控、低并发、易漂移）。合成器按
+<code>api &gt; html &gt; scraping</code> 的层级优先选择实现，同能力低层级实现仅作降级兜底。
+html tier 的实现必须内置风控处理（如豆瓣的 PoW 挑战求解器与短时效 cookie 刷新，
+见 <code>docs/research/douban-vs-tmdb-metadata.md</code> §3.2.1），并在风控命中时熔断降级，
+不得在同步请求链路上反复重试。</p>
+<h3 id="31-providercontext-与错误语义">3.1 ProviderContext 与错误语义<a class="headerlink" href="#31-providercontext-与错误语义" title="Permanent link">¶</a></h3>
+<p>provider 只能拿到注入的运行时上下文，不能直接访问全局单例或数据库：</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ProviderContext</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="n">http</span><span class="p">:</span> <span class="n">HttpClient</span>                 <span class="c1"># 已带超时/代理/重试限制</span>
+    <span class="n">cache</span><span class="p">:</span> <span class="n">Cache</span>                     <span class="c1"># provider 专属命名空间</span>
+    <span class="n">rate_limiter</span><span class="p">:</span> <span class="n">RateLimiter</span>        <span class="c1"># provider 专属配额</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>        <span class="c1"># 插件/系统配置，已脱敏</span>
+    <span class="n">logger</span><span class="p">:</span> <span class="n">ProviderLogger</span>           <span class="c1"># 自动脱敏</span>
+    <span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span>                   <span class="c1"># 插件私有数据目录</span>
+</code></pre></div>
+<p>统一错误类型，前端与编排层按类型降级：</p>
+<div class="highlight"><pre><span></span><code><span class="n">ProviderNotFound</span>        <span class="c1"># 条目不存在</span>
+<span class="n">ProviderTimeout</span>
+<span class="n">ProviderUnavailable</span>
+<span class="n">ProviderRateLimited</span>
+<span class="n">ProviderParseError</span>      <span class="c1"># 响应结构变化/反爬</span>
+<span class="n">ProviderAuthError</span>       <span class="c1"># Cookie/Token 失效</span>
+<span class="n">ProviderSchemaError</span>     <span class="c1"># 返回 DTO 不符合 schema_version</span>
+</code></pre></div>
+<p>约束：</p>
+<ul>
+<li><code>ProviderTimeout/Unavailable/RateLimited</code> 触发熔断，不视为数据不存在；</li>
+<li><code>ProviderNotFound</code> 可缓存较短的空结果，避免同一失败反复请求；</li>
+<li><code>ProviderParseError/SchemaError</code> 需要记录并通知维护者；</li>
+<li>provider 不能抛裸异常给业务层，必须转换为上述错误。</li>
+</ul>
+<h3 id="32-人员实体">3.2 人员实体<a class="headerlink" href="#32-人员实体" title="Permanent link">¶</a></h3>
+<p>演员/导演/编剧是跨作品的一等实体，不应只作为作品字段字符串：</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">PersonIdentity</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">person_id</span><span class="p">:</span> <span class="nb">str</span>                <span class="c1"># 本地稳定 ID</span>
+    <span class="n">canonical_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">aliases</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="n">external_refs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ProviderRef</span><span class="p">]</span>
+    <span class="n">images</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ImageAsset</span><span class="p">]</span>
+    <span class="n">updated_at</span><span class="p">:</span> <span class="n">datetime</span>
+</code></pre></div>
+<ul>
+<li>provider 可实现 <code>ACTOR_DETAIL</code> 能力，返回 <code>PersonIdentity</code>；</li>
+<li>作品 <code>credits</code> 同时保留显示名与可选 <code>person_id</code>；</li>
+<li>同名不同人通过 provider ref 区分，无 ref 时只按显示名展示，不强行合并；</li>
+<li>人员缓存独立 TTL，支持手动刷新；插件可注册私有人员源。</li>
+</ul>
+<p>内置 provider：</p>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>能力</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tmdb</code></td>
+<td>search/detail/ids/seasons/episodes/credits/images</td>
+<td>现有 <code>TmdbLookup</code> 适配</td>
+</tr>
+<tr>
+<td><code>douban</code></td>
+<td>search/detail/ids/credits/images</td>
+<td>现有 <code>DoubanApi</code> / <code>DouBan</code> 适配</td>
+</tr>
+<tr>
+<td><code>bangumi</code></td>
+<td>search/detail/ids/relations</td>
+<td>动漫别名与关系，服务 ADR-014</td>
+</tr>
+</tbody>
+</table>
+<p>插件 provider 与内置 provider 使用同一个 registry，不允许业务代码直接 import 具体 provider 类。</p>
+<h3 id="4-provider-注册与插件扩展点">4. Provider 注册与插件扩展点<a class="headerlink" href="#4-provider-注册与插件扩展点" title="Permanent link">¶</a></h3>
+<p>核心提供扩展注册表（与现有 <code>api_registry</code> 同级的 <code>metadata_registry</code>）：</p>
+<div class="highlight"><pre><span></span><code><span class="n">ctx</span><span class="o">.</span><span class="n">register_metadata_provider</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>
+<span class="n">ctx</span><span class="o">.</span><span class="n">unregister_metadata_provider</span><span class="p">(</span><span class="n">provider_key</span><span class="p">)</span>
+<span class="n">ctx</span><span class="o">.</span><span class="n">register_naming_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+<span class="n">ctx</span><span class="o">.</span><span class="n">register_parser_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+<span class="n">ctx</span><span class="o">.</span><span class="n">register_nfo_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+<span class="n">ctx</span><span class="o">.</span><span class="n">register_content_profile</span><span class="p">(</span><span class="n">profile</span><span class="p">)</span>
+</code></pre></div>
+<p>manifest 新增声明：</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"backend"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"metadata"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"providers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"example"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"entry"</span><span class="p">:</span><span class="w"> </span><span class="s2">"backend.provider:ExampleProvider"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"search"</span><span class="p">,</span><span class="w"> </span><span class="s2">"detail"</span><span class="p">,</span><span class="w"> </span><span class="s2">"images"</span><span class="p">],</span>
+<span class="w">          </span><span class="nt">"media_types"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"movie"</span><span class="p">,</span><span class="w"> </span><span class="s2">"tv"</span><span class="p">],</span>
+<span class="w">          </span><span class="nt">"content_profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">          </span><span class="nt">"visibility"</span><span class="p">:</span><span class="w"> </span><span class="s2">"public"</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">],</span>
+<span class="w">      </span><span class="nt">"discovery_providers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"example"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"entry"</span><span class="p">:</span><span class="w"> </span><span class="s2">"backend.discovery:ExampleDiscovery"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"feeds"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"popular"</span><span class="p">,</span><span class="w"> </span><span class="s2">"latest"</span><span class="p">],</span>
+<span class="w">          </span><span class="nt">"content_profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">          </span><span class="nt">"visibility"</span><span class="p">:</span><span class="w"> </span><span class="s2">"public"</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">"required_permission"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">],</span>
+<span class="w">      </span><span class="nt">"content_profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"default"</span><span class="p">,</span><span class="w"> </span><span class="nt">"entry"</span><span class="p">:</span><span class="w"> </span><span class="s2">"backend.profiles:DefaultProfile"</span><span class="p">}</span>
+<span class="w">      </span><span class="p">],</span>
+<span class="w">      </span><span class="nt">"match_profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"default"</span><span class="p">,</span><span class="w"> </span><span class="nt">"content_profile"</span><span class="p">:</span><span class="w"> </span><span class="s2">"default"</span><span class="p">,</span><span class="w"> </span><span class="nt">"entry"</span><span class="p">:</span><span class="w"> </span><span class="s2">"backend.match:DefaultMatchProfile"</span><span class="p">}</span>
+<span class="w">      </span><span class="p">],</span>
+<span class="w">      </span><span class="nt">"naming_profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"default"</span><span class="p">,</span><span class="w"> </span><span class="nt">"content_profile"</span><span class="p">:</span><span class="w"> </span><span class="s2">"default"</span><span class="p">,</span><span class="w"> </span><span class="nt">"entry"</span><span class="p">:</span><span class="w"> </span><span class="s2">"backend.naming:DefaultNaming"</span><span class="p">}</span>
+<span class="w">      </span><span class="p">],</span>
+<span class="w">      </span><span class="nt">"parser_profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">      </span><span class="nt">"nfo_profiles"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>注册规则：</p>
+<ol>
+<li>插件只能注册 manifest 中声明过的 key；注册表校验 <code>plugin_id</code> 与 key 的归属。</li>
+<li>key 全局唯一；核心内置 key 不可被插件覆盖。</li>
+<li>插件禁用/卸载时按 <code>plugin_id</code> 批量注销，并清除其缓存命名空间、发现项缓存、人员缓存与限流状态。</li>
+<li>provider 实现失败、超时或返回非法 DTO 时只降级该 provider，不中断整个合成。</li>
+<li>provider 不直接访问 repository；需要数据时通过 <code>ProviderContext</code> 暴露的只读能力或返回 DTO。</li>
+<li>注册必须是<strong>幂等且可热重载</strong>：同 key 重复注册视为替换；插件升级时按新 <code>result_schema_version</code> 清理旧缓存；正在执行的任务完成或取消后切换新实例。</li>
+</ol>
+<h3 id="5-合成策略composition-policy">5. 合成策略（Composition Policy）<a class="headerlink" href="#5-合成策略composition-policy" title="Permanent link">¶</a></h3>
+<p>策略与 provider 解耦，订阅、刮削目录、API 预览都可以指定同一份策略。</p>
+<div class="highlight"><pre><span></span><code><span class="nt">metadata_policy</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">primary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">douban</span>
+<span class="w">  </span><span class="nt">fallbacks</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">tmdb</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">allow_partial</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">  </span><span class="nt">conflict</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">primary_wins</span><span class="w">          </span><span class="c1"># primary_wins | first_non_empty | manual</span>
+<span class="w">  </span><span class="nt">fields</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">title</span><span class="p">:</span><span class="w">      </span><span class="p p-Indicator">{</span><span class="nt">order</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">douban</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tmdb</span><span class="p p-Indicator">],</span><span class="nt"> locale</span><span class="p">:</span><span class="w"> </span><span class="nv">zh-Hans</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">overview</span><span class="p">:</span><span class="w">   </span><span class="p p-Indicator">{</span><span class="nt">order</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">douban</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tmdb</span><span class="p p-Indicator">],</span><span class="nt"> locale</span><span class="p">:</span><span class="w"> </span><span class="nv">zh-Hans</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">poster</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt">order</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">tmdb</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">douban</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">backdrop</span><span class="p">:</span><span class="w">   </span><span class="p p-Indicator">{</span><span class="nt">order</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">tmdb</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">douban</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">runtime</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt">order</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">tmdb</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">douban</span><span class="p p-Indicator">]}</span>
+<span class="w">    </span><span class="nt">genres</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt">order</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">tmdb</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">douban</span><span class="p p-Indicator">],</span><span class="nt"> merge</span><span class="p">:</span><span class="w"> </span><span class="nv">union</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">credits</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt">order</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">douban</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tmdb</span><span class="p p-Indicator">],</span><span class="nt"> merge</span><span class="p">:</span><span class="w"> </span><span class="nv">union_by_name</span><span class="p p-Indicator">}</span>
+<span class="w">    </span><span class="nt">ratings</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt">order</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">douban</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">tmdb</span><span class="p p-Indicator">],</span><span class="nt"> merge</span><span class="p">:</span><span class="w"> </span><span class="nv">namespaced</span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<p>预设：</p>
+<table>
+<thead>
+<tr>
+<th>预设</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>douban_primary</code></td>
+<td>豆瓣为主，TMDB 补齐图片、季集、IMDb/TVDB、英文标题</td>
+</tr>
+<tr>
+<td><code>tmdb_primary</code></td>
+<td>TMDB 为主，豆瓣补齐中文标题、中文简介、豆瓣评分</td>
+</tr>
+<tr>
+<td><code>bangumi_primary</code></td>
+<td>Bangumi 为主，TMDB 补齐剧集与图片（动漫）</td>
+</tr>
+<tr>
+<td><code>provider_only:&lt;key&gt;</code></td>
+<td>单源直出，允许没有 TMDB ID</td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td>订阅或目录显式保存的字段策略</td>
+</tr>
+</tbody>
+</table>
+<p>系统级默认预设为 <code>tmdb_primary</code>（与现状一致：结构完整、外部 ID 可靠，中文展示由豆瓣
+字段级补充实现）。用户可在设置中切换为 <code>douban_primary</code>，单条订阅/单个媒体库根可覆盖。</p>
+<p><strong>策略解析顺序</strong>：订阅显式设置 &gt; 锚点来源默认（见 6.4）&gt; 系统默认。</p>
+<h3 id="51-数据源能力基线">5.1 数据源能力基线<a class="headerlink" href="#51-数据源能力基线" title="Permanent link">¶</a></h3>
+<p>字段策略不能只看优先级，还要看 provider 的<strong>实测能力</strong>。调研结论见
+<code>docs/research/douban-vs-tmdb-metadata.md</code>，关键约束：</p>
+<ul>
+<li><strong>豆瓣无 seasons/episodes 能力</strong>：剧集按季分条目，无分集名/日期/剧照；<code>douban_primary</code> 下
+  <code>seasons/episodes/backdrop/logo/release_date</code> 必须强制 TMDB 兜底，与字段优先级无关。</li>
+<li><strong>豆瓣日期不可靠</strong>：<code>pubdate</code> 是带地区标注的数组，可能是重映日（实测 1994 年电影返回
+  <code>2026-08-28(中国大陆)</code>）；年份来源用 <code>year</code>，日期来源优先 TMDB <code>release_date</code>，
+  豆瓣 <code>pubdate</code> 需地区过滤并排除晚于 <code>year</code> 超过 3 年的重映值。</li>
+<li><strong>豆瓣无 imdb_id</strong>：跨源映射不能依赖豆瓣外部 ID，只能走 ADR-014 搜索匹配并进入
+  <code>LINK_CONFIDENCE</code> 审核流程。</li>
+<li><strong>评分不可合并</strong>：豆瓣评分（中文观众大样本）与 TMDB 评分差异大，必须命名空间共存。</li>
+<li><strong>能力声明驱动合成</strong>：<code>ProviderDescriptor.capabilities</code> 缺少 <code>SEASONS/EPISODES</code> 的 provider
+  不参与对应字段的竞争；<code>images</code> 标记为 <code>limited</code> 的 provider 不参与 backdrop/logo。</li>
+</ul>
+<p>合成器内置一条硬规则：<strong>字段优先级生效前先按 capability 过滤候选</strong>。</p>
+<p>合成算法：</p>
+<ol>
+<li><strong>身份闸门</strong>：只有通过 ADR-014 匹配，或存在精确 <code>ProviderRef</code> / 内容编号相等时，才允许合并。</li>
+<li><strong>取数</strong>：按 <code>primary + fallbacks</code> 并行请求，单 provider 超时/失败只记降级原因。</li>
+<li><strong>规范化</strong>：provider adapter 把原始响应映射成 <code>ProviderRecord</code>；禁止把原始 JSON 直接写入核心字段。</li>
+<li><strong>字段求解</strong>：</li>
+<li><code>locked</code> 手动值优先；</li>
+<li>按字段 <code>order</code> 取第一个非空值；</li>
+<li><code>locale</code> 不匹配时降级到无 locale 值；</li>
+<li>数组字段按 <code>merge</code> 规则合并（<code>union</code> / <code>union_by_name</code> / <code>primary_only</code>）；</li>
+<li>评分始终按 provider 命名空间并存；</li>
+<li>空值不覆盖已有值。</li>
+<li><strong>来源记录</strong>：每个最终字段写入 <code>FieldValue</code>，API 可展示「该值来自 douban:12345」。</li>
+<li><strong>快照</strong>：生成 <code>snapshot_hash</code>，缓存到 <code>MEDIA_METADATA_SNAPSHOT</code>，并回写 identity 的 refs。</li>
+<li><strong>失败策略</strong>：<code>allow_partial=true</code> 时返回部分快照；否则要求主源成功。</li>
+</ol>
+<p>关键规则：</p>
+<ul>
+<li><strong>不允许用低置信度候选补齐主源</strong>；补充源必须通过身份闸门。</li>
+<li><strong>不允许跨作品合并</strong>：同 provider 同 ID 或 ADR-014 判定同一 Work 才可合并。</li>
+<li><strong>年份冲突不自动覆盖</strong>：保留主源年份，冲突写入 <code>extra["conflicts"]</code> 供人工处理。</li>
+</ul>
+<h3 id="6-稳定身份与订阅模型">6. 稳定身份与订阅模型<a class="headerlink" href="#6-稳定身份与订阅模型" title="Permanent link">¶</a></h3>
+<h4 id="61-本地身份">6.1 本地身份<a class="headerlink" href="#61-本地身份" title="Permanent link">¶</a></h4>
+<p>新增 <code>MediaIdentity</code>，作为订阅、下载、转移、刮削共同引用的稳定对象：</p>
+<div class="highlight"><pre><span></span><code>MEDIA_IDENTITY
+  IDENTITY_ID (ULID, PK)
+  MEDIA_TYPE
+  CONTENT_PROFILE
+  CANONICAL_TITLE
+  YEAR
+  CREATED_AT
+  UPDATED_AT
+
+MEDIA_EXTERNAL_REF
+  ID
+  IDENTITY_ID
+  PROVIDER
+  EXTERNAL_ID
+  MEDIA_TYPE
+  SCOPE
+  URL
+  CONFIDENCE
+  LINK_METHOD          -- exact_ref / external_ids / search_match / manual
+  LINK_CONFIDENCE      -- 0.0-1.0，低置信度不自动合并
+  REVIEWED             -- 人工确认过的映射，后续刷新不降级
+  IS_PRIMARY
+  UNIQUE(PROVIDER, EXTERNAL_ID, SCOPE)
+</code></pre></div>
+<p>ADR-014 的 <code>Work</code> 继续负责别名、franchise、edition；<code>MediaIdentity</code> 是跨 provider 的本地聚合根。识别层命中 Work 后，通过 refs 解析或创建 <code>MediaIdentity</code>。</p>
+<h4 id="62-订阅表扩展">6.2 订阅表扩展<a class="headerlink" href="#62-订阅表扩展" title="Permanent link">¶</a></h4>
+<p><code>SUBSCRIBE_MOVIES</code> / <code>SUBSCRIBE_TVS</code> 增加：</p>
+<div class="highlight"><pre><span></span><code>IDENTITY_ID          -- 本地身份
+ANCHOR_PROVIDER      -- 订阅锚点来源，如 douban / tmdb
+ANCHOR_EXTERNAL_ID   -- 锚点外部 ID
+CONTENT_PROFILE      -- 内容形态，默认 default
+METADATA_POLICY      -- 预设名或策略 JSON
+NAMING_PROFILE       -- 可空，空则按内容形态取默认
+</code></pre></div>
+<p>兼容策略：</p>
+<ul>
+<li><code>TMDBID</code> 保留为<strong>派生兼容列</strong>，由 identity 的 tmdb ref 回填；旧 API、旧查询、旧下载历史继续工作。</li>
+<li>新增订阅优先写 <code>IDENTITY_ID + ANCHOR_*</code>；没有 identity 时创建。</li>
+<li>唯一约束从 <code>(USER_ID, TMDBID, ...)</code> 演进为 <code>(USER_ID, IDENTITY_ID, SEASON)</code>；迁移期双写并保留旧索引。</li>
+<li>对外 API 的 <code>mediaid</code> 支持 <code>tmdb:123</code>、<code>douban:456</code>、<code>bangumi:789</code>、<code>provider:id</code>；旧 <code>DB:</code> / <code>BG:</code> 继续解析。</li>
+</ul>
+<h4 id="63-豆瓣订阅不再强制桥接-tmdb">6.3 豆瓣订阅不再强制桥接 TMDB<a class="headerlink" href="#63-豆瓣订阅不再强制桥接-tmdb" title="Permanent link">¶</a></h4>
+<p><code>doubansync</code> 与手工添加订阅统一走：</p>
+<div class="highlight"><pre><span></span><code>douban identity → MediaIdentity(douban ref) → metadata policy
+</code></pre></div>
+<ul>
+<li>若策略为 <code>douban_primary</code> 且 TMDB 未匹配，仍创建订阅，<code>TMDBID</code> 为空；</li>
+<li>若之后 TMDB 匹配成功，只补充 ref 与快照，不改写订阅锚点；</li>
+<li><code>refresh_rss_metainfo</code> 从「豆瓣转 TMDB」改为「刷新 identity 的 refs 与快照」。</li>
+</ul>
+<h4 id="64-订阅锚点跟随卡片来源">6.4 订阅锚点：跟随卡片来源<a class="headerlink" href="#64-订阅锚点跟随卡片来源" title="Permanent link">¶</a></h4>
+<p>探索页/搜索页/详情页点击「订阅」时，<strong>锚点 = 用户所看到的那张卡片的来源</strong>：</p>
+<div class="highlight"><pre><span></span><code>豆瓣卡片（douban:1292052）
+  → anchor = douban:1292052
+  → 创建/复用 MediaIdentity，写入 douban ref
+  → metadata_policy 默认跟随锚点来源：douban → douban_primary
+  → 后台异步尝试匹配 TMDB ref（不阻塞订阅创建）
+
+TMDB 卡片（tmdb:278）
+  → anchor = tmdb:278
+  → metadata_policy 默认跟随锚点来源：tmdb → tmdb_primary
+</code></pre></div>
+<p>规则：</p>
+<ol>
+<li><strong>用户从哪个源看到的，就用哪个源做主源</strong>。豆瓣卡片订阅得到的展示与卡片一致
+   （中文标题/简介/豆瓣评分），不会出现「点的是豆瓣卡片，详情却变成 TMDB 英文信息」。</li>
+<li>锚点源缺能力时照常合成兜底（如豆瓣锚点的剧集结构由 TMDB 补），策略只是字段优先级，
+   不是能力开关。</li>
+<li>锚点创建后不随后台匹配结果改变；TMDB ref 匹配成功只补充 identity，不动 anchor 与策略。</li>
+<li>用户在订阅编辑页可显式切换策略（<code>douban_primary</code> / <code>tmdb_primary</code> / <code>custom</code>），
+   显式设置后不再跟随锚点。</li>
+<li>搜索结果卡片必须携带来源 ref（<code>douban:</code> / <code>tmdb:</code> / <code>bangumi:</code>），前端透传；
+   不允许把豆瓣卡片转成「标题+年份再搜 TMDB」的隐式桥接。</li>
+</ol>
+<p>体验验收标准第 1 条的准确表述：<strong>默认 <code>tmdb_primary</code> 保证结构与外部 ID 完整；
+中文展示通过豆瓣字段级补充实现；从豆瓣卡片发起的订阅自动升级为 <code>douban_primary</code>。</strong></p>
+<h4 id="65-匹配链插件化matchprofile">6.5 匹配链插件化（MatchProfile）<a class="headerlink" href="#65-匹配链插件化matchprofile" title="Permanent link">¶</a></h4>
+<p>现状：<code>type_inferrer.infer_type()</code> 硬编码 <code>SxxExx→TV / 年份→MOVIE / 制作组→ANIME</code>，
+<code>MediaService</code> 再按 <code>MediaType</code> 分支走不同的 TMDB 匹配策略。新增内容形态必须改核心代码，
+这是接新来源的主要障碍。</p>
+<p>解耦为两层：</p>
+<ul>
+<li><code>MediaType</code>（粗粒度文件形态，保持稳定）：movie / tv / anime / unknown，决定季集结构与 NFO 类型；</li>
+<li><code>content_profile</code>（内容形态，<strong>可插件注册</strong>）：决定检测规则、解析策略、匹配策略、
+  provider 候选、命名/NFO profile。动漫从「类型」降级为内置 profile <code>anime</code>，
+  与未来的其他内容形态平级。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MatchProfile</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>                        <span class="c1"># content_profile key，如 anime / music / documentary</span>
+    <span class="n">base_media_type</span><span class="p">:</span> <span class="n">MediaType</span>      <span class="c1"># 兜底文件形态</span>
+    <span class="n">priority</span><span class="p">:</span> <span class="nb">int</span>                   <span class="c1"># 检测顺序，插件高于内置默认</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">detect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ParseContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Detection</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""文件名/上下文 → 命中则返回 Detection(confidence, anchor_hint)，未命中返回 None"""</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">match</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parsed</span><span class="p">:</span> <span class="n">ParsedRelease</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProviderContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MatchResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""ParsedRelease → provider 查询策略 + 打分 + 候选排序"""</span>
+</code></pre></div>
+<p>匹配链执行顺序：</p>
+<div class="highlight"><pre><span></span><code>文件名 → 通用预处理（资源标记/字幕组剥离，核心）
+  → MatchProfile.detect 按 priority 降序（插件 profile 在前）
+      高置信度命中 → content_profile + anchor_hint（如内容编号），跳过通用推断
+      未命中 → 内置 infer_type（movie/tv/anime 兼容逻辑不变）
+  → MatchProfile.match
+      有 anchor_hint → provider 精确查询（内容编号/ID）
+      无 → 标题+年份搜索 + profile 自定义打分
+  → IdentityResolver → MediaIdentity
+</code></pre></div>
+<p>规则：</p>
+<ol>
+<li><strong>检测短路</strong>：profile 高置信度命中时不再走通用 <code>infer_type</code>，避免把内容编号误判为剧集；</li>
+<li><strong>置信度阈值</strong>：detect 置信度 &lt; 0.85 视为未命中，回退通用推断，不产出半成品身份；</li>
+<li><strong>作用域</strong>：profile 可声明 <code>applies_to</code>（媒体库根/订阅来源/手动指定），
+   默认 profile 不在普通媒体库启用垂直检测，防止误识别；</li>
+<li><strong>内置兼容</strong>：<code>movie</code> / <code>tv</code> / <code>anime</code> 作为内置 profile 保留现有全部行为；
+   现有 <code>infer_type</code> 与 <code>MediaService</code> 的 anime 分支迁移为内置 <code>anime</code> profile 的实现，
+   对外语义不变；</li>
+<li><strong>匹配策略可替换</strong>：profile 的 <code>match()</code> 决定查询与打分——动漫用季度+集数对齐，
+   垂直内容用内容编号精确匹配，电影用标题+年份；</li>
+<li><code>MatchProfile</code> 与 <code>NamingProfile</code> / <code>NfoProfile</code> / <code>ParserProfile</code> 通过同一个
+   <code>content_profile</code> key 关联，插件 manifest 一次声明整套形态。</li>
+</ol>
+<h3 id="7-刮削管线">7. 刮削管线<a class="headerlink" href="#7-刮削管线" title="Permanent link">¶</a></h3>
+<p><code>Scraper</code> 从「TMDB 信息驱动」改为「快照驱动」：</p>
+<div class="highlight"><pre><span></span><code>file → parse → identity（NFO / 下载历史 / 媒体服务器 / 在线识别）
+     → MetadataOrchestrator.compose(identity, policy)
+     → MediaMetadataSnapshot
+     → NfoRenderer / ImageResolver / CreditsResolver
+</code></pre></div>
+<p>行为变化：</p>
+<ul>
+<li>不再要求 <code>media_info.tmdb_info</code>；<code>douban_primary</code> 下可以只用豆瓣数据生成 NFO。</li>
+<li>NFO 的 <code>uniqueid</code> 为所有已知 ref 生成，例如 <code>tmdb</code>、<code>douban</code>、<code>bangumi</code>；<code>default="true"</code> 由策略的 primary 决定。</li>
+<li><code>tmdbid</code> 标签仅在存在 TMDB ref 时输出，保持 Kodi/Emby/Jellyfin 兼容。</li>
+<li>图片按字段策略选择，不再固定 TMDB → Fanart。</li>
+<li>演职人员按 <code>merge</code> 规则合并，中文名匹配继续使用 <code>ChineseCredits</code>。</li>
+<li>provider 部分失败时仍可生成部分 NFO，并在日志/快照中标记 <code>degraded</code>。</li>
+</ul>
+<p>NFO 渲染器重构为：</p>
+<div class="highlight"><pre><span></span><code>NfoRenderer
+  ├── CommonNfoWriter        # movie / tvshow / season / episode 通用字段
+  ├── ProviderIdWriter       # uniqueid / tmdbid / imdbid / tvdbid
+  ├── CreditWriter
+  ├── RatingWriter           # 多 provider 评分
+  └── ProfileNfoContributor  # 插件贡献的额外标签（可选）
+</code></pre></div>
+<h3 id="71-图片解析与代理">7.1 图片解析与代理<a class="headerlink" href="#71-图片解析与代理" title="Permanent link">¶</a></h3>
+<p><code>ImageResolver</code> 独立于 provider：</p>
+<div class="highlight"><pre><span></span><code>provider 返回 ImageAsset(url/type/size/locale/provider)
+  → 图片策略选择（poster/backdrop/logo/thumb/fanart/actor）
+  → ImageProxy 下载、缓存、校验、转换
+  → 落盘或写入媒体服务器
+</code></pre></div>
+<p>约束：</p>
+<ul>
+<li>图片 URL 视为不可信：校验 Content-Type、尺寸、大小上限；不执行响应内容；</li>
+<li>图片代理按 provider + schema_version + URL hash 命名空间缓存；</li>
+<li>需要 Referer/Cookie 的源由 provider 声明，核心统一透传并脱敏；</li>
+<li>私有来源使用独立缓存命名空间，不与公共来源混用；</li>
+<li>下载失败按策略 fallback 到下一 provider，不阻塞 NFO 生成；</li>
+<li>人工选择的图片作为手动锁定字段，自动刷新不得覆盖。</li>
+</ul>
+<h3 id="8-命名规则扩展">8. 命名规则扩展<a class="headerlink" href="#8-命名规则扩展" title="Permanent link">¶</a></h3>
+<h4 id="81-字段目录扩展">8.1 字段目录扩展<a class="headerlink" href="#81-字段目录扩展" title="Permanent link">¶</a></h4>
+<p>核心字段目录保留现有字段，并新增 provider 无关字段：</p>
+<div class="highlight"><pre><span></span><code>doubanid, bgmid, provider, provider_id, content_profile
+release_date, runtime, original_language
+studio, label, series, actors, rating_douban, rating_tmdb
+</code></pre></div>
+<p>插件字段必须使用带命名空间的 key：</p>
+<div class="highlight"><pre><span></span><code>{example.field}       # 语法扩展：key 允许 "."，仅注册过的字段可通过校验
+</code></pre></div>
+<p>原因：</p>
+<ul>
+<li>避免插件字段与核心字段冲突；</li>
+<li>插件卸载后旧模板会校验失败并给出明确提示，而不是静默渲染空值；</li>
+<li>公共仓库不需要知道垂直字段名。</li>
+</ul>
+<h4 id="82-namingprofile">8.2 NamingProfile<a class="headerlink" href="#82-namingprofile" title="Permanent link">¶</a></h4>
+<div class="highlight"><pre><span></span><code><span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">NamingField</span><span class="p">:</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>                  <span class="c1"># 可带命名空间，如 example.content_id</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">applies</span><span class="p">:</span> <span class="nb">str</span>              <span class="c1"># both / movie / tv / profile-specific</span>
+    <span class="n">resolver</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">MediaMetadata</span><span class="p">,</span> <span class="n">NamingContext</span><span class="p">],</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="n">sanitizer</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">NamingProfile</span><span class="p">:</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">content_profile</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">fields</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NamingField</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+    <span class="n">default_movie</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">default_tv</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">default_tv_season</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">parser_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">nfo_profile</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+<ul>
+<li><code>NamingProfile</code> 由插件注册，核心只提供 <code>default</code> profile。</li>
+<li>选择优先级：订阅显式设置 &gt; 媒体库根设置 &gt; <code>content_profile</code> 默认 &gt; 系统默认。</li>
+<li>校验：未知字段、未闭合条件段、跨 profile 字段混用均在预览阶段报错。</li>
+<li>渲染：<code>get_format_dict</code> 改为从 <code>MediaMetadata</code> + 注册字段 resolver 构建，不再直接读 <code>MediaInfo.tmdb_id</code>。</li>
+<li>兼容：现有 <code>{title}</code>、<code>{tmdbid}</code>、<code>{season_episode}</code> 等字段语义不变。</li>
+</ul>
+<h4 id="83-parserprofile">8.3 ParserProfile<a class="headerlink" href="#83-parserprofile" title="Permanent link">¶</a></h4>
+<p>垂直内容往往需要先识别内容编号，再做元数据查询：</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ParserProfile</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">content_profile</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">priority</span><span class="p">:</span> <span class="nb">int</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">extract</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">subtitle</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ParsedRelease</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<ul>
+<li>核心在通用解析链之前按 <code>priority</code> 尝试已注册 profile；</li>
+<li>profile 高置信度命中时可直接生成 <code>anchor_ref</code>（内容编号），跳过通用标题匹配；</li>
+<li>低置信度时回退到通用 <code>ReleaseParser</code>，避免误判；</li>
+<li>profile 必须声明 <code>applies_to</code>（媒体库根/文件名模式），默认不全局启用。</li>
+</ul>
+<p><code>ParserProfile</code> 是 <code>MatchProfile</code>（§6.5）的解析层组件：<code>ParserProfile.extract</code> 产出
+<code>ParsedRelease</code> + <code>anchor_hint</code>，<code>MatchProfile.detect/match</code> 负责检测决策与打分。
+同一 <code>content_profile</code> 的 Parser / Match / Naming / Nfo 由插件成套注册。</p>
+<h3 id="9-discovery--feed-扩展探索页">9. Discovery / Feed 扩展（探索页）<a class="headerlink" href="#9-discovery--feed-扩展探索页" title="Permanent link">¶</a></h3>
+<p>「探索」不是某个 provider 的专属页面，而是核心提供的<strong>来源无关发现面</strong>。
+provider 除了元数据详情，还可以声明可浏览的 feed（热门、最新、榜单、标签、演员作品等）。</p>
+<p>这是<strong>通用能力，不是垂直内容专属能力</strong>：内置的豆瓣、TMDB、Bangumi 排行榜/日历/热门，以及未来接入的 Trakt、AniList、MAL、第三方榜单或站点自建榜单，全部走同一套 <code>DiscoveryProvider</code> 注册与动态渲染。核心不再维护 <code>pageCategories</code> / <code>singlePageMap</code> 这类硬编码来源表。</p>
+<p><code>DiscoveryProvider</code> 与 <code>MetadataProvider</code> 是两个独立能力：</p>
+<ul>
+<li>同一个来源可以同时实现两者（如 TMDB：既能搜索详情，也能提供热门/趋势）；</li>
+<li>也可以只实现发现能力（只提供榜单，点击后交给其他 provider 补详情）；</li>
+<li>还可以只实现元数据能力（不提供浏览页，只被订阅/刮削引用）。</li>
+</ul>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DiscoveryProvider</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="n">descriptor</span><span class="p">:</span> <span class="n">DiscoveryDescriptor</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">feeds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">:</span> <span class="n">ProviderContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">DiscoveryFeed</span><span class="p">]:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">items</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">feed</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">page</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">filters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+        <span class="n">ctx</span><span class="p">:</span> <span class="n">ProviderContext</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DiscoveryPage</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DiscoveryFeed</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">schema_version</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>                    <span class="c1"># 在 provider 内唯一，如 popular / latest / top_rated</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>                  <span class="c1"># 展示名，由 provider 提供</span>
+    <span class="n">icon</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">facets</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Facet</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>    <span class="c1"># 年份、标签、演员、厂牌等可筛选维度</span>
+    <span class="n">page_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DiscoveryItem</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">schema_version</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">ref</span><span class="p">:</span> <span class="n">ProviderRef</span>            <span class="c1"># 可回查详情的稳定引用</span>
+    <span class="n">content_profile</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">original_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">year</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">poster</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">backdrop</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">rating</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>   <span class="c1"># 按 provider 命名空间</span>
+    <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">anchor_ref</span><span class="p">:</span> <span class="n">ProviderRef</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>   <span class="c1"># 可直接用于订阅的锚点</span>
+    <span class="n">actions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>     <span class="c1"># subscribe / search / download / detail</span>
+    <span class="n">extra</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># 命名空间扩展字段</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DiscoveryPage</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">items</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">DiscoveryItem</span><span class="p">]</span>
+    <span class="n">page</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">has_more</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">facets</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">FacetValue</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+</code></pre></div>
+<p>设计约束：</p>
+<ol>
+<li><strong>feed 由 provider 声明，不由核心猜测</strong>。核心不假设每个源都有 <code>popular</code>；provider 可以只提供 <code>latest</code>、<code>top_rated</code>、<code>by_tag</code>、<code>by_actress</code>。</li>
+<li><strong>来源驱动 UI</strong>：探索页从 <code>/api/media/discovery/providers</code> 拉取当前用户可见的 provider/feed，动态渲染来源标签、筛选器与卡片；不在前端硬编码来源名单。</li>
+<li><strong>插件注入分两类</strong>：</li>
+<li><strong>数据注入（推荐）</strong>：插件只注册 <code>DiscoveryProvider</code>，探索页使用核心通用卡片与筛选器渲染，不需要改前端；</li>
+<li><strong>UI 注入（可选）</strong>：需要特殊布局时，插件通过 <code>frontend.slots</code> 注册 <code>discovery.panels</code> 面板，核心只预留插槽，不感知内容。</li>
+<li><strong>订阅入口统一</strong>：卡片上的「订阅」调用通用订阅 API，携带 <code>anchor_ref + content_profile + metadata_policy</code>，不要求 TMDB。列表项没有 <code>anchor_ref</code> 时只显示「查看详情」，进入详情后再由 provider 解析锚点，禁止列表页为每个条目触发详情请求。</li>
+<li><strong>私有来源</strong>：<code>visibility: private</code> 的 provider 默认不出现在探索页；需要 <code>metadata:private:view</code> 权限或管理员，由后端过滤，不能只靠前端隐藏。</li>
+<li><strong>缓存与限流</strong>：feed 按 <code>provider + feed + page + filters</code> 缓存；provider 声明 TTL；单源失败不影响其他来源。</li>
+<li><strong>无稳定榜单的来源</strong>：只暴露实际可用的 feed，禁止伪造「热门」；例如只有搜索/分类能力的源可以提供 <code>search</code> / <code>by_tag</code> / <code>by_actress</code> 面板。</li>
+</ol>
+<p>feed 类型（provider 声明，前端按类型选择通用渲染器）：</p>
+<table>
+<thead>
+<tr>
+<th>kind</th>
+<th>语义</th>
+<th>通用渲染</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ranking</code></td>
+<td>榜单/排行</td>
+<td>带名次卡片</td>
+</tr>
+<tr>
+<td><code>trending</code></td>
+<td>趋势/流行</td>
+<td>横向或网格卡片</td>
+</tr>
+<tr>
+<td><code>latest</code></td>
+<td>最新</td>
+<td>时间倒序网格</td>
+</tr>
+<tr>
+<td><code>calendar</code></td>
+<td>日历/放送表</td>
+<td>按日期分组</td>
+</tr>
+<tr>
+<td><code>seasonal</code></td>
+<td>季度档（新番/新剧/新片）</td>
+<td>季度切换器 + 网格</td>
+</tr>
+<tr>
+<td><code>collection</code></td>
+<td>专题/合集</td>
+<td>分组卡片</td>
+</tr>
+<tr>
+<td><code>search</code></td>
+<td>源内搜索</td>
+<td>搜索框 + 结果网格</td>
+</tr>
+</tbody>
+</table>
+<h4 id="91-内置-feed-基线">9.1 内置 feed 基线<a class="headerlink" href="#91-内置-feed-基线" title="Permanent link">¶</a></h4>
+<p>现有探索页只有「豆瓣热门/TOP250、TMDB 趋势、Bangumi 周日历」，缺少用户高频使用的
+<strong>季度档</strong>（每季新番、每季度新剧）。DiscoveryProvider 落地时，内置 provider 至少提供：</p>
+<table>
+<thead>
+<tr>
+<th>feed</th>
+<th>provider</th>
+<th>kind</th>
+<th>实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每季新番</td>
+<td><code>bangumi</code></td>
+<td>seasonal</td>
+<td><code>air_date</code> 落在选定季度的动画条目（bangumi 搜索/标签接口），facet <code>season=2026-winter</code></td>
+</tr>
+<tr>
+<td>每季新番（补充）</td>
+<td><code>tmdb</code></td>
+<td>seasonal</td>
+<td><code>discover/tv</code> + <code>with_genres=16</code> + <code>first_air_date.gte/lte=季度区间</code></td>
+</tr>
+<tr>
+<td>每季度新剧</td>
+<td><code>tmdb</code></td>
+<td>seasonal</td>
+<td><code>discover/tv</code> + <code>first_air_date</code> 季度区间 + <code>with_origin_country</code>/语言筛选</td>
+</tr>
+<tr>
+<td>每季度新片</td>
+<td><code>tmdb</code></td>
+<td>seasonal</td>
+<td><code>discover/movie</code> + <code>primary_release_date</code> 季度区间</td>
+</tr>
+<tr>
+<td>季度华语剧</td>
+<td><code>douban</code></td>
+<td>seasonal</td>
+<td><code>tv_recommend(tags=国产剧,2026)</code> / <code>subject_collection</code> 变体</td>
+</tr>
+<tr>
+<td>放送日历</td>
+<td><code>bangumi</code></td>
+<td>calendar</td>
+<td>现有 <code>/calendar</code> 按星期分组（保留）</td>
+</tr>
+<tr>
+<td>正在热映/即将上映/热门/Top250/口碑榜</td>
+<td><code>douban</code></td>
+<td>ranking/trending</td>
+<td>现有 subject_collection 端点（保留）</td>
+</tr>
+<tr>
+<td>TMDB 趋势</td>
+<td><code>tmdb</code></td>
+<td>trending</td>
+<td>现有 trending/discover（保留）</td>
+</tr>
+</tbody>
+</table>
+<p>规则：</p>
+<ul>
+<li><code>seasonal</code> feed 必须带 <code>season</code> facet，格式 <code>YYYY-q1..q4</code>（剧集/电影）与
+  <code>YYYY-winter/spring/summer/fall</code>（新番，映射为 1/4/7/10 月季度）；</li>
+<li>前端渲染统一的季度切换器（上一季/当季/下一季），facet 值透传 provider；</li>
+<li>季度区间换算由核心完成（winter=01-01~03-31 等），provider 只接收日期区间；</li>
+<li>默认选中「当季」；<code>seasonal</code> feed 按 <code>season + page</code> 缓存，TTL 6 小时；</li>
+<li>这些内置 feed 只是 registry 数据，不是前端代码——新增/下线一个 feed 不改前端。</li>
+</ul>
+<h4 id="92-探索页信息架构排行榜重构">9.2 探索页信息架构（排行榜重构）<a class="headerlink" href="#92-探索页信息架构排行榜重构" title="Permanent link">¶</a></h4>
+<p>现状问题：<code>/discovery/ranking</code> 把豆瓣热映、TMDB 趋势、豆瓣 Top250、口碑榜混排在一页，
+来源语义不同（热度 vs 评分榜 vs 趋势），用户无法预期每一行是什么。</p>
+<p>重构为两级结构，<strong>来源是一级维度，feed 是二级维度</strong>：</p>
+<div class="highlight"><pre><span></span><code>探索
+├─ 来源 tab：豆瓣 | TMDB | Bangumi | [插件来源...]     ← 由 /api/media/discovery/providers 动态生成
+│   └─ feed tab：该来源自己声明的 feeds                 ← 由 feeds() 动态生成
+│       └─ 内容区：按 feed.kind 选择通用渲染器 + facets 筛选
+└─ 「综合」tab（可选，默认关）：跨源同 kind feed 的聚合视图，条目标注来源徽标
+</code></pre></div>
+<p>规则：</p>
+<ol>
+<li><strong>不允许在同一内容区混排不同来源的条目</strong>，除非用户显式进入「综合」tab；
+   综合视图中每个条目必须带来源徽标，点击订阅时使用该条目自己的 anchor_ref。</li>
+<li>「排行榜」不再是独立硬编码页面，而是 kind=<code>ranking/trending</code> feed 的筛选视图
+   （<code>/discovery?kind=ranking</code>），菜单保留入口但数据走同一协议。</li>
+<li>一级来源 tab 的顺序：内置来源在前（豆瓣/TMDB/Bangumi），插件来源按启用时间追加，
+   私有来源按权限过滤；tab 数量多时折叠为下拉。</li>
+<li>记住用户上次选择的来源与 feed（本地偏好），下次进入直接恢复。</li>
+<li>空 feed 或 provider 降级时，tab 仍显示但内容区给出来源级错误提示，
+   不影响其他来源。</li>
+</ol>
+<p>动态 UI 契约：</p>
+<ul>
+<li>provider 返回 <code>feeds[]</code> 时同时声明 <code>kind / title / facets / page_size / render_hint</code>；</li>
+<li>前端只实现少量通用渲染器（<code>grid</code>、<code>ranking_grid</code>、<code>calendar</code>、<code>list</code>），未知 <code>render_hint</code> 回退 <code>grid</code>；</li>
+<li>新增来源不需要改前端代码，只需注册 provider 并返回 feed 描述；</li>
+<li>现有豆瓣/TMDB/Bangumi 的硬编码分类逐步迁移为内置 <code>DiscoveryProvider</code>，迁移完成后删除前端 <code>pageCategories</code> / <code>singlePageMap</code>。</li>
+</ul>
+<p>当前插件前端路由统一挂在 <code>/plugin</code> 下（<code>loader.ts</code> 的 <code>registerPluginRoutes</code>），因此要把入口放进「探索」：
+- 首选核心探索页的通用 <code>discovery</code> 数据源机制；
+- 需要整页自定义时，在探索页增加 <code>PluginSlot target="discovery.panels"</code>，插件注册该 slot；
+- 不建议让核心新增 <code>/discovery/&lt;source&gt;-*</code> 之类硬编码路由。</p>
+<p>订阅页同样保持通用：按 <code>content_profile</code> 与权限过滤订阅列表，插件只提供来源和命名 profile，不复制一套订阅管理页面。</p>
+<h3 id="10-api-变更">10. API 变更<a class="headerlink" href="#10-api-变更" title="Permanent link">¶</a></h3>
+<p>新增只读/预览接口：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/media/providers</code></td>
+<td>当前用户可见 provider、能力、健康状态</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/media/search</code></td>
+<td><code>{provider, query, media_type, content_profile}</code></td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/media/lookup?ref=&lt;provider&gt;:&lt;id&gt;&amp;policy=&lt;key&gt;</code></td>
+<td>单条详情</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/media/compose/preview</code></td>
+<td>返回合成后的规范字段与 provenance</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/media/discovery/providers</code></td>
+<td>当前用户可见的 discovery provider / feed / facets</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/media/discovery/items</code></td>
+<td><code>{provider, feed, page, filters}</code> → 标准化发现项</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/media/identity/{identity_id}</code></td>
+<td>identity、refs、快照摘要、冲突</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/media/identity/link/review</code></td>
+<td>人工确认/拒绝跨源映射（<code>metadata:manage</code>）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/media/identity/conflicts</code></td>
+<td>待确认映射与字段冲突列表</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/media/naming/profiles</code></td>
+<td>可用命名 profile 与字段目录</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/media/naming/preview</code></td>
+<td>模板 + 样本元数据 → 渲染结果</td>
+</tr>
+</tbody>
+</table>
+<p>权限与可见性：</p>
+<ul>
+<li><code>discovery:view</code> 控制探索页访问；</li>
+<li><code>metadata:private:view</code> 控制 <code>visibility: private</code> 的 provider / feed / 订阅；</li>
+<li>后端按权限过滤 provider 列表与发现项，前端隐藏不能作为安全边界。</li>
+</ul>
+<p>订阅接口保持向后兼容：</p>
+<ul>
+<li><code>mediaid</code> 支持新 ref 语法；旧 <code>DB:</code> / <code>BG:</code> / 纯数字继续映射。</li>
+<li>新增可选字段 <code>anchor</code>、<code>metadata_policy</code>、<code>naming_profile</code>、<code>content_profile</code>。</li>
+<li>返回值增加 <code>identity_id</code>、<code>refs</code>，<code>tmdbid</code> 继续返回（可为空）。</li>
+</ul>
+<h3 id="11-数据库与迁移">11. 数据库与迁移<a class="headerlink" href="#11-数据库与迁移" title="Permanent link">¶</a></h3>
+<p>新增表：</p>
+<div class="highlight"><pre><span></span><code>MEDIA_IDENTITY
+MEDIA_EXTERNAL_REF
+MEDIA_METADATA_SNAPSHOT
+MEDIA_FIELD_OVERRIDE       -- 手动锁定字段（用户/管理员）
+PERSON_IDENTITY            -- 人员实体与别名
+PERSON_EXTERNAL_REF        -- 人员跨源引用
+</code></pre></div>
+<p>历史表扩展：</p>
+<ul>
+<li><code>DOWNLOADHISTORY</code> / <code>TRANSFERHISTORY</code> 增加 <code>IDENTITY_ID</code>、<code>ANCHOR_PROVIDER</code>、<code>ANCHOR_EXTERNAL_ID</code>、<code>CONTENT_PROFILE</code>；</li>
+<li>迁移期双写，旧 <code>TMDBID</code> 继续保留；</li>
+<li>重识别、目录改名、媒体服务器同步优先使用 identity/ref，旧列仅作兼容回退。</li>
+</ul>
+<p>迁移步骤：</p>
+<ol>
+<li>建新表与索引；不修改现有列语义。</li>
+<li>从 <code>SUBSCRIBE_*</code>、<code>DOWNLOADHISTORY</code>、<code>TRANSFERHISTORY</code> 的 TMDBID 回填 identity + tmdb ref。</li>
+<li>从 <code>SUBSCRIBE_*</code> 的豆瓣来源（<code>DB:</code> 前缀、历史 note）回填 douban ref。</li>
+<li>订阅表新增列，双写；旧 <code>TMDBID</code> 继续由 ref 派生。</li>
+<li>新增唯一约束前先做重复 identity 合并（按 provider ref 精确匹配 + 年份 + 标题人工/规则复核）。</li>
+<li>回滚策略：关闭 <code>metadata.provider_engine</code> 后读旧列；新表保留不删除。</li>
+</ol>
+<p>迁移要求遵循项目约定：revision ID 使用 <code>uv run alembic revision -m "..."</code> 生成，迁移后执行 <code>uv run alembic upgrade head</code> 与 <code>uv run alembic check</code>。</p>
+<h3 id="12-缓存限流与可观测性">12. 缓存、限流与可观测性<a class="headerlink" href="#12-缓存限流与可观测性" title="Permanent link">¶</a></h3>
+<ul>
+<li>provider 缓存按 <code>provider:schema_version:ref:locale</code> 命名空间隔离，TTL 由 provider 声明。</li>
+<li>单 provider 并发上限、QPS、超时、重试、熔断独立配置；不得让一个慢源拖垮整条识别链。</li>
+<li>合成结果按 <code>identity_id + policy_hash + snapshot_hash</code> 缓存。</li>
+<li>日志统一携带 <code>identity_id</code>、<code>provider</code>、<code>snapshot_hash</code>；provider 凭证与 Cookie 必须脱敏。</li>
+<li>指标：provider 成功率、P95 延迟、降级次数、合成字段覆盖率、未匹配率。</li>
+<li>事件：<code>metadata.provider.failed</code>、<code>metadata.snapshot.created</code>、<code>metadata.conflict.detected</code>，供插件与告警订阅。</li>
+<li>刷新策略：快照 TTL 由策略声明；订阅刷新只拉取缺失或过期的 provider；手动刷新按 provider 粒度；低置信度映射不会自动重建。</li>
+</ul>
+<h3 id="13-安全与插件边界">13. 安全与插件边界<a class="headerlink" href="#13-安全与插件边界" title="Permanent link">¶</a></h3>
+<ul>
+<li>provider 只能通过 <code>ProviderContext</code> 使用 HTTP、缓存、限流、配置与日志，不直接访问数据库或业务 repository。</li>
+<li>出站域名由 manifest 声明 <code>allowed_hosts</code>，默认拒绝 localhost、内网地址与云元数据地址；重定向后重新校验。</li>
+<li>provider 返回值有大小上限与 schema 校验；非法响应视为失败，不写入快照。</li>
+<li>插件凭证只存 <code>PLUGIN_CONFIG</code>，不得回显到日志、API 或 NFO。</li>
+<li><code>visibility: private</code> 的 provider / profile 不进入公开市场列表，仅在安装并被管理员启用后可见；探索页与订阅列表同样按 <code>metadata:private:view</code> 在后端过滤。</li>
+<li>新增权限码在 RBAC 初始化中登记（<code>metadata:private:view</code>、必要的 <code>metadata:manage</code>），角色配置后才可使用；插件不能自行绕过权限模型。</li>
+<li>垂直内容插件使用独立仓库与独立分发渠道；核心仓库只保留通用扩展协议与空实现。</li>
+</ul>
+<h3 id="14-实施阶段">14. 实施阶段<a class="headerlink" href="#14-实施阶段" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>验收</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P0</td>
+<td>规范模型、Provider registry、TMDB/Douban/Bangumi adapter；旧路径不变</td>
+<td>契约测试通过，旧功能零回归</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Composer + 策略 + provenance + preview API</td>
+<td><code>douban_primary</code> / <code>tmdb_primary</code> 合成矩阵测试通过</td>
+</tr>
+<tr>
+<td>P2</td>
+<td><code>MediaIdentity</code> / <code>MEDIA_EXTERNAL_REF</code> / 快照表 + 数据回填</td>
+<td>旧订阅可解析，新订阅可无 TMDB 创建</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>Scraper/NFO 改为快照驱动；图片与演职人员统一</td>
+<td>豆瓣单源可生成 NFO；TMDB 旧 NFO 兼容</td>
+</tr>
+<tr>
+<td>P4</td>
+<td>订阅读写切换 identity；douban sync 不再强制桥接；探索页改为 provider/feed 驱动，内置 seasonal 基线（每季新番/季度新剧）</td>
+<td>豆瓣订阅无 TMDB 时仍可搜索、下载、转移；探索页来源可插拔；季度切换器可用</td>
+</tr>
+<tr>
+<td>P5</td>
+<td>NamingProfile / ParserProfile / MatchProfile 扩展；<code>infer_type</code> 与 <code>MediaService</code> 类型分支迁移为内置 profile；<code>get_format_dict</code> 改造</td>
+<td>现有模板与识别结果零变化；插件 profile 可注册/卸载</td>
+</tr>
+<tr>
+<td>P6</td>
+<td>插件 metadata + discovery 扩展点上线，私有 provider pack 接入</td>
+<td>插件启停、缓存清理、权限与失败隔离通过</td>
+</tr>
+<tr>
+<td>P7</td>
+<td>移除 legacy 分支（至少两个 minor 版本后）</td>
+<td>全量回归与迁移演练通过</td>
+</tr>
+</tbody>
+</table>
+<p>每个阶段通过 feature flag 控制：</p>
+<div class="highlight"><pre><span></span><code>metadata.provider_engine
+metadata.douban_primary
+metadata.snapshot_scraper
+naming.profile_engine
+discovery.provider_engine
+</code></pre></div>
+<h3 id="15-测试策略">15. 测试策略<a class="headerlink" href="#15-测试策略" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>Provider 契约测试</strong>：统一 fixture 验证 search/detail/map_ids 的 DTO、错误、超时、空结果。</li>
+<li><strong>合成矩阵</strong>：豆瓣主/TMDB 主/单源/部分失败/冲突/锁定字段/多语言。</li>
+<li><strong>身份测试</strong>：同 provider 同 ID、跨 provider 映射、年份冲突、低置信度拒绝合并。</li>
+<li><strong>命名测试</strong>：字段注册、命名空间、未知字段、可选片段、迁移前后模板等价。</li>
+<li><strong>NFO 测试</strong>：多 uniqueid、缺失 TMDB、rating 命名空间、剧集/季边界。</li>
+<li><strong>迁移测试</strong>：旧订阅、旧下载历史、<code>DB:</code> 前缀、重复 identity 合并。</li>
+<li><strong>插件测试</strong>：注册/注销、禁用后回退、恶意/非法 DTO、超限响应、凭证脱敏。</li>
+<li><strong>集成测试</strong>：豆瓣订阅 → 搜索 → 下载 → 转移 → 刮削 → 重命名全链路无 TMDB。</li>
+<li><strong>探索测试</strong>：feed 注册/分页/筛选、私有 provider 权限过滤、单源失败不影响其他来源、无榜单来源不伪造 feed。</li>
+</ul>
+<h2 id="备选方案">备选方案<a class="headerlink" href="#备选方案" title="Permanent link">¶</a></h2>
+<h3 id="方案-a继续以-tmdb-为主豆瓣只做展示层补充">方案 A：继续以 TMDB 为主，豆瓣只做展示层补充<a class="headerlink" href="#方案-a继续以-tmdb-为主豆瓣只做展示层补充" title="Permanent link">¶</a></h3>
+<p>改动最小，但无法满足「豆瓣独立刮削」「无 TMDB 订阅」「垂直内容命名」；一旦 TMDB 无条目即断路。否决。</p>
+<h3 id="方案-b为每个-provider-增加一套独立字段和分支">方案 B：为每个 provider 增加一套独立字段和分支<a class="headerlink" href="#方案-b为每个-provider-增加一套独立字段和分支" title="Permanent link">¶</a></h3>
+<p>短期直观，长期形成 provider 笛卡尔积；每接一个源都要改 Scraper、NFO、订阅、命名。否决。</p>
+<h3 id="方案-c外部微服务统一刮削核心只存结果">方案 C：外部微服务统一刮削，核心只存结果<a class="headerlink" href="#方案-c外部微服务统一刮削核心只存结果" title="Permanent link">¶</a></h3>
+<p>隔离性好，但引入额外部署、鉴权、缓存与一致性成本，且与现有插件框架重复。保留为未来可选部署形态，不作为本期主方案。</p>
+<h2 id="风险与缓解">风险与缓解<a class="headerlink" href="#风险与缓解" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>缓解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>跨源错误合并</td>
+<td>身份闸门 + 精确 ref 优先 + 低置信度不合并 + 冲突可见</td>
+</tr>
+<tr>
+<td>字段策略过于复杂</td>
+<td>提供预设，默认 <code>douban_primary</code> / <code>tmdb_primary</code>；高级策略才暴露字段级配置</td>
+</tr>
+<tr>
+<td>provider 限流/封禁</td>
+<td>独立限流、缓存、熔断、可配置代理；失败只降级</td>
+</tr>
+<tr>
+<td>迁移期双写不一致</td>
+<td>以 ref 为源、TMDBID 为派生；迁移脚本可重跑；旧读路径保留</td>
+</tr>
+<tr>
+<td>插件安全</td>
+<td>manifest 声明、域名白名单、DTO 校验、无 DB 直连、凭证脱敏</td>
+</tr>
+<tr>
+<td>现有模板失效</td>
+<td>字段语义不变；未知字段在预览阶段报错；插件卸载回退默认 profile</td>
+</tr>
+<tr>
+<td>探索列表触发 N+1 详情请求</td>
+<td>列表只返回列表数据；<code>anchor_ref</code> 缺失时禁用订阅，详情页按需解析</td>
+</tr>
+<tr>
+<td>跨源映射误判</td>
+<td><code>LINK_METHOD/LINK_CONFIDENCE/REVIEWED</code> 记录；低置信度进入待确认，不自动合并</td>
+</tr>
+<tr>
+<td>性能下降</td>
+<td>并行取数、快照缓存、热路径零网络、provider 并发上限</td>
+</tr>
+</tbody>
+</table>
+<h2 id="决策">决策<a class="headerlink" href="#决策" title="Permanent link">¶</a></h2>
+<p>采用 <strong>Provider + Composition + NamingProfile</strong> 架构：</p>
+<ol>
+<li>本地 <code>MediaIdentity</code> 作为跨源稳定身份，外部 ID 变为多值 <code>ProviderRef</code>；</li>
+<li>任何 provider 都能独立作为主源，TMDB 不再是必填；</li>
+<li>字段级合成策略支持豆瓣主、TMDB 主、单源与未来多源；</li>
+<li>刮削与 NFO 消费规范快照，不再直读 provider 原始字典；</li>
+<li>命名、解析、NFO、内容形态通过插件注册扩展，核心保持通用；</li>
+<li>迁移期保留 TMDB 兼容列与旧 API，按阶段切换。</li>
+</ol>
+<p>该设计同时满足当前豆瓣/TMDB 双源需求与后续 provider 扩展，不把任何垂直内容细节带入公共核心。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "content.action.edit", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>

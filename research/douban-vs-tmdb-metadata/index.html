@@ -1,0 +1,1798 @@
+<!DOCTYPE html><html lang="zh" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Nexus Media 多功能媒体库管理工具使用文档">
+      
+      
+      
+        <link rel="canonical" href="https://linyuan0213.github.io/nexus-media/research/douban-vs-tmdb-metadata/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>豆瓣 vs TMDB 元数据质量调研 - Nexus Media 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#豆瓣-vs-tmdb-元数据质量调研" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="Nexus Media 文档" class="md-header__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Nexus Media 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              豆瓣 vs TMDB 元数据质量调研
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到深色模式" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换到深色模式" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到浅色模式" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换到浅色模式" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Nexus Media 文档" class="md-nav__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    Nexus Media 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装部署
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    使用指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    使用指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    基础配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    资源搜索与探索
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sites/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    站点配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../filter_rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    过滤规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../download_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../downloaders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体服务器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../directory_sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    目录同步
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_organization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体整理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rss/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RSS 订阅
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../indexers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    索引器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通知渠道配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../message_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    消息通知模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务与调度
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    存储后端
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    用户与权限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    插件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件使用
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugin_development_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发者
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    开发者
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    本地开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent-mvp-detailed-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    常见问题
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    更新日志
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#1-字段对比实测" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 字段对比（实测）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-数据质量结论" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 数据质量结论
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. 数据质量结论">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#豆瓣更强的场景" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        豆瓣更强的场景
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tmdb-更强的场景" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TMDB 更强的场景
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-对合成策略adr-025的约束" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 对合成策略（ADR-025）的约束
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. 对合成策略（ADR-025）的约束">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-douban_primary-字段分配" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 douban_primary 字段分配
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-豆瓣日期陷阱" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 豆瓣日期陷阱
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#321-豆瓣分集元数据html-层补充" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2.1 豆瓣分集元数据（HTML 层补充）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.2.1 豆瓣分集元数据（HTML 层补充）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#风控与-cookie-取证2026-10-20-实测" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        风控与 Cookie 取证（2026-10-20 实测）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-剧集身份映射" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 剧集身份映射
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-请求治理" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 请求治理
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-能力声明建议providerdescriptor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 能力声明建议（ProviderDescriptor）
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/linyuan0213/nexus-media/edit/master/docs/research/douban-vs-tmdb-metadata.md" title="编辑此页" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="豆瓣-vs-tmdb-元数据质量调研">豆瓣 vs TMDB 元数据质量调研<a class="headerlink" href="#豆瓣-vs-tmdb-元数据质量调研" title="Permanent link">¶</a></h1>
+<blockquote>
+<p>调研日期：2026-10-19
+样本：豆瓣《肖申克的救赎》（subject <code>1292052</code>）、豆瓣剧集（分季条目，含 <code>episodes_count</code>）、
+TMDB <code>movie/278</code>、<code>tv/100088</code>（含 <code>season/1</code> 分集）。
+代码依据：<code>src/app/infrastructure/external/doubanapi/</code>、<code>src/app/media/lookup/tmdb_*</code>。</p>
+</blockquote>
+<h2 id="1-字段对比实测">1. 字段对比（实测）<a class="headerlink" href="#1-字段对比实测" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>豆瓣（frodo API）</th>
+<th>TMDB（v3 API）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>中文标题</td>
+<td><code>title</code> 人工维护，质量高</td>
+<td>按请求语言，存在但常不如豆瓣准确</td>
+</tr>
+<tr>
+<td>原始标题</td>
+<td><code>original_title</code></td>
+<td><code>original_title</code> / <code>original_name</code></td>
+</tr>
+<tr>
+<td>别名</td>
+<td><code>aka</code> 含港台译名、民间译名</td>
+<td>需另调 <code>translations</code>，按语言维度</td>
+</tr>
+<tr>
+<td>评分</td>
+<td><code>rating={value, count}</code>，中文观众样本极大（例：9.7 / 335 万）</td>
+<td><code>vote_average / vote_count</code>（例：8.73 / 3.1 万）</td>
+</tr>
+<tr>
+<td>简介</td>
+<td><code>intro</code> 人工中文长简介，常含获奖/背景信息</td>
+<td>zh-CN overview 常有缺失或机翻</td>
+</tr>
+<tr>
+<td>上映日期</td>
+<td><code>pubdate=["2026-08-28(中国大陆)"]</code> 数组带地区标注，<strong>可能是重映日期</strong>；<code>release_date</code> 常为 null</td>
+<td><code>release_date=1994-09-23</code> 原始日期 + <code>release_dates</code> 按国家/分级</td>
+</tr>
+<tr>
+<td>时长</td>
+<td><code>durations=["142分钟"]</code> 字符串数组（可能多剪辑版本）</td>
+<td><code>runtime</code> 整数分钟</td>
+</tr>
+<tr>
+<td>海报</td>
+<td>单张 <code>cover_url</code>（webp），有 large/normal/small 尺寸</td>
+<td><code>poster_path</code> 多尺寸，票数排序</td>
+</tr>
+<tr>
+<td>背景图/Logo</td>
+<td><strong>无 backdrop，无 logo</strong>；剧照走 <code>photos</code> 端点</td>
+<td>backdrops / logos / stills 齐全</td>
+</tr>
+<tr>
+<td>演职员</td>
+<td>详情仅演员名列表；celebrities 端点有 <code>latin_name/avatar/roles</code></td>
+<td>cast（character/order/头像）+ crew（job 细分，百级）</td>
+</tr>
+<tr>
+<td>外部 ID</td>
+<td>API 无 imdb_id（只能网页 xpath 刮，见 <code>webapi.py</code>）</td>
+<td><code>imdb_id / wikidata_id</code> 等 <code>external_ids</code></td>
+</tr>
+<tr>
+<td>剧集结构</td>
+<td><strong>按季分条目</strong>（每季独立 subject_id）；API 仅 <code>episodes_count</code> 计数</td>
+<td>show → seasons → episodes，分集含 <code>air_date/runtime/overview/still/vote</code></td>
+</tr>
+<tr>
+<td>分集元数据</td>
+<td>API 无；<strong>HTML 有</strong>（分集列表页 <code>subject/{id}/episodes/</code>、分集页 <code>subject/{id}/episode/{n}/</code>），但强制 Cookie 且被 <code>sec.douban.com</code> 风控（实测 302）</td>
+<td>API 原生完整</td>
+</tr>
+<tr>
+<td>季数/集数</td>
+<td>网页端点可刮 <code>季数/集数</code>；API 只有 <code>episodes_count</code></td>
+<td><code>number_of_seasons / number_of_episodes</code> + seasons 数组</td>
+</tr>
+<tr>
+<td>类型</td>
+<td><code>genres</code> 中文标签数组</td>
+<td><code>genres</code> 带 id + 按语言名称</td>
+</tr>
+<tr>
+<td>国家/语言</td>
+<td><code>countries</code> / <code>languages</code> 中文名数组</td>
+<td><code>production_countries / spoken_languages</code>（ISO 结构）</td>
+</tr>
+<tr>
+<td>出品方</td>
+<td>无（<code>vendors</code> 是国内流媒体播放源）</td>
+<td><code>production_companies / networks</code></td>
+</tr>
+<tr>
+<td>预告</td>
+<td>单个 <code>trailer</code>（中国大陆预告，含封面/时长）</td>
+<td><code>videos</code>（YouTube）列表</td>
+</tr>
+<tr>
+<td>榜单</td>
+<td><code>honor_infos</code>（如 Top250 #1）+ 30+ subject_collection 榜单端点</td>
+<td>无榜单概念，只有 <code>popularity</code> 数值</td>
+</tr>
+<tr>
+<td>分级</td>
+<td><code>is_restrictive</code> 布尔</td>
+<td><code>release_dates</code> 内含 certification</td>
+</tr>
+<tr>
+<td>播放源</td>
+<td><code>vendors / linewatches</code>（国内在哪看）</td>
+<td><code>watch/providers</code> 需单独端点</td>
+</tr>
+<tr>
+<td>互动指标</td>
+<td><code>comment_count / review_count / forum_topic_count</code></td>
+<td>无</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-数据质量结论">2. 数据质量结论<a class="headerlink" href="#2-数据质量结论" title="Permanent link">¶</a></h2>
+<h3 id="豆瓣更强的场景">豆瓣更强的场景<a class="headerlink" href="#豆瓣更强的场景" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>中文本地化</strong>：标题、简介、别名（含港台译名）质量显著高于 TMDB 中文。</li>
+<li><strong>评分决策</strong>：豆瓣评分与评价数更贴合中文用户；<code>comment_count</code>/<code>review_count</code> 是热度信号。</li>
+<li><strong>华语/综艺/冷门片覆盖</strong>：国产剧、综艺条目 TMDB 经常缺失或资料不全。</li>
+<li><strong>榜单生态</strong>：<code>movie_showing / movie_top250 / tv_chinese_best_weekly</code> 等 subject_collection 端点
+  可直接映射为 ADR-025 的 <code>DiscoveryProvider</code> feed，无需爬 HTML。</li>
+<li><strong>展示速览</strong>：<code>card_subtitle</code>（<code>1994 / 美国 / 剧情 犯罪 / 导演 / 主演</code>）可直接用于卡片副标题。</li>
+</ul>
+<h3 id="tmdb-更强的场景">TMDB 更强的场景<a class="headerlink" href="#tmdb-更强的场景" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>剧集结构</strong>：豆瓣按季分条目；API 无分集元数据，HTML 层有分集页但 Cookie 风控，
+  属于降级通道而非主链路；</li>
+<li><strong>图片体系</strong>：backdrop/logo/多尺寸海报，豆瓣只有单海报，媒体库刮削必须用 TMDB 补图。</li>
+<li><strong>日期语义</strong>：<code>release_date</code> 为原始上映日；豆瓣 <code>pubdate</code> 可能是地区重映日，不能直接当原始日期。</li>
+<li><strong>跨源映射</strong>：<code>external_ids</code>（imdb/wikidata）让 identity 链接可靠；豆瓣只能靠标题+年份模糊匹配。</li>
+<li><strong>稳定性</strong>：官方 API + 明确限流（项目配置 <code>tmdb_rate=40/10s</code>）；豆瓣 frodo 为私有接口，
+  依赖内置 key/UA 伪装，存在风控与字段漂移风险（<code>null_rating_reason</code> / <code>localized_message</code>）。</li>
+</ul>
+<h2 id="3-对合成策略adr-025的约束">3. 对合成策略（ADR-025）的约束<a class="headerlink" href="#3-对合成策略adr-025的约束" title="Permanent link">¶</a></h2>
+<h3 id="31-douban_primary-字段分配">3.1 <code>douban_primary</code> 字段分配<a class="headerlink" href="#31-douban_primary-字段分配" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nt">title</span><span class="p">:</span><span class="w">          </span><span class="l l-Scalar l-Scalar-Plain">douban（TMDB 兜底）</span>
+<span class="nt">original_title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">douban（TMDB 兜底）</span>
+<span class="nt">aka/aliases</span><span class="p">:</span><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">douban + TMDB translations 并集</span>
+<span class="nt">overview</span><span class="p">:</span><span class="w">       </span><span class="l l-Scalar l-Scalar-Plain">douban（TMDB 兜底，避免豆瓣 intro 为空）</span>
+<span class="nt">rating</span><span class="p">:</span><span class="w">         </span><span class="l l-Scalar l-Scalar-Plain">命名空间共存 ratings.douban / ratings.tmdb，不合并</span>
+<span class="nt">release_date</span><span class="p">:</span><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">TMDB 原始日期优先；豆瓣 pubdate 需地区过滤且排除重映日</span>
+<span class="nt">runtime</span><span class="p">:</span><span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">TMDB 整数优先；豆瓣 durations 取第一个数字兜底</span>
+<span class="nt">poster</span><span class="p">:</span><span class="w">         </span><span class="l l-Scalar l-Scalar-Plain">TMDB 优先（多尺寸/票数），豆瓣兜底</span>
+<span class="nt">backdrop/logo</span><span class="p">:</span><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">仅 TMDB</span>
+<span class="nt">seasons/episodes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">仅 TMDB（动漫可由 Bangumi 补充别名/放送信息）</span>
+<span class="nt">credits</span><span class="p">:</span><span class="w">        </span><span class="l l-Scalar l-Scalar-Plain">TMDB cast/crew 为主；豆瓣 celebrities 补中文名与头像</span>
+<span class="nt">external_ids</span><span class="p">:</span><span class="w">   </span><span class="l l-Scalar l-Scalar-Plain">TMDB；豆瓣不提供 imdb_id（API 层）</span>
+</code></pre></div>
+<h3 id="32-豆瓣日期陷阱">3.2 豆瓣日期陷阱<a class="headerlink" href="#32-豆瓣日期陷阱" title="Permanent link">¶</a></h3>
+<ul>
+<li><code>pubdate</code> 是数组且带地区后缀（<code>2026-08-28(中国大陆)</code>），需按目标地区筛选；</li>
+<li>重映/再映日期会排在前面，<strong>不能取第一个就当年份来源</strong>；</li>
+<li><code>year</code> 字段是稳定的出品年份，年份来源用 <code>year</code> 而不是 <code>pubdate</code>；</li>
+<li>日历/订阅用 <code>pubdate</code> 时要去掉地区标注并校验是否晚于 <code>year</code> 超过阈值（&gt;3 年视为重映）。</li>
+</ul>
+<h3 id="321-豆瓣分集元数据html-层补充">3.2.1 豆瓣分集元数据（HTML 层补充）<a class="headerlink" href="#321-豆瓣分集元数据html-层补充" title="Permanent link">¶</a></h3>
+<p>豆瓣分集数据存在但只在 HTML 层：</p>
+<div class="highlight"><pre><span></span><code>分集列表页: https://movie.douban.com/subject/{id}/episodes/
+分集详情页: https://movie.douban.com/subject/{id}/episode/{n}/
+</code></pre></div>
+<p>分集页结构（实测《兰香如故》<code>36449295/episode/4/</code>，200 响应 31KB）：</p>
+<div class="highlight"><pre><span></span><code>title:        "兰香如故 第4集"
+字段区:        第4集 / 本集中文名 / 本集原名 / 播放时间 / 剧情简介（&lt;span&gt; 标签文本，可 xpath）
+分集导航:      &lt;a href="/subject/{id}/episode/{n}/"&gt; × 47 —— 一页即可枚举全季分集
+</code></pre></div>
+<p>字段是用户贡献制，冷门分集可能「暂无，欢迎添加」（本例即空）；热门剧集通常有中文分集名与首播日期。</p>
+<h4 id="风控与-cookie-取证2026-10-20-实测">风控与 Cookie 取证（2026-10-20 实测）<a class="headerlink" href="#风控与-cookie-取证2026-10-20-实测" title="Permanent link">¶</a></h4>
+<p>裸请求分集页流程：</p>
+<div class="highlight"><pre><span></span><code>GET /subject/36449295/episode/4/
+  → 302 https://sec.douban.com/c?r=&lt;目标&gt;&amp;_s=&lt;hex&gt;&amp;a=1
+  → 挑战页内嵌 PoW：求解 SHA-512(cha + nonce) 前 4 位 hex == "0000"
+  → POST /c (tok, cha, sol=nonce, red)
+  → 302 回目标页，Set-Cookie: dbsawcv1（HttpOnly，Max-Age=120）
+  → GET 目标页 200
+</code></pre></div>
+<p>Cookie 来源取证：</p>
+<table>
+<thead>
+<tr>
+<th>Cookie</th>
+<th>生成方</th>
+<th>证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bid</code></td>
+<td><strong>服务端</strong> Set-Cookie</td>
+<td>首次任意响应即下发，1 年有效，匿名浏览器 ID</td>
+</tr>
+<tr>
+<td><code>ll</code></td>
+<td><strong>服务端</strong></td>
+<td>按 IP 地理位置设置的城市代码（遗留 cookie，挑战流程未出现，非必需）</td>
+</tr>
+<tr>
+<td><code>dbsawcv1</code></td>
+<td><strong>服务端</strong> Set-Cookie</td>
+<td>PoW 验证通过后由 <code>sec.douban.com</code> 下发；HttpOnly、Secure、<strong>TTL 仅 120 秒</strong>；载荷为 <code>时间戳@哈希@...</code> 服务端签名</td>
+</tr>
+<tr>
+<td><code>ap_v</code></td>
+<td><strong>本地 JS 生成</strong></td>
+<td><code>asset.doubanio.com/.../dui.switcher.*.js</code> 中 <code>ap_v:(o?"1":"0")+","+r</code> 写入；分析/开关用途，与风控无关</td>
+</tr>
+</tbody>
+</table>
+<p>要点：</p>
+<ul>
+<li>本地 JS 只计算 <strong>PoW 的 nonce</strong>，cookie 本体由服务端签发；不能伪造 <code>dbsawcv1</code>，
+  但可以离线复现 PoW 求解（SHA-512(cha+nonce)，4 位前导零，实测 ~1 万次迭代 / 0.01s）。</li>
+<li><code>dbsawcv1</code> TTL 120s，意味着 HTML 层访问需要<strong>挑战求解器常驻</strong>：
+  每次风控触发时走一遍「GET → 解析 tok/cha → 求 nonce → POST /c → 重试」。</li>
+<li>风控触发与 IP/频率/路径相关；带上有效登录 Cookie 可显著降低触发率（<code>DoubanWeb</code> 的 <code>CookieAuth</code>）。</li>
+</ul>
+<p>参考求解实现（已实测通过）：</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">solve_douban_pow</span><span class="p">(</span><span class="n">cha</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">difficulty</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+    <span class="n">nonce</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="s2">"0"</span> <span class="o">*</span> <span class="n">difficulty</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">nonce</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha512</span><span class="p">((</span><span class="n">cha</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">nonce</span><span class="p">))</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">nonce</span>
+</code></pre></div>
+<h3 id="33-剧集身份映射">3.3 剧集身份映射<a class="headerlink" href="#33-剧集身份映射" title="Permanent link">¶</a></h3>
+<ul>
+<li>豆瓣剧集条目 ≈ TMDB <code>show + season</code>，<code>MEDIA_EXTERNAL_REF.SCOPE</code> 记录 <code>season=N</code>；</li>
+<li>一个 TMDB show 可能对应多个豆瓣 subject（每季一条）；</li>
+<li>豆瓣订阅的「季」概念天然对齐豆瓣条目，但 NFO/媒体服务器需要 TMDB show 结构；</li>
+<li><code>refresh</code> 时禁止再把豆瓣订阅单向转成 TMDB（ADR-025 已决策），改为双向 ref 并存。</li>
+</ul>
+<h3 id="34-请求治理">3.4 请求治理<a class="headerlink" href="#34-请求治理" title="Permanent link">¶</a></h3>
+<ul>
+<li>豆瓣 frodo 接口保留随机休眠（现 1-5s）与长 TTL 缓存；并发默认 1-2；</li>
+<li><code>null_rating_reason</code> 非空表示「暂无评分」，与「查询失败」区分；</li>
+<li><code>localized_message</code> 表示风控/错误，映射为 <code>ProviderUnavailable</code>，不缓存空结果；</li>
+<li>网页端点（imdb_id、季集数）需要 Cookie，作为可选增强而非主链路。</li>
+</ul>
+<h2 id="4-能力声明建议providerdescriptor">4. 能力声明建议（ProviderDescriptor）<a class="headerlink" href="#4-能力声明建议providerdescriptor" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>provider</th>
+<th>capabilities</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tmdb</code></td>
+<td>search/detail/ids/seasons/episodes/credits/images/release_dates（全部 api tier）</td>
+<td>全能力</td>
+</tr>
+<tr>
+<td><code>douban</code></td>
+<td>search/detail/credits/discovery（api tier）+ episodes/images-extra/imdb（html tier，cookie 风控）</td>
+<td>剧集分集与 imdb 走 HTML 降级通道</td>
+</tr>
+<tr>
+<td><code>bangumi</code></td>
+<td>search/detail/relations/calendar</td>
+<td>动漫放送与别名</td>
+</tr>
+</tbody>
+</table>
+<p>豆瓣 <code>images</code> 能力标记为 <code>limited</code>（仅海报/剧照，无 backdrop/logo），
+合成器据此强制 TMDB 兜底图片字段。豆瓣 <code>EPISODES</code> 能力存在但 tier=html，
+合成时优先级始终低于 TMDB 的 api tier 实现。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "content.action.edit", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
