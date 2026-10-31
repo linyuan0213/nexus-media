@@ -5,7 +5,7 @@ PathUtils - 路径相关纯函数工具
 
 import os
 
-from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
+from app.core.constants import RMT_MIN_FILESIZE
 from app.core.root_path import get_project_root
 from app.core.settings import settings
 
@@ -161,10 +161,8 @@ class PathUtils:
         """
         if not path or not os.path.isdir(path):
             return False
-        media_exts = exts or RMT_MEDIAEXT
-        ext = os.path.splitext(os.path.normpath(path).rstrip(os.sep))[1].lower()
-        if ext in media_exts:
-            return True
+        # 迅雷完成后的目录名也可能带媒体后缀（Movie.mp4/）；
+        # 只有还存在 .xltd 等未完成标记时才算未完成，不能仅凭后缀判断。
         return PathUtils.has_incomplete_download_marker(path)
 
     @staticmethod

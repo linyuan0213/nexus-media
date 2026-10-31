@@ -192,6 +192,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         transfer_pipeline=transfer_pipeline,
         download_history_repo=DownloadHistoryRepositoryAdapter(),
         media_cache=MediaCache(),
+        sync_path_repo=SyncPathRepositoryAdapter(),
     )
 
     shared_client_factory = DownloadClientFactory()
