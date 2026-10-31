@@ -3,12 +3,12 @@
 from app.utils.path_utils import PathUtils
 
 
-def test_incomplete_media_dir_by_media_suffix(tmp_path):
+def test_completed_media_suffix_dir_is_not_incomplete(tmp_path):
     source = tmp_path / "download-001.mp4"
     source.mkdir()
     (source / "info.mp4").write_bytes(b"x")
 
-    assert PathUtils.is_incomplete_media_dir(str(source)) is True
+    assert PathUtils.is_incomplete_media_dir(str(source)) is False
 
 
 def test_incomplete_media_dir_by_xltd_marker(tmp_path):

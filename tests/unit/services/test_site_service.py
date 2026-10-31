@@ -20,6 +20,8 @@ def site_service():
         site_cookie=MagicMock(),
         string_utils=MagicMock(),
         site_entity_repo=MagicMock(),
+        indexer_site_config_repo=MagicMock(),
+        idx_config_repo=MagicMock(),
     )
 
 

@@ -13,6 +13,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 from concurrent.futures import Future, wait
+from pathlib import Path
 from typing import Any
 
 import log
@@ -118,6 +119,7 @@ class FileTransferService:
         self._min_filesize = RMT_MIN_FILESIZE
         self._filesize_cover = False
         self._ignored_paths: re.Pattern[str] | None = None
+        self._duplicate_scrape_at: dict[str, float] = {}
         self._ignored_files: re.Pattern[str] | None = None
         self._sync_repo = sync_path_repo
 
@@ -461,6 +463,7 @@ class FileTransferService:
         src_backend=None,
         dst_backend=None,
         fallback_episode=None,
+        force_scrape: bool = False,
     ) -> tuple[bool, str]:
         """识别并转移一个文件、多个文件或者目录."""
         if not in_path or not (src_backend.exists(in_path) if src_backend is not None else os.path.exists(in_path)):
@@ -621,6 +624,7 @@ class FileTransferService:
                 udf_flag,
                 src_backend,
                 dst_backend,
+                force_scrape,
             )
 
             # ---------- 阶段 5：后处理 ----------
@@ -1151,6 +1155,7 @@ class FileTransferService:
         udf_flag,
         src_backend,
         dst_backend,
+        force_scrape: bool = False,
     ):
         failed_count = 0
         alert_count = 0
@@ -1275,6 +1280,10 @@ class FileTransferService:
                 if fc > 0:
                     success_flag = False
                 if fc > 0 or exist_filenum > 0:
+                    if exist_filenum > 0 and ret_file_path and ret_dir_path:
+                        self._scrape_duplicate_if_incomplete(
+                            media, ret_dir_path, ret_file_path, resolved_backend, force_scrape
+                        )
                     continue
 
                 file_ext = os.path.splitext(file_item)[-1]
@@ -1568,6 +1577,38 @@ class FileTransferService:
         if not row or not self._history_dest_exists(row, dst_backend):
             return ""
         return os.path.join(str(row.dest_path), str(row.dest_filename))
+
+    def _scrape_duplicate_if_incomplete(
+        self, media, dir_path: str, file_path: str, dst_backend=None, force: bool = False
+    ) -> None:
+        """目标已存在时，若 NFO 不完整则补刮，不重复搬运文件."""
+        file_name = os.path.splitext(os.path.basename(file_path))[0]
+        file_ext = os.path.splitext(file_path)[-1]
+        key = os.path.normpath(os.path.join(dir_path, file_name))
+        now = time.time()
+        if not force and now - self._duplicate_scrape_at.get(key, 0) < 600:
+            return
+        nfo_candidates = [
+            os.path.join(dir_path, "movie.nfo"),
+            os.path.join(dir_path, f"{file_name}.nfo"),
+        ]
+        for nfo in nfo_candidates if not force else []:
+            try:
+                if not os.path.exists(nfo):
+                    continue
+                content = Path(nfo).read_text(encoding="utf-8", errors="ignore")
+                plot = re.search(r"<plot>\s*(.*?)\s*</plot>", content, re.S)
+                actors = re.search(r"<actor>\s*<name>\s*(.*?)\s*</name>", content, re.S)
+                if (plot and plot.group(1).strip()) or (actors and actors.group(1).strip()):
+                    return
+            except Exception:
+                continue
+        self._duplicate_scrape_at[key] = now
+        log.info(f"[Rmt]目标已存在但元数据不完整，补刮：{key}")
+        try:
+            self._scrape_queue_service.scrape_file_now(media, dir_path, file_name, file_ext, dst_backend, force=force)
+        except Exception as e:  # noqa: BLE001 - 补刮失败不改变转移结果
+            log.warn(f"[Rmt]补刮失败 {key}: {e}")
 
     def _do_transfer_file(
         self,

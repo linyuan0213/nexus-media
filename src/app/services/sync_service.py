@@ -543,6 +543,7 @@ class SyncService:
                     in_path=path,
                     target_dir=dest_dir,
                     dst_backend=dst_backend,
+                    force_scrape=True,
                 )
                 if succ_flag and flag == "unidentification":
                     self._filetransfer.update_transfer_unknown_state(path)

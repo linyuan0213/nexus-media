@@ -29,9 +29,11 @@ class ScrapeQueueService:
         """提交目录刮削任务（非阻塞）."""
         self._executor.submit(self._scrape_folder, path, dst_backend, mode)
 
-    def scrape_file_now(self, media, dir_path: str, file_name: str, file_ext: str, dst_backend=None) -> bool:
+    def scrape_file_now(
+        self, media, dir_path: str, file_name: str, file_ext: str, dst_backend=None, force: bool = False
+    ) -> bool:
         """同步生成 NFO/图片，供转移在发布完成事件前确保元数据落盘."""
-        return self._scrape_file(media.model_copy(deep=True), dir_path, file_name, file_ext, dst_backend)
+        return self._scrape_file(media.model_copy(deep=True), dir_path, file_name, file_ext, dst_backend, force=force)
 
     def _scrape_file(self, media, dir_path: str, file_name: str, file_ext: str, dst_backend, *, force=False) -> bool:
         try:

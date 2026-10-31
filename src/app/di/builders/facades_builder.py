@@ -2,6 +2,7 @@
 
 from app.agent.agents.recognizer_adapter import MediaRecognizerParser
 from app.agent.service import AgentService
+from app.db.repositories.transfer_repo_adapter import TransferHistoryRepositoryAdapter
 from app.di.models import BusinessFacades, InfrastructureObjects
 from app.downloader.client_factory import DownloadClientFactory
 from app.media.lookup.tmdb_client import TmdbClient
@@ -36,6 +37,7 @@ def build_business_facades(infra: InfrastructureObjects) -> BusinessFacades:
     download_monitor = DownloadMonitor(
         client_factory=DownloadClientFactory(),
         event_bus=infra.event_bus,
+        history_repo=TransferHistoryRepositoryAdapter(),
     )
 
     return BusinessFacades(

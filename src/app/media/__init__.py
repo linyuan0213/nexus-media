@@ -33,7 +33,6 @@ from .parser import (
 from .parser._customization import CustomizationMatcher
 from .parser._metainfo import meta_info
 from .parser._release_groups import ReleaseGroupsMatcher
-from .scraper import Scraper
 from .service import MediaService
 
 __all__ = [
@@ -54,3 +53,13 @@ __all__ = [
     "Bangumi",
     "Scraper",
 ]
+
+
+def __getattr__(name: str):
+    """Scraper 延迟导入，避免 app.media 初始化时与 system_config 循环依赖."""
+    if name == "Scraper":
+        from .scraper import Scraper as _Scraper  # noqa: PLC0415 - 打破循环依赖
+
+        globals()["Scraper"] = _Scraper
+        return _Scraper
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

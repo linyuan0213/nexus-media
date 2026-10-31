@@ -2,6 +2,7 @@
 
 import time
 from concurrent.futures import as_completed
+from typing import Any
 
 import log
 from app.core.constants import PT_TAG
@@ -27,11 +28,13 @@ class DownloadMonitor:
         event_bus: EventBus,
         interval: int = 30,
         max_workers: int = 4,
+        history_repo: Any | None = None,
     ):
         self._client_factory = client_factory
         self._interval = interval
         self._max_workers = max_workers
         self._event_bus = event_bus
+        self._history_repo = history_repo
         self._processed_ids: set[str] = set()
         self._executor: ThreadExecutor | None = None
         self._running = False
@@ -85,8 +88,19 @@ class DownloadMonitor:
                 tag = PT_TAG if only_nexus_media else None
                 trans_tasks = client.get_transfer_task(tag=tag, match_path=match_path)
                 for task in trans_tasks:
-                    if task.get("id"):
-                        self._processed_ids.add(self._make_id(did, str(task.get("id"))))
+                    task_id = str(task.get("id") or "")
+                    if not task_id:
+                        continue
+                    # 有转移历史的才算已处理；重启时未转移的完成任务必须保留，
+                    # 让首次增量检查重新触发，否则会被 warmup 永久吞掉。
+                    if self._history_repo is None:
+                        self._processed_ids.add(self._make_id(did, task_id))
+                        continue
+                    try:
+                        if self._history_repo.get_by_source(str(task.get("path") or "")) is not None:
+                            self._processed_ids.add(self._make_id(did, task_id))
+                    except Exception as e:  # noqa: BLE001 - 历史查询失败不应阻断启动
+                        log.debug(f"[DownloadMonitor]查询转移历史失败 {task_id}: {e}")
         except Exception as e:
             log.warn(f"[DownloadMonitor]预热失败: {e!s}")
 
