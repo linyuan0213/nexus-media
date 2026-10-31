@@ -89,7 +89,10 @@ class SiteCache:
     def _sync_indexer_site_config(self) -> None:
         """将 builtin 站点名同步到 INDEXER_SITE_CONFIG；已存在行保留 enabled/download_setting。"""
         try:
+            existing = {row.site_name.lower() for row in self._indexer_site_config_repo.list_all()}
             for site_info in self._site_by_ids.values():
+                if site_info["name"].lower() in existing:
+                    continue
                 self._indexer_site_config_repo.upsert_site(
                     site_name=site_info["name"],
                     source="builtin",
