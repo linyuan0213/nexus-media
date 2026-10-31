@@ -121,9 +121,10 @@ class BrowserSession(_BaseBrowserSession):
     def html(self) -> str:
         return str(self.current_page().get("html") or "")
 
-    def current_page(self) -> dict[str, Any]:
-        """读取当前活动页 URL/HTML，不触发导航."""
-        response = self._client.get(self._session_url(f"/sessions/{self._sid}/html"))
+    def current_page(self, tab: str | None = None) -> dict[str, Any]:
+        """读取活动页或指定标签页 URL/HTML，不触发导航."""
+        params = {"tab": tab} if tab else None
+        response = self._client.get(self._session_url(f"/sessions/{self._sid}/html"), params=params)
         response.raise_for_status()
         data = (response.json() or {}).get("data") or {}
         return data if isinstance(data, dict) else {}
@@ -184,6 +185,8 @@ class BrowserSession(_BaseBrowserSession):
             response.raise_for_status()
             data = (response.json() or {}).get("data") or {}
             active = data.get("active")
+            if not active:
+                return
             tabs = data.get("tabs") or []
             for tab in tabs:
                 name = tab.get("name") if isinstance(tab, dict) else str(tab)
@@ -209,8 +212,7 @@ class BrowserSession(_BaseBrowserSession):
             except Exception as e:
                 log.warn(f"[BrowserSession] 关闭会话 {self.session_id} 失败: {e}")
         else:
-            # 持久会话保留活动标签页，只清理历史标签；全部关闭会导致下一次
-            # navigate 返回 500（与页面的连接已断开）。
+            # 保留活动页面，关闭历史标签，避免 Chrome 标签无限累积卡死。
             self.close_inactive_tabs()
         self._client.close()
 

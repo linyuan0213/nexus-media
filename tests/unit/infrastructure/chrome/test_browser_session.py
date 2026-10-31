@@ -34,7 +34,7 @@ def test_persistent_session_keeps_active_tab_without_deleting_session():
 
     session.close()
 
-    # 持久会话保留活动标签页，只清理历史标签，否则下一次 navigate 会 500。
+    # 持久会话保留活动页面，只关闭历史标签，避免标签累积卡死。
     session.close_tabs.assert_not_called()
     session.close_inactive_tabs.assert_called_once()
     session._client.delete.assert_not_called()
