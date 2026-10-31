@@ -10,10 +10,11 @@ from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAd
 from app.domain.media_ref import MediaRef
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
-from app.media.category_matcher import get_category
 from app.media.image_resolver import MediaImageResolver
 from app.media.message_image_policy import transform_message_image
 from app.utils import StringUtils
+
+from .category_matcher import get_category
 
 
 class MediaInfo(BaseModel):
@@ -564,7 +565,7 @@ class MediaInfo(BaseModel):
                         break
             if self.release_date:
                 self.year = self.release_date[0:4]
-            self.category = get_category(rule_map.get("movie"), info)
+            self.category = get_category(rule_map.get("movie"), info, MediaType.MOVIE.value)
             log.debug(
                 f"[MediaInfo]电影分类匹配: title={self.title!r} lang={info.get('original_language')} "
                 f"origin={info.get('origin_country')} genre={info.get('genre_ids')} -> {self.category!r}"
@@ -601,15 +602,15 @@ class MediaInfo(BaseModel):
             if self.release_date:
                 self.year = self.release_date[0:4]
             if self.type == MediaType.MOVIE:
-                self.category = get_category(rule_map.get("movie"), info)
+                self.category = get_category(rule_map.get("movie"), info, MediaType.MOVIE.value)
                 log.debug(
                     f"[MediaInfo]电影分类匹配: title={self.title!r} lang={info.get('original_language')} "
                     f"origin={info.get('origin_country')} genre={info.get('genre_ids')} -> {self.category!r}"
                 )
             elif self.type == MediaType.TV:
-                self.category = get_category(rule_map.get("tv"), info)
+                self.category = get_category(rule_map.get("tv"), info, MediaType.TV.value)
             else:
-                self.category = get_category(rule_map.get("anime"), info)
+                self.category = get_category(rule_map.get("anime"), info, MediaType.ANIME.value)
             self.poster_path = (
                 ImageProxy.get_tmdbimage_url(info.get("poster_path"), size="medium") if info.get("poster_path") else ""
             )
