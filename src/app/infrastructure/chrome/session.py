@@ -119,10 +119,14 @@ class BrowserSession(_BaseBrowserSession):
         return response.json().get("data", {})
 
     def html(self) -> str:
+        return str(self.current_page().get("html") or "")
+
+    def current_page(self) -> dict[str, Any]:
+        """读取当前活动页 URL/HTML，不触发导航."""
         response = self._client.get(self._session_url(f"/sessions/{self._sid}/html"))
         response.raise_for_status()
-        data = response.json().get("data", {})
-        return data.get("html", "")
+        data = (response.json() or {}).get("data") or {}
+        return data if isinstance(data, dict) else {}
 
     def cookies(self, domain: str | None = None) -> dict[str, Any]:
         params = {"domain": domain} if domain else {}
