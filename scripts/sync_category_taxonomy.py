@@ -226,7 +226,53 @@ def _tmdb_key_for(genre_id: int, kind: str, seed_index: dict[tuple[int, str], st
     return seed_index.get((genre_id, kind), f"tmdb_{kind}_{genre_id}")
 
 
-def build_taxonomy(tmdb: dict[str, list[dict[str, Any]]], douban_aliases: set[str]) -> dict[str, Any]:
+def _fetch_bangumi_aliases(client: httpx.Client, limit: int = 30) -> set[str]:
+    """采样当季 Bangumi 条目，收集标签作为别名；一次性维护使用."""
+    try:
+        response = client.get(
+            "https://api.bgm.tv/calendar",
+            headers={"User-Agent": "nexus-media-category-taxonomy/1.0"},
+            timeout=20,
+        )
+        response.raise_for_status()
+        calendar = response.json() or []
+    except (httpx.HTTPError, ValueError):
+        return set()
+
+    ids: list[int] = []
+    for day in calendar:
+        for item in day.get("items") or []:
+            subject_id = item.get("id")
+            if subject_id is not None:
+                ids.append(int(subject_id))
+            if len(ids) >= limit:
+                break
+        if len(ids) >= limit:
+            break
+
+    aliases: set[str] = set()
+    for subject_id in ids:
+        try:
+            detail_response = client.get(
+                f"https://api.bgm.tv/v0/subjects/{subject_id}",
+                headers={"User-Agent": "nexus-media-category-taxonomy/1.0"},
+                timeout=20,
+            )
+            detail_response.raise_for_status()
+            detail = detail_response.json() or {}
+        except (httpx.HTTPError, ValueError):
+            continue
+        for tag in detail.get("tags") or []:
+            name = str(tag.get("name") or "").strip()
+            if name:
+                aliases.add(name)
+    return aliases
+
+
+def build_taxonomy(
+    tmdb: dict[str, list[dict[str, Any]]],
+    extra_aliases: set[str],
+) -> dict[str, Any]:
     genres: dict[str, dict[str, Any]] = {}
     for seed in GENRE_SEEDS:
         item = {
@@ -270,7 +316,7 @@ def build_taxonomy(tmdb: dict[str, list[dict[str, Any]]], douban_aliases: set[st
     alias_to_key = {
         alias.strip().lower(): key for key, item in genres.items() for alias in item["aliases"] if alias.strip()
     }
-    for alias in douban_aliases:
+    for alias in extra_aliases:
         key = alias_to_key.get(alias.lower())
         if key and alias not in genres[key]["aliases"]:
             genres[key]["aliases"].append(alias)
@@ -300,26 +346,32 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--offline", action="store_true", help="不访问 TMDB/豆瓣，仅使用内置映射")
     parser.add_argument("--douban", action="store_true", help="额外从豆瓣标签页收集中文别名")
+    parser.add_argument("--bangumi", action="store_true", help="额外采样 Bangumi 当季条目收集标签别名")
+    parser.add_argument("--bangumi-limit", type=int, default=30, help="Bangumi 采样条目数，默认 30")
     parser.add_argument("--tmdb-api-key", default=None)
     args = parser.parse_args()
 
     tmdb: dict[str, list[dict[str, Any]]] = {}
-    douban_aliases: set[str] = set()
+    extra_aliases: set[str] = set()
     if not args.offline:
         with httpx.Client(follow_redirects=True) as client:
             tmdb = _fetch_tmdb(_tmdb_api_key(args.tmdb_api_key), client)
             if args.douban:
-                douban_aliases = _fetch_douban_aliases(client)
+                extra_aliases.update(_fetch_douban_aliases(client))
+            if args.bangumi:
+                extra_aliases.update(_fetch_bangumi_aliases(client, args.bangumi_limit))
 
-    taxonomy = build_taxonomy(tmdb, douban_aliases)
+    taxonomy = build_taxonomy(tmdb, extra_aliases)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(taxonomy, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(
         f"已写入 {args.output}：{len(taxonomy['genres'])} 个类型，"
         f"{len(taxonomy['languages'])} 种语言，{len(taxonomy['countries'])} 个国家/地区"
     )
-    if args.douban and not douban_aliases:
+    if args.douban and not extra_aliases:
         print("提示：豆瓣标签页未获取到别名，已仅使用内置映射")
+    if args.bangumi and not extra_aliases:
+        print("提示：Bangumi 未获取到标签别名，已仅使用内置映射")
 
 
 if __name__ == "__main__":
