@@ -362,6 +362,12 @@ class SiteService:
                 return SiteUpdateResultDTO(code=400, msg="站点不存在于站点定义中，无法添加")
             try:
                 self._site_entity_repo.insert(entity)
+                # 删除站点会保留一条 disabled 配置行；重新添加时必须重新启用。
+                self._indexer_site_config_repo.upsert_site(
+                    site_name=str(name or ""),
+                    source="builtin",
+                    enabled=True,
+                )
                 self._sites.refresh()
                 return SiteUpdateResultDTO(code=0)
             except Exception as e:

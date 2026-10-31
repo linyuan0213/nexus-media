@@ -89,15 +89,21 @@ class SiteCache:
     def _sync_indexer_site_config(self) -> None:
         """将 builtin 站点名同步到 INDEXER_SITE_CONFIG；已存在行保留 enabled/download_setting。"""
         try:
-            existing = {row.site_name.lower() for row in self._indexer_site_config_repo.list_all()}
+            existing = {
+                str(row.site_name).strip().casefold()
+                for row in self._indexer_site_config_repo.list_all()
+                if str(row.site_name or "").strip()
+            }
             for site_info in self._site_by_ids.values():
-                if site_info["name"].lower() in existing:
+                site_name = str(site_info.get("name") or "").strip()
+                if not site_name or site_name.casefold() in existing:
                     continue
                 self._indexer_site_config_repo.upsert_site(
-                    site_name=site_info["name"],
+                    site_name=site_name,
                     source="builtin",
                     enabled=True,
                 )
+                existing.add(site_name.casefold())
         except Exception as e:
             log.error(f"[SiteCache]同步索引器站点配置失败: {e!s}")
 
