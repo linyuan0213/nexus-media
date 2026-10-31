@@ -24,7 +24,7 @@ def test_enter_releases_slot_when_ensure_session_fails(monkeypatch):
     assert session._slot is None
 
 
-def test_persistent_session_keeps_active_tab_without_deleting_session():
+def test_persistent_session_keeps_all_user_tabs():
     session = BrowserSession.__new__(BrowserSession)
     session._persist = True
     session._sid = "sid"
@@ -34,8 +34,8 @@ def test_persistent_session_keeps_active_tab_without_deleting_session():
 
     session.close()
 
-    # 持久会话保留活动页面，只关闭历史标签，避免标签累积卡死。
+    # 持久会话不清理任何标签页：标签属于用户，自动化不能关闭它们。
     session.close_tabs.assert_not_called()
-    session.close_inactive_tabs.assert_called_once()
+    session.close_inactive_tabs.assert_not_called()
     session._client.delete.assert_not_called()
     session._client.close.assert_called_once()
