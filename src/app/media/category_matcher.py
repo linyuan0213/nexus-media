@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .category_context import CategoryContext
+from .category_rules import match_rule_group
 from .category_taxonomy import Taxonomy, load_taxonomy
 
 _FIELD_MAP = {
@@ -135,12 +136,16 @@ def get_category(categorys, tmdb_info, media_type: str | None = None):
         return _legacy_get_category(categorys, tmdb_info)
     context = CategoryContext.from_info(tmdb_info, media_type=media_type)
     fallback = ""
-    for key, rules in categorys.items():
+    for key, rules in (categorys or {}).items():
         if not rules:
             if not fallback:
                 fallback = key
             continue
-        if _matches_legacy_rules(rules, context, taxonomy):
+        if isinstance(rules, list):
+            matched = match_rule_group(rules, context)
+        else:
+            matched = _matches_legacy_rules(rules, context, taxonomy)
+        if matched:
             return key
     return fallback
 
@@ -154,6 +159,10 @@ def match_category(categorys, context: CategoryContext) -> str:
             if not fallback:
                 fallback = key
             continue
-        if _matches_legacy_rules(rules, context, taxonomy):
+        if isinstance(rules, list):
+            matched = match_rule_group(rules, context)
+        else:
+            matched = _matches_legacy_rules(rules, context, taxonomy)
+        if matched:
             return key
     return fallback

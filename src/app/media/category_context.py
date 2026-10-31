@@ -19,6 +19,7 @@ class CategoryContext:
     prefix: str | None = None
     flags: set[str] = field(default_factory=set)
     raw: dict[str, Any] = field(default_factory=dict)
+    provenance: dict[str, set[str]] = field(default_factory=dict)
 
     @classmethod
     def from_info(
@@ -28,6 +29,7 @@ class CategoryContext:
         media_type: str | None = None,
         provider: str | None = None,
         content_profile: str | None = None,
+        source: str | None = None,
     ) -> CategoryContext:
         if not info:
             return cls()
@@ -45,8 +47,22 @@ class CategoryContext:
         if provider:
             providers.add(provider.lower())
         profiles = _text_set(info.get("content_profiles"))
-        if content_profile:
-            profiles.add(content_profile.lower())
+        profile = content_profile or info.get("content_profile")
+        if profile:
+            profiles.add(str(profile).strip().lower())
+        source_name = str(source or provider or "unknown").strip().lower()
+        provenance: dict[str, set[str]] = {}
+        for field_name, values in (
+            ("genres", genres),
+            ("languages", languages),
+            ("countries", countries),
+            ("tags", tags),
+            ("content_profiles", profiles),
+            ("providers", providers),
+            ("flags", _text_set(info.get("flags"))),
+        ):
+            if values:
+                provenance[field_name] = {source_name}
         return cls(
             genres=genres,
             languages=languages,
@@ -57,6 +73,7 @@ class CategoryContext:
             prefix=_text_or_none(info.get("prefix") or info.get("content_id")),
             flags=_text_set(info.get("flags")),
             raw=dict(info),
+            provenance=provenance,
         )
 
     def merge(self, other: CategoryContext) -> CategoryContext:
@@ -70,6 +87,10 @@ class CategoryContext:
             prefix=self.prefix or other.prefix,
             flags=self.flags | other.flags,
             raw={**self.raw, **other.raw},
+            provenance={
+                key: self.provenance.get(key, set()) | other.provenance.get(key, set())
+                for key in set(self.provenance) | set(other.provenance)
+            },
         )
 
 

@@ -42,3 +42,36 @@ def test_context_can_be_merged_for_multiple_sources():
     assert "ja" in merged.languages
     assert "JP" in merged.countries
     assert match_category({"kids": {"genres": "kids"}}, merged) == "kids"
+
+
+def test_rule_dsl_supports_operators_and_source():
+    context = CategoryContext.from_info(
+        {
+            "genres": [{"id": 16, "name": "Animation"}],
+            "original_language": "ja",
+            "content_profile": "adult",
+        },
+        media_type="tv",
+        source="tmdb",
+    )
+    rules = {
+        "anime_ja_adult": [
+            {"field": "genre", "operator": "contains", "value": "animation"},
+            {"field": "original_language", "operator": "in", "value": ["ja", "ko"]},
+            {"field": "content_profile", "operator": "eq", "value": "adult"},
+            {"source": "tmdb", "field": "genre", "operator": "contains", "value": "animation"},
+        ],
+        "fallback": [],
+    }
+    assert match_category(rules, context) == "anime_ja_adult"
+
+
+def test_rule_dsl_source_mismatch_does_not_match():
+    context = CategoryContext.from_info({"genres": ["动画"]}, source="douban")
+    rules = {
+        "only_tmdb": [
+            {"field": "genre", "operator": "contains", "value": "动画", "source": "tmdb"},
+        ],
+        "fallback": [],
+    }
+    assert match_category(rules, context) == "fallback"
