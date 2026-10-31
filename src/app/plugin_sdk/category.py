@@ -20,6 +20,12 @@ class CategoryContribution:
     fields: tuple[str, ...] = ()
     scope: str = "extension"
     priority: int = 0
+    tab_key: str | None = None
+    tab_label: str | None = None
+    tab_order: int = 100
+    category_labels: dict[str, str] = field(default_factory=dict)
+    category_enabled: dict[str, bool] = field(default_factory=dict)
+    field_labels: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.namespace.strip():

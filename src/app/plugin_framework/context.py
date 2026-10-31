@@ -336,9 +336,9 @@ class PluginContext:
     def register_naming_profile(self, key: str, profile: Any) -> None:
         self.register_metadata_profile("naming", key, profile)
 
-    def register_category_contribution(self, contribution: Any) -> None:
+    def register_category_contribution(self, contribution: Any, persist: Any = None) -> None:
         """注册插件分类贡献；scope=core 时参与核心分类."""
-        register_category_contribution(contribution, self._plugin_id)
+        register_category_contribution(contribution, self._plugin_id, persist=persist)
         namespace = str(contribution.namespace).strip()
         if namespace not in self._category_contributions:
             self._category_contributions.append(namespace)

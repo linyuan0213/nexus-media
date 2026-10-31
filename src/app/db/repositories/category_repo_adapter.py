@@ -44,8 +44,9 @@ class CategoryConfigRepositoryAdapter(ICategoryConfigRepository):
         sort_order: int,
         is_default: int,
         rules: dict[str, str] | list[dict[str, Any]],
+        enabled: int = 1,
     ) -> int:
-        return self._repo.save_category_config(media_type, name, sort_order, is_default, rules)
+        return self._repo.save_category_config(media_type, name, sort_order, is_default, rules, enabled)
 
     def delete(self, cid: int) -> None:
         self._repo.delete_category_config(cid)

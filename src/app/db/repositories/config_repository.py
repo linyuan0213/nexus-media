@@ -986,6 +986,7 @@ class ConfigRepository(BaseRepository):
         sort_order: int,
         is_default: int,
         rules: dict[str, str] | list[dict[str, Any]],
+        enabled: int = 1,
     ) -> int:
         with self.session() as db:
             existing = (
@@ -999,9 +1000,16 @@ class ConfigRepository(BaseRepository):
             if existing:
                 existing.SORT_ORDER = sort_order
                 existing.IS_DEFAULT = is_default
+                existing.ENABLED = enabled
                 cid = existing.ID
             else:
-                cat = CONFIGCATEGORY(MEDIA_TYPE=media_type, NAME=name, SORT_ORDER=sort_order, IS_DEFAULT=is_default)
+                cat = CONFIGCATEGORY(
+                    MEDIA_TYPE=media_type,
+                    NAME=name,
+                    SORT_ORDER=sort_order,
+                    IS_DEFAULT=is_default,
+                    ENABLED=enabled,
+                )
                 db.add(cat)
                 db.flush()
                 cid = cat.ID

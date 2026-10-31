@@ -480,7 +480,7 @@ class MediaInfo(BaseModel):
         rule_map: dict[str, dict[str, Any]] = {"movie": {}, "tv": {}, "anime": {}}
         for ent in entities:
             mt = ent.media_type
-            if mt in rule_map:
+            if mt in rule_map and bool(getattr(ent, "enabled", True)):
                 effective = ent.rules if not ent.is_default else {}
                 if not effective:
                     log.debug(f"[MediaInfo]分类『{ent.name}』({mt}) 无有效规则，将作为兜底")

@@ -5,8 +5,10 @@ import pytest
 from app.media.category_contributions import (
     clear_category_contributions,
     get_category_contributions,
+    get_category_tabs,
     register_category_contribution,
     unregister_plugin_contributions,
+    update_category_contribution_by_tab,
 )
 from app.media.category_matcher import get_category
 from app.plugin_sdk.category import CategoryContribution
@@ -51,3 +53,21 @@ def test_plugin_contributions_are_removed_on_unload():
     register_category_contribution(contribution, "demo_plugin")
     unregister_plugin_contributions("demo_plugin")
     assert get_category_contributions() == []
+
+
+def test_contribution_can_add_editable_tab():
+    saved = []
+    contribution = CategoryContribution(
+        namespace="demo_plugin",
+        media_types=("movie",),
+        categories={"demo": [{"field": "plugin.demo.prefix", "operator": "startswith_any", "value": ["FC2"]}]},
+        tab_key="external",
+        tab_label="外部",
+        tab_order=10,
+        category_labels={"demo": "演示分类"},
+    )
+    register_category_contribution(contribution, "demo_plugin", persist=saved.append)
+    tabs = get_category_tabs()
+    assert [tab["key"] for tab in tabs[:4]] == ["movie", "tv", "anime", "external"]
+    update_category_contribution_by_tab("external", [{"name": "demo", "label": "演示分类", "rules": []}])
+    assert saved == [[{"name": "demo", "label": "演示分类", "rules": []}]]

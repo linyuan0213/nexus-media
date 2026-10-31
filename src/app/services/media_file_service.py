@@ -16,6 +16,7 @@ from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.constants import SUBTITLE_DOWNLOAD
 from app.events.payloads import SubtitleDownloadPayload
+from app.media.category_contributions import get_category_tabs, update_category_contribution_by_tab
 from app.media.category_taxonomy import taxonomy_payload
 from app.storage import LocalStorageBackend, StorageBackendFactory
 from app.storage.backends.base import FileInfo, StorageBackend, StorageType
@@ -334,6 +335,10 @@ class MediaFileService:
 
         return taxonomy_payload()
 
+    def get_category_tabs(self) -> list[dict]:
+        """分类页标签（含插件动态注入标签）."""
+        return get_category_tabs()
+
     def get_category_config(self) -> list[dict]:
         """获取二级分类配置（数据库）"""
         repo = CategoryConfigRepositoryAdapter()
@@ -350,5 +355,12 @@ class MediaFileService:
                 sort_order=item.get("sort_order", 0),
                 is_default=int(item.get("is_default", 0)),
                 rules=item.get("rules", {}),
+                enabled=int(item.get("enabled", 1)),
             )
+        for media_type in {str(item.get("media_type") or "") for item in items}:
+            if media_type not in {"movie", "tv", "anime"}:
+                update_category_contribution_by_tab(
+                    media_type,
+                    [item for item in items if str(item.get("media_type")) == media_type],
+                )
         return "保存成功"

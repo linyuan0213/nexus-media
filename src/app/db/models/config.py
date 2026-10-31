@@ -157,6 +157,7 @@ class CONFIGCATEGORY(Base):
     NAME: Mapped[str] = mapped_column(String(255))
     SORT_ORDER: Mapped[int] = mapped_column(Integer, default=0)
     IS_DEFAULT: Mapped[int] = mapped_column(Integer, default=0)
+    ENABLED: Mapped[int] = mapped_column(Integer, default=1)
 
 
 class CONFIGCATEGORYRULE(Base):

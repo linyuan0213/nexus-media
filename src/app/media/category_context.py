@@ -42,7 +42,9 @@ class CategoryContext:
         countries = taxonomy.country_codes(info.get("origin_country"))
         countries.update(taxonomy.country_codes(info.get("production_countries")))
         countries.update(taxonomy.country_codes(info.get("countries")))
-        tags = _text_set(info.get("tags"))
+        raw_tags = info.get("tags")
+        tags = _text_set(raw_tags)
+        genres.update(taxonomy.genre_keys(raw_tags, media_type))
         providers = _text_set(info.get("providers"))
         if provider:
             providers.add(provider.lower())
