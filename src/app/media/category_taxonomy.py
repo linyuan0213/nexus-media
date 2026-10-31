@@ -124,3 +124,22 @@ def load_taxonomy() -> Taxonomy:
                 country_aliases[text.lower()] = str(key).upper()
 
     return Taxonomy(genre_aliases, genre_id_keys, language_aliases, country_aliases)
+
+
+def taxonomy_payload() -> dict:
+    """供分类配置页面读取的只读映射表."""
+    try:
+        data = json.loads(_taxonomy_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"genres": {}, "languages": {}, "countries": {}}
+    data["fields"] = [
+        {"key": "genre", "label": "类型", "type": "set"},
+        {"key": "original_language", "label": "语言", "type": "set"},
+        {"key": "country", "label": "国家/地区", "type": "set"},
+        {"key": "tag", "label": "标签", "type": "set"},
+        {"key": "content_profile", "label": "内容画像", "type": "string"},
+        {"key": "provider", "label": "来源", "type": "set"},
+    ]
+    data["operators"] = ["eq", "neq", "in", "not_in", "contains", "contains_any", "startswith_any", "regex", "exists"]
+    data["sources"] = ["*", "tmdb", "douban", "bangumi"]
+    return data

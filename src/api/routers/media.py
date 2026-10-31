@@ -1485,6 +1485,14 @@ def unidentification(
     return success()
 
 
+@router.get("/category/taxonomy", response_model=CommonResponse, summary="获取分类映射词表")
+def get_category_taxonomy(
+    current_user=Depends(require_permission("library:manage")),
+    svc: MediaFileService = Depends(get_media_file_service),
+):
+    return success(data=svc.get_category_taxonomy())
+
+
 @router.post("/category/config/update", response_model=CommonResponse, summary="更新分类配置")
 def update_category_config(
     req: UpdateCategoryConfigRequest,

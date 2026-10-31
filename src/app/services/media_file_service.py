@@ -16,6 +16,7 @@ from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.constants import SUBTITLE_DOWNLOAD
 from app.events.payloads import SubtitleDownloadPayload
+from app.media.category_taxonomy import taxonomy_payload
 from app.storage import LocalStorageBackend, StorageBackendFactory
 from app.storage.backends.base import FileInfo, StorageBackend, StorageType
 from app.storage.config_models import LocalStorageConfig
@@ -327,6 +328,11 @@ class MediaFileService:
         target = os.path.join(dest_dir, name).replace("\\", "/")
         backend.write_stream(target, stream)
         return target
+
+    def get_category_taxonomy(self) -> dict:
+        """获取分类映射词表，供前端规则编辑器使用."""
+
+        return taxonomy_payload()
 
     def get_category_config(self) -> list[dict]:
         """获取二级分类配置（数据库）"""
