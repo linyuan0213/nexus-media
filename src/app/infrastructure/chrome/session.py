@@ -33,6 +33,7 @@ class _BaseBrowserSession:
         timeout: float = 60.0,
         api_key: str | None = None,
         persist: bool = True,
+        cleanup_auto_tabs: bool = False,
     ):
         self.site_key = site_key
         self.server_url = server_url.rstrip("/")
@@ -45,6 +46,8 @@ class _BaseBrowserSession:
         self._slot: Any = None
         # persist=True 时关闭不删除会话，保留过盾 Cookie 供后续请求复用
         self._persist = persist
+        # 专用后台会话退出时只清理本次自动化产生的 auto_* 临时页。
+        self._cleanup_auto_tabs = cleanup_auto_tabs
         # 会话键可能含 URL（https://...），规范化为 URL 安全 id，避免路径 404
         self.session_id = to_session_id(site_key)
         self._sid = quote(self.session_id, safe="")
@@ -92,6 +95,8 @@ class BrowserSession(_BaseBrowserSession):
 
     def __exit__(self, *exc: Any) -> None:
         try:
+            if self._cleanup_auto_tabs:
+                self.close_auto_tabs()
             self.close()
         finally:
             slot = self._slot
@@ -201,6 +206,16 @@ class BrowserSession(_BaseBrowserSession):
             return
         response.raise_for_status()
 
+    def close_auto_tabs(self) -> None:
+        """只关闭自动创建的 auto_* 临时页，保留 tab_N 用户页."""
+        try:
+            for tab in self.list_tabs():
+                name = tab.get("name") if isinstance(tab, dict) else str(tab)
+                if name and str(name).startswith("auto_"):
+                    self.close_tab(str(name))
+        except Exception as e:  # noqa: BLE001
+            log.debug(f"[BrowserSession] 清理临时标签页失败: {e}")
+
     def close_tabs(self) -> None:
         """关闭会话内全部标签页，保留会话（Cookie/clearance 仍可复用）."""
         try:
@@ -232,6 +247,8 @@ class BrowserSession(_BaseBrowserSession):
         return response.json().get("data", {})
 
     def close(self, delete_session: bool | None = None) -> None:
+        if self._cleanup_auto_tabs:
+            self.close_auto_tabs()
         if delete_session is None:
             delete_session = not self._persist
         if delete_session:

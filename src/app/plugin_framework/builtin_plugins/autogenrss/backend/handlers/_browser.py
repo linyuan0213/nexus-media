@@ -1,5 +1,6 @@
 """浏览器自动化通用 RSS 生成处理器。"""
 
+import uuid
 from typing import cast
 
 from lxml import etree
@@ -37,22 +38,32 @@ class BrowserRssGenHandler(SiteRssGenHandler):
         self._plugin_ctx.info(f"开始浏览器RSS生成：{site}")
         try:
             with BrowserSession(
-                site_key=site, server_url=server_url, fp_profile_id=get_default_fp_profile_id()
+                site_key=site,
+                server_url=server_url,
+                fp_profile_id=get_default_fp_profile_id(),
+                cleanup_auto_tabs=True,
             ) as session:
-                result = session.navigate(url, cookie=ctx.cookie)
-                html_text = result.get("html", "")
-                if not html_text:
-                    return SiteRssGenResult.fail(site, "无法打开网站")
+                tab_name = f"auto_rss_{uuid.uuid4().hex[:12]}"
+                try:
+                    result = session.navigate(url, tab_name=tab_name, cookie=ctx.cookie)
+                    html_text = result.get("html", "")
+                    if not html_text:
+                        return SiteRssGenResult.fail(site, "无法打开网站")
 
-                if not is_logged_in(html_text):
-                    return SiteRssGenResult.fail(site, "Cookie已失效")
+                    if not is_logged_in(html_text):
+                        return SiteRssGenResult.fail(site, "Cookie已失效")
 
-                rss_link = self._parse_rss_link(html_text)
-                self._plugin_ctx.debug(f"生成的rss: {rss_link}")
-                if rss_link:
-                    self._save_rss_url(ctx.raw.get("id"), rss_link)
-                    return SiteRssGenResult.success(site)
-                return SiteRssGenResult.fail(site, "未解析到RSS链接")
+                    rss_link = self._parse_rss_link(html_text)
+                    self._plugin_ctx.debug(f"生成的rss: {rss_link}")
+                    if rss_link:
+                        self._save_rss_url(ctx.raw.get("id"), rss_link)
+                        return SiteRssGenResult.success(site)
+                    return SiteRssGenResult.fail(site, "未解析到RSS链接")
+                finally:
+                    try:
+                        session.close_tab(tab_name)
+                    except Exception as close_err:  # noqa: BLE001
+                        self._plugin_ctx.debug(f"关闭临时标签页失败: {close_err}")
         except Exception as e:
             self._plugin_ctx.warn(f"{site} 浏览器RSS生成异常: {e}")
             return SiteRssGenResult.fail(site, str(e))

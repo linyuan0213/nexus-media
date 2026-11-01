@@ -70,11 +70,20 @@ class _FakeSession:
     def close(self, delete_session=True):
         pass
 
-    def navigate(self, url, timeout=30):
+    def navigate(self, url, tab_name=None, timeout=30, **_kwargs):
         self.url = url
 
-    def html(self):
+    def html(self, tab_name=None):
         return self._html
+
+    def close_tab(self, tab_name):
+        return None
+
+    def switch_tab(self, tab_name):
+        return None
+
+    def close_auto_tabs(self):
+        return None
 
 
 class TestSearchUrl:

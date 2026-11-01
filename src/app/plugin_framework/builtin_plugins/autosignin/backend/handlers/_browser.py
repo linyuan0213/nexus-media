@@ -59,7 +59,12 @@ class BrowserSigninHandler(SiteSigninHandler):
         try:
             lab = settings.get("laboratory") or {}
             fp_profile_id = str(lab.get("chrome_fp_profile_id") or "") or None
-            with BrowserSession(site_key=site, server_url=server_url, fp_profile_id=fp_profile_id) as session:
+            with BrowserSession(
+                site_key=site,
+                server_url=server_url,
+                fp_profile_id=fp_profile_id,
+                cleanup_auto_tabs=True,
+            ) as session:
                 result = session.navigate(home_url, cookie=ctx.cookie)
                 html_text = result.get("html", "") or ""
                 if not html_text:
@@ -82,7 +87,12 @@ class BrowserSigninHandler(SiteSigninHandler):
             # 使用用户真实浏览器指纹画像（实验室默认画像），提高 Turnstile 等人机验证通过率
             lab = settings.get("laboratory") or {}
             fp_profile_id = str(lab.get("chrome_fp_profile_id") or "") or None
-            with BrowserSession(site_key=site, server_url=server_url, fp_profile_id=fp_profile_id) as session:
+            with BrowserSession(
+                site_key=site,
+                server_url=server_url,
+                fp_profile_id=fp_profile_id,
+                cleanup_auto_tabs=True,
+            ) as session:
                 # 优先直接访问签到页：GET attendance 即完成签到，无需首页查找+点击，
                 # 且等待签到页自身的 WAF/雷池挑战清除后再判定，避免误报失败
                 attendance_url = self._resolve_attendance_url(home_url)

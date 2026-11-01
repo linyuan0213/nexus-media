@@ -20,8 +20,8 @@ import log
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
 from app.infrastructure.chrome.challenge import has_pending_turnstile, is_challenge
-from app.infrastructure.chrome.session import BrowserSession
 from app.infrastructure.chrome.site_lock import site_serial
+from app.infrastructure.chrome.task import browser_task
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.sites import engine_tools
 from app.sites.api_searcher import ApiSiteSearcher
@@ -213,7 +213,7 @@ class HtmlSiteSearcher:
             return None
 
         try:
-            with BrowserSession(
+            with browser_task(
                 session_id,
                 server_url=server,
                 user_agent=self._user_config.get("ua"),
@@ -221,36 +221,32 @@ class HtmlSiteSearcher:
                 fp_profile_id=fp_profile_id,
                 fingerprint=fingerprint,
                 persist=True,
-            ) as session:
-                try:
-                    # 1) 过盾后的并发路径：已有 clearance 时直接请求，无需拿站点锁
+                navigate_timeout=60,
+                challenge_timeout=120,
+            ) as task:
+                session = task.session
+                # 1) 过盾后的并发路径：已有 clearance 时直接请求，无需拿站点锁
+                reused = _reuse_fetch(session)
+                if reused:
+                    return reused
+                # 2) 需要过盾：仅此阶段串行（双重检查，避免并发重复过盾）
+                with site_serial(session_id):
                     reused = _reuse_fetch(session)
                     if reused:
                         return reused
-                    # 2) 需要过盾：仅此阶段串行（双重检查，避免并发重复过盾）
-                    with site_serial(session_id):
-                        reused = _reuse_fetch(session)
-                        if reused:
-                            return reused
-                        # 未过盾：先访问站点首页触发并通过盾，再请求搜索链接，
-                        # 避免在盾未通过时直接打搜索 URL（浪费/可能被流控）
-                        session.navigate(base_url, cookie=cookie)
-                        session.navigate(search_url, cookie=cookie)
-                        html = session.html()
-                        accepted = _accept_results(html)
+                    # 首页触发挑战，再在同一临时页请求搜索 URL；页面退出自动关闭 tab。
+                    with task.page(base_url, cookie=cookie) as page:
+                        page.load(search_url, cookie=cookie)
+                        accepted = _accept_results(page.html())
                         if accepted:
                             log.info(f"[HtmlSiteSearcher]{self._site.name} 过盾后搜索成功")
                             return accepted
                         try:
-                            session.turnstile(timeout=8)
+                            page.turnstile(timeout=8)
                         except Exception as e:  # noqa: BLE001
                             log.debug(f"[HtmlSiteSearcher]{self._site.name} Turnstile 处理失败: {e}")
-                        session.navigate(search_url, cookie=cookie)
-                        return _accept_results(session.html())
-                finally:
-                    # 保留会话（clearance/Cookie 复用）。标签页归会话/用户所有，
-                    # 这里不能 close_tabs()：会误删并发请求或用户正在看的页面。
-                    pass
+                        page.load(search_url, cookie=cookie)
+                        return _accept_results(page.html())
         except Exception as e:  # noqa: BLE001
             log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器搜索失败: {e}")
             return None
