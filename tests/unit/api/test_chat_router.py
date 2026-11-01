@@ -144,6 +144,30 @@ class TestChatRouter:
         assert data["model"] == "gpt-test"
         assert "api_key" not in data
 
+    def test_agent_status_exposes_configured_flag(self):
+        """status 需同时暴露用户开关(configured)与可用状态(enabled)，便于前端区分三种状态."""
+        client, agent_service = _make_client()
+        agent_service.is_enabled = True
+        data = client.get("/api/agent/status").json()["data"]
+        assert data["configured"] is True
+        assert data["enabled"] is True
+
+    def test_agent_status_configured_but_not_ready(self):
+        """用户启用但 Provider 未配置：configured=True、enabled=False."""
+        client, agent_service = _make_client(agent_ready=False)
+        agent_service.is_enabled = True
+        data = client.get("/api/agent/status").json()["data"]
+        assert data["configured"] is True
+        assert data["enabled"] is False
+
+    def test_agent_status_disabled(self):
+        """用户未启用：configured=False、enabled=False."""
+        client, agent_service = _make_client(agent_ready=False)
+        agent_service.is_enabled = False
+        data = client.get("/api/agent/status").json()["data"]
+        assert data["configured"] is False
+        assert data["enabled"] is False
+
     def test_cancel_turn(self):
         client, _ = _make_client()
         runtime = chat_router._DEFAULT_RUNTIME

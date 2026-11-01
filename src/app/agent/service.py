@@ -69,6 +69,11 @@ class AgentService:
         return self._chat_agent
 
     @property
+    def is_enabled(self) -> bool:
+        """用户是否启用了 Agent（不代表配置完整，配置完整见 ready）."""
+        return self._enabled
+
+    @property
     def ready(self) -> bool:
         return self._enabled and (self._provider is not None or bool(self._fallbacks))
 
