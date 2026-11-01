@@ -95,7 +95,7 @@ class BrowserSession(_BaseBrowserSession):
 
     def __exit__(self, *exc: Any) -> None:
         try:
-            if self._cleanup_auto_tabs:
+            if getattr(self, "_cleanup_auto_tabs", False):
                 self.close_auto_tabs()
             self.close()
         finally:
@@ -247,7 +247,7 @@ class BrowserSession(_BaseBrowserSession):
         return response.json().get("data", {})
 
     def close(self, delete_session: bool | None = None) -> None:
-        if self._cleanup_auto_tabs:
+        if getattr(self, "_cleanup_auto_tabs", False):
             self.close_auto_tabs()
         if delete_session is None:
             delete_session = not self._persist
