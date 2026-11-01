@@ -19,7 +19,16 @@ def _subscribe_id(subscribe, mtype, title: str, year, tmdbid):
     return None
 
 
-def check_media_exists(media_server, subscribe, mtype, title, year, mediaid=None):
+def check_media_exists(
+    media_server,
+    subscribe,
+    mtype,
+    title,
+    year,
+    mediaid=None,
+    anchor_provider=None,
+    anchor_external_id=None,
+):
     """判断媒体是否存在并返回相关信息 (fav, rssid, extra)
 
     参数：
@@ -34,6 +43,13 @@ def check_media_exists(media_server, subscribe, mtype, title, year, mediaid=None
         return False, None, ""
     subscribe_mtype = MediaType.MOVIE if str(mtype).lower() == "movie" else MediaType.TV
     media_title = f"{title} ({year})" if (str(mtype).lower() != "movie" and year) else title
+    if anchor_provider and anchor_external_id and hasattr(subscribe, "get_subscribe_by_anchor"):
+        try:
+            by_anchor = subscribe.get_subscribe_by_anchor(anchor_provider, anchor_external_id, subscribe_mtype)
+        except Exception:  # noqa: BLE001
+            by_anchor = None
+        if by_anchor:
+            return "1", by_anchor.get("rssid"), ""
     subscribe_mediaid = mediaid
     if mediaid and (str(mediaid).startswith("DB:") or str(mediaid).startswith("BGM:")):
         subscribe_mediaid = None

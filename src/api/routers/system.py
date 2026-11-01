@@ -133,7 +133,11 @@ class SearchRequest(BaseModel):
     search_word: str | None = None
     unident: bool | None = None
     filters: dict | None = None
-    tmdbid: str | int | None = None
+    metadata_ref: str | None = None
+    anchor_provider: str | None = None
+    anchor_external_id: str | None = None
+    identity_id: str | None = None
+    content_profile: str | None = None
     media_type: str | None = None
 
 
@@ -605,7 +609,11 @@ def search(
         search_word=search_word,
         ident_flag=ident_flag,
         filters=req.filters,
-        tmdbid=req.tmdbid,
+        metadata_ref=req.metadata_ref,
+        anchor_provider=req.anchor_provider,
+        anchor_external_id=req.anchor_external_id,
+        identity_id=req.identity_id,
+        content_profile=req.content_profile,
         media_type=req.media_type,
         session_id=session_id,
         user_id=current_user.user_id,
@@ -627,11 +635,11 @@ async def search_progress(session_id: str):
             detail = tracker.get_process(f"search:{session_id}")
             if not detail:
                 # 会话无进度记录：后端重启后内存进度已清空，或会话早已结束。
-                # 宽限 3s 覆盖“SSE 先于搜索任务启动”的竞态，超时关闭流让前端回源已持久化的结果
+                # 搜索任务可能排在订阅任务后面；宽限 10s 兼顾进度连接与旧会话快速关闭。
                 now = loop.time()
                 if missing_since is None:
                     missing_since = now
-                elif now - missing_since > 3:
+                elif now - missing_since > 10:
                     break
                 await asyncio.sleep(0.3)
                 continue

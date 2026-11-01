@@ -182,6 +182,8 @@ class IndexerFilterEngine:
         title = meta_info.rev_string
         if meta_info.subtitle:
             title = f"{title} {meta_info.subtitle}"
+        if getattr(meta_info, "description", None):
+            title = f"{title} {meta_info.description}"
 
         order_seq = 0
         group_match = True
