@@ -621,7 +621,7 @@ class BaseSearchStrategy:
             media_info.title = name or media_info.title
             media_info.cn_name = name or media_info.cn_name
             media_info.year = year or media_info.year
-        elif content_profile not in ("", "default"):
+        elif str(content_profile or "").strip().lower() not in ("", "default", "anime"):
             media_info = meta_info(title=("%s %s" % (name, year)).strip(), mtype=mtype)
             media_info.tmdb_id = ""
             media_info.type = mtype
