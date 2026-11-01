@@ -283,7 +283,7 @@ class TestSubscribeHistoryService:
         repo.get_all.return_value = [MagicMock(to_dict=lambda: {"id": 1})]
         svc = SubscribeHistoryService(history_repo=repo, subscribe=MagicMock(), rss_helper=MagicMock())
         result = svc.get_history("MOV")
-        assert result == [{"id": 1}]
+        assert result == [{"id": 1, "provider_label": ""}]
         repo.get_all.assert_called_once_with(rtype="MOV", user=None, content_profile=None)
 
     def test_delete(self):

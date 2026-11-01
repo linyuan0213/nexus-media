@@ -3,6 +3,7 @@
 import log
 from app.core.settings import settings
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
+from app.domain.media_ref import media_identity_key, normalize_identity_key
 from app.domain.mediatypes import MediaType
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.media.identity.matcher import get_target_matcher
@@ -31,8 +32,25 @@ class SubscribeMatcher:
         """ADR-014 P3：订阅匹配统一走 TargetMatcher（ID 判等 + edition 距离）"""
         return bool(settings.get("laboratory").get("target_matcher"))
 
+    @staticmethod
+    def _match_identity(media_info, rss_info) -> bool:
+        """按统一引用判等；metadata_ref 优先于旧 tmdbid。"""
+        target_ref = str(rss_info.get("metadata_ref") or "").strip()
+        if not target_ref:
+            provider = str(rss_info.get("anchor_provider") or "").strip()
+            external = str(rss_info.get("anchor_external_id") or "").strip()
+            if provider and external:
+                target_ref = f"{provider}:{external}"
+            elif str(rss_info.get("tmdbid") or "").strip().isdigit():
+                target_ref = f"tmdb:{rss_info['tmdbid']}"
+        if not target_ref:
+            return False
+        return normalize_identity_key(media_identity_key(media_info)) == normalize_identity_key(target_ref)
+
     def _match_tmdb(self, media_info, rss_info) -> bool:
-        """订阅目标 TMDB 身份判等：统一路径（TargetMatcher）或退化 tmdb_id 判等"""
+        """兼容入口：有统一引用时只做身份判等。"""
+        if rss_info.get("metadata_ref") or rss_info.get("anchor_provider"):
+            return self._match_identity(media_info, rss_info)
         tmdbid = rss_info.get("tmdbid")
         if not self._use_unified_match():
             return str(getattr(media_info, "tmdb_id", None)) == str(tmdbid)
@@ -108,7 +126,11 @@ class SubscribeMatcher:
                 fuzzy_match = rss_info.get("fuzzy_match")
 
                 if not fuzzy_match:
-                    if tmdbid and not str(tmdbid).startswith("DB:"):
+                    if (
+                        rss_info.get("metadata_ref")
+                        or rss_info.get("anchor_provider")
+                        or (tmdbid and not str(tmdbid).startswith("DB:"))
+                    ):
                         if not self._match_tmdb(media_info, rss_info):
                             continue
                     else:
@@ -137,7 +159,11 @@ class SubscribeMatcher:
                 fuzzy_match = rss_info.get("fuzzy_match")
 
                 if not fuzzy_match:
-                    if tmdbid and not str(tmdbid).startswith("DB:"):
+                    if (
+                        rss_info.get("metadata_ref")
+                        or rss_info.get("anchor_provider")
+                        or (tmdbid and not str(tmdbid).startswith("DB:"))
+                    ):
                         if not self._match_tmdb(media_info, rss_info):
                             continue
                     else:

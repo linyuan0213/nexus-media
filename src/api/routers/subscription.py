@@ -67,6 +67,9 @@ class AddRssMediaRequest(BaseModel):
     mediaid: str | int | None = None
     metadata_ref: str | None = None
     provider: str | None = None
+    anchor_provider: str | None = None
+    anchor_external_id: str | None = None
+    identity_id: str | None = None
     rss_sites: list | None = None
     search_sites: list | None = None
     over_edition: bool | None = None
@@ -85,7 +88,6 @@ class AddRssMediaRequest(BaseModel):
     metadata_policy: str | None = None
     content_profile: str | None = None
     naming_profile: str | None = None
-    tmdbid: str | int | None = None
 
 
 class SubscribeIdRequest(BaseModel):
@@ -111,7 +113,8 @@ class RemoveRssMediaRequest(BaseModel):
     year: str | None = None
     season: str | None = None
     rssid: int | None = None
-    tmdbid: str | int | None = None
+    anchor_provider: str | None = None
+    anchor_external_id: str | None = None
     page: str | None = None
     content_profile: str | None = None
 
@@ -123,9 +126,10 @@ class SubscribeDetailRequest(BaseModel):
 
 
 class SubscribeSeasonsRequest(BaseModel):
-    tmdbid: str | int | None = None
     name: str | None = None
     year: str | None = None
+    anchor_provider: str | None = None
+    anchor_external_id: str | None = None
 
 
 class GetDefaultSubscribeSettingRequest(BaseModel):
@@ -332,6 +336,8 @@ def add_rss_media(
     svc: SubscribeService = Depends(get_subscribe_service),
     app_context=Depends(get_app_context),
 ):
+    if req.anchor_provider and req.anchor_external_id and not req.metadata_ref:
+        req.metadata_ref = f"{req.anchor_provider}:{req.anchor_external_id}"
     kwargs = _build_add_kwargs(req)
     kwargs["user_id"] = user.user_id
     permissions = set(getattr(user, "permissions", []) or [])
@@ -469,19 +475,18 @@ def remove_rss_media(
     user: UserContext = Depends(require_permission("subscription:manage")),
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
-    tmdbid = req.tmdbid
-    if not str(tmdbid).isdigit():
-        tmdbid = None
     name = req.name
     if name:
         name = meta_info(title=name).get_name()
     rssid = req.rssid
     mtype, _profile = _resolve_type_and_profile(req.type, req.content_profile)
     deleted = 0
-    if not str(req.type or "").strip() and not str(req.content_profile or "").strip() and rssid:
-        # 简化接口只传 rssid：尝试两张表都删除（历史行为）。
-        deleted = int(svc.delete_subscribe(mtype=MediaType.MOVIE, rssid=rssid, user=user) or 0)
-        deleted += int(svc.delete_subscribe(mtype=MediaType.TV, rssid=rssid, user=user) or 0)
+    if rssid:
+        deleted = int(svc.delete_subscribe(mtype=mtype, rssid=rssid, user=user) or 0)
+        if deleted == 0 and not str(req.type or "").strip() and not str(req.content_profile or "").strip():
+            # 只有调用方未指定类型时，才尝试另一张表。
+            other = MediaType.TV if mtype == MediaType.MOVIE else MediaType.MOVIE
+            deleted = int(svc.delete_subscribe(mtype=other, rssid=rssid, user=user) or 0)
     elif mtype == MediaType.MOVIE:
         deleted = int(
             svc.delete_subscribe(
@@ -489,7 +494,7 @@ def remove_rss_media(
                 title=name or "",
                 year=req.year,
                 rssid=rssid,
-                tmdbid=tmdbid,
+                tmdbid=None,
                 user=user,
             )
             or 0
@@ -502,15 +507,11 @@ def remove_rss_media(
                 title=name or "",
                 season=_normalize_season(req.season),
                 rssid=rssid,
-                tmdbid=tmdbid,
+                tmdbid=None,
                 user=user,
             )
             or 0
         )
-    elif rssid:
-        # 未能解析载体时尝试两边都删除
-        deleted = int(svc.delete_subscribe(mtype=MediaType.MOVIE, rssid=rssid, user=user) or 0)
-        deleted += int(svc.delete_subscribe(mtype=MediaType.TV, rssid=rssid, user=user) or 0)
     return success(data={"page": req.page, "deleted": deleted, "rssid": rssid})
 
 
@@ -696,7 +697,7 @@ def get_tv_subscribed_seasons(
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
     seasons = svc.get_subscribe_seasons(
-        tmdbid=str(req.tmdbid) if req.tmdbid is not None else None,
+        tmdbid=None,
         title=req.name,
         year=req.year,
         user=user,

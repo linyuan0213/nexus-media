@@ -117,7 +117,9 @@ class SubscribeUpdateService:
             "year": resolved_year,
             "keyword": keyword or current_keyword,
             "image": image or self._existing(row, "IMAGE", "image", default=""),
-            "tmdbid": self._existing(row, "TMDBID", "tmdbid", default=""),
+            "tmdbid": (
+                self._existing(row, "TMDBID", "tmdbid", default="") if str(anchor_provider or "tmdb") == "tmdb" else ""
+            ),
             "identity_id": identity_id,
             "anchor_provider": anchor_provider,
             "anchor_external_id": external,

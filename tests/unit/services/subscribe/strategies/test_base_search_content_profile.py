@@ -159,3 +159,22 @@ class TestGetMediaInfoContentProfile:
         assert info is not None
         assert str(info.tmdb_id) == "106449"
         media_cache.get_tmdb_info.assert_called_once()
+
+    def test_explicit_anchor_provider_skips_tmdb(self):
+        """有明确元数据锚点时，不能再用 TMDB 覆盖所选源。"""
+        strategy, media_cache, _ = _make_strategy(dict(_TMDB_TV))
+
+        info = strategy._get_media_info(
+            tmdbid="335790",
+            name="黑暗召唤师在地下恋爱中",
+            year="2025",
+            mtype=MediaType.ANIME,
+            content_profile="anime",
+            anchor_provider="bangumi",
+            anchor_external_id="123456",
+        )
+
+        assert info is not None
+        assert info.anchor_provider == "bangumi"
+        assert info.anchor_external_id == "123456"
+        media_cache.get_tmdb_info.assert_not_called()

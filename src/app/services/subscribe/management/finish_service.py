@@ -12,6 +12,21 @@ from app.media import MediaInfo
 from app.services.subscribe.management.utils import tv_filter_signature
 
 
+def _row_ref(row: Any) -> str:
+    metadata_ref = str(getattr(row, "METADATA_REF", "") or "").strip()
+    if metadata_ref:
+        return metadata_ref
+    identity_id = str(getattr(row, "IDENTITY_ID", "") or "").strip()
+    if identity_id:
+        return f"id:{identity_id}"
+    provider = str(getattr(row, "ANCHOR_PROVIDER", "") or "").strip().lower()
+    external = str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or "").strip()
+    if provider and external:
+        return f"{provider}:{external}"
+    tmdb = str(getattr(row, "TMDBID", "") or "").strip()
+    return f"tmdb:{tmdb}" if tmdb.isdigit() else ""
+
+
 def _history_scope(row: Any) -> dict[str, Any]:
     return {
         "anchor_provider": getattr(row, "ANCHOR_PROVIDER", None),
@@ -43,16 +58,16 @@ class SubscribeFinishService:
         except Exception as e:  # noqa: BLE001
             log.debug(f"[Subscribe]查询兄弟订阅失败: {e}")
             return
-        tmdb = str(getattr(primary_row, "TMDBID", None) or getattr(primary_row, "tmdb_id", "") or "")
+        primary_ref = _row_ref(primary_row)
         season = str(getattr(primary_row, "SEASON", None) or getattr(primary_row, "season", "") or "")
         primary_sig = tv_filter_signature(primary_row)
         for row in siblings:
             sid = getattr(row, "ID", None) or getattr(row, "id", None)
             if not sid or str(sid) == str(getattr(primary_row, "ID", "") or getattr(primary_row, "id", "")):
                 continue
-            row_tmdb = str(getattr(row, "TMDBID", None) or getattr(row, "tmdb_id", "") or "")
+            row_ref = _row_ref(row)
             row_season = str(getattr(row, "SEASON", None) or getattr(row, "season", "") or "")
-            if row_tmdb != tmdb or (season and row_season != season):
+            if row_ref != primary_ref or (season and row_season != season):
                 continue
             if getattr(row, "OVER_EDITION", None) or getattr(row, "over_edition", False):
                 continue
@@ -86,7 +101,7 @@ class SubscribeFinishService:
                 rtype=rtype,
                 name=row.NAME,
                 year=row.YEAR,
-                tmdbid=row.TMDBID,
+                tmdbid=row.TMDBID if _row_ref(row).startswith("tmdb:") else "",
                 image=media.get_poster_image() or image,
                 desc=media.overview,
                 user_id=owner_user_id,
@@ -117,7 +132,7 @@ class SubscribeFinishService:
                 name=row.NAME,
                 year=row.YEAR,
                 season=row.SEASON,
-                tmdbid=row.TMDBID,
+                tmdbid=row.TMDBID if _row_ref(row).startswith("tmdb:") else "",
                 image=media.get_poster_image() or image,
                 desc=media.overview,
                 total=total,
@@ -130,9 +145,20 @@ class SubscribeFinishService:
 
         # 仅洗版订阅完成后清理下载历史（允许后续升级重下）；
         # 普通订阅保留下载历史，避免重新订阅时重复下载已完成的剧集
-        if self._download_repo and media.tmdb_id and (media.type == MediaType.MOVIE or over_edition):
+        if self._download_repo and (media.type == MediaType.MOVIE or over_edition):
             season_prefix = media.get_season_string() if media.type != MediaType.MOVIE else None
-            self._download_repo.delete_by_tmdb(media.tmdb_id, season_prefix)
+            identity_id = str(getattr(row, "IDENTITY_ID", "") or "")
+            anchor_provider = str(getattr(row, "ANCHOR_PROVIDER", "") or "")
+            anchor_external = str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or "")
+            if identity_id or (anchor_provider and anchor_external):
+                self._download_repo.delete_by_identity(
+                    identity_id=identity_id or None,
+                    anchor_provider=anchor_provider or None,
+                    anchor_external_id=anchor_external or None,
+                    season_prefix=season_prefix,
+                )
+            elif media.tmdb_id:
+                self._download_repo.delete_by_tmdb(media.tmdb_id, season_prefix)
 
         self._event_bus.publish(
             Event(
@@ -163,7 +189,10 @@ class SubscribeFinishService:
             resolved_type = MediaType.ANIME
         elif resolved_type == MediaType.ANIME and row_profile in ("", "default"):
             row_profile = "anime"
-        media = MediaInfo(type=resolved_type, tmdb_id=str(row.TMDBID or ""))
+        media = MediaInfo(
+            type=resolved_type,
+            tmdb_id=str(row.TMDBID or "") if _row_ref(row).startswith("tmdb:") else "",
+        )
         media.title = row.NAME
         media.year = row.YEAR
         owner_user_id = getattr(row, "USER_ID", None)
@@ -190,7 +219,7 @@ class SubscribeFinishService:
             name=row.NAME,
             year=row.YEAR,
             season=row.SEASON,
-            tmdbid=row.TMDBID,
+            tmdbid=row.TMDBID if _row_ref(row).startswith("tmdb:") else "",
             image=row.IMAGE,
             desc=row.DESC,
             total=total,
@@ -221,7 +250,10 @@ class SubscribeFinishService:
         over_edition = bool(getattr(row, "OVER_EDITION", False))
         # 删除订阅前固化通知/历史所需字段（尤其是 IMAGE 海报）。
         image = str(getattr(row, "IMAGE", "") or "")
-        media = MediaInfo(type=MediaType.MOVIE, tmdb_id=str(row.TMDBID or ""))
+        media = MediaInfo(
+            type=MediaType.MOVIE,
+            tmdb_id=str(row.TMDBID or "") if _row_ref(row).startswith("tmdb:") else "",
+        )
         media.title = row.NAME
         media.year = row.YEAR
         media.poster_path = image
@@ -238,16 +270,26 @@ class SubscribeFinishService:
             rtype=MediaTypeMapper.to_tmdb(MediaType.MOVIE),
             name=row.NAME,
             year=row.YEAR,
-            tmdbid=row.TMDBID,
+            tmdbid=row.TMDBID if _row_ref(row).startswith("tmdb:") else "",
             image=image,
             desc=row.DESC,
             user_id=owner_user_id,
             **_history_scope(row),
         )
         delete_subscribe_fn(mtype=MediaType.MOVIE, rssid=rssid)
-        # 仅洗版电影完成后清理下载历史（允许后续升级重下）
-        if self._download_repo and row.TMDBID and over_edition:
-            self._download_repo.delete_by_tmdb(row.TMDBID, None)
+        # 仅洗版电影完成后清理下载历史（允许后续升级重下），优先按多元身份清理。
+        if self._download_repo and over_edition:
+            identity_id = str(getattr(row, "IDENTITY_ID", "") or "")
+            anchor_provider = str(getattr(row, "ANCHOR_PROVIDER", "") or "")
+            anchor_external = str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or "")
+            if identity_id or (anchor_provider and anchor_external):
+                self._download_repo.delete_by_identity(
+                    identity_id=identity_id or None,
+                    anchor_provider=anchor_provider or None,
+                    anchor_external_id=anchor_external or None,
+                )
+            elif row.TMDBID:
+                self._download_repo.delete_by_tmdb(row.TMDBID, None)
         self._event_bus.publish(
             Event(
                 event_type=SUBSCRIBE_FINISHED,
