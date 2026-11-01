@@ -436,7 +436,7 @@ class ResultFilter:
                 continue
 
             profile = str(filter_args.get("content_profile") or "").strip()
-            if profile and profile != "default":
+            if profile not in ("", "default", "anime"):
                 # 成人等非默认画像只做本地解析，避免 300+ 结果逐个走缓存/远端识别
                 mi = meta_info(
                     title=torrent_name,

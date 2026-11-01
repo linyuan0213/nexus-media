@@ -285,3 +285,72 @@ def test_multilingual_torrent_survives_rule_and_identity_pipeline(title):
     assert len(result.results) == 1
     assert result.results[0].tmdb_id == 106449
     assert result.results[0].provider_data["name"] == "凡人修仙传"
+
+
+class TestCoreContentProfileParsing:
+    @pytest.mark.parametrize("profile", ["", "default", "anime"])
+    def test_core_profiles_preserve_episode_parsing(self, profile):
+        title = "攻壳机动队 S01E03 2026 1080p"
+        parsed = MediaInfo(
+            cn_name="攻壳机动队",
+            year="2026",
+            type=MediaType.TV,
+            begin_season=1,
+            begin_episode=3,
+        )
+        with patch("app.indexer.core.result_filter.cached_meta_info", return_value=parsed) as parse:
+            candidates, direct_results, stats = _make_filter().local_filter(
+                [_item(title)],
+                filter_args={"content_profile": profile},
+                match_media=_gits_2026(),
+            )
+
+        assert len(candidates) == 1
+        assert direct_results == []
+        assert stats.index_match_fail == 0
+        assert candidates[0].meta_info.type == MediaType.TV
+        assert candidates[0].meta_info.get_season_list() == [1]
+        assert candidates[0].meta_info.get_episode_list() == [3]
+        assert candidates[0].skip_tmdb is False
+        parse.assert_called_once()
+
+    @pytest.mark.parametrize("profile", ["av", "private"])
+    def test_custom_profiles_keep_local_movie_parsing(self, profile):
+        title = "Example Title 1080p"
+        parsed = MediaInfo(title="Example Title", en_name="Example Title", type=MediaType.MOVIE)
+        with (
+            patch("app.indexer.core.result_filter.cached_meta_info") as cached_parse,
+            patch("app.indexer.core.result_filter.meta_info", return_value=parsed) as local_parse,
+        ):
+            candidates, direct_results, stats = _make_filter().local_filter(
+                [_item(title)], filter_args={"content_profile": profile}
+            )
+
+        assert candidates == []
+        assert len(direct_results) == 1
+        assert direct_results[0].type == MediaType.MOVIE
+        assert stats.index_sucess == 1
+        cached_parse.assert_not_called()
+        assert local_parse.call_args.kwargs["mtype"] == MediaType.MOVIE
+
+@pytest.mark.parametrize(
+    ("title", "season", "episode"),
+    [
+        ("攻壳机动队 S01E03 2026 1080p", 1, 3),
+        ("攻壳机动队 S02E12 2026 1080p", 2, 12),
+    ],
+)
+def test_anime_profile_preserves_real_title_episode_parsing(title, season, episode):
+    with patch("app.indexer.core.result_filter.cached_meta_info", wraps=parse_title) as cached_parse:
+        candidates, direct_results, _ = _make_filter().local_filter(
+            [_item(title)],
+            filter_args={"content_profile": "anime"},
+            match_media=_gits_2026(),
+        )
+
+    assert len(candidates) == 1
+    assert direct_results == []
+    assert candidates[0].meta_info.type == MediaType.TV
+    assert candidates[0].meta_info.get_season_list() == [season]
+    assert candidates[0].meta_info.get_episode_list() == [episode]
+    cached_parse.assert_called_once()
