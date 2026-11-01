@@ -210,7 +210,6 @@ async def proxy_bgm_image(img_path: str):
     return await _serve_image(cache_path, image_url)
 
 
-
 def _face_box(data: bytes) -> tuple[int, int, int, int] | None:
     verify_url = os.environ.get("NEXUS_VERIFY_URL", "http://nexus-verify:9300").rstrip("/")
     try:
@@ -246,7 +245,7 @@ def _crop_poster_bytes(data: bytes, mode: str) -> bytes:
                 output = io.BytesIO()
                 img.crop((left, 0, left + target_w, height)).save(output, format="JPEG", quality=92)
                 return output.getvalue()
-            # 人脸模型不可用/未检测到脸时居中裁切；FC2 人物主体在中央，
+            # 人脸模型不可用/未检测到脸时居中裁切；人物主体通常在中央，
             # 回退右侧只会得到空白背景。
             left = max(0, (width - target_w) // 2)
         else:
@@ -274,6 +273,7 @@ async def proxy_poster(url: str, mode: str = "face"):
     with open(cache_path, "wb") as handle:
         handle.write(data)
     return Response(data, media_type="image/jpeg")
+
 
 @router.get("/library/{img_url:path}", summary="代理媒体库图片")
 async def proxy_library_image(request: Request, img_url: str, server_id: int | None = None):
