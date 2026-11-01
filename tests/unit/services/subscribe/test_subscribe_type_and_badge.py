@@ -279,3 +279,28 @@ class TestAliasFallbackInCheckMediaExists:
         assert fav == "1"
         assert rssid == 20
         media_server.check_item_exists.assert_not_called()
+
+
+class TestCheckMediaExistsByAnchor:
+    def test_non_tmdb_subscription_resolved_by_anchor(self):
+        media_server = MagicMock()
+        subscribe = MagicMock()
+        subscribe.get_subscribe_by_anchor.return_value = {
+            "rssid": "77",
+            "fav": "1",
+        }
+
+        fav, rssid, _ = check_media_exists(
+            media_server=media_server,
+            subscribe=subscribe,
+            mtype="tv",
+            title="FX战士久留美",
+            year="2026",
+            mediaid=None,
+            anchor_provider="douban",
+            anchor_external_id="37923549",
+        )
+
+        assert fav == "1"
+        assert rssid == "77"
+        subscribe.get_subscribe_by_anchor.assert_called_once_with("douban", "37923549", MediaType.TV)

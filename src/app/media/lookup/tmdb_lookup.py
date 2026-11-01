@@ -51,9 +51,11 @@ class TmdbLookup(BaseLookup):
         if not parsed.title_en and not parsed.title_cn:
             return None
 
+        # 集数不参与缓存键：TMDB lookup 返回的是剧集级身份，同一季不同集会得到同一结果。
+        # 带上 episode 会让 2000 条分集结果产生 2000 次重复查询。
         cache_key = (
             f"lookup:{parsed.title_cn or ''}|{parsed.title_en or ''}|{parsed.year or ''}"
-            f"|{parsed.season or ''}|{parsed.episode or ''}|{parsed.type.value if parsed.type else ''}"
+            f"|{parsed.season or ''}|{parsed.type.value if parsed.type else ''}"
             f"|{hint_type.value if hint_type else ''}|{int(bool(strict))}|{(language or '').lower()}"
         )
         cached = self._lookup_cache.get(cache_key)

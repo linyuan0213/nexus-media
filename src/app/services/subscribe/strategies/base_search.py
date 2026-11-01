@@ -568,6 +568,34 @@ class BaseSearchStrategy:
         prefix = text.split(":", 1)[0].strip().upper()
         return prefix not in {"DB", "TMDB", "DOUBAN", "BANGUMI", "BGM", "BG"}
 
+    @staticmethod
+    def _tmdb_name_matches(tmdb_info, requested_name: str) -> bool:
+        """校验 TMDB ID 对应的标题，防止错误 ID 把搜索改成无关影片."""
+        if not tmdb_info or not requested_name:
+            return False
+
+        def norm(value: str) -> str:
+            return "".join(ch for ch in str(value or "").casefold() if ch.isalnum())
+
+        wanted = norm(requested_name)
+        if not wanted:
+            return False
+        candidates: list[str] = []
+        for key in ("name", "title", "original_name", "original_title", "cn_name", "zh_name"):
+            value = tmdb_info.get(key) if isinstance(tmdb_info, dict) else None
+            if value:
+                candidates.append(str(value))
+        for key in ("aliases", "aka", "alternative_titles"):
+            value = tmdb_info.get(key) if isinstance(tmdb_info, dict) else None
+            if isinstance(value, list):
+                candidates.extend(str(item) for item in value if item)
+        if not candidates:
+            # 明确给的是 TMDB ID 且 TMDB 没有返回标题时，保留该 provider 结果。
+            return True
+        return any(
+            wanted in norm(candidate) or norm(candidate) in wanted for candidate in candidates if norm(candidate)
+        )
+
     def _get_media_info(
         self,
         tmdbid,
@@ -601,9 +629,15 @@ class BaseSearchStrategy:
             media_info.year = year or media_info.year
             # 核心画像（default/anime）可用 TMDB 补充海报/简介；插件画像由插件负责。
             raw_tmdb = str(tmdbid or "").strip()
-            if raw_tmdb.isdigit() and str(content_profile or "").strip().lower() in ("", "default", "anime"):
-                media_info.tmdb_id = raw_tmdb
-                media_info.provider_data = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=raw_tmdb) or {}
+            if (
+                raw_tmdb.isdigit()
+                and not anchor_provider
+                and str(content_profile or "").strip().lower() in ("", "default", "anime")
+            ):
+                tmdb_info = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=raw_tmdb) or {}
+                if self._tmdb_name_matches(tmdb_info, str(name or "")):
+                    media_info.tmdb_id = raw_tmdb
+                    media_info.provider_data = tmdb_info
         elif self._is_external_ref(tmdbid):
             media_info = meta_info(title=("%s %s" % (name, year)).strip(), mtype=mtype)
             media_info.tmdb_id = ""
@@ -621,7 +655,7 @@ class BaseSearchStrategy:
             media_info.title = name or media_info.title
             media_info.cn_name = name or media_info.cn_name
             media_info.year = year or media_info.year
-        elif content_profile not in ("", "default"):
+        elif str(content_profile or "").strip().lower() not in ("", "default", "anime"):
             media_info = meta_info(title=("%s %s" % (name, year)).strip(), mtype=mtype)
             media_info.tmdb_id = ""
             media_info.type = mtype
@@ -631,7 +665,13 @@ class BaseSearchStrategy:
         elif tmdbid and not str(tmdbid).startswith("DB:"):
             media_info = meta_info(title=("%s %s" % (name, year)).strip())
             tmdb_info = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
-            media_info.set_provider_data(tmdb_info)
+            if self._tmdb_name_matches(tmdb_info, str(name or "")):
+                media_info.set_provider_data(tmdb_info)
+            else:
+                # 错误的历史 TMDB ID 不得覆盖标题和后续资源搜索词。
+                log.warn(f"[BaseSearchStrategy] TMDB ID {tmdbid} 与标题不匹配，按原名称搜索：{name}")
+                media_info.tmdb_id = ""
+                media_info.provider_data = {}
             # en_name 为空或非拉丁时补全英文名，避免日语原名导致英文标题匹配失败
             if self._media_service:
                 self._media_service.enrich_en_name(media_info)

@@ -347,7 +347,7 @@ def test_plugin_anchor_never_queries_tmdb(strategy):
 
 
 def test_douban_anchor_can_use_tmdb_supplement(strategy):
-    """豆瓣锚点可用 TMDB 补全，但不以此判定订阅是否错误."""
+    """豆瓣锚点是独立来源，不应补 TMDB."""
     strategy._media_cache.get_tmdb_info = MagicMock(return_value={"id": 123})
 
     result = strategy._get_media_info(
@@ -362,9 +362,8 @@ def test_douban_anchor_can_use_tmdb_supplement(strategy):
     assert result is not None
     assert result.anchor_provider == "douban"
     assert result.anchor_external_id == "38221205"
-    assert result.tmdb_id == "123"
-    assert result.provider_data == {"id": 123}
-    strategy._media_cache.get_tmdb_info.assert_called_once()
+    assert result.tmdb_id == ""
+    strategy._media_cache.get_tmdb_info.assert_not_called()
 
 
 def test_external_movie_anchor_without_provider_data_is_not_error(strategy):

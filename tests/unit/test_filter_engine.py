@@ -1,11 +1,13 @@
 """IndexerFilterEngine 单元测试."""
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
 from app.domain.mediatypes import MediaType
 from app.indexer.core.filter_engine import IndexerFilterEngine
+from app.indexer.core.result_filter import ResultFilter
 
 
 def _meta(title: str, subtitle: str | None = None):
@@ -67,3 +69,48 @@ class TestAudioFilter:
         meta = _meta("Some Artist - Some Album.flac")
         match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": MediaType.MOVIE})
         assert not match
+
+
+def test_rule_group_matches_chinese_subtitle_description():
+    from types import SimpleNamespace
+
+    meta = SimpleNamespace(
+        rev_string="A Record of a Mortal's Journey to Immortality S01",
+        subtitle=None,
+        description="凡人修仙传 全30集 国语中字",
+        size=None,
+        upload_volume_factor=None,
+        download_volume_factor=None,
+        type=None,
+        total_episodes=0,
+    )
+    match, _, _ = IndexerFilterEngine.check_rules(
+        meta,
+        {"name": "中字"},
+        [{"include": ["中字"], "exclude": None, "size": None, "free": None, "pri": 0}],
+    )
+    assert match
+
+
+def test_quick_name_match_uses_description_aliases():
+    meta = SimpleNamespace(
+        title="A Record of a Mortal's Journey to Immortality",
+        cn_name="",
+        en_name="",
+        description="凡人修仙传 全30集 国语中字",
+        type=None,
+        rev_string="",
+        org_string="",
+        year="2020",
+        size=0,
+    )
+    match = SimpleNamespace(
+        title="凡人修仙传",
+        cn_name="凡人修仙传",
+        en_name="",
+        original_title="",
+        type=None,
+        content_profile="",
+        year="2020",
+    )
+    assert ResultFilter.quick_name_match(meta, match)

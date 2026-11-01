@@ -23,12 +23,23 @@ def _session():
     return sessionmaker(bind=get_engine())()
 
 
-def _download_row(tmdb: str, se: str, state: str = "completed"):
+def _download_row(
+    tmdb: str,
+    se: str,
+    state: str = "completed",
+    *,
+    anchor_provider: str | None = None,
+    anchor_external_id: str | None = None,
+    identity_id: str | None = None,
+):
     return DOWNLOADHISTORY(
         TITLE="t",
         YEAR="",
         TYPE="TV",
         TMDBID=tmdb,
+        ANCHOR_PROVIDER=anchor_provider,
+        ANCHOR_EXTERNAL_ID=anchor_external_id,
+        IDENTITY_ID=identity_id,
         SE=se,
         VOTE="",
         POSTER="",
@@ -45,12 +56,21 @@ def _download_row(tmdb: str, se: str, state: str = "completed"):
     )
 
 
-def _transfer_row(tmdb: int, se: str):
+def _transfer_row(
+    tmdb: int,
+    se: str,
+    *,
+    media_type: str = "TV",
+    anchor_provider: str | None = None,
+    anchor_external_id: str | None = None,
+):
     return TRANSFERHISTORY(
         MODE="link",
-        TYPE="TV",
+        TYPE=media_type,
         CATEGORY="",
         TMDBID=tmdb,
+        ANCHOR_PROVIDER=anchor_provider,
+        ANCHOR_EXTERNAL_ID=anchor_external_id,
         TITLE="t",
         YEAR="",
         SEASON_EPISODE=se,
@@ -256,3 +276,58 @@ class TestMidSeasonResubscribe:
                 )
         repo = TransferRepository()
         assert repo.get_contiguous_transferred_episode_by_tmdb(223564, 1, start=26) == 28
+
+
+def test_download_contiguous_by_identity_without_tmdb():
+    s = _session()
+    s.add_all(
+        [
+            _download_row("", "S01E01", anchor_provider="content_id", anchor_external_id="CUSTOM-0001"),
+            _download_row("", "S01E02", anchor_provider="content_id", anchor_external_id="CUSTOM-0001"),
+            _download_row("", "S01E04", anchor_provider="content_id", anchor_external_id="CUSTOM-0001"),
+        ]
+    )
+    s.commit()
+    s.close()
+    repo = DownloadRepository()
+    assert (
+        repo.get_contiguous_completed_episode_by_ref(
+            identity_id=None,
+            anchor_provider="content_id",
+            anchor_external_id="CUSTOM-0001",
+            season=1,
+        )
+        == 2
+    )
+
+
+def test_delete_download_history_by_anchor_identity():
+    s = _session()
+    s.add_all(
+        [
+            _download_row("", "S01E01", anchor_provider="content_id", anchor_external_id="CUSTOM-0001"),
+            _download_row("", "S02E01", anchor_provider="content_id", anchor_external_id="CUSTOM-0001"),
+            _download_row("", "S01E01", anchor_provider="content_id", anchor_external_id="OTHER"),
+        ]
+    )
+    s.commit()
+    s.close()
+
+    repo = DownloadRepository()
+    deleted = repo.delete_download_history_by_identity(
+        identity_id=None,
+        anchor_provider="content_id",
+        anchor_external_id="CUSTOM-0001",
+        season_prefix="S01",
+    )
+
+    assert deleted == 1
+    assert (
+        repo.get_contiguous_completed_episode_by_ref(
+            identity_id=None,
+            anchor_provider="content_id",
+            anchor_external_id="CUSTOM-0001",
+            season=2,
+        )
+        == 1
+    )

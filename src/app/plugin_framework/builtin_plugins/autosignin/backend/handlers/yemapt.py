@@ -51,7 +51,10 @@ class YemaPT(SiteSigninHandler):
         self._plugin_ctx.info(f"[{site}] 开始浏览器签到（ALTCHA）: {checkin_url}")
         try:
             with BrowserSession(
-                site_key=site, server_url=server_url, fp_profile_id=get_default_fp_profile_id()
+                site_key=site,
+                server_url=server_url,
+                fp_profile_id=get_default_fp_profile_id(),
+                cleanup_auto_tabs=True,
             ) as session:
                 # 1. 打开签到页（SPA hash 路由），等待渲染
                 session.navigate(checkin_url, cookie=ctx.cookie)

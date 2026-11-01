@@ -373,7 +373,7 @@ class RssFeedStrategy:
                         )
                     if not media_info.provider_data:
                         # 插件内容画像/非 TMDB 锚点不依赖 TMDB provider_data；
-                        # 命中订阅后继续走下载，避免 AV/插件订阅被静默跳过。
+                        # 命中订阅后继续走下载，避免插件订阅被静默跳过。
                         profile = str(match_info.get("content_profile") or "default")
                         anchor_provider = str(match_info.get("anchor_provider") or "")
                         if profile in ("", "default") and anchor_provider in ("", "tmdb"):
@@ -586,6 +586,20 @@ class RssFeedStrategy:
             seen_urls.add(_key)
             unique_media.append(_m)
         rss_download_torrents = unique_media
+
+        # 电影同一订阅只下载一个候选；不同站点可能返回不同种子 URL，
+        # 仅按 URL 去重会把同一部电影重复提交到多个下载器。
+        movie_filtered: list = []
+        seen_movie_rss: set[int] = set()
+        for media in rss_download_torrents:
+            rssid = getattr(media, "rssid", None)
+            if getattr(media, "type", None) == MediaType.MOVIE and rssid:
+                if int(rssid) in seen_movie_rss:
+                    log.info(f"[RssFeedStrategy] 电影订阅 {rssid} 已有候选，跳过重复下载")
+                    continue
+                seen_movie_rss.add(int(rssid))
+            movie_filtered.append(media)
+        rss_download_torrents = movie_filtered
 
         for media in rss_download_torrents:
             if media.type not in (MediaType.TV, MediaType.ANIME):

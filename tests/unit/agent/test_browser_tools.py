@@ -34,11 +34,20 @@ class _FakeSession:
     def close(self, delete_session=True):
         pass
 
-    def navigate(self, url, timeout=30):
+    def navigate(self, url, tab_name=None, timeout=30, **_kwargs):
         self.url = url
 
-    def html(self):
+    def html(self, tab_name=None):
         return self._html
+
+    def close_tab(self, tab_name):
+        return None
+
+    def switch_tab(self, tab_name):
+        return None
+
+    def close_auto_tabs(self):
+        return None
 
     def screenshot(self, tab_name=None, full_page=False):
         return {"png_base64": self._png, "size": 5}
@@ -111,10 +120,10 @@ class _ChallengeSession:
     def close(self, delete_session=True):
         pass
 
-    def navigate(self, url, timeout=30):
+    def navigate(self, url, tab_name=None, timeout=30, **_kwargs):
         pass
 
-    def html(self):
+    def html(self, tab_name=None):
         self._calls += 1
         if self._calls <= self._attempts:
             return "<html>Checking your browser... DDoS protection</html>"

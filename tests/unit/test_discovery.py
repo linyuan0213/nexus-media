@@ -32,6 +32,26 @@ def test_season_range_supports_anime_and_quarter_names():
 
 
 class _FakeDoubanApi:
+    def tv_animation(self, start=0, count=20):
+        return {
+            "total": 1,
+            "subject_collection_items": [
+                {
+                    "id": "37923549",
+                    "title": "动画剧集",
+                    "type": "tv",
+                    "year": "2026",
+                    "photos": ["https://img/still-540x303.webp"],
+                    "pic": {
+                        "large": "https://img/poster-2x3.webp",
+                        "normal": "https://img/poster-small.webp",
+                    },
+                    "rating": {"value": 8.1},
+                    "tags": [],
+                }
+            ],
+        }
+
     def movie_showing(self, start=0, count=20):
         return {
             "total": 1,
@@ -64,6 +84,14 @@ def test_douban_discovery_maps_items():
     assert item.anchor_ref is not None
     assert item.anchor_ref.external_id == "37068446"
     assert page.has_more is False
+
+
+def test_douban_discovery_prefers_poster_over_still_photo():
+    provider = DoubanDiscovery(api=_FakeDoubanApi())
+
+    page = provider.items("tv_animation", 1, {}, None)
+
+    assert page.items[0].poster == "https://img/poster-2x3.webp"
 
 
 class _FakeMediaService:

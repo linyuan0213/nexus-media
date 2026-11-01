@@ -196,6 +196,7 @@ def agent_status(
     return success(
         data={
             "enabled": service.ready,
+            "configured": service.is_enabled,
             "provider": service.provider_name,
             "model": service.model_name,
             "reasoning_effort": reasoning.effort,

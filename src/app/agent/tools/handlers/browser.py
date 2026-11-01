@@ -8,12 +8,14 @@ import ipaddress
 import re
 import socket
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 from lxml import html as lhtml
 
+import log
 from app.agent.tools.base import ToolResult
 from app.agent.tools.context import ToolContext
 from app.core.settings import settings
@@ -98,6 +100,7 @@ def _open_session(site_key: str | None) -> BrowserSession:
         site_key=site_key or "agent",
         server_url=server_url,
         fp_profile_id=_default_fp_profile_id(),
+        cleanup_auto_tabs=True,
     )
     session.__enter__()
     return session
@@ -114,11 +117,16 @@ def browser_fetch(ctx: ToolContext, url: str, site_key: str | None = None, timeo
         _validate_url(url)
         site_key = _validate_site_key(site_key)
         session = _open_session(site_key)
+        tab_name = f"auto_agent_fetch_{uuid.uuid4().hex[:12]}"
         try:
-            session.navigate(url, timeout=int(timeout or 30))
-            html_str = session.html()
-            html_str = wait_challenge_clear(session, html_str)
+            session.navigate(url, tab_name=tab_name, timeout=int(timeout or 30))
+            html_str = session.html(tab_name)
+            html_str = wait_challenge_clear(session, html_str, tab_name=tab_name)
         finally:
+            try:
+                session.close_tab(tab_name)
+            except Exception as close_err:  # noqa: BLE001
+                log.debug(f"[BrowserTool] 关闭临时标签页失败: {close_err}")
             _close_session(session)
     except Exception as e:
         return ToolResult(success=False, error=f"浏览器访问失败: {e}")
@@ -135,13 +143,18 @@ def browser_screenshot(ctx: ToolContext, url: str, site_key: str | None = None, 
         _validate_url(url)
         site_key = _validate_site_key(site_key)
         session = _open_session(site_key)
+        tab_name = f"auto_agent_shot_{uuid.uuid4().hex[:12]}"
         try:
-            session.navigate(url, timeout=30)
-            html_str = session.html()
+            session.navigate(url, tab_name=tab_name, timeout=30)
+            html_str = session.html(tab_name)
             # 等待人机验证通过后再截图，避免截到 Cloudflare 验证页
-            wait_challenge_clear(session, html_str)
-            result = session.screenshot(full_page=bool(full_page))
+            wait_challenge_clear(session, html_str, tab_name=tab_name)
+            result = session.screenshot(tab_name=tab_name, full_page=bool(full_page))
         finally:
+            try:
+                session.close_tab(tab_name)
+            except Exception as close_err:  # noqa: BLE001
+                log.debug(f"[BrowserTool] 关闭临时标签页失败: {close_err}")
             _close_session(session)
     except Exception as e:
         return ToolResult(success=False, error=f"截图失败: {e}")

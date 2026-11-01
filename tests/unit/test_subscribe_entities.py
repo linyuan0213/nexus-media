@@ -65,7 +65,7 @@ def test_tv_entity_maps_identity_fields():
     assert entity.to_dict()["identity_id"] == "01J00000000000000000000000"
 
 
-def test_web_utils_douban_fallback_sets_identity_fields():
+def test_web_utils_douban_fallback_does_not_supplement_tmdb():
     from unittest.mock import MagicMock
 
     from app.domain.mediatypes import MediaType
@@ -94,7 +94,7 @@ def test_web_utils_douban_fallback_sets_identity_fields():
     assert info.total_episodes == 9
     assert info.begin_season == 1
     media_service.get_tmdb_info.assert_not_called()
-    media_service.get_media_info.assert_called_once()
+    media_service.get_media_info.assert_not_called()
 
 
 def test_detail_links_follow_anchor_and_keep_tmdb_supplement():

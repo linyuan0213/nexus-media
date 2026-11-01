@@ -82,6 +82,12 @@ class SearchQueryBuilder:
 
         search_name_list.append(search_cn_name)
         search_name_list.append(search_en_name)
+        for alias in getattr(media_info, "aliases", None) or []:
+            alias_text = str(alias or "").strip()
+            if alias_text and alias_text not in search_name_list:
+                search_name_list.append(alias_text)
+                if len(search_name_list) >= 6:
+                    break
 
         # 开启多语言搜索
         max_workers = 1

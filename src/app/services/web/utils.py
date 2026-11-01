@@ -2,7 +2,6 @@ from typing import Any
 
 import cn2an
 
-import log
 from app.domain.mediatypes import MediaType
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -10,6 +9,8 @@ from app.infrastructure.security import generate_password_hash
 from app.media import meta_info
 from app.media.external.bangumi import Bangumi
 from app.media.external.douban import DouBan
+from app.media.metadata import ProviderRef
+from app.media.metadata.registry import registry as metadata_registry
 from app.media.service import MediaService
 from app.utils import ExceptionUtils, IpUtils, StringUtils
 from app.utils.config_tools import get_proxies
@@ -85,6 +86,34 @@ class WebUtils:
         if not mediaid:
             return None
         media_info = None
+        raw_id = str(mediaid)
+        if ":" in raw_id:
+            provider_key, external_id = raw_id.split(":", 1)
+            provider_key = provider_key.strip().lower()
+            if provider_key not in ("db", "bg", "tmdb") and external_id:
+                provider = metadata_registry.get_provider(provider_key)
+                if provider is not None:
+                    ref = ProviderRef(
+                        provider=provider_key,
+                        external_id=external_id,
+                        media_type=mtype,
+                        scope="default",
+                    )
+                    record = provider.detail(ref, None)
+                    if record is not None:
+                        title = str(getattr(record, "title", "") or "").strip()
+                        if title:
+                            media_info = meta_info(title=title, mtype=mtype or MediaType.MOVIE)
+                            media_info.title = title
+                            has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in title)
+                            media_info.cn_name = title if has_cjk else None
+                            media_info.en_name = None if has_cjk else title
+                            media_info.original_title = str(getattr(record, "original_title", "") or title)
+                            media_info.year = str(getattr(record, "year", "") or "")
+                            media_info.overview = str(getattr(record, "overview", "") or "")
+                            media_info.anchor_provider = provider_key
+                            media_info.anchor_external_id = external_id
+                            return media_info
         if str(mediaid).startswith("DB:"):
             # 豆瓣锚点：只用豆瓣数据，不再为“补 TMDB”做标题重映射
             doubanid = mediaid[3:]
@@ -121,22 +150,7 @@ class WebUtils:
             if cover:
                 media_info.poster_path = cover
                 media_info.backdrop_path = cover
-            # TMDB 仅作为可选补充：能映射才填真实 TMDB ID，绝不覆盖豆瓣 anchor/文本/封面
-            if self._media_service is not None:
-                try:
-                    tmdb_media = self._media_service.get_media_info(
-                        title=f"{title} {year}".strip(),
-                        mtype=mtype,
-                        strict=bool(year),
-                        cache=False,
-                    )
-                    if tmdb_media and tmdb_media.provider_data:
-                        media_info.tmdb_id = str(tmdb_media.tmdb_id or "")
-                        media_info.provider_data = tmdb_media.provider_data
-                        if not media_info.total_episodes:
-                            media_info.total_episodes = int(tmdb_media.total_episodes or 0)
-                except Exception as exc:  # noqa: BLE001 - 映射失败保持豆瓣直连
-                    log.debug(f"[WebUtils]豆瓣 {doubanid} 可选映射 TMDB 失败: {exc}")
+            # 豆瓣是独立元数据源：不补 TMDB、不生成 TMDB 映射，搜索和展示只用豆瓣身份。
             return media_info
         elif str(mediaid).startswith("BG:"):
             # Bangumi 直连：不再要求映射到 TMDB

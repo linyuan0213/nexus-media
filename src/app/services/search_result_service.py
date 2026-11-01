@@ -43,10 +43,12 @@ class SearchResultService:
                 "releasegroup": item.OTHERINFO or "未知",
             }
             title_string = f"{item.TITLE}"
-            if item.YEAR:
-                title_string = f"{title_string} ({item.YEAR})"
             mtype = item.TYPE or ""
             parsed_mtype = MediaType.from_string(mtype)
+            # 剧集/动漫按标题聚合，避免同一部剧的 2025/2026 季标签拆成多张卡片；
+            # 电影保留年份，用于区分同名翻拍。
+            if item.YEAR and parsed_mtype == MediaType.MOVIE:
+                title_string = f"{title_string} ({item.YEAR})"
             se_key = item.ES_STRING if item.ES_STRING and parsed_mtype != MediaType.MOVIE else MediaType.MOVIE.value
             if parsed_mtype != MediaType.MOVIE:
                 se_key = infer_episode_key(se_key, item.TORRENT_NAME)
@@ -95,8 +97,12 @@ class SearchResultService:
                     respix,
                 )
             else:
+                anchor_provider = str(getattr(item, "ANCHOR_PROVIDER", "") or "")
+                anchor_external = str(getattr(item, "ANCHOR_EXTERNAL_ID", "") or "")
+                if not anchor_provider and item.TMDBID:
+                    anchor_provider, anchor_external = "tmdb", str(item.TMDBID)
                 fav, rssid = 0, None
-                if item.TMDBID:
+                if item.TMDBID or anchor_provider:
                     fav, rssid, _ = check_media_exists(
                         media_server=self._media_server,
                         subscribe=self._subscribe,
@@ -104,6 +110,8 @@ class SearchResultService:
                         title=item.TITLE,
                         year=item.YEAR,
                         mediaid=item.TMDBID,
+                        anchor_provider=anchor_provider or None,
+                        anchor_external_id=anchor_external or None,
                     )
                 poster_url = item.POSTER
                 try:
@@ -115,6 +123,14 @@ class SearchResultService:
                     "title": item.TITLE,
                     "year": item.YEAR,
                     "type_key": mtype,
+                    "identity_id": getattr(item, "IDENTITY_ID", None),
+                    "anchor_provider": anchor_provider,
+                    "anchor_external_id": anchor_external,
+                    "metadata_ref": (
+                        f"{anchor_provider}:{anchor_external}" if anchor_provider and anchor_external else ""
+                    ),
+                    "provider": anchor_provider,
+                    "content_profile": getattr(item, "CONTENT_PROFILE", None) or "default",
                     "image": poster_url,
                     "type": media_type,
                     "vote": item.VOTE,

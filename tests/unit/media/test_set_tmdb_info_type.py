@@ -58,3 +58,19 @@ class TestStringMediaTypeNormalization:
             m = _media(MediaType.TV)
             m.set_provider_data({"media_type": "tv", "id": 10, "genre_ids": [35]})
         assert m.type == MediaType.TV
+
+
+def test_set_provider_data_accepts_string_genres():
+    from app.media.models import MediaInfo
+
+    m = MediaInfo()
+    with _patch_categories():
+        m.set_provider_data(
+            {
+                "media_type": "tv",
+                "title": "多元数据动画",
+                "genres": ["动画", "剧情"],
+            }
+        )
+
+    assert m.genres == ["动画", "剧情"]

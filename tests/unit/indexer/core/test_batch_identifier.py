@@ -287,6 +287,21 @@ class TestIdentifyGroups:
         first = lookup.lookup.call_args_list[0][0][0]
         assert first.title_cn == "穹庐下的魔女"
 
+    def test_target_hit_stops_extra_name_lookups(self):
+        lookup = MagicMock()
+        hit = LookupResult(tmdb_id=106449, title="凡人修仙传", media_type=MediaType.TV)
+        lookup.lookup.return_value = hit
+        svc = self._service(lookup)
+        group = self._group(["凡人修仙传", "Fsp Dn"])
+        group["target_tmdb_id"] = "106449"
+
+        result = svc.identify_groups([group])
+
+        status, info = result["v2_test_S1_E1"]
+        assert status == IdentifyStatus.HIT
+        assert info.tmdb_id == 106449
+        assert lookup.lookup.call_count == 1
+
     def test_conflict_prefers_most_specific_name(self):
         """攻壳机动队案例：中文通称命中 2026 新剧，英文子系列名命中 SAC，
         冲突时采信最具体（最长）名称"""

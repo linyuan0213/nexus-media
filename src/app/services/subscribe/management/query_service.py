@@ -122,6 +122,23 @@ def _normalized_anchor(provider, external_id) -> tuple[str | None, str | None]:
     return value or None, external or None
 
 
+def _canonical_ref(row) -> str:
+    """统一身份输出：metadata_ref > identity > anchor > tmdb."""
+    explicit = str(getattr(row, "METADATA_REF", "") or "").strip()
+    if explicit:
+        return explicit
+    identity_id = str(getattr(row, "IDENTITY_ID", "") or "").strip()
+    if identity_id:
+        return f"id:{identity_id}"
+    provider, external = _normalized_anchor(
+        getattr(row, "ANCHOR_PROVIDER", None), getattr(row, "ANCHOR_EXTERNAL_ID", None)
+    )
+    if provider and external:
+        return f"{provider}:{external}"
+    tmdbid = str(getattr(row, "TMDBID", "") or "").strip()
+    return f"tmdb:{tmdbid}" if tmdbid.isdigit() else ""
+
+
 class SubscribeQueryService:
     """订阅查询服务"""
 
@@ -215,6 +232,7 @@ class SubscribeQueryService:
             anchor_provider, anchor_external_id = _normalized_anchor(
                 rss_movie.ANCHOR_PROVIDER, rss_movie.ANCHOR_EXTERNAL_ID
             )
+            metadata_ref = _canonical_ref(rss_movie)
             if not keyword and anchor_external_id and rss_movie.CONTENT_PROFILE not in (None, "", "default"):
                 keyword = anchor_external_id
             ret_dict[str(rss_movie.ID)] = {
@@ -223,12 +241,12 @@ class SubscribeQueryService:
                 "username": usernames.get(rss_movie.USER_ID) if rss_movie.USER_ID else None,
                 "name": rss_movie.NAME,
                 "year": rss_movie.YEAR,
-                "tmdbid": rss_movie.TMDBID,
+                "tmdbid": rss_movie.TMDBID if metadata_ref.startswith("tmdb:") else "",
                 "identity_id": rss_movie.IDENTITY_ID,
                 "anchor_provider": anchor_provider,
                 "anchor_external_id": anchor_external_id,
                 "provider": getattr(rss_movie, "PROVIDER", None),
-                "metadata_ref": getattr(rss_movie, "METADATA_REF", None),
+                "metadata_ref": metadata_ref,
                 "source_label": _source_label(
                     getattr(rss_movie, "PROVIDER", None) or anchor_provider or "",
                     rss_movie.TMDBID,
@@ -327,6 +345,7 @@ class SubscribeQueryService:
             ]
             search_sites = [site for site in (search_sites or []) if site in search_sites_valid]
             anchor_provider, anchor_external_id = _normalized_anchor(rss_tv.ANCHOR_PROVIDER, rss_tv.ANCHOR_EXTERNAL_ID)
+            metadata_ref = _canonical_ref(rss_tv)
             resolved_type = (
                 "anime"
                 if rss_tv.CONTENT_PROFILE == "anime" or anchor_provider == "bangumi"
@@ -349,12 +368,12 @@ class SubscribeQueryService:
                 "name": rss_tv.NAME,
                 "year": rss_tv.YEAR,
                 "season": rss_tv.SEASON,
-                "tmdbid": rss_tv.TMDBID,
+                "tmdbid": rss_tv.TMDBID if metadata_ref.startswith("tmdb:") else "",
                 "identity_id": rss_tv.IDENTITY_ID,
                 "anchor_provider": anchor_provider,
                 "anchor_external_id": anchor_external_id,
                 "provider": getattr(rss_tv, "PROVIDER", None),
-                "metadata_ref": getattr(rss_tv, "METADATA_REF", None),
+                "metadata_ref": metadata_ref,
                 "source_label": _source_label(
                     getattr(rss_tv, "PROVIDER", None) or anchor_provider or "",
                     rss_tv.TMDBID,

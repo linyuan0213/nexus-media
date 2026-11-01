@@ -117,6 +117,67 @@ class TestSubscribeFinishService:
         svc.finish_rss_subscribe(1, media, MagicMock())
         assert history_repo.upsert.call_args.kwargs["total"] == 10
 
+    def test_finish_movie_wash_cleans_downloads_by_identity(self):
+        movie_repo = MagicMock()
+        rss = MagicMock()
+        rss.NAME = "Custom Movie"
+        rss.YEAR = "2024"
+        rss.TMDBID = ""
+        rss.IDENTITY_ID = "I1"
+        rss.ANCHOR_PROVIDER = "content_id"
+        rss.ANCHOR_EXTERNAL_ID = "CUSTOM-0001"
+        rss.OVER_EDITION = True
+        movie_repo.get_all.return_value = [rss]
+        download_repo = MagicMock()
+        svc = SubscribeFinishService(
+            movie_repo, MagicMock(), MagicMock(), MagicMock(), MagicMock(), download_repo=download_repo
+        )
+        media = MagicMock()
+        media.type = MediaType.MOVIE
+        media.to_dict.return_value = {}
+        svc.finish_rss_subscribe(1, media, MagicMock())
+
+        download_repo.delete_by_identity.assert_called_once_with(
+            identity_id="I1",
+            anchor_provider="content_id",
+            anchor_external_id="CUSTOM-0001",
+            season_prefix=None,
+        )
+        download_repo.delete_by_tmdb.assert_not_called()
+
+    def test_finish_tv_wash_cleans_downloads_by_identity(self):
+        tv_repo = MagicMock()
+        rss = MagicMock()
+        rss.NAME = "Custom TV"
+        rss.YEAR = "2024"
+        rss.TMDBID = ""
+        rss.IDENTITY_ID = "I2"
+        rss.ANCHOR_PROVIDER = "content_id"
+        rss.ANCHOR_EXTERNAL_ID = "CUSTOM-0002"
+        rss.OVER_EDITION = True
+        rss.SEASON = "S01"
+        rss.CURRENT_EP = 3
+        rss.TOTAL = 3
+        rss.TOTAL_EP = 3
+        tv_repo.get_all.return_value = [rss]
+        download_repo = MagicMock()
+        svc = SubscribeFinishService(
+            MagicMock(), tv_repo, MagicMock(), MagicMock(), MagicMock(), download_repo=download_repo
+        )
+        media = MagicMock()
+        media.type = MediaType.TV
+        media.get_season_string.return_value = "S01"
+        media.to_dict.return_value = {}
+        svc.finish_rss_subscribe(1, media, MagicMock())
+
+        download_repo.delete_by_identity.assert_called_once_with(
+            identity_id="I2",
+            anchor_provider="content_id",
+            anchor_external_id="CUSTOM-0002",
+            season_prefix="S01",
+        )
+        download_repo.delete_by_tmdb.assert_not_called()
+
     def test_finish_no_rss_found(self):
         movie_repo = MagicMock()
         movie_repo.get_all.return_value = []

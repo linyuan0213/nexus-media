@@ -1,6 +1,7 @@
 """快照驱动 NFO 渲染测试（无网络）."""
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -127,7 +128,9 @@ def test_scraper_snapshot_movie_path_writes_nfo(tmp_path):
     scraper._downloader = cast(Any, downloader)
     scraper._nfo_gen = NfoGenerator(downloader)
 
-    scraper._scrape_movie_from_snapshot(_snapshot(), str(tmp_path), "movie", True, False)
+    scraper._scrape_movie_from_snapshot(
+        _snapshot(), SimpleNamespace(title="movie"), str(tmp_path), "movie", True, False
+    )
 
     assert downloader.saved
     assert downloader.saved[0][1].endswith("movie.nfo")
@@ -259,3 +262,35 @@ def test_movie_nfo_marks_external_subtitle_as_chinese(tmp_path):
 
     xml, _ = downloader.saved[0]
     assert "<tag>中字</tag>" in xml
+
+
+@pytest.mark.parametrize(
+    ("provider", "external_id", "title"),
+    [
+        ("douban", "37923549", "测试豆瓣条目"),
+        ("tmdb", "220542", "测试 TMDB 条目"),
+        ("bangumi", "55770", "测试 Bangumi 条目"),
+    ],
+)
+def test_nfo_primary_provider_is_provider_agnostic(tmp_path, provider, external_id, title):
+    downloader = _FakeDownloader()
+    snapshot = _snapshot(
+        primary_provider=provider,
+        refs=[ProviderRef(provider=provider, external_id=external_id)],
+        fields={
+            "title": FieldValue(value=title, provider=provider, external_id=external_id),
+            "year": FieldValue(value="2026", provider=provider, external_id=external_id),
+        },
+        ratings={provider: 8.0},
+    )
+
+    NfoGenerator(downloader).gen_movie_nfo_from_snapshot(
+        snapshot,
+        {"basic": True},
+        str(tmp_path),
+        "movie",
+    )
+
+    xml, _ = downloader.saved[0]
+    assert f'<uniqueid type="{provider}" default="true">{external_id}</uniqueid>' in xml
+    assert f"<title>{title}</title>" in xml

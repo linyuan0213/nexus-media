@@ -1,10 +1,14 @@
 """ResultFilter 测试：match_filter 缓存隔离 + local_filter 召回门语义"""
 
+from types import SimpleNamespace
 from typing import cast
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.domain.mediatypes import MediaType
+from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.core.result_filter import ResultFilter
 from app.media import meta_info as parse_title
 from app.media.models import MediaInfo
@@ -226,3 +230,58 @@ class TestCachedMediaInfoIsolation:
         second.org_string = "title B"
         ret_array = [first]
         assert second not in ret_array
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "凡人修仙传 S01E01 2020 1080p WEB-DL H264",
+        "A Record of a Mortal's Journey to Immortality S01E01 2020 1080p WEB-DL H264",
+    ],
+)
+def test_multilingual_torrent_survives_rule_and_identity_pipeline(title):
+    group = SimpleNamespace(
+        id=1,
+        default=True,
+        to_dict=lambda: {"id": 1, "name": "中字"},
+    )
+    rule = SimpleNamespace(include="中字", exclude="", note=None, priority=0)
+    group_repo = MagicMock()
+    group_repo.get_all.return_value = [group]
+    group_repo.get_by_id.return_value = group
+    rule_repo = MagicMock()
+    rule_repo.get_by_group.return_value = [rule]
+    media_service = MagicMock()
+    media_service.get_all_names.return_value = []
+    media_service.merge_media_info.side_effect = lambda target, source: target
+    result_filter = ResultFilter(
+        media=media_service,
+        filter_group_repo=group_repo,
+        filter_rule_repo=rule_repo,
+    )
+    pipeline = SearchPipeline(
+        media_service=media_service,
+        result_filter=result_filter,
+        progress=MagicMock(),
+    )
+    match_media = MediaInfo(
+        title="凡人修仙传",
+        cn_name="凡人修仙传",
+        en_name="A Record of a Mortal's Journey to Immortality",
+        original_title="A Record of a Mortal's Journey to Immortality",
+        year="2020",
+        type=MediaType.TV,
+        tmdb_id=106449,
+        provider_data={"id": 106449, "name": "凡人修仙传", "media_type": "tv"},
+    )
+
+    result = pipeline.process(
+        all_results=[_item(title, description="凡人修仙传 国语中字")],
+        filter_args={"rule": 1, "year": "2020", "type": MediaType.TV.value},
+        match_media=match_media,
+        search_name="凡人修仙传",
+    )
+
+    assert len(result.results) == 1
+    assert result.results[0].tmdb_id == 106449
+    assert result.results[0].provider_data["name"] == "凡人修仙传"

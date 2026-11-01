@@ -37,6 +37,16 @@ def test_identity_idempotent_and_lookup_by_ref(repo):
     assert [(ref.PROVIDER, ref.EXTERNAL_ID) for ref in refs] == [("tmdb", "278")]
 
 
+def test_tmdb_same_external_id_isolated_by_media_type(repo):
+    movie = repo.ensure_identity(media_type="movie")
+    tv = repo.ensure_identity(media_type="tv")
+    repo.upsert_ref(movie.IDENTITY_ID, provider="tmdb", external_id="106449", media_type="movie")
+    repo.upsert_ref(tv.IDENTITY_ID, provider="tmdb", external_id="106449", media_type="tv")
+
+    assert repo.find_by_ref("tmdb", "106449", media_type="movie").IDENTITY_ID == movie.IDENTITY_ID
+    assert repo.find_by_ref("tmdb", "106449", media_type="tv").IDENTITY_ID == tv.IDENTITY_ID
+
+
 def test_ref_cannot_be_reassigned_to_another_identity(repo):
     first = repo.ensure_identity()
     second = repo.ensure_identity()

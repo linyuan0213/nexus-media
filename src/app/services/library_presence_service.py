@@ -139,7 +139,12 @@ class LibraryPresenceService:
             for provider in dict.fromkeys(providers):
                 for current_scope in dict.fromkeys([scope, "default"]):
                     try:
-                        identity = self._identity_repo.find_by_ref(provider, external, scope=current_scope)
+                        identity = self._identity_repo.find_by_ref(
+                            provider,
+                            external,
+                            scope=current_scope,
+                            media_type=str(getattr(anchor, "media_type", "") or "") or None,
+                        )
                     except Exception:  # noqa: BLE001 - 身份查询失败继续兜底
                         identity = None
                     if identity is not None:

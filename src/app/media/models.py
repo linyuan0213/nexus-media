@@ -38,6 +38,7 @@ class MediaInfo(BaseModel):
     # ---- 名称 ----
     cn_name: str | None = None
     en_name: str | None = None
+    aliases: list[str] = Field(default_factory=list)
     _name: str | None = None
 
     # ---- 解析器内部属性 ----
@@ -493,17 +494,21 @@ class MediaInfo(BaseModel):
             if parsed_media_type != MediaType.UNKNOWN:
                 media_type = parsed_media_type
         raw_genres = info.get("genres") or []
-        self.genres = [
-            str(genre.get("name") or genre.get("id"))
-            for genre in raw_genres
-            if (hasattr(genre, "get") and (genre.get("name") or genre.get("id")))
-            or (not hasattr(genre, "get") and genre)
-        ]
+        # TMDB 返回 [{"id","name"}]，多元数据 provider 常返回 ["动画", ...]。
+        self.genres = []
+        for genre in raw_genres:
+            value = genre.get("name") or genre.get("id") if hasattr(genre, "get") else genre
+            if value not in (None, ""):
+                self.genres.append(str(value))
         if media_type == MediaType.TV:
             genre_ids = info.get("genre_ids") or []
             # TMDB detail 返回 genres（数组）而非 genre_ids，需兼容提取
             if not genre_ids:
-                genre_ids = [g.get("id") for g in (info.get("genres") or []) if g.get("id")]
+                genre_ids = [
+                    g.get("id")
+                    for g in (info.get("genres") or [])
+                    if hasattr(g, "get") and g.get("id")
+                ]
             if isinstance(genre_ids, list):
                 genre_ids = [str(val).upper() for val in genre_ids]
             else:
