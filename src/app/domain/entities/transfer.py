@@ -7,6 +7,8 @@ import os
 from dataclasses import dataclass, fields
 from typing import Any, Optional
 
+from app.domain.media_ref import canonical_metadata_ref, is_tmdb_media
+
 
 @dataclass
 class TransferHistoryEntity:
@@ -118,7 +120,8 @@ class TransferHistoryEntity:
             "mode": self.mode,
             "type": self.media_type,
             "category": self.category,
-            "tmdbid": self.tmdb_id,
+            "tmdbid": self.tmdb_id if is_tmdb_media(self) else "",
+            "metadata_ref": canonical_metadata_ref(self),
             "title": self.title,
             "year": self.year,
             "season_episode": self.season_episode,

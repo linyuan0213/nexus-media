@@ -177,7 +177,7 @@ class NfoGenerator:
 
     # ---------- snapshot 渲染（ADR-025） ----------
 
-    def gen_movie_nfo_from_snapshot(self, snapshot, scraper_nfo, out_path, file_name):
+    def gen_movie_nfo_from_snapshot(self, snapshot, scraper_nfo, out_path, file_name, fallback_title: str = ""):
         """从 MediaMetadata 快照生成电影 NFO."""
         if getattr(snapshot, "content_profile", "") == "adult":
             # 成人自定义画像必须写标题/简介/演员，不能因用户旧配置只在 NFO 留番号。
@@ -186,8 +186,16 @@ class NfoGenerator:
         root = DomUtils.add_node(doc, doc, "movie")
         self._gen_snapshot_common(snapshot, doc, root, scraper_nfo)
         if scraper_nfo.get("basic"):
-            DomUtils.add_node(doc, root, "title", _snapshot_value(snapshot, "title"))
-            DomUtils.add_node(doc, root, "originaltitle", _snapshot_value(snapshot, "original_title"))
+            snapshot_title = _snapshot_value(snapshot, "title")
+            content_code = _snapshot_value(snapshot, "content_id") or file_name
+            title = (
+                fallback_title
+                if fallback_title and snapshot_title.startswith(content_code)
+                else (snapshot_title or fallback_title)
+            )
+            original_title = _snapshot_value(snapshot, "original_title") or title
+            DomUtils.add_node(doc, root, "title", title)
+            DomUtils.add_node(doc, root, "originaltitle", original_title)
             release = _snapshot_value(snapshot, "release_date")
             DomUtils.add_node(doc, root, "premiered", release)
             DomUtils.add_node(doc, root, "year", _snapshot_value(snapshot, "year") or str(release)[:4])

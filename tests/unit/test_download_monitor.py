@@ -59,6 +59,48 @@ class TestDownloadMonitor:
         assert "qb1:task1" in m._processed_ids
         assert "tr1:task1" in m._processed_ids
 
+    def test_warmup_skips_stale_path_without_history(self, mock_factory, mock_bus):
+        history = MagicMock()
+        history.get_by_source.return_value = None
+        m = DownloadMonitor(
+            client_factory=mock_factory,
+            event_bus=mock_bus,
+            history_repo=history,
+        )
+        mock_client = MagicMock()
+        mock_client.get_transfer_task.return_value = [
+            {"id": "stale", "path": "/definitely/not/exists.mkv", "tags": [], "name": "stale"}
+        ]
+        mock_factory.get_client.return_value = mock_client
+        mock_factory.get_downloader_conf.return_value = {"only_nexus_media": False, "match_path": False}
+
+        m._warmup()
+
+        assert "qb1:stale" in m._processed_ids
+        assert "tr1:stale" in m._processed_ids
+
+    def test_warmup_keeps_existing_untransferred_path(self, tmp_path, mock_factory, mock_bus):
+        target = tmp_path / "movie.mkv"
+        target.write_bytes(b"x")
+        history = MagicMock()
+        history.get_by_source.return_value = None
+        m = DownloadMonitor(
+            client_factory=mock_factory,
+            event_bus=mock_bus,
+            history_repo=history,
+        )
+        mock_client = MagicMock()
+        mock_client.get_transfer_task.return_value = [
+            {"id": "ready", "path": str(target), "tags": [], "name": "movie"}
+        ]
+        mock_factory.get_client.return_value = mock_client
+        mock_factory.get_downloader_conf.return_value = {"only_nexus_media": False, "match_path": False}
+
+        m._warmup()
+
+        assert "qb1:ready" not in m._processed_ids
+        assert "tr1:ready" not in m._processed_ids
+
     def test_warmup_no_client(self, monitor):
         m, factory, _ = monitor
         factory.get_client.return_value = None

@@ -71,6 +71,19 @@ def test_nfo_tv_uses_series_tmdb_and_episode_fields(tmp_path):
     assert data["episode"] == 2
 
 
+def test_nfo_tv_keeps_content_id_identity(tmp_path):
+    directory = tmp_path / "Show"
+    directory.mkdir()
+    (directory / "tvshow.nfo").write_text(
+        "<tvshow><title>Show</title><uniqueid type='content_id'>CUSTOM-0001</uniqueid></tvshow>",
+        encoding="utf-8",
+    )
+    data = collect_nfo(_backend(), str(directory), "Show.S01E02", MediaType.TV)
+    assert data is not None
+    assert data["content_id"] == "CUSTOM-0001"
+    assert data["unique_ids"]["content_id"] == "CUSTOM-0001"
+
+
 def test_season_nfo_title_is_not_show_title(tmp_path):
     directory = tmp_path / "Show"
     directory.mkdir()

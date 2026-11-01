@@ -1,5 +1,6 @@
 """下载监控服务 — 高频轮询检测下载完成，触发事件驱动转移."""
 
+import os
 import time
 from concurrent.futures import as_completed
 from typing import Any
@@ -91,14 +92,24 @@ class DownloadMonitor:
                     task_id = str(task.get("id") or "")
                     if not task_id:
                         continue
+                    uid = self._make_id(did, task_id)
+                    task_path = str(task.get("path") or "")
                     # 有转移历史的才算已处理；重启时未转移的完成任务必须保留，
                     # 让首次增量检查重新触发，否则会被 warmup 永久吞掉。
                     if self._history_repo is None:
-                        self._processed_ids.add(self._make_id(did, task_id))
+                        self._processed_ids.add(uid)
                         continue
                     try:
-                        if self._history_repo.get_by_source(str(task.get("path") or "")) is not None:
-                            self._processed_ids.add(self._make_id(did, task_id))
+                        if self._history_repo.get_by_source(task_path) is not None:
+                            self._processed_ids.add(uid)
+                            continue
+                        # 启动期残留任务：下载器里仍标记完成，但路径已不存在时
+                        # 转移必然失败，不能让它重放并产生“无法识别”误通知。
+                        if task_path and os.path.isabs(task_path) and not os.path.exists(task_path):
+                            self._processed_ids.add(uid)
+                            log.warn(
+                                f"[DownloadMonitor]跳过启动期残留任务（路径不存在）: {task_id} @ {task_path}"
+                            )
                     except Exception as e:  # noqa: BLE001 - 历史查询失败不应阻断启动
                         log.debug(f"[DownloadMonitor]查询转移历史失败 {task_id}: {e}")
         except Exception as e:

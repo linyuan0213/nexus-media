@@ -80,3 +80,31 @@ def test_same_tmdb_multiple_records_not_ambiguous(tmp_path):
     tmdb_info, media_type, _s, _e = svc._lookup_download_record(file_path)
     assert tmdb_info is not None
     assert media_type == MediaType.ANIME
+
+
+def test_apply_download_record_hint_keeps_anchor_without_tmdb():
+    media = SimpleNamespace(
+        anchor_provider=None,
+        anchor_external_id=None,
+        identity_id=None,
+        content_profile="default",
+        poster_path=None,
+        title="",
+    )
+    record = SimpleNamespace(
+        ANCHOR_PROVIDER="content_id",
+        ANCHOR_EXTERNAL_ID="CUSTOM-0001",
+        IDENTITY_ID="I1",
+        CONTENT_PROFILE="custom",
+        POSTER="http://poster",
+        TITLE="Custom Title",
+    )
+
+    FileTransferService._apply_download_record_hint(media, record)
+
+    assert media.anchor_provider == "content_id"
+    assert media.anchor_external_id == "CUSTOM-0001"
+    assert media.identity_id == "I1"
+    assert media.content_profile == "custom"
+    assert media.poster_path == "http://poster"
+    assert media.title == "Custom Title"

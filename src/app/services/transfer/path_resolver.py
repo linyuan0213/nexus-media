@@ -535,18 +535,10 @@ def _media_provider(media) -> tuple[str | None, str | None]:
     anchor_external = str(getattr(media, "anchor_external_id", "") or "")
     if anchor_provider and anchor_external:
         return anchor_provider, anchor_external
+    # 运行路径只接受新的 anchor/identity；DB:/BG:/数字前缀仅保留在迁移层。
     raw = str(getattr(media, "tmdb_id", "") or "")
-    if raw.startswith("DB:"):
-        return "douban", raw[3:] or None
-    if raw.startswith("BG:"):
-        return "bangumi", raw[3:] or None
-    if raw.startswith("TMDB:"):
-        return "tmdb", raw[5:] or None
     if raw.isdigit():
         return "tmdb", raw
-    douban_id = getattr(media, "douban_id", None)
-    if douban_id:
-        return "douban", str(douban_id)
     return None, None
 
 

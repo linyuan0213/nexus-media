@@ -13,6 +13,7 @@ from sqlalchemy import Integer, and_, case, cast, func, or_, tuple_
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.episode_progress import contiguous_episodes
+from app.domain.media_ref import is_tmdb_media
 
 
 class DownloadRepository(BaseRepository):
@@ -115,6 +116,30 @@ class DownloadRepository(BaseRepository):
             )
         return contiguous_episodes((se for (se,) in rows), int(season or 1), start=int(start or 1))
 
+    def get_contiguous_completed_episode_by_ref(
+        self,
+        *,
+        identity_id: str | None,
+        anchor_provider: str | None,
+        anchor_external_id: str | None,
+        season: int | None,
+        start: int = 1,
+    ) -> int:
+        """按多元身份查询已完成下载的连续集数（非 TMDB 订阅续订用）."""
+        if not identity_id and not (anchor_provider and anchor_external_id):
+            return 0
+        with self.session() as db:
+            query = db.query(DOWNLOADHISTORY.SE).filter(DOWNLOADHISTORY.STATE == "completed")
+            if identity_id:
+                query = query.filter(DOWNLOADHISTORY.IDENTITY_ID == str(identity_id))
+            else:
+                query = query.filter(
+                    DOWNLOADHISTORY.ANCHOR_PROVIDER == str(anchor_provider),
+                    DOWNLOADHISTORY.ANCHOR_EXTERNAL_ID == str(anchor_external_id),
+                )
+            rows = query.all()
+        return contiguous_episodes((se for (se,) in rows), int(season or 1), start=int(start or 1))
+
     def delete_download_history_by_tmdb(self, tmdb_id: int | str | None, season_prefix: str | None = None) -> int:
         """
         删除已完成的下载历史，根据TMDB ID和可选的季前缀（仅删除 STATE=completed，保留下载中的）
@@ -132,6 +157,36 @@ class DownloadRepository(BaseRepository):
             if season_prefix:
                 query = query.filter(DOWNLOADHISTORY.SE.like(f"{season_prefix}%"))
 
+            count = query.count()
+            query.delete(synchronize_session="fetch")
+            db.commit()
+            return count
+
+    def delete_download_history_by_identity(
+        self,
+        *,
+        identity_id: str | None,
+        anchor_provider: str | None,
+        anchor_external_id: str | None,
+        season_prefix: str | None = None,
+    ) -> int:
+        """按多元身份删除已完成下载历史（洗版重下用）."""
+        identity_id = str(identity_id or "").strip()
+        anchor_provider = str(anchor_provider or "").strip()
+        anchor_external_id = str(anchor_external_id or "").strip()
+        if not identity_id and not (anchor_provider and anchor_external_id):
+            return 0
+        with self.session() as db:
+            query = db.query(DOWNLOADHISTORY).filter(DOWNLOADHISTORY.STATE == "completed")
+            if identity_id:
+                query = query.filter(DOWNLOADHISTORY.IDENTITY_ID == identity_id)
+            else:
+                query = query.filter(
+                    DOWNLOADHISTORY.ANCHOR_PROVIDER == anchor_provider,
+                    DOWNLOADHISTORY.ANCHOR_EXTERNAL_ID == anchor_external_id,
+                )
+            if season_prefix:
+                query = query.filter(DOWNLOADHISTORY.SE.like(f"{season_prefix}%"))
             count = query.count()
             query.delete(synchronize_session="fetch")
             db.commit()
@@ -199,7 +254,7 @@ class DownloadRepository(BaseRepository):
                         "TITLE": media_info.title,
                         "YEAR": media_info.year or "",
                         "TYPE": media_info.type.value if media_info.type else "",
-                        "TMDBID": media_info.tmdb_id or "",
+                        "TMDBID": (media_info.tmdb_id or "") if is_tmdb_media(media_info) else "",
                         "VOTE": media_info.vote_average or "",
                         "POSTER": media_info.get_poster_image() or "",
                         "OVERVIEW": media_info.overview or "",
@@ -227,7 +282,7 @@ class DownloadRepository(BaseRepository):
                         TITLE=media_info.title,
                         YEAR=media_info.year or "",
                         TYPE=media_info.type.value if media_info.type else "",
-                        TMDBID=media_info.tmdb_id or "",
+                        TMDBID=(media_info.tmdb_id or "") if is_tmdb_media(media_info) else "",
                         VOTE=media_info.vote_average or "",
                         POSTER=media_info.get_poster_image() or "",
                         OVERVIEW=media_info.overview or "",

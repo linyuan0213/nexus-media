@@ -794,6 +794,10 @@ class MediaService:
                 return IdentifyStatus.ERROR, info
             if looked_up and looked_up.tmdb_id:
                 hits.append((name, looked_up))
+                # 已命中搜索目标时无需再查其余别名/噪声名称（如发布组缩写）。
+                target_id = str(group.get("target_tmdb_id") or "")
+                if target_id and str(looked_up.tmdb_id) == target_id:
+                    break
 
         if not hits:
             return IdentifyStatus.NOT_FOUND, info

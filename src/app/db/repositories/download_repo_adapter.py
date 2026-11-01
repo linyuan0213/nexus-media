@@ -54,6 +54,23 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
             return 0
         return self._repo.get_contiguous_completed_episode_by_tmdb(int(tmdb_id), season, start=start)
 
+    def get_contiguous_completed_episode_by_ref(
+        self,
+        *,
+        identity_id: str | None,
+        anchor_provider: str | None,
+        anchor_external_id: str | None,
+        season: int | None,
+        start: int = 1,
+    ) -> int:
+        return self._repo.get_contiguous_completed_episode_by_ref(
+            identity_id=identity_id,
+            anchor_provider=anchor_provider,
+            anchor_external_id=anchor_external_id,
+            season=season,
+            start=start,
+        )
+
     def insert(self, media_info, downloader: str, download_id: str, save_dir: str) -> None:
         self._repo.insert_download_history(media_info, downloader, download_id, save_dir)
 
@@ -159,6 +176,21 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
         if not items:
             return
         self._repo.batch_update_download_state(items)
+
+    def delete_by_identity(
+        self,
+        *,
+        identity_id: str | None,
+        anchor_provider: str | None,
+        anchor_external_id: str | None,
+        season_prefix: str | None = None,
+    ) -> int:
+        return self._repo.delete_download_history_by_identity(
+            identity_id=identity_id,
+            anchor_provider=anchor_provider,
+            anchor_external_id=anchor_external_id,
+            season_prefix=season_prefix,
+        )
 
     def delete_by_tmdb(self, tmdb_id: str, season_prefix: str | None = None) -> int:
         return self._repo.delete_download_history_by_tmdb(tmdb_id, season_prefix)

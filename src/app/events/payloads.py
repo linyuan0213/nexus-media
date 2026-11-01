@@ -29,6 +29,11 @@ class MediaEpisodeTransferredPayload:
     episodes: list[int]
     total_episodes: int
     media_type: str | None = None
+    anchor_provider: str | None = None
+    anchor_external_id: str | None = None
+    identity_id: str | None = None
+    content_profile: str | None = None
+    user_id: int | None = None
 
 
 @dataclass(frozen=True)
