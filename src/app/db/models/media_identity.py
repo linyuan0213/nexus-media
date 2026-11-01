@@ -34,7 +34,7 @@ class MediaExternalRef(Base):
 
     __tablename__ = "MEDIA_EXTERNAL_REF"
     __table_args__ = (
-        UniqueConstraint("PROVIDER", "EXTERNAL_ID", "SCOPE", name="UQ_MEDIA_EXTERNAL_REF"),
+        UniqueConstraint("PROVIDER", "EXTERNAL_ID", "SCOPE", "MEDIA_TYPE", name="UQ_MEDIA_EXTERNAL_REF"),
         Index("INDX_MEDIA_EXTERNAL_REF_IDENTITY", "IDENTITY_ID"),
     )
 

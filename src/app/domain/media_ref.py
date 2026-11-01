@@ -44,6 +44,34 @@ def normalize_identity_key(value: Any) -> str:
     return text
 
 
+def canonical_metadata_ref(media: Any) -> str:
+    """返回新的统一引用；不再把数字/DB:/BG: 当作运行时主键。"""
+    if media is None:
+        return ""
+    explicit = str(getattr(media, "metadata_ref", "") or "").strip()
+    if explicit:
+        return explicit
+    identity_id = str(getattr(media, "identity_id", "") or "").strip()
+    if identity_id:
+        return f"id:{identity_id}"
+    provider = str(getattr(media, "anchor_provider", "") or "").strip().lower()
+    external = str(getattr(media, "anchor_external_id", "") or "").strip()
+    if provider and external:
+        return f"{provider}:{external}"
+    if provider == "tmdb" or not provider:
+        tmdb_id = str(getattr(media, "tmdb_id", "") or "").strip()
+        if tmdb_id.isdigit():
+            return f"tmdb:{tmdb_id}"
+    return ""
+
+
+def is_tmdb_media(media: Any) -> bool:
+    provider = str(getattr(media, "anchor_provider", "") or "").strip().lower()
+    if provider:
+        return provider == "tmdb"
+    return str(getattr(media, "tmdb_id", "") or "").strip().isdigit()
+
+
 def media_identity_key(media: Any) -> str:
     """返回媒体对象的稳定匹配键；优先 identity_id，其次 anchor。"""
     if media is None:

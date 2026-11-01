@@ -55,7 +55,7 @@ class MetadataBackfillService:
     def run(self, *, dry_run: bool = True, limit: int | None = None) -> BackfillReport:
         report = BackfillReport(dry_run=dry_run)
         rows = self._legacy_repo.list_rows(limit=limit)
-        seen: set[tuple[str, str, str]] = set()
+        seen: set[tuple[str, str, str, str]] = set()
 
         for row in rows:
             report.scanned += 1
@@ -67,14 +67,19 @@ class MetadataBackfillService:
                 report.skip_reasons[reason] = report.skip_reasons.get(reason, 0) + 1
                 continue
 
-            key = (ref.provider, ref.external_id, ref.scope)
+            key = (ref.provider, ref.external_id, ref.scope, row.media_type)
             if key in seen:
                 report.duplicates += 1
                 continue
             seen.add(key)
             report.unique_refs += 1
 
-            existing = self._identity_repo.find_by_ref(ref.provider, ref.external_id, scope=ref.scope)
+            existing = self._identity_repo.find_by_ref(
+                ref.provider,
+                ref.external_id,
+                scope=ref.scope,
+                media_type=row.media_type,
+            )
             if existing is not None:
                 report.existing += 1
                 continue
