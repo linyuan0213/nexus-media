@@ -53,14 +53,6 @@ class LibraryPresenceService:
                 return provider, external
         return "", ""
 
-    @staticmethod
-    def _aliases(item: Any) -> list[str]:
-        extra = getattr(item, "extra", None) or {}
-        values = extra.get("library_aliases") if isinstance(extra, dict) else None
-        if not isinstance(values, (list, tuple, set)):
-            return []
-        return [str(value).strip() for value in values if str(value).strip()]
-
     def annotate(self, items: list[Any]) -> None:
         """原地写入 item.extra['in_library']."""
         unresolved: list[tuple[Any, tuple[str, str]]] = []
@@ -79,27 +71,6 @@ class LibraryPresenceService:
                 self._set(item)
             else:
                 remaining.append((item, pair))
-        if not remaining:
-            return
-
-        # 1b) 插件提供的库内命名别名（用于匹配不同来源的编号格式）
-        alias_pairs: list[tuple[Any, tuple[str, str]]] = []
-        for item, _pair in remaining:
-            anchor = getattr(item, "anchor_ref", None) or getattr(item, "ref", None)
-            providers = {
-                str(getattr(anchor, "provider", "") or "").strip(),
-                str(getattr(getattr(item, "ref", None), "provider", "") or "").strip(),
-            }
-            for provider in providers - {""}:
-                for alias in self._aliases(item):
-                    alias_pairs.append((item, (provider, alias)))
-        if alias_pairs:
-            alias_present = self._batch_query(self._transfer_repo, [pair for _, pair in alias_pairs], "转移历史别名")
-            alias_hit_ids = {id(item) for item, pair in alias_pairs if pair in alias_present}
-            for item, _pair in remaining:
-                if id(item) in alias_hit_ids:
-                    self._set(item)
-            remaining = [entry for entry in remaining if id(entry[0]) not in alias_hit_ids]
         if not remaining:
             return
 
@@ -269,7 +240,7 @@ class LibraryPresenceService:
                     title=getattr(item, "title", None),
                     year=getattr(item, "year", None),
                     content_profile=getattr(item, "content_profile", None),
-                    alternate_titles=[external, *self._aliases(item)] if external else self._aliases(item),
+                    alternate_titles=[external] if external else [],
                 )
             )
         except Exception as exc:  # noqa: BLE001
