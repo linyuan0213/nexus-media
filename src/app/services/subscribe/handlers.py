@@ -3,6 +3,8 @@
 由 app.di.factories 在对象图构建完成后显式注册，避免事件处理器直接访问 registry。
 """
 
+from typing import Any
+
 import log
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import (
@@ -97,14 +99,35 @@ def handle_media_episode_transferred(event: Event, finalize_fn=None) -> None:
     try:
         tv_repo = SubscribeTvRepositoryAdapter()
         ep_repo = SubscribeTvEpisodeRepositoryAdapter()
-        raw_id = tv_repo.get_id(
-            title=payload.title,
-            season=payload.season,
-            tmdbid=payload.tmdb_id,
-        )
-        rssid = int(raw_id) if raw_id is not None else None
+        rssid = None
+        anchor_provider = str(payload.anchor_provider or "")
+        anchor_external = str(payload.anchor_external_id or "")
+        if anchor_provider and anchor_external:
+            by_anchor = getattr(tv_repo, "get_id_by_anchor", None)
+            if by_anchor:
+                raw_anchor_id = by_anchor(
+                    anchor_provider,
+                    anchor_external,
+                    season=payload.season,
+                    content_profile=payload.content_profile,
+                    user_id=payload.user_id,
+                )
+                rssid = int(raw_anchor_id) if raw_anchor_id is not None else None
         if not rssid:
-            log.info(f"[Event]未找到订阅: tmdb_id={payload.tmdb_id} season={payload.season}")
+            lookup_kwargs: dict[str, Any] = {
+                "title": payload.title,
+                "season": payload.season,
+                "tmdbid": payload.tmdb_id,
+            }
+            if payload.user_id is not None:
+                lookup_kwargs["user_id"] = payload.user_id
+            raw_id = tv_repo.get_id(**lookup_kwargs)
+            rssid = int(raw_id) if raw_id is not None else None
+        if not rssid:
+            log.info(
+                f"[Event]未找到订阅: tmdb_id={payload.tmdb_id} "
+                f"anchor={payload.anchor_provider}:{payload.anchor_external_id} season={payload.season}"
+            )
             return
 
         downloaded = {int(e) for e in (payload.episodes or []) if str(e).isdigit()}
@@ -115,8 +138,9 @@ def handle_media_episode_transferred(event: Event, finalize_fn=None) -> None:
         # 不能用「全集 - 本次转移集」重算，否则会把之前已入库的集误标回缺失，
         # 导致订阅进度倒退并重复下载。
         current_missing = ep_repo.get(rssid)
-        if current_missing is None:
-            # 缺失列表未初始化：以订阅的 current_ep（首个待下载集）推导初始范围
+        if not current_missing:
+            # 缺失列表未初始化或为空：以订阅的 current_ep（首个待下载集）推导初始范围。
+            # 空列表不能直接视为“全部完成”，否则首集刚转移就会误写订阅历史。
             total = int(payload.total_episodes or 0)
             if total <= 0:
                 # 总集数未知时无法核定缺失，保持原状态，避免误判完成
@@ -211,7 +235,7 @@ def build_movie_transfer_finalize_handler(subscribe_service: SubscribeService):
             matched = bool(tmdb) and row_tmdb == tmdb
             if not matched and anchor_external and row_external == anchor_external:
                 # 转移事件的锚点可能来自 content_id，而订阅行来自具体 provider；
-                # 同一番号/锚点即可定稿，不能要求两边 provider 完全一致。
+                # 同一内容编号/锚点即可定稿，不能要求两边 provider 完全一致。
                 matched = True
             if not matched:
                 continue
@@ -253,8 +277,18 @@ def build_transfer_fail_reopen_handler(subscribe_service: SubscribeService):
             owner = getattr(history, "user_id", None)
             tv_repo = SubscribeTvRepositoryAdapter()
             ep_repo = SubscribeTvEpisodeRepositoryAdapter()
+            history_identity = str(getattr(history, "identity_id", "") or "")
             for sub in tv_repo.get_all():
-                if not history_tmdb or str(sub.tmdb_id) != history_tmdb:
+                row_tmdb = str(getattr(sub, "tmdb_id", "") or "")
+                row_external = str(getattr(sub, "anchor_external_id", "") or "")
+                row_identity = str(getattr(sub, "identity_id", "") or "")
+                matched = bool(history_tmdb) and row_tmdb == history_tmdb
+                if not matched and history_external and row_external == history_external:
+                    # 同一锚点即视为同一订阅，兼容转移链路的 content_id 锚点。
+                    matched = True
+                if not matched and history_identity and row_identity == history_identity:
+                    matched = True
+                if not matched:
                     continue
                 if season is not None and str(sub.season) != season:
                     continue

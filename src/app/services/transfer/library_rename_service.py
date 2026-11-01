@@ -199,6 +199,10 @@ class LibraryRenameService:
         tmdbid: str | int | None,
         season: int | str | None,
         episode: int | str | None,
+        metadata_ref: str | None = None,
+        anchor_provider: str | None = None,
+        anchor_external_id: str | None = None,
+        content_profile: str | None = None,
         user_id: int | None = None,
     ) -> dict[str, Any]:
         normalized_path = norm_path(path)
@@ -208,6 +212,13 @@ class LibraryRenameService:
             raise ValidationError(f"非法媒体类型: {media_type}")
         if mtype != MediaType.MOVIE and (season is None or episode is None):
             raise ValidationError("剧集必须提供 season 和 episode")
+        ref_provider = str(anchor_provider or "").strip()
+        ref_external = str(anchor_external_id or "").strip()
+        if not ref_provider and metadata_ref and ":" in metadata_ref:
+            ref_provider, ref_external = metadata_ref.split(":", 1)
+        if not ref_provider and str(tmdbid or "").isdigit():
+            ref_provider, ref_external = "tmdb", str(tmdbid)
+        is_tmdb = ref_provider == "tmdb"
         self._repo.upsert_metadata(
             normalize_backend(backend_id),
             normalized_path,
@@ -215,11 +226,13 @@ class LibraryRenameService:
                 "type": mtype.value,
                 "title": title or "",
                 "year": year or "",
-                "tmdbid": tmdbid or "",
-                "anchor_provider": "tmdb" if tmdbid else None,
-                "anchor_external_id": str(tmdbid) if tmdbid else None,
-                "content_profile": "default",
-                "metadata_policy": "tmdb_primary" if tmdbid else None,
+                "tmdbid": ref_external if is_tmdb else "",
+                "identity_id": None,
+                "anchor_provider": ref_provider or None,
+                "anchor_external_id": ref_external or None,
+                "content_profile": content_profile or "default",
+                "metadata_ref": f"{ref_provider}:{ref_external}" if ref_provider and ref_external else None,
+                "metadata_policy": "tmdb_primary" if is_tmdb else "provider_primary",
                 "season": season if season is not None else "",
                 "episode": episode if episode is not None else "",
                 "metadata_source": "manual",

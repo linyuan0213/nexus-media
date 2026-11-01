@@ -308,6 +308,43 @@ class TransferRepository(BaseRepository):
                 )
             return None
 
+    def get_transfer_info_by_ref(
+        self,
+        ref: str,
+        season: str | None = None,
+        season_episode: str | None = None,
+        media_type: str | None = None,
+    ) -> list[TRANSFERHISTORY] | None:
+        """按统一引用查询转移记录；旧数字仅作为迁移兼容."""
+        value = str(ref or "").strip()
+        if not value:
+            return None
+        with self.session() as db:
+            query = db.query(TRANSFERHISTORY)
+            if value.startswith("id:"):
+                query = query.filter(TRANSFERHISTORY.IDENTITY_ID == value[3:])
+            elif ":" in value:
+                provider, external = value.split(":", 1)
+                query = query.filter(
+                    TRANSFERHISTORY.ANCHOR_PROVIDER == provider,
+                    TRANSFERHISTORY.ANCHOR_EXTERNAL_ID == external,
+                )
+            elif value.isdigit():
+                query = query.filter(TRANSFERHISTORY.TMDBID == int(value))
+            else:
+                return None
+            if media_type:
+                # TMDB movie/tv 同号时用 TYPE 隔离；动漫历史可能落在 tv。
+                types = {str(media_type)}
+                if str(media_type) == "anime":
+                    types.add("tv")
+                query = query.filter(TRANSFERHISTORY.TYPE.in_(types))
+            if season:
+                query = query.filter(TRANSFERHISTORY.SEASON_EPISODE.like(f"%{season}%"))
+            if season_episode:
+                query = query.filter(TRANSFERHISTORY.SEASON_EPISODE == season_episode)
+            return query.all()
+
     def get_contiguous_transferred_episode_by_tmdb(self, tmdbid: int | None, season: int | None, start: int = 1) -> int:
         """
         查询某剧集某季已成功转移的「从订阅起点 start 起连续」的最大集号（重订阅续订用）。
@@ -320,6 +357,30 @@ class TransferRepository(BaseRepository):
         with self.session() as db:
             rows = db.query(TRANSFERHISTORY.SEASON_EPISODE).filter(TRANSFERHISTORY.TMDBID == int(tmdbid)).all()
         return contiguous_episodes((se for (se,) in rows), int(season or 1), start=int(start or 1))
+
+    def get_contiguous_transferred_episode_by_ref(
+        self,
+        ref: str,
+        season: int | None,
+        media_type: str | None = None,
+        start: int = 1,
+    ) -> int:
+        """按统一引用查询该季连续已转移集数（非 TMDB 订阅续订用）."""
+        if not str(ref or "").strip():
+            return 0
+        rows = (
+            self.get_transfer_info_by_ref(
+                ref,
+                season=f"S{int(season or 1):02d}",
+                media_type=media_type,
+            )
+            or []
+        )
+        return contiguous_episodes(
+            (getattr(row, "SEASON_EPISODE", "") for row in rows),
+            int(season or 1),
+            start=int(start or 1),
+        )
 
     def delete_transfer_history_by_source(self, source_path: str, source_filename: str) -> None:
         with self.session() as db:
@@ -343,13 +404,20 @@ class TransferRepository(BaseRepository):
             )
 
     def get_transfer_history_by_source_full_path(self, source_full_path: str) -> TRANSFERHISTORY | None:
-        """据源文件全路径取最近一条转移记录（用于校验目标是否仍存在）."""
+        """据源文件全路径取最近一条转移记录（用于校验目标是否仍存在）.
+
+        兼容旧记录把完整文件路径写进 SOURCE_PATH 的格式。
+        """
+        source_full_path = os.path.normpath(source_full_path)
         path = os.path.dirname(source_full_path)
         filename = os.path.basename(source_full_path)
         with self.session() as db:
             return (
                 db.query(TRANSFERHISTORY)
-                .filter(TRANSFERHISTORY.SOURCE_PATH == path, TRANSFERHISTORY.SOURCE_FILENAME == filename)
+                .filter(
+                    (TRANSFERHISTORY.SOURCE_PATH == path) & (TRANSFERHISTORY.SOURCE_FILENAME == filename)
+                    | (TRANSFERHISTORY.SOURCE_PATH == source_full_path)
+                )
                 .order_by(TRANSFERHISTORY.DATE.desc())
                 .first()
             )

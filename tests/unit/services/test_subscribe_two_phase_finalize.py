@@ -146,6 +146,44 @@ def test_episode_transferred_finalizes_only_when_lack_empty():
     assert finalize.call_args.args[0] == 42
 
 
+def test_episode_transferred_uses_anchor_for_non_tmdb_subscription():
+    tv_repo = MagicMock()
+    tv_repo.get_id_by_anchor.return_value = 77
+    ep_repo = MagicMock()
+    ep_repo.get.return_value = [1]
+    finalize = MagicMock()
+    event = Event(
+        event_type=MEDIA_EPISODE_TRANSFERRED,
+        payload=MediaEpisodeTransferredPayload(
+            tmdb_id="",
+            title="CUSTOM-0001",
+            season="1",
+            episodes=[1],
+            total_episodes=1,
+            anchor_provider="content_id",
+            anchor_external_id="CUSTOM-0001",
+            content_profile="custom",
+            user_id=3,
+        ),
+    )
+    with (
+        patch.object(handlers, "SubscribeTvRepositoryAdapter", return_value=tv_repo),
+        patch.object(handlers, "SubscribeTvEpisodeRepositoryAdapter", return_value=ep_repo),
+    ):
+        handlers.handle_media_episode_transferred(event, finalize_fn=finalize)
+
+    tv_repo.get_id_by_anchor.assert_called_once_with(
+        "content_id",
+        "CUSTOM-0001",
+        season="1",
+        content_profile="custom",
+        user_id=3,
+    )
+    tv_repo.get_id.assert_not_called()
+    finalize.assert_called_once()
+    assert finalize.call_args.args[0] == 77
+
+
 def test_episode_transferred_partial_does_not_finalize():
     tv_repo = MagicMock()
     tv_repo.get_id.return_value = 42
@@ -214,6 +252,49 @@ def test_transfer_fail_reopens_subscription_and_resets_history():
         title=None, year=None, season=None, rssid=9, lack_episodes=[5, 6, 7]
     )
     dha.return_value.update_state.assert_called_once_with("qb", "t1", "downloading")
+
+
+def test_transfer_fail_reopens_tv_subscription_by_anchor():
+    """多元数据 TV 订阅无 TMDB，失败时按锚点回补缺失."""
+    svc = MagicMock()
+    handler = handlers.build_transfer_fail_reopen_handler(svc)
+    history = SimpleNamespace(
+        tmdb_id="",
+        anchor_provider="content_id",
+        anchor_external_id="CUSTOM-0001",
+        season_episode="S01E01",
+        downloader="qb",
+        download_id="t3",
+    )
+    sub = SimpleNamespace(
+        id=12,
+        tmdb_id="",
+        anchor_provider="content_id",
+        anchor_external_id="CUSTOM-0001",
+        season="1",
+        user_id=None,
+    )
+    ep_repo = MagicMock()
+    ep_repo.get.return_value = []
+    event = Event(event_type=TRANSFER_FAIL, payload=TransferFailPayload(path="/dl/x", count=1, reason="boom"))
+
+    with (
+        patch.object(handlers, "DownloadHistoryRepositoryAdapter") as dha,
+        patch.object(handlers, "SubscribeTvRepositoryAdapter") as tha,
+        patch.object(handlers, "SubscribeTvEpisodeRepositoryAdapter", return_value=ep_repo),
+        patch.object(handlers, "SubscribeMovieRepositoryAdapter") as mra,
+        patch.object(handlers, "RegexParser") as rp,
+    ):
+        dha.return_value.get_by_path.return_value = history
+        tha.return_value.get_all.return_value = [sub]
+        mra.return_value.get_all.return_value = []
+        rp.return_value.parse.return_value = SimpleNamespace(season=1, episode=1, end_episode=None)
+        handler(event)
+
+    svc.update_rss_state.assert_called_once_with(MediaType.TV, 12, SubscribeState.RUNNING.value)
+    tha.return_value.update_lack.assert_called_once_with(
+        title=None, year=None, season=None, rssid=12, lack_episodes=[1]
+    )
 
 
 def test_transfer_fail_reopens_movie_subscription():
@@ -549,7 +630,7 @@ def test_reconcile_finalizes_running_movie_when_transfer_history_exists():
         identity_id="id-21",
         anchor_provider="javdb",
         anchor_external_id="PRWF-017",
-        content_profile="adult",
+        content_profile="custom",
         keyword="PRWF-017",
     )
     svc._tv_repo.get_all.return_value = []

@@ -12,7 +12,6 @@ from app.domain.mediatypes import MediaType
 from app.media import meta_info
 from app.services.search_context import SearchContext
 from app.services.search_orchestrator import SearchOrchestrator
-from app.services.web.utils import get_mediainfo_from_id
 
 
 def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
@@ -22,31 +21,85 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
         content: str,
         ident_flag: bool = True,
         filters: dict | None = None,
-        tmdbid: str | None = None,
+        metadata_ref: str | None = None,
+        anchor_provider: str | None = None,
+        anchor_external_id: str | None = None,
+        identity_id: str | None = None,
+        content_profile: str | None = None,
         media_type: MediaType | None = None,
         session_id: str | None = None,
         user_id: int | None = None,
     ) -> tuple[int, str]:
+        filter_args = dict(filters or {})
+        if content_profile:
+            filter_args["content_profile"] = content_profile
+        if anchor_provider:
+            filter_args["anchor_provider"] = anchor_provider
+        if anchor_external_id:
+            filter_args["anchor_external_id"] = anchor_external_id
+        if identity_id:
+            filter_args["identity_id"] = identity_id
+        if metadata_ref:
+            filter_args["metadata_ref"] = metadata_ref
+
+        requested_rule = filter_args.get("rule")
+        profile = str(filter_args.get("content_profile") or "").strip()
         match_media = None
-        if tmdbid:
-            match_media = get_mediainfo_from_id(mtype=media_type, mediaid=tmdbid)
+        if anchor_provider and anchor_external_id:
+            resolve_provider = anchor_provider
+            if anchor_provider == "content_id":
+                # content_id 是内部锚点，没有对应 metadata provider。
+                # 用页面选定的真实来源解析编号，再还原 content_id 身份。
+                resolve_provider = str(filter_args.get("metadata_source") or "").strip()
+                if not resolve_provider or resolve_provider == "content_id":
+                    resolve_provider = "javalibrary"
+            resolved_profile = content_profile or str(filter_args.get("content_profile") or "default")
+            if anchor_provider == "content_id":
+                match_media = orchestrator.resolve_content_id_media(
+                    resolve_provider,
+                    str(anchor_external_id),
+                    media_type=media_type,
+                    content_profile=resolved_profile,
+                )
+                if match_media:
+                    match_media.anchor_provider = anchor_provider
+                    match_media.anchor_external_id = str(anchor_external_id)
+                    if identity_id:
+                        match_media.identity_id = identity_id
+            else:
+                match_media = orchestrator.resolve_anchor_media(
+                    resolve_provider,
+                    str(anchor_external_id),
+                    media_type=media_type,
+                    content_profile=resolved_profile,
+                )
             if not match_media:
                 return -1, f"{content} 未识别到媒体信息！"
+            if anchor_provider not in ("content_id", profile) and not orchestrator.identity_matches_keyword(
+                match_media, content
+            ):
+                # 前端路由可能残留上一次搜索的锚点（例如同编号的电影/剧集），
+                # 与当前关键词不一致时必须丢弃，否则会继续用错误身份搜索。
+                log.warn(
+                    f"[Orchestrator]忽略不匹配锚点 {anchor_provider}:{anchor_external_id}，改按关键词识别: {content}"
+                )
+                match_media = None
+                for key in ("anchor_provider", "anchor_external_id", "identity_id", "metadata_ref"):
+                    filter_args.pop(key, None)
 
-        filter_args = dict(filters or {})
-        profile = str(filter_args.get("content_profile") or "").strip()
         if match_media is None and profile and profile != "default":
             # 无 TMDB ID 的来源仍需一个本地匹配目标
             match_media = meta_info(title=content, mtype=media_type or MediaType.MOVIE)
             match_media.content_profile = profile
             match_media.keyword = content
             match_media.type = media_type or MediaType.MOVIE
-            match_media.anchor_provider = str(filter_args.get("metadata_source") or profile)
+            match_media.anchor_provider = str(
+                filter_args.get("anchor_provider") or filter_args.get("metadata_source") or profile
+            )
             match_media.anchor_external_id = str(filter_args.get("anchor_external_id") or content)
             if not match_media.get_name():
                 match_media.en_name = content
-            # 自定义画像（成人番号等）不能走 TMDB 识别，否则 ACHJ-097 这类
-            # 番号会在过滤前被判“无法识别名称”，导致有资源也返回 0 条。
+            # 自定义画像的编号不能走 TMDB 识别，避免错误映射导致资源过滤失败。
             ident_flag = False
         if filter_args.get("site") == []:
             # 前端未选择站点时传空数组：归一为 None（全部可见站点）
@@ -57,6 +110,10 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
             else:
                 # 站点已经由前端指定/归一为全部时，仍要继承默认过滤规则。
                 _apply_default_rule(filter_args, media_type, system_config, profile)
+
+        if requested_rule in (None, ""):
+            # 手动资源搜索不默认套用中字规则组；用户显式选择规则时仍生效。
+            filter_args["rule"] = -1
 
         ctx = SearchContext(
             keyword=content,
@@ -100,7 +157,7 @@ def _apply_default_rule(
     system_config: Any,
     content_profile: str | None = None,
 ) -> None:
-    """站点已指定时仍继承默认订阅的过滤规则（如 AV 自动优选）."""
+    """站点已指定时仍继承默认订阅的过滤规则."""
     default_setting = _default_subscribe_setting(media_type, system_config, content_profile)
     if not filter_args.get("rule") and default_setting.get("rule") not in (None, ""):
         filter_args["rule"] = default_setting.get("rule")
@@ -117,7 +174,7 @@ def _apply_default_sites(
         default_setting = _default_subscribe_setting(media_type, system_config, content_profile)
         # None = 不限制，由索引器按用户可见站点过滤；避免空列表被当成"零站点"
         filter_args["site"] = default_setting.get("search_sites") or None
-        # 资源搜索沿用默认订阅的过滤规则（如 AV 自动优选），不静默退回全局默认组。
+        # 资源搜索沿用默认订阅的过滤规则，不静默退回全局默认组。
         if not filter_args.get("rule") and default_setting.get("rule") not in (None, ""):
             filter_args["rule"] = default_setting.get("rule")
     except Exception as e:

@@ -45,6 +45,22 @@ class ITransferHistoryRepository(Protocol):
 
     def get_transfer_info_by(self, tmdbid, season=None, season_episode=None): ...
 
+    def get_transfer_info_by_ref(
+        self,
+        ref: str,
+        season: str | None = None,
+        season_episode: str | None = None,
+        media_type: str | None = None,
+    ): ...
+
+    def get_contiguous_transferred_episode_by_ref(
+        self,
+        ref: str,
+        season: int | None = None,
+        media_type: str | None = None,
+        start: int = 1,
+    ) -> int: ...
+
     def get_contiguous_transferred_episode_by_tmdb(self, tmdbid, season: int | None = None, start: int = 1) -> int: ...
 
     def get_transfer_info_by_id(self, logid): ...

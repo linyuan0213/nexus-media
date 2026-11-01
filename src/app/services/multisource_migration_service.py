@@ -114,7 +114,11 @@ class MultiSourceMigrationService(BaseRepository):
         if not provider or not external:
             return False, False
 
-        identity = self._identity_repo.find_by_ref(provider, external)
+        identity = self._identity_repo.find_by_ref(
+            provider,
+            external,
+            media_type=media_type.value,
+        )
         created = False
         if identity is None:
             if dry_run:
@@ -201,7 +205,11 @@ class MultiSourceMigrationService(BaseRepository):
                 provider, external = ref.provider, ref.external_id
         if not provider or not external:
             return False, False
-        identity = self._identity_repo.find_by_ref(provider, external)
+        identity = self._identity_repo.find_by_ref(
+            provider,
+            external,
+            media_type=media_type.value,
+        )
         created = False
         if identity is None:
             if dry_run:
@@ -246,6 +254,12 @@ class MultiSourceMigrationService(BaseRepository):
 
     @staticmethod
     def _media_type(row: Any) -> MediaType:
+        table = str(getattr(row, "__tablename__", "") or "").upper()
+        if "SUBSCRIBE_TVS" in table:
+            profile = str(getattr(row, "CONTENT_PROFILE", "") or "").strip().lower()
+            return MediaType.ANIME if profile == "anime" else MediaType.TV
+        if "SUBSCRIBE_MOVIES" in table:
+            return MediaType.MOVIE
         raw = str(getattr(row, "TYPE", "") or "").strip().lower()
         if raw in {"tv", "series", "show"} or "剧" in raw or "综艺" in raw:
             return MediaType.TV

@@ -1,6 +1,6 @@
-"""浏览器自动化门面."""
+"""插件浏览器 SDK。"""
 
-from app.infrastructure.chrome import BrowserSession
+from app.infrastructure.chrome import BrowserSession, browser_task
 from app.infrastructure.chrome.challenge import wait_challenge_clear
 
-__all__ = ["BrowserSession", "wait_challenge_clear"]
+__all__ = ["BrowserSession", "browser_task", "wait_challenge_clear"]

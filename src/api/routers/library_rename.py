@@ -31,6 +31,10 @@ class ManualMetadataRequest(BaseModel):
     title: str | None = None
     year: str | None = None
     tmdbid: str | int | None = None
+    metadata_ref: str | None = None
+    anchor_provider: str | None = None
+    anchor_external_id: str | None = None
+    content_profile: str | None = None
     season: int | str | None = None
     episode: int | str | None = None
 
@@ -147,6 +151,10 @@ def set_manual_metadata(
             title=req.title,
             year=req.year,
             tmdbid=req.tmdbid,
+            metadata_ref=req.metadata_ref,
+            anchor_provider=req.anchor_provider,
+            anchor_external_id=req.anchor_external_id,
+            content_profile=req.content_profile,
             season=req.season,
             episode=req.episode,
             user_id=user.user_id,

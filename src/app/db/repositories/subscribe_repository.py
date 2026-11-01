@@ -225,6 +225,41 @@ class SubscribeRepository(BaseRepository):
                 return ret[0]
             return self._fuzzy_subscribe_id(db, SubscribeTvs, title, year)
 
+    def get_rss_tv_id_by_anchor(
+        self,
+        provider: str,
+        external_id: str,
+        season: str | None = None,
+        content_profile: str | None = None,
+        user_id: int | None = None,
+    ) -> int | None:
+        """按多元数据锚点查订阅 ID（非 TMDB 订阅的转移进度依赖此方法）."""
+        provider = str(provider or "").strip()
+        external_id = str(external_id or "").strip()
+        if not provider or not external_id:
+            return None
+        with self.session() as db:
+            query = db.query(SubscribeTvs.ID).filter(
+                SubscribeTvs.ANCHOR_PROVIDER == provider,
+                SubscribeTvs.ANCHOR_EXTERNAL_ID == external_id,
+            )
+            if season:
+                query = query.filter(SubscribeTvs.SEASON == str(season))
+            if user_id is not None:
+                query = query.filter(SubscribeTvs.USER_ID == user_id)
+            if content_profile == "default":
+                query = query.filter(
+                    or_(
+                        SubscribeTvs.CONTENT_PROFILE == "default",
+                        SubscribeTvs.CONTENT_PROFILE.is_(None),
+                        SubscribeTvs.CONTENT_PROFILE == "",
+                    )
+                )
+            elif content_profile:
+                query = query.filter(SubscribeTvs.CONTENT_PROFILE == content_profile)
+            row = query.order_by(SubscribeTvs.ID.desc()).first()
+            return int(row[0]) if row else None
+
     @staticmethod
     def _normalize_title(value) -> str:
         """标题归一化：去空白与常见标点，便于豆瓣/探索页标题与订阅名比对."""
@@ -1417,6 +1452,13 @@ class SubscribeRepository(BaseRepository):
                 )
             if tmdbid:
                 query = query.filter(SubscribeHistory.TMDBID == tmdbid)
+            elif anchor_external_id:
+                # 多数据源下同一番号可能来自不同 provider，按锚点去重而不是标题。
+                query = query.filter(SubscribeHistory.ANCHOR_EXTERNAL_ID == anchor_external_id)
+                if content_profile:
+                    query = query.filter(SubscribeHistory.CONTENT_PROFILE == content_profile)
+            elif identity_id:
+                query = query.filter(SubscribeHistory.IDENTITY_ID == identity_id)
             else:
                 query = query.filter(
                     SubscribeHistory.NAME == name,

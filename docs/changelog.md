@@ -1,5 +1,17 @@
 # 版本历史
 
+## v5.5.0 (2026-11-01)
+
+### 新增
+
+- 统一多元数据身份（provider + external_id + media_type），覆盖搜索、订阅、下载、转移、刮削和通知。
+- 新增统一浏览器任务/页面生命周期，支持点击、输入、JS、截图及临时标签页自动清理。
+
+### 修复
+
+- 修复 TMDB 电影/剧集同 ID 冲突、搜索来源与进度竞态、非 TMDB 转移/刮削/NFO 身份。
+- 修复同域批量过盾、插件来源搜索、下载监控重启误报和洗版清理。
+
 ## v5.4.4 (2026-10-31)
 
 ### 修复
@@ -1248,7 +1260,7 @@
 ### 修复
 - **订阅续订断点推导**：从订阅起点推导续订点（支持中途订阅——订阅从第 N 集开始跟踪时，历史只有 N 之后的集，现从 N 数起而非从第 1 集），`current_ep` 随转移/刷新同步推进（首个待下载集），历史推导只向前不倒退，避免重新订阅重复下载已转移剧集
 - **订阅进度显示**：转移完成事件同步推进 `current_ep`（此前只更新缺失集数 `lack`，`current_ep` 停在订阅创建值导致前端进度显示卡住）
-- **Telegram 消息 HTML 转义**：媒体通知改用 `parse_mode=HTML` + 转义，文件名/番号中的 `_ [ ] ~ #` 等特殊字符不再触发 Telegram 400 "can't parse entities"、也不再显示原始符号
+- **Telegram 消息 HTML 转义**：媒体通知改用 `parse_mode=HTML` + 转义，文件名/内容编号中的 `_ [ ] ~ #` 等特殊字符不再触发 Telegram 400 "can't parse entities"、也不再显示原始符号
 - **Telegram 发布通知渲染**：GitHub Release 通知的 changelog（markdown）转 Telegram 兼容 HTML（加粗、列表圆点、代码等宽、链接可点击），不再显示原始 markdown 符号
 - **站点维护部分编辑保留认证**：维护页只编辑部分字段时，未携带的 cookie/headers/api_key 等保留存量，不再被覆盖清空
 - **内置索引器站点资源接口异常**：`list()` 路径 `last_error` 未初始化导致 `/api/site/sites/resources` 报错
@@ -2155,7 +2167,7 @@
 - 错误日志不到 SSE：`LOG_BUFFER` 容量仅 200 条，启动和运行时高频日志将 error 挤出队列，增大到 2000
 
 ### 新增
-- KamePT 站点配置：支持 NexusPHP HTML 模式的 KamePT（CosAV/音声/游戏 CG）
+- KamePT 站点配置：支持 NexusPHP HTML 模式的 KamePT 等站点
 
 ### 数据库迁移
 - 无需迁移

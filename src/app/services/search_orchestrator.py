@@ -22,6 +22,7 @@ from app.events.constants import SEARCH_START
 from app.events.payloads import SearchStartPayload
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.progress import ProgressTracker
+from app.media import meta_info
 from app.media.image_resolver import DEFAULT_TMDB_IMAGE
 from app.media.service import MediaService
 from app.message import Message
@@ -119,36 +120,249 @@ class SearchOrchestrator:
 
         return None, ctx.no_exists or {}, len(media_list), 0
 
+    def resolve_anchor_media(
+        self,
+        anchor_provider: str,
+        anchor_external_id: str,
+        media_type: MediaType | None = None,
+        content_profile: str | None = None,
+    ):
+        """按新锚点模型读取独立元数据源，不经过 TMDB/旧 DB: 转换."""
+        service = self._metadata_service
+        if service is None or not anchor_provider or not anchor_external_id:
+            return None
+        try:
+            record = service.lookup(
+                anchor_provider,
+                str(anchor_external_id),
+                media_type=media_type,
+                content_profile=content_profile or "default",
+                allow_private=True,
+            )
+        except Exception as exc:  # noqa: BLE001 - 来源失败由调用方决定回退
+            log.warn(f"[Orchestrator]锚点元数据读取失败 {anchor_provider}:{anchor_external_id}: {exc}")
+            return None
+        if not isinstance(record, dict):
+            return None
+        title = str(record.get("title") or record.get("name") or "").strip()
+        if not title:
+            return None
+        actual_type = media_type or MediaType.from_string(str(record.get("media_type") or "")) or MediaType.TV
+        genres = record.get("genres") or []
+        genre_names = [str(item.get("name") if isinstance(item, dict) else item).strip() for item in genres if item]
+        if actual_type == MediaType.TV and any(name in {"动画", "动漫", "アニメ", "Animation"} for name in genre_names):
+            actual_type = MediaType.ANIME
+        info = meta_info(title=title, mtype=actual_type)
+        info.title = title
+        has_cjk = any("\u4e00" <= char <= "\u9fff" for char in title)
+        info.cn_name = title if has_cjk else None
+        aliases = [str(item).strip() for item in (record.get("aliases") or []) if str(item).strip()]
+        latin_alias = next((item for item in aliases if any("a" <= ch.lower() <= "z" for ch in item)), "")
+        info.en_name = None if has_cjk else title
+        if not info.en_name and latin_alias:
+            info.en_name = latin_alias
+        info.aliases = aliases
+        info.original_title = str(record.get("original_title") or title)
+        info.original_language = str(record.get("original_language") or "")
+        info.year = str(record.get("year") or "")
+        info.overview = str(record.get("overview") or "")
+        info.anchor_provider = anchor_provider
+        info.anchor_external_id = str(anchor_external_id)
+        info.content_profile = content_profile or str(record.get("content_profile") or "default")
+        info.tmdb_id = str(anchor_external_id) if anchor_provider == "tmdb" else ""
+        images = record.get("images") or {}
+        poster = (images.get("poster") or [None])[0] if isinstance(images, dict) else None
+        if poster:
+            info.poster_path = str(poster.get("url") if isinstance(poster, dict) else poster)
+        return info
+
+    def resolve_content_id_media(
+        self,
+        provider: str,
+        content_id: str,
+        media_type: MediaType | None = None,
+        content_profile: str | None = None,
+    ):
+        """用选定 provider 搜索内容编号，再用命中的 provider 详情 ID 解析."""
+        service = self._metadata_service
+        if service is None or not provider or not content_id:
+            return None
+        try:
+            hits = service.search(
+                query=str(content_id),
+                provider=provider,
+                media_type=media_type,
+                content_profile=content_profile or "default",
+                limit=5,
+                allow_private=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warn(f"[Orchestrator]编号搜索失败 {provider}:{content_id}: {exc}")
+            return None
+        for hit in hits or []:
+            ref = hit.get("ref") or {}
+            hit_provider = str(ref.get("provider") or provider)
+            hit_external = str(ref.get("external_id") or "")
+            if not hit_external:
+                continue
+            media = self.resolve_anchor_media(
+                hit_provider,
+                hit_external,
+                media_type=media_type,
+                content_profile=content_profile,
+            )
+            if media is not None:
+                media.anchor_provider = "content_id"
+                media.anchor_external_id = str(content_id)
+                return media
+        return None
+
+    @staticmethod
+    def _provider_title(media_info) -> str:
+        data = getattr(media_info, "provider_data", None)
+        if data is None or not hasattr(data, "get"):
+            return ""
+        return str(
+            data.get("name") or data.get("title") or data.get("original_name") or data.get("original_title") or ""
+        )
+
+    @classmethod
+    def identity_matches_keyword(cls, media_info, keyword: str) -> bool:
+        """锚点身份是否与当前关键词一致（覆盖 provider_data 与本地字段）."""
+
+        def norm(value: str) -> str:
+            return "".join(ch for ch in str(value or "").casefold() if ch.isalnum())
+
+        wanted = norm(keyword)
+        if not wanted:
+            return True
+        candidates: list[str] = []
+        for key in ("title", "cn_name", "en_name", "original_title"):
+            value = getattr(media_info, key, None)
+            if value:
+                candidates.append(str(value))
+        for alias in getattr(media_info, "aliases", None) or []:
+            if alias:
+                candidates.append(str(alias))
+        data = getattr(media_info, "provider_data", None)
+        if data is not None and hasattr(data, "get"):
+            for key in ("name", "title", "original_name", "original_title", "cn_name", "zh_name"):
+                value = data.get(key)
+                if value:
+                    candidates.append(str(value))
+            for key in ("aliases", "aka", "alternative_titles"):
+                value = data.get(key)
+                if isinstance(value, dict):
+                    value = value.get("titles") or value.get("results") or []
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            item = item.get("title") or item.get("name")
+                        if item:
+                            candidates.append(str(item))
+        return any(
+            wanted in norm(candidate) or norm(candidate) in wanted for candidate in candidates if norm(candidate)
+        )
+
+    @staticmethod
+    def _provider_title_matches(media_info, keyword: str) -> bool:
+        """防止错误 TMDB 映射把搜索词改成无关影片."""
+        data = getattr(media_info, "provider_data", None)
+        if data is None or not hasattr(data, "get"):
+            return False
+
+        def norm(value: str) -> str:
+            return "".join(ch for ch in str(value or "").casefold() if ch.isalnum())
+
+        wanted = norm(keyword)
+        if not wanted:
+            return False
+        candidates: list[str] = []
+        for key in ("name", "title", "original_name", "original_title", "cn_name", "zh_name"):
+            value = data.get(key)
+            if value:
+                candidates.append(str(value))
+        for key in ("aliases", "aka", "alternative_titles"):
+            value = data.get(key)
+            if isinstance(value, dict):
+                value = value.get("titles") or value.get("results") or []
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        item = item.get("title") or item.get("name")
+                    if item:
+                        candidates.append(str(item))
+        return any(
+            wanted in norm(candidate) or norm(candidate) in wanted for candidate in candidates if norm(candidate)
+        )
+
     def _prepare_search(self, ctx: SearchContext) -> tuple[list[str], int, dict]:
         media_info = ctx.match_media
 
-        if ctx.filter_args and not media_info:
-            return [ctx.keyword], 1, self._inject_user(ctx, dict(ctx.filter_args))
+        explicit_anchor = bool(
+            getattr(media_info, "anchor_provider", "") and str(getattr(media_info, "anchor_provider", "")) != "tmdb"
+        )
+        if (
+            media_info
+            and media_info.provider_data
+            and not explicit_anchor
+            and not self._provider_title_matches(media_info, ctx.keyword)
+        ):
+            log.warn(
+                f"[Orchestrator]识别结果与关键词不匹配，丢弃身份: 搜索名={ctx.keyword}, "
+                f"provider标题={self._provider_title(media_info)}"
+            )
+            media_info = None
+            ctx.match_media = None
 
         if not media_info:
             media_info = self._identify_media(ctx)
+            if media_info and media_info.provider_data and not self._provider_title_matches(media_info, ctx.keyword):
+                log.warn(
+                    f"[Orchestrator]首次识别标题不匹配，按 TV 重试: 搜索名={ctx.keyword}, "
+                    f"provider标题={self._provider_title(media_info)}"
+                )
+                retry = self._identify_media(ctx, force_type=MediaType.TV)
+                media_info = (
+                    retry
+                    if retry and retry.provider_data and self._provider_title_matches(retry, ctx.keyword)
+                    else None
+                )
             ctx.match_media = media_info
 
-        if media_info and media_info.provider_data:
+        if media_info:
             search_names, max_workers = SearchQueryBuilder.build_search_names(media_info, self._media)
             search_season = media_info.get_season_list() if media_info.begin_season is not None else None
             search_episode = media_info.get_episode_list()
+            if ctx.search_type == SearchType.WEB:
+                # 手动资源搜索按整部剧召回；用户显式指定季/集时才过滤。
+                if not (ctx.filter_args or {}).get("season"):
+                    search_season = None
+                if not (ctx.filter_args or {}).get("episode"):
+                    search_episode = None
             if search_episode and not search_season:
                 search_season = [1]
             filter_args = {
                 "season": search_season,
                 "episode": search_episode,
                 "year": media_info.year,
-                "type": media_info.type.value if media_info and media_info.type else None,
+                "type": media_info.type.value if media_info.type else None,
             }
             if ctx.filter_args:
                 filter_args.update(ctx.filter_args)
+            log.info(f"[Orchestrator]搜索名={ctx.keyword}, 实际搜索词={search_names}")
             return search_names, min(max_workers, 8), self._inject_user(ctx, filter_args)
-        else:
-            base = {"season": None, "episode": None, "year": None}
-            if ctx.filter_args:
-                base.update(ctx.filter_args)
-            return [ctx.keyword], 1, self._inject_user(ctx, base)
+
+        base = {
+            "season": None,
+            "episode": None,
+            "year": None,
+            "type": ctx.media_type.value if ctx.media_type else None,
+        }
+        if ctx.filter_args:
+            base.update(ctx.filter_args)
+        log.info(f"[Orchestrator]搜索名={ctx.keyword}, 无有效 provider 身份，按原关键词搜索")
+        return [ctx.keyword], 1, self._inject_user(ctx, base)
 
     @staticmethod
     def _inject_user(ctx: SearchContext, filter_args: dict) -> dict:
@@ -157,7 +371,7 @@ class SearchOrchestrator:
             filter_args["user_id"] = ctx.user_id
         return filter_args
 
-    def _identify_media(self, ctx: SearchContext) -> Any:
+    def _identify_media(self, ctx: SearchContext, force_type: MediaType | None = None) -> Any:
         try:
             if self._intent_resolver:
                 intent = self._intent_resolver.resolve(ctx.keyword)
@@ -173,9 +387,11 @@ class SearchOrchestrator:
                     ctx.keyword
                 )
                 keyword = content or key_word or ctx.keyword
-            if ctx.media_type:
+            if force_type:
+                mtype = force_type
+            elif ctx.media_type:
                 mtype = ctx.media_type
-            ident = self._media.get_media_info(mtype=mtype, title=keyword)
+            ident = self._media.get_media_info(mtype=mtype, title=keyword, cache=False)
             if ident and ident.provider_data:
                 if season_num:
                     ident.begin_season = int(season_num)
@@ -264,7 +480,7 @@ class SearchOrchestrator:
         match_media = ctx.match_media
         if match_media:
             if not match_media.get_poster_image() and self._metadata_service is not None:
-                self._metadata_service.hydrate_media(match_media)
+                self._hydrate_with_timeout(match_media)
             poster_url = match_media.get_poster_image()
             overview = match_media.overview
             vote = match_media.vote_average
@@ -276,8 +492,40 @@ class SearchOrchestrator:
                     mi.overview = overview
                 if vote and not mi.vote_average:
                     mi.vote_average = vote
+                # 结果行必须继承锚点的媒体类型和身份，否则资源卡片/入库会退回默认 movie。
+                if match_media.type != MediaType.UNKNOWN:
+                    if match_media.type in (MediaType.MOVIE, MediaType.ANIME):
+                        mi.type = match_media.type
+                    elif mi.type not in (MediaType.TV, MediaType.ANIME):
+                        mi.type = match_media.type
+                if not getattr(mi, "anchor_provider", None):
+                    mi.anchor_provider = getattr(match_media, "anchor_provider", None)
+                if not getattr(mi, "anchor_external_id", None):
+                    mi.anchor_external_id = getattr(match_media, "anchor_external_id", None)
+                if not getattr(mi, "identity_id", None):
+                    mi.identity_id = getattr(match_media, "identity_id", None)
+                if not getattr(mi, "content_profile", None) or str(mi.content_profile) == "default":
+                    mi.content_profile = getattr(match_media, "content_profile", None) or "default"
+                if not getattr(mi, "tmdb_id", None) and match_media.tmdb_id:
+                    mi.tmdb_id = match_media.tmdb_id
 
         self._persist_results(ctx, media_list)
+
+    def _hydrate_with_timeout(self, match_media, timeout: float = 5.0) -> None:
+        """海报补全是有界增强，不能阻塞搜索入库；超时先返回已有数据."""
+        service = self._metadata_service
+        if service is None:
+            return
+        executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="search_hydrate")
+        future = executor.submit(service.hydrate_media, match_media)
+        try:
+            future.result(timeout=timeout)
+        except TimeoutError:
+            log.warn(f"[Orchestrator]海报补全超时 {timeout:.0f}s，先返回搜索结果")
+        except Exception as exc:  # noqa: BLE001
+            log.warn(f"[Orchestrator]海报补全失败: {exc}")
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
 
     def _persist_results(self, ctx: SearchContext, media_list: list):
         lock = get_lock_manager().create_lock("search:persist_results", ttl_seconds=60)

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.domain.mediatypes import MediaType
+from app.media.metadata.registry import registry as metadata_registry
 from app.schemas.auth import UserContext
 from app.services.rss_processor import RssHelper
 
@@ -33,9 +34,21 @@ class SubscribeHistoryService:
         content_profile: str | None = None,
     ) -> list[dict]:
         """获取订阅历史记录（按媒体类型、内容画像和归属过滤）."""
-        return [
-            rec.to_dict() for rec in self._history_repo.get_all(rtype=mtype, user=user, content_profile=content_profile)
-        ]
+        rows = []
+        for rec in self._history_repo.get_all(rtype=mtype, user=user, content_profile=content_profile):
+            item = rec.to_dict()
+            provider = str(item.get("anchor_provider") or "").strip()
+            actual_provider = str(item.get("provider") or "").strip()
+            if provider in ("", "content_id"):
+                provider = actual_provider
+            descriptor = getattr(metadata_registry.get_provider(provider), "descriptor", None) if provider else None
+            item["provider_label"] = (
+                str(getattr(descriptor, "display_name", "") or provider or "")
+                if provider not in ("", "content_id")
+                else ""
+            )
+            rows.append(item)
+        return rows
 
     def delete(self, rssid: int | None, user: UserContext | None = None) -> None:
         """删除订阅历史记录（普通用户仅可删除自己的历史）."""
@@ -72,10 +85,13 @@ class SubscribeHistoryService:
         anchor_external = str(row.anchor_external_id or "").strip()
         metadata_ref = str(row.metadata_ref or "").strip() or None
         if anchor_provider and anchor_external:
+            # 所有来源统一 provider:external，新增 provider 不需要改分支。
             mediaid = f"{anchor_provider}:{anchor_external}"
+            metadata_ref = metadata_ref or mediaid
         elif metadata_ref:
             mediaid = metadata_ref
         else:
+            # 仅旧数据迁移兼容；新订阅不会走到这里。
             mediaid = row.tmdb_id
         code, msg, _ = self._subscribe.add_rss_subscribe(
             mtype=mtype,
@@ -85,7 +101,7 @@ class SubscribeHistoryService:
             season=season,
             mediaid=mediaid,
             metadata_ref=metadata_ref,
-            provider=row.provider,
+            provider=row.provider or anchor_provider or None,
             content_profile=profile,
             metadata_policy=row.metadata_policy,
             naming_profile=row.naming_profile,
@@ -93,6 +109,11 @@ class SubscribeHistoryService:
             current_ep=row.start,
             user_id=user.user_id if user else None,
         )
+        if code == 0 or "已存在" in str(msg):
+            # 重新订阅成功，或订阅仍在但历史残留：移除历史，保证幂等。
+            self._history_repo.delete(row.id)
+        if "已存在" in str(msg):
+            return 0, "订阅已存在，已清理历史"
         return code, msg
 
     def truncate(self, user: UserContext | None = None) -> None:

@@ -100,6 +100,18 @@ class TestGetTransferHistoryBySourceDir:
         assert len(repo.get_transfer_history_by_source_dir("/src/tv")) == 2
 
 
+class TestGetTransferHistoryBySourceFullPath:
+    def test_matches_directory_and_filename(self, repo):
+        _insert_at(repo, "/src/Movie", "E01.mkv", "/lib/Movie", "E01.mkv")
+        row = repo.get_transfer_history_by_source_full_path("/src/Movie/E01.mkv")
+        assert row is not None and row.SOURCE_FILENAME == "E01.mkv"
+
+    def test_matches_legacy_full_path_source(self, repo):
+        _insert_at(repo, "/src/Movie/E01.mkv", "E01.mkv", "/lib/Movie", "E01.mkv")
+        row = repo.get_transfer_history_by_source_full_path("/src/Movie/E01.mkv")
+        assert row is not None and row.SOURCE_FILENAME == "E01.mkv"
+
+
 class TestGetTransferSeriesStatistics:
     def test_distinct_series_per_day(self, repo):
         _insert(repo, "tv", 101, "2024-01-01 10:00:00")
@@ -118,3 +130,34 @@ class TestGetTransferSeriesStatistics:
 
     def test_empty(self, repo):
         assert repo.get_transfer_series_statistics(days=0) == []
+
+
+class TestGetTransferInfoByRefMediaType:
+    def test_same_tmdb_id_isolated_by_type(self, repo):
+        with repo.session() as db:
+            for mtype in ("movie", "tv"):
+                db.add(
+                    TRANSFERHISTORY(
+                        MODE="link",
+                        TYPE=mtype,
+                        CATEGORY="",
+                        TMDBID=106449,
+                        TITLE=mtype,
+                        YEAR="2024",
+                        SEASON_EPISODE="S01E01",
+                        SOURCE="",
+                        SOURCE_PATH="/src",
+                        SOURCE_FILENAME="f.mkv",
+                        DEST="",
+                        DEST_PATH="/dst",
+                        DEST_FILENAME="f.mkv",
+                        ANCHOR_PROVIDER="tmdb",
+                        ANCHOR_EXTERNAL_ID="106449",
+                        DATE="2024-01-01 10:00:00",
+                    )
+                )
+            db.commit()
+
+        rows = repo.get_transfer_info_by_ref("tmdb:106449", media_type="movie")
+        assert rows is not None and len(rows) == 1
+        assert rows[0].TYPE == "movie"

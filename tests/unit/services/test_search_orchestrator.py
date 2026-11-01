@@ -1,7 +1,14 @@
 """SearchOrchestrator 搜索进度失败站点汇总测试"""
 
+import threading
+import time
+from typing import Any, cast
 from unittest.mock import MagicMock
 
+from app.domain.enums import SearchType
+from app.domain.mediatypes import MediaType
+from app.media.models import MediaInfo
+from app.services.search_context import SearchContext
 from app.services.search_orchestrator import SearchOrchestrator
 
 
@@ -21,6 +28,24 @@ def _make_orchestrator() -> SearchOrchestrator:
 
 def _set_progress(orch: SearchOrchestrator, detail: dict) -> None:
     orch._progress.get_process = MagicMock(return_value=detail)
+
+
+class TestHydrateTimeout:
+    def test_slow_hydrate_does_not_block_search(self):
+        release = threading.Event()
+
+        class _SlowMetadata:
+            def hydrate_media(self, media):
+                release.wait(3)
+
+        orch = _make_orchestrator()
+        orch._metadata_service = _SlowMetadata()
+        started = time.monotonic()
+        orch._hydrate_with_timeout(MediaInfo(org_string="SONE-028"), timeout=0.2)
+        elapsed = time.monotonic() - started
+        release.set()
+
+        assert elapsed < 1.0
 
 
 class TestFailedSitesSummary:
@@ -109,3 +134,71 @@ class TestOrchestrateFinalText:
         final = [c for c in calls if "搜索完成" in c]
         assert final, "应有搜索完成的 progress update"
         assert "站点B(超时)" in final[-1]
+
+
+class TestProviderIdentityRecovery:
+    def test_wrong_movie_identity_retries_tv_and_keeps_multilingual_search(self):
+        orch = _make_orchestrator()
+        wrong = MediaInfo(
+            title="The Private Navy of Sgt. O'Farrell",
+            en_name="The Private Navy of Sgt. O'Farrell",
+            original_title="The Private Navy of Sgt. O'Farrell",
+            year="1968",
+            type=MediaType.MOVIE,
+            tmdb_id=106449,
+            provider_data={"id": 106449, "title": "The Private Navy of Sgt. O'Farrell"},
+        )
+        correct = MediaInfo(
+            title="凡人修仙传",
+            cn_name="凡人修仙传",
+            en_name="A Record of a Mortal's Journey to Immortality",
+            original_title="A Record of a Mortal's Journey to Immortality",
+            original_language="zh",
+            year="2020",
+            type=MediaType.TV,
+            tmdb_id=106449,
+            provider_data={"id": 106449, "name": "凡人修仙传", "media_type": "tv"},
+        )
+        orch._media.get_media_info = cast(Any, MagicMock(side_effect=[wrong, correct]))
+        orch._media.get_tmdb_zhtw_title = cast(Any, MagicMock(return_value=None))
+        ctx = SearchContext(
+            keyword="凡人修仙传",
+            session_id="provider-retry",
+            search_type=SearchType.WEB,
+            filter_args={"site": None},
+        )
+
+        names, _, filter_args = orch._prepare_search(ctx)
+
+        assert ctx.match_media is correct
+        assert filter_args["type"] == MediaType.TV.value
+        assert filter_args["year"] == "2020"
+        assert "凡人修仙传" in names
+        assert "A Record of a Mortal's Journey to Immortality" in names
+        assert all("Private Navy" not in name for name in names)
+        assert cast(Any, orch._media.get_media_info).call_count == 2
+
+    def test_invalid_supplied_identity_does_not_leak_type_or_year(self):
+        orch = _make_orchestrator()
+        wrong = MediaInfo(
+            title="The Private Navy of Sgt. O'Farrell",
+            en_name="The Private Navy of Sgt. O'Farrell",
+            year="1968",
+            type=MediaType.MOVIE,
+            tmdb_id=106449,
+            provider_data={"id": 106449, "title": "The Private Navy of Sgt. O'Farrell"},
+        )
+        orch._media.get_media_info = cast(Any, MagicMock(return_value=None))
+        ctx = SearchContext(
+            keyword="凡人修仙传",
+            session_id="invalid-provider",
+            search_type=SearchType.WEB,
+            match_media=wrong,
+        )
+
+        names, _, filter_args = orch._prepare_search(ctx)
+
+        assert ctx.match_media is None
+        assert names == ["凡人修仙传"]
+        assert filter_args["year"] is None
+        assert filter_args.get("type") is None

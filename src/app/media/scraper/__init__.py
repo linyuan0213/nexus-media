@@ -27,6 +27,7 @@ from app.domain.mediatypes import MediaType
 from app.infrastructure.ffmpeg import FfmpegProcessor
 from app.infrastructure.image_proxy import ImageProxy
 from app.infrastructure.temp import temp_manager
+from app.media.display_image_policy import unwrap_display_image_url
 from app.media.external.douban import DouBan
 from app.media.fanart import Fanart
 from app.media.metadata.images import ImageResolver
@@ -216,6 +217,33 @@ class Scraper:
                 return True
         return False
 
+    def _write_identity_nfo(self, file: str, media_info, force_nfo: bool) -> None:
+        """元数据合成失败时至少写入识别出的番号标题，避免留下空 NFO."""
+        dir_path = os.path.dirname(file)
+        file_name = _nfo_base_name(file)
+        nfo_path = os.path.join(dir_path, f"{file_name}.nfo")
+        if not force_nfo and self._exists(nfo_path) and self._nfo_has_metadata(self._read_text(nfo_path)):
+            return
+        title = (
+            self._download_history_title(file)
+            or str(getattr(media_info, "title", "") or "").strip()
+            or file_name
+        )
+        year = str(getattr(media_info, "year", "") or "")
+        scraper_nfo = {**self._scraper_nfo.get("movie", {}), "basic": True}
+        try:
+            self._nfo_gen.gen_movie_nfo(
+                {"title": title, "original_title": title, "release_date": year},
+                [],
+                [],
+                scraper_nfo,
+                dir_path,
+                file_name,
+            )
+            log.info(f"[Scraper]{file} 已写入基础 NFO 标题：{title}")
+        except Exception as e:  # noqa: BLE001 - 兜底失败不阻断其他文件
+            log.warn(f"[Scraper]{file} 写入基础 NFO 失败: {e}")
+
     def folder_scraper(self, path, exclude_path=None, mode=None, dst_backend=None):
         """刮削指定文件夹或文件"""
         try:
@@ -265,7 +293,7 @@ class Scraper:
                             continue
                         log.error(f"[Scraper]{file} 插件画像快照刮削未生成完整 NFO/图片")
                     log.warn(f"[Scraper]{file} 插件画像无法合成元数据快照")
-                    # 自定义画像必须由插件提供元数据；不能回退 TMDB 生成只有番号的空壳 NFO。
+                    self._write_identity_nfo(file, profile_info, force_nfo)
                     continue
                 standard_snapshot = self._compose_standard_snapshot(file, mi)
                 if standard_snapshot is not None:
@@ -406,13 +434,13 @@ class Scraper:
             log.info(f"[Scraper]{file_name} 现有 NFO 不完整，强制重写")
             force_nfo = True
         if media.type == MediaType.MOVIE:
-            self._scrape_movie_from_snapshot(snapshot, dir_path, file_name, force_nfo, force_pic)
+            self._scrape_movie_from_snapshot(snapshot, media, dir_path, file_name, force_nfo, force_pic)
         else:
             self._scrape_tv_from_snapshot(snapshot, media, dir_path, file_name, file_ext, force_nfo, force_pic)
         target = os.path.join(dir_path, f"{file_name}{file_ext}")
         return self._has_scraped_metadata(target, dst_backend)
 
-    def _scrape_movie_from_snapshot(self, snapshot, dir_path, file_name, force_nfo, force_pic):
+    def _scrape_movie_from_snapshot(self, snapshot, media, dir_path, file_name, force_nfo, force_pic):
         scraper_movie_nfo = self._scraper_nfo.get("movie", {})
         scraper_movie_pic = self._scraper_pic.get("movie", {})
         # 先运行插件快照处理器，再补图/补演员，避免 actor_fallback 尚未生成。
@@ -425,10 +453,42 @@ class Scraper:
         if scraper_movie_nfo.get("basic") or scraper_movie_nfo.get("credits"):
             nfo_path = os.path.join(dir_path, f"{file_name}.nfo")
             if force_nfo or not self._exists(nfo_path):
-                self._nfo_gen.gen_movie_nfo_from_snapshot(snapshot, scraper_movie_nfo, dir_path, file_name)
+                fallback_title = (
+                    self._download_history_title(os.path.join(dir_path, file_name))
+                    or str(getattr(media, "title", "") or "")
+                    or file_name
+                )
+                self._nfo_gen.gen_movie_nfo_from_snapshot(
+                    snapshot, scraper_movie_nfo, dir_path, file_name, fallback_title=fallback_title
+                )
         self._cleanup_stale_nfos(dir_path, file_name)
         if self._dst_backend is None:
             self._apply_watermark(snapshot, dir_path)
+        self._ensure_poster_thumb(dir_path, file_name)
+
+    def _ensure_poster_thumb(self, dir_path: str, file_name: str) -> None:
+        """Emby 首页缩略图优先使用 poster，避免回退到未裁剪的 fanart."""
+        poster_path = ""
+        for ext in (".jpg", ".jpeg", ".png", ".webp"):
+            candidate = os.path.join(dir_path, f"poster{ext}")
+            if os.path.exists(candidate):
+                poster_path = candidate
+                break
+        if not poster_path:
+            return
+        thumb_path = os.path.join(dir_path, "thumb.jpg")
+        try:
+            if not os.path.exists(thumb_path):
+                shutil.copyfile(poster_path, thumb_path)
+            nfo_path = os.path.join(dir_path, f"{file_name}.nfo")
+            if os.path.exists(nfo_path):
+                with open(nfo_path, encoding="utf-8", errors="ignore") as handle:
+                    content = handle.read()
+                content = re.sub(r"<thumb>.*?</thumb>", "<thumb>thumb.jpg</thumb>", content, flags=re.S)
+                with open(nfo_path, "w", encoding="utf-8") as handle:
+                    handle.write(content)
+        except Exception as exc:  # noqa: BLE001 - 缩略图失败不影响主海报
+            log.debug(f"[Scraper]生成 poster thumb 失败: {exc}")
 
     def _scrape_tv_from_snapshot(self, snapshot, media, dir_path, file_name, file_ext, force_nfo, force_pic):
         scraper_tv_nfo = self._scraper_nfo.get("tv", {})
@@ -699,7 +759,8 @@ class Scraper:
             return True
         # 海报按优先级依次尝试更多来源；前几个可能是 NOW PRINTING 占位图。
         limit = 12 if file_name == "poster" else 5
-        for url in list(candidates)[:limit]:
+        for raw_url in list(candidates)[:limit]:
+            url = unwrap_display_image_url(str(raw_url or ""))
             if not url or url.rstrip("/").endswith("/login"):
                 continue
             try:
@@ -1068,6 +1129,29 @@ class Scraper:
             log.warn(f"[Scraper]普通媒体快照合成失败: {exc}")
             return None
 
+    def _download_history_title(self, file_path: str) -> str:
+        """从下载历史读取任务标题，供缺少元数据的 NFO 回退."""
+        try:
+            repo = DownloadHistoryRepositoryAdapter()
+            base = os.path.splitext(os.path.basename(file_path))[0]
+            candidates = [base, re.sub(r"[-_](?:C|HD|4K|UHD|CD\d+)$", "", base, flags=re.I)]
+            for code in dict.fromkeys(candidates):
+                rows = repo.get_by_identity(anchor_provider="content_id", anchor_external_id=code)
+                for row in rows or []:
+                    title = str(getattr(row, "TITLE", "") or getattr(row, "title", "") or "").strip()
+                    if title:
+                        return title
+            history = repo.get_download_history_by_path(file_path)
+            if not history:
+                parent = os.path.dirname(file_path)
+                if parent and parent != file_path:
+                    history = repo.get_download_history_by_path(parent)
+            if history:
+                return str(getattr(history, "TITLE", "") or "").strip()
+        except Exception as exc:  # noqa: BLE001 - 历史不可用不阻断刮削
+            log.debug(f"[Scraper]读取下载历史标题失败 {file_path}: {exc}")
+        return ""
+
     def _download_history_tmdb(self, file_path):
         """从下载历史中读取订阅时记录的 TMDB 信息。
 
@@ -1222,6 +1306,18 @@ class Scraper:
         """刮削电影元数据 — 各步骤独立容错，单步失败不影响其他刮削输出."""
         scraper_movie_nfo = self._scraper_nfo.get("movie", {})
         scraper_movie_pic = self._scraper_pic.get("movie", {})
+        tmdbinfo = dict(media.provider_data or {}) if isinstance(media.provider_data, dict) else {}
+        # 聚合元数据为空时仍写入已识别的标题/年份，避免生成空 title 的 NFO。
+        if not tmdbinfo.get("title"):
+            tmdbinfo["title"] = (
+                self._download_history_title(os.path.join(dir_path, file_name))
+                or media.title
+                or media.get_title_string()
+            )
+        if not tmdbinfo.get("original_title"):
+            tmdbinfo["original_title"] = media.original_title or media.title or ""
+        if not tmdbinfo.get("release_date"):
+            tmdbinfo["release_date"] = str(media.year or "")
 
         if scraper_movie_nfo.get("basic") or scraper_movie_nfo.get("credits"):
             nfo_exists = self._exists(os.path.join(dir_path, "movie.nfo")) or self._exists(
@@ -1230,10 +1326,9 @@ class Scraper:
             if force_nfo or not nfo_exists:
                 try:
                     doubaninfo = self._fetch_douban(media, scraper_movie_nfo)
-                    directors, actors = self._fetch_credits(media.provider_data, scraper_movie_nfo, doubaninfo)
-                    self._nfo_gen.gen_movie_nfo(
-                        media.provider_data, directors, actors, scraper_movie_nfo, dir_path, file_name
-                    )
+                    credits_info = media.provider_data or tmdbinfo
+                    directors, actors = self._fetch_credits(credits_info, scraper_movie_nfo, doubaninfo)
+                    self._nfo_gen.gen_movie_nfo(tmdbinfo, directors, actors, scraper_movie_nfo, dir_path, file_name)
                 except Exception as e:
                     log.error(f"[Scraper]生成 movie.nfo 失败：{e}")
 
@@ -1281,7 +1376,7 @@ class Scraper:
             or scraper_tv_pic.get("season_poster")
         )
         seasoninfo = None
-        if need_season_detail:
+        if need_season_detail and str(getattr(media, "tmdb_id", "") or "").isdigit():
             try:
                 seasoninfo = self.media.get_tmdb_tv_season_detail(
                     tmdbid=media.tmdb_id, season=int(media.get_season_seq())
@@ -1366,7 +1461,7 @@ class Scraper:
                 log.error(f"[Scraper]下载 season thumb 失败：{e}")
 
         # ---- episode thumb ----
-        if scraper_tv_pic.get("episode_thumb"):
+        if scraper_tv_pic.get("episode_thumb") and str(getattr(media, "tmdb_id", "") or "").isdigit():
             try:
                 episode_thumb = os.path.join(dir_path, file_name + "-thumb.jpg")
                 if force_pic or not self._exists(episode_thumb):
@@ -1404,15 +1499,17 @@ class Scraper:
     def _download_images(self, media, dir_path, scraper_pic, force_pic):
         """下载电影图片"""
         if scraper_pic.get("poster"):
-            poster = media.get_poster_image(original=True)
+            poster = unwrap_display_image_url(media.get_poster_image(original=True))
             if poster and not self._portrait_image_exists(dir_path, "poster", 300):
                 self._downloader.download(poster, dir_path, "poster", force_pic)
         if scraper_pic.get("backdrop"):
-            backdrop = media.get_backdrop_image(default=False, original=True)
+            backdrop = unwrap_display_image_url(media.get_backdrop_image(default=False, original=True))
             if backdrop:
                 self._downloader.download(backdrop, dir_path, "fanart", force_pic)
-        for pic_type in ["background", "logo", "disc", "banner", "thumb"]:
-            if scraper_pic.get(pic_type):
+        if str(getattr(media, "tmdb_id", "") or "").isdigit():
+            for pic_type in ["background", "logo", "disc", "banner", "thumb"]:
+                if not scraper_pic.get(pic_type):
+                    continue
                 getter = getattr(self.fanart, f"get_{pic_type}", None)
                 if getter:
                     url = getter(media_type=media.type, queryid=media.tmdb_id)

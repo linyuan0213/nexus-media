@@ -26,12 +26,13 @@ class _FakeProvider:
         visibility: Literal["public", "private"] = "public",
         capabilities=None,
         media_type=MediaType.MOVIE,
+        media_types=None,
     ):
         self.descriptor = ProviderDescriptor(
             provider_key=key,
             display_name=key,
             capabilities=frozenset(capabilities or {ProviderCapability.DETAIL}),
-            media_types=frozenset({media_type}),
+            media_types=frozenset(media_types or {media_type}),
             visibility=visibility,
         )
         self._title = title
@@ -54,7 +55,7 @@ class _FakeSnapshotRepo:
         self.refs = []
         self.snapshots = []
 
-    def find_by_ref(self, provider, external_id, *, scope="default") -> Any:
+    def find_by_ref(self, provider, external_id, *, scope="default", media_type=None) -> Any:
         return None
 
     def latest_snapshot(self, identity_id, *, policy_key=None, scope=None) -> Any:
@@ -191,7 +192,7 @@ def test_link_subscription_maps_legacy_id_and_writes_ref():
 
 def test_link_subscription_does_not_block_on_repo_failure():
     class _BrokenRepo:
-        def find_by_ref(self, provider, external_id, *, scope="default"):
+        def find_by_ref(self, provider, external_id, *, scope="default", media_type=None):
             return None
 
         def latest_snapshot(self, identity_id, *, policy_key=None, scope=None):
@@ -475,9 +476,39 @@ def test_search_and_lookup_use_registry_providers():
     hits = svc.search(query="测试")
     assert hits[0]["title"] == "测试-hit"
 
-    detail = svc.lookup("tmdb", "1")
+    assert svc.lookup("tmdb", "1") is None
+    detail = svc.lookup("tmdb", "1", media_type=MediaType.MOVIE)
     assert detail is not None
     assert detail["title"] == "标题"
+
+
+def test_lookup_cache_isolates_media_type_for_same_external_id():
+    class _TypedProvider(_FakeProvider):
+        def detail(self, ref, ctx):
+            media_type = ref.media_type or MediaType.MOVIE
+            return ProviderRecord(
+                provider=self.descriptor.provider_key,
+                external_id=ref.external_id,
+                refs=[ProviderRef(provider=self.descriptor.provider_key, external_id=ref.external_id)],
+                media_type=media_type,
+                title=f"{media_type.value}:{ref.external_id}",
+            )
+
+    registry = MetadataRegistry()
+    registry.register_provider(
+        _TypedProvider(
+            "tmdb",
+            "标题",
+            media_types={MediaType.MOVIE, MediaType.TV},
+        )
+    )
+    svc = MetadataService(registry=registry, identity_repo=_FakeSnapshotRepo(), register_builtins=False)
+
+    movie = svc.lookup("tmdb", "106449", media_type=MediaType.MOVIE)
+    tv = svc.lookup("tmdb", "106449", media_type=MediaType.TV)
+
+    assert movie is not None and movie["title"] == "movie:106449"
+    assert tv is not None and tv["title"] == "tv:106449"
 
 
 def test_compose_for_media_uses_content_profile_aggregate_provider():

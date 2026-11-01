@@ -7,6 +7,8 @@ from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Any, Optional
 
+from app.domain.media_ref import canonical_metadata_ref, is_tmdb_media
+
 
 class SubscribeState(Enum):
     """订阅状态值对象"""
@@ -116,7 +118,7 @@ class SubscribeHistoryEntity:
             "rssid": self.subscribe_id,
             "name": self.name,
             "year": self.year,
-            "tmdbid": self.tmdb_id,
+            "tmdbid": self.tmdb_id if is_tmdb_media(self) else "",
             "season": self.season,
             "image": self.image,
             "desc": self.description,
@@ -129,7 +131,7 @@ class SubscribeHistoryEntity:
             "anchor_external_id": self.anchor_external_id,
             "content_profile": self.content_profile,
             "provider": self.provider,
-            "metadata_ref": self.metadata_ref,
+            "metadata_ref": canonical_metadata_ref(self),
             "metadata_policy": self.metadata_policy,
             "naming_profile": self.naming_profile,
         }
@@ -304,7 +306,7 @@ class SubscribeMovieEntity:
             "name": self.name,
             "year": self.year,
             "keyword": self.keyword,
-            "tmdbid": self.tmdb_id,
+            "tmdbid": self.tmdb_id if is_tmdb_media(self) else "",
             "image": self.image,
             "rss_sites": self.subscribe_sites,
             "search_sites": self.search_sites,
@@ -328,7 +330,7 @@ class SubscribeMovieEntity:
             "anchor_external_id": self.anchor_external_id,
             "content_profile": self.content_profile,
             "provider": self.provider,
-            "metadata_ref": self.metadata_ref,
+            "metadata_ref": canonical_metadata_ref(self),
             "metadata_policy": self.metadata_policy,
             "naming_profile": self.naming_profile,
         }
@@ -584,7 +586,7 @@ class SubscribeTvEntity:
             "year": self.year,
             "keyword": self.keyword,
             "season": self.season,
-            "tmdbid": self.tmdb_id,
+            "tmdbid": self.tmdb_id if is_tmdb_media(self) else "",
             "image": self.image,
             "rss_sites": self.subscribe_sites,
             "search_sites": self.search_sites,
@@ -612,7 +614,7 @@ class SubscribeTvEntity:
             "anchor_external_id": self.anchor_external_id,
             "content_profile": self.content_profile,
             "provider": self.provider,
-            "metadata_ref": self.metadata_ref,
+            "metadata_ref": canonical_metadata_ref(self),
             "metadata_policy": self.metadata_policy,
             "naming_profile": self.naming_profile,
         }

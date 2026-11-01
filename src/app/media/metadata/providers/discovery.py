@@ -390,6 +390,11 @@ def _douban_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
     cover = raw.get("cover_url")
     if not cover and isinstance(raw.get("cover"), dict):
         cover = raw["cover"].get("url")
+    # 豆瓣榜单的 photos[0] 多为 540x303 剧照，真正的 2:3 主海报在 pic.large。
+    if not cover:
+        pic = raw.get("pic") or {}
+        if isinstance(pic, dict):
+            cover = pic.get("large") or pic.get("normal")
     if not cover:
         photos = raw.get("photos") or []
         cover = photos[0] if photos else None

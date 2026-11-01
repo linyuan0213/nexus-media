@@ -92,12 +92,22 @@ class DownloadService:
                 # 识别失败时，用搜索记录已有的数据创建最小 MediaInfo
                 media = MediaInfo()
                 media.title = res.TITLE or res.TORRENT_NAME
-                if res.TMDBID:
+                if getattr(res, "ANCHOR_PROVIDER", None) and getattr(res, "ANCHOR_EXTERNAL_ID", None):
+                    media.anchor_provider = res.ANCHOR_PROVIDER
+                    media.anchor_external_id = res.ANCHOR_EXTERNAL_ID
+                    media.identity_id = getattr(res, "IDENTITY_ID", None)
+                    media.content_profile = getattr(res, "CONTENT_PROFILE", None) or "default"
+                elif str(res.TMDBID or "").isdigit():
                     media.tmdb_id = res.TMDBID
                 if res.POSTER:
                     media.poster_path = res.POSTER
             else:
-                if res.TMDBID and not media.tmdb_id:
+                if getattr(res, "ANCHOR_PROVIDER", None) and getattr(res, "ANCHOR_EXTERNAL_ID", None):
+                    media.anchor_provider = res.ANCHOR_PROVIDER
+                    media.anchor_external_id = res.ANCHOR_EXTERNAL_ID
+                    media.identity_id = getattr(res, "IDENTITY_ID", None)
+                    media.content_profile = getattr(res, "CONTENT_PROFILE", None) or "default"
+                elif str(res.TMDBID or "").isdigit() and not media.tmdb_id:
                     media.tmdb_id = res.TMDBID
                 if res.POSTER and not media.poster_path:
                     media.poster_path = res.POSTER

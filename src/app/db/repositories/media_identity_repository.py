@@ -94,17 +94,10 @@ class MediaIdentityRepository(BaseRepository):
         external_id: str,
         *,
         scope: str = "default",
+        media_type: str | None = None,
     ) -> MediaIdentity | None:
         with self.readonly() as db:
-            ref = (
-                db.query(MediaExternalRef)
-                .filter(
-                    MediaExternalRef.PROVIDER == provider,
-                    MediaExternalRef.EXTERNAL_ID == str(external_id),
-                    MediaExternalRef.SCOPE == scope,
-                )
-                .first()
-            )
+            ref = self._find_ref(db, provider, external_id, scope, media_type)
             if ref is None:
                 return None
             return db.query(MediaIdentity).filter(MediaIdentity.IDENTITY_ID == ref.IDENTITY_ID).first()
@@ -127,7 +120,7 @@ class MediaIdentityRepository(BaseRepository):
         is_primary: bool = False,
     ) -> MediaExternalRef:
         with self.session() as db:
-            ref = self._find_ref(db, provider, external_id, scope)
+            ref = self._find_ref(db, provider, external_id, scope, media_type)
             if ref is None:
                 ref = MediaExternalRef(
                     IDENTITY_ID=identity_id,
@@ -147,7 +140,7 @@ class MediaIdentityRepository(BaseRepository):
                     db.commit()
                 except IntegrityError:
                     db.rollback()
-                    ref = self._find_ref(db, provider, external_id, scope)
+                    ref = self._find_ref(db, provider, external_id, scope, media_type)
                     if ref is None:
                         raise
                 else:
@@ -338,13 +331,23 @@ class MediaIdentityRepository(BaseRepository):
             db.refresh(override)
             return override
 
-    def _find_ref(self, db, provider: str, external_id: str, scope: str) -> MediaExternalRef | None:
-        return (
-            db.query(MediaExternalRef)
-            .filter(
-                MediaExternalRef.PROVIDER == provider,
-                MediaExternalRef.EXTERNAL_ID == str(external_id),
-                MediaExternalRef.SCOPE == scope,
-            )
-            .first()
+    def _find_ref(
+        self,
+        db,
+        provider: str,
+        external_id: str,
+        scope: str,
+        media_type: str | None = None,
+    ) -> MediaExternalRef | None:
+        query = db.query(MediaExternalRef).filter(
+            MediaExternalRef.PROVIDER == provider,
+            MediaExternalRef.EXTERNAL_ID == str(external_id),
+            MediaExternalRef.SCOPE == scope,
         )
+        if media_type:
+            typed = query.filter(MediaExternalRef.MEDIA_TYPE == media_type).first()
+            if typed is not None:
+                return typed
+            # 兼容未回填类型的历史记录。
+            return query.filter(MediaExternalRef.MEDIA_TYPE.is_(None)).first()
+        return query.first()

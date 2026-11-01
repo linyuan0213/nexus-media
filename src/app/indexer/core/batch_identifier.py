@@ -133,6 +133,7 @@ class BatchIdentifier:
                     "enclosure": cand.item.get("enclosure"),
                     "size": cand.item.get("size"),
                     "seeders": cand.item.get("seeders"),
+                    "target_tmdb_id": str(getattr(match_media, "tmdb_id", "") or "") if match_media else "",
                 }
                 groups[cache_key] = g
                 order.append(cache_key)

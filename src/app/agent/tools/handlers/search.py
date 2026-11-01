@@ -1,5 +1,6 @@
 """网页搜索工具 handler — 通过内置 Chrome 服务（nexus-chrome）抓取搜索引擎结果页并解析"""
 
+import uuid
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -129,11 +130,16 @@ def _search_with_engine(query: str, engine: str, limit: int) -> dict | None:
     try:
         _validate_url(url)
         session = _open_session(None)
+        tab_name = f"auto_agent_search_{uuid.uuid4().hex[:12]}"
         try:
-            session.navigate(url, timeout=30)
-            html_str = session.html()
-            html_str = wait_challenge_clear(session, html_str)
+            session.navigate(url, tab_name=tab_name, timeout=30)
+            html_str = session.html(tab_name)
+            html_str = wait_challenge_clear(session, html_str, tab_name=tab_name)
         finally:
+            try:
+                session.close_tab(tab_name)
+            except Exception as close_err:  # noqa: BLE001
+                log.debug(f"[WebSearch] 关闭临时标签页失败: {close_err}")
             _close_session(session)
     except Exception as e:  # noqa: BLE001
         log.warn(f"[WebSearch]{engine} 访问失败: {e}")

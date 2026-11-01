@@ -224,8 +224,16 @@ class ResultFilter:
             _norm(meta_info.title),
             _norm(meta_info.cn_name),
             _norm(meta_info.en_name),
+            _norm(getattr(meta_info, "description", "")),
         }
         meta_names.discard("")
+
+        # 简介可能包含中文别名；标题为英文时，不能因标题语言不同直接拒绝。
+        description_norm = _norm(getattr(meta_info, "description", ""))
+        if description_norm:
+            for match_name in match_names:
+                if match_name and match_name in description_norm:
+                    return True
 
         if not match_names or not meta_names:
             return False
@@ -256,6 +264,9 @@ class ResultFilter:
                 # 子串匹配：两个方向用不同阈值
                 # 订阅名 in 种子名（如 "GHOSTINTHESHELL" in "GHOSTINTHESHELLSAC2045S02"）→ 高阈值防误匹配
                 # 种子名 in 订阅名 → 低阈值（订阅更具体）
+                if _has_cjk(mn) and _has_cjk(mmn) and mmn.startswith(mn) and len(mn) >= 3:
+                    # “凡人修仙传” vs “凡人修仙传：星海飞驰” 属于同一主系列。
+                    return True
                 if _has_cjk(mn) == _has_cjk(mmn):
                     if mmn in mn:
                         if len(mmn) / len(mn) >= 0.85:
@@ -523,8 +534,11 @@ class ResultFilter:
                             )
                             stats.index_match_fail += 1
                             continue
+                # 先写入简介，quick_name_match 才能用中文别名匹配英文标题。
+                if description and not getattr(mi, "description", None):
+                    mi.description = description
                 # search_name 伪匹配：种子名与搜索词差异大时跳过
-                if search_name and mi.get_name():
+                if search_name and mi.get_name() and match_media:
                     _sn_norm = _norm(search_name)
                     _mi_norm = _norm(mi.get_name())
                     if _sn_norm and _mi_norm and len(_sn_norm) >= 3 and len(_mi_norm) >= 3:
@@ -537,6 +551,10 @@ class ResultFilter:
                                 )
                                 stats.index_match_fail += 1
                                 continue
+                if search_name and not mi.title:
+                    mi.title = search_name
+                if search_name and not mi.cn_name and StringUtils.is_all_chinese(search_name):
+                    mi.cn_name = search_name
                 media_info = mi
                 media_info.set_torrent_info(
                     site=indexer_name,
@@ -568,6 +586,22 @@ class ResultFilter:
                         res_order=res_order,
                         skip_tmdb=True,
                         media_info=self._media.merge_media_info(mi, match_media),
+                        indexer_name=indexer_name,
+                        indexer_order=indexer_order,
+                        indexer_public=indexer_public,
+                    )
+                )
+                continue
+
+            if not match_media:
+                # 没有元数据身份时，手动关键词搜索不能再用名称门禁全部拒绝。
+                candidates.append(
+                    SearchCandidate(
+                        item=item,
+                        meta_info=mi,
+                        res_order=res_order,
+                        skip_tmdb=True,
+                        media_info=mi,
                         indexer_name=indexer_name,
                         indexer_order=indexer_order,
                         indexer_public=indexer_public,
@@ -832,6 +866,13 @@ class ResultFilter:
                 stats.index_match_fail += 1
                 continue
 
+            if match_media:
+                if not media_info.title:
+                    media_info.title = match_media.title
+                if not media_info.cn_name:
+                    media_info.cn_name = match_media.cn_name
+                if not media_info.original_title:
+                    media_info.original_title = match_media.original_title
             log.info(
                 f"[ResultFilter]{display_name} {description} 识别为 {media_info.get_title_string()} "
                 f"{media_info.get_season_episode_string()} 匹配成功"

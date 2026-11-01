@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
+from app.domain.media_ref import canonical_metadata_ref, is_tmdb_media
 from app.domain.mediatypes import MediaType
 from app.utils.json_utils import JsonUtils
 
@@ -193,7 +194,8 @@ class DownloadHistoryEntity:
             "title": self.title,
             "year": self.year,
             "type": self.media_type,
-            "tmdbid": self.tmdb_id,
+            "tmdbid": self.tmdb_id if is_tmdb_media(self) else "",
+            "metadata_ref": canonical_metadata_ref(self),
             "se": self.season_episode,
             "vote": self.vote,
             "poster": self.poster,
@@ -206,6 +208,10 @@ class DownloadHistoryEntity:
             "download_id": self.download_id,
             "save_path": self.save_path,
             "date": self.date,
+            "identity_id": self.identity_id,
+            "anchor_provider": self.anchor_provider,
+            "anchor_external_id": self.anchor_external_id,
+            "content_profile": self.content_profile,
         }
 
 

@@ -5,12 +5,15 @@ FastAPI 图片代理路由
 """
 
 import asyncio
+import base64
 import io
 import ipaddress
+import json
 import os
 import socket
 import time
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
@@ -207,6 +210,71 @@ async def proxy_bgm_image(img_path: str):
     return await _serve_image(cache_path, image_url)
 
 
+
+def _face_box(data: bytes) -> tuple[int, int, int, int] | None:
+    verify_url = os.environ.get("NEXUS_VERIFY_URL", "http://nexus-verify:9300").rstrip("/")
+    try:
+        request = urllib.request.Request(
+            f"{verify_url}/face/bbox",
+            data=json.dumps({"image_b64": base64.b64encode(data).decode()}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=8) as response:
+            payload = json.loads(response.read().decode() or "{}")
+    except Exception:  # noqa: BLE001 - verify 不可用时回退裁切
+        return None
+    faces = payload.get("faces") or []
+    if not faces:
+        return None
+    face = max(faces, key=lambda item: item.get("width", 0) * item.get("height", 0))
+    return int(face["x"]), int(face["y"]), int(face["width"]), int(face["height"])
+
+
+def _crop_poster_bytes(data: bytes, mode: str) -> bytes:
+    with Image.open(io.BytesIO(data)) as img:
+        width, height = img.size
+        if mode == "none" or width <= height * 1.15:
+            return data
+        target_w = max(1, int(height * 0.71))
+        if mode == "face":
+            face = _face_box(data)
+            if face:
+                fx, _, fw, _ = face
+                center_x = fx + fw // 2
+                left = max(0, min(center_x - int(target_w * 0.38), width - target_w))
+                output = io.BytesIO()
+                img.crop((left, 0, left + target_w, height)).save(output, format="JPEG", quality=92)
+                return output.getvalue()
+            # 人脸模型不可用/未检测到脸时居中裁切；FC2 人物主体在中央，
+            # 回退右侧只会得到空白背景。
+            left = max(0, (width - target_w) // 2)
+        else:
+            left = max(0, width - target_w)
+        output = io.BytesIO()
+        img.crop((left, 0, left + target_w, height)).save(output, format="JPEG", quality=92)
+        return output.getvalue()
+
+
+@router.get("/crop", summary="按裁剪策略代理海报")
+async def proxy_poster(url: str, mode: str = "face"):
+    """下载后按 face/right/none 裁剪，供插件按海报配置使用."""
+    _guard_image_url(url)
+    cache_path = get_cache_path("poster", f"v4:{mode}:{url}")
+    if os.path.exists(cache_path):
+        return FileResponse(cache_path, media_type="image/jpeg")
+    data = await download_image(url)
+    if not data:
+        raise NexusError("获取图片失败", errcode=ErrorCode.IMAGE_FETCH_FAILED, http_status=404)
+    try:
+        data = await asyncio.to_thread(_crop_poster_bytes, data, mode)
+    except Exception as e:  # noqa: BLE001 - 裁剪失败返回原图
+        log.debug(f"[Img]海报裁剪失败 {url}: {e}")
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    with open(cache_path, "wb") as handle:
+        handle.write(data)
+    return Response(data, media_type="image/jpeg")
+
 @router.get("/library/{img_url:path}", summary="代理媒体库图片")
 async def proxy_library_image(request: Request, img_url: str, server_id: int | None = None):
     """代理媒体库内网图片"""
@@ -283,6 +351,10 @@ def _resolve_blur_source(url: str, depth: int = 0) -> tuple[str, str]:
     if decoded.startswith("/img/library/"):
         inner = urllib.parse.unquote(decoded[len("/img/library/") :])
         return _resolve_blur_source(inner, depth + 1)
+    if decoded.startswith("/img/crop?"):
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(decoded).query)
+        nested = (query.get("url") or [""])[0]
+        return _resolve_blur_source(nested, depth + 1) if nested else ("", "")
     if decoded.startswith("/img/poster?"):
         query = urllib.parse.parse_qs(urllib.parse.urlsplit(decoded).query)
         local = _safe_local_poster((query.get("path") or [""])[0])

@@ -1,8 +1,11 @@
 """Web 搜索统一入口（make_web_search_fn）单元测试"""
 
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 from app.domain.mediatypes import MediaType
+from app.infrastructure.external.tmdbv3api.as_obj import AsObj
+from app.services.search_orchestrator import SearchOrchestrator
 from app.services.search_web_entry import make_web_search_fn
 
 
@@ -26,23 +29,28 @@ class TestMakeWebSearchFn:
         assert code == 1
         assert "未搜索到" in msg
 
-    def test_tmdbid_resolves_media(self):
+    def test_anchor_resolves_media(self):
         orchestrator = MagicMock()
         orchestrator.orchestrate.return_value = (None, {}, 3, 0)
         fake_media = MagicMock()
-        with patch("app.services.search_web_entry.get_mediainfo_from_id", return_value=fake_media) as m:
-            fn = make_web_search_fn(orchestrator, system_config=None)
-            code, _ = fn("x", tmdbid="12345", media_type=MediaType.MOVIE)
+        orchestrator.resolve_anchor_media.return_value = fake_media
+        fn = make_web_search_fn(orchestrator, system_config=None)
+        code, _ = fn(
+            "x",
+            anchor_provider="douban",
+            anchor_external_id="36139980",
+            media_type=MediaType.TV,
+        )
         assert code == 0
-        m.assert_called_once()
+        orchestrator.resolve_anchor_media.assert_called_once()
         ctx = orchestrator.orchestrate.call_args[0][0]
         assert ctx.match_media is fake_media
 
-    def test_tmdbid_unresolved_returns_error(self):
+    def test_anchor_unresolved_returns_error(self):
         orchestrator = MagicMock()
-        with patch("app.services.search_web_entry.get_mediainfo_from_id", return_value=None):
-            fn = make_web_search_fn(orchestrator, system_config=None)
-            code, msg = fn("x", tmdbid="99999")
+        orchestrator.resolve_anchor_media.return_value = None
+        fn = make_web_search_fn(orchestrator, system_config=None)
+        code, msg = fn("x", anchor_provider="douban", anchor_external_id="99999")
         assert code == -1
         orchestrator.orchestrate.assert_not_called()
 
@@ -80,3 +88,36 @@ class TestMakeWebSearchFn:
         fn("x", filters={"site": []}, media_type=MediaType.TV)
         ctx = orchestrator.orchestrate.call_args[0][0]
         assert ctx.filter_args["site"] is None
+
+
+class TestProviderTitleMatch:
+    def test_wrong_tmdb_title_is_rejected(self):
+        media = SimpleNamespace(provider_data={"name": "The Private Navy of Sgt. O'Farrell"})
+        assert not SearchOrchestrator._provider_title_matches(media, "凡人修仙传")
+
+    def test_title_and_alias_are_accepted(self):
+        media = SimpleNamespace(
+            provider_data={
+                "name": "A Record Of A Mortals Journey To Immortality",
+                "aliases": ["凡人修仙传"],
+            }
+        )
+        assert SearchOrchestrator._provider_title_matches(media, "凡人修仙传")
+
+    def test_identity_matches_rejects_stale_anchor(self):
+        media = SimpleNamespace(
+            title="The Private Navy of Sgt. O'Farrell",
+            cn_name=None,
+            en_name=None,
+            original_title=None,
+            aliases=[],
+            provider_data=None,
+        )
+        assert not SearchOrchestrator.identity_matches_keyword(media, "凡人修仙传")
+        assert SearchOrchestrator.identity_matches_keyword(media, "Private Navy")
+
+    def test_tmdb_as_obj_provider_data_is_supported(self):
+        media = SimpleNamespace(provider_data=AsObj(name="凡人修仙传", original_name="凡人修仙传"))
+
+        assert SearchOrchestrator._provider_title(media) == "凡人修仙传"
+        assert SearchOrchestrator._provider_title_matches(media, "凡人修仙传")

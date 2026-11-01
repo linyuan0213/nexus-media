@@ -105,7 +105,7 @@ def _collect_tv(backend: StorageBackend, directory: str, base_name: str) -> dict
         show = read_nfo(backend, os.path.join(parent, "tvshow.nfo"))
     if show and show.get("kind") == "tvshow":
         # 身份字段以 tvshow 为准
-        for key in ("title", "year", "tmdbid", "imdbid", "original_title"):
+        for key in ("title", "year", "tmdbid", "imdbid", "content_id", "unique_ids", "original_title"):
             if show.get(key):
                 merged[key] = show[key]
         merged["show_path"] = show.get("path")

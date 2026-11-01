@@ -204,3 +204,32 @@ class TestMergeMediaInfo:
         """target 为空时返回 target."""
         source = MediaInfo(title="Test", type=MediaType.MOVIE)
         assert TmdbLookup.merge_media_info(None, source) is None
+
+
+class TestEpisodeIndependentLookupCache:
+    """同一季不同集数应复用剧集级识别结果，避免逐集查 TMDB."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_cache(self):
+        cache = get_cache_manager().get("tmdb_lookup")
+        if cache is not None:
+            cache.clear()
+
+    def test_same_show_different_episodes_share_lookup(self):
+        parser = RegexParser()
+        lookup = TmdbLookup(client=MagicMock())
+        first = parser.parse("Mortal Journey S01E01")
+        second = parser.parse("Mortal Journey S01E02")
+        assert first is not None and second is not None
+
+        payload = {
+            "id": 106449,
+            "name": "Mortal Journey",
+            "first_air_date": "2020-01-01",
+            "media_type": MediaType.TV,
+            "genres": [{"name": "动画"}],
+        }
+        with patch.object(lookup, "_lookup_tmdb", return_value=payload) as mock_lookup:
+            assert lookup.lookup(first, hint_type=MediaType.TV) is not None
+            assert lookup.lookup(second, hint_type=MediaType.TV) is not None
+            assert mock_lookup.call_count == 1

@@ -171,6 +171,16 @@ class SubscribeTvRepositoryAdapter:
     ) -> int | str | None:
         return self._repo.get_rss_tv_id(title, year, season, tmdbid, user_id, content_profile)
 
+    def get_id_by_anchor(
+        self,
+        provider: str,
+        external_id: str,
+        season: str | None = None,
+        content_profile: str | None = None,
+        user_id: int | None = None,
+    ) -> int | None:
+        return self._repo.get_rss_tv_id_by_anchor(provider, external_id, season, content_profile, user_id)
+
     def is_exists(self, title: str, year: str, season: str | None = None) -> bool:
         return self._repo.is_exists_rss_tv(title, year, season)
 

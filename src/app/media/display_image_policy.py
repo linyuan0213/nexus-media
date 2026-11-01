@@ -48,13 +48,27 @@ def transform_display_image(content_profile: str, image_url: str) -> str:
 
 
 def unwrap_display_image_url(image_url: str | None) -> str:
-    """把展示用的 /img/blur?url=... 还原成原始图片 URL，避免写回数据库."""
+    """把展示代理 URL 还原成原始图片 URL，避免写回数据库或被下载器当成本地路径."""
     value = str(image_url or "")
-    if "/img/blur" not in value:
-        return value
-    try:
-        query = parse_qs(urlsplit(value).query)
-        raw = (query.get("url") or [""])[0]
-        return unquote(raw) if raw else value
-    except Exception:
-        return value
+    for _ in range(5):
+        try:
+            parts = urlsplit(value)
+            if parts.path.rstrip("/").endswith(("/img/blur", "/img/crop")):
+                raw = (parse_qs(parts.query).get("url") or [""])[0]
+                if not raw:
+                    break
+                value = unquote(raw)
+                continue
+            if parts.path == "/img" and parts.query.startswith("url="):
+                raw = (parse_qs(parts.query).get("url") or [""])[0]
+                if not raw:
+                    break
+                value = unquote(raw)
+                continue
+            if parts.path.startswith("/img/library/"):
+                value = unquote(parts.path[len("/img/library/") :])
+                continue
+        except Exception:
+            break
+        break
+    return value
