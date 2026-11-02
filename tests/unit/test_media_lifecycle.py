@@ -195,3 +195,36 @@ def test_reconciler_backfills_download_and_transfer_history():
     assert current.STATUS == LifecycleStatus.SUCCEEDED.value
     assert current.TITLE == "Reconcile Demo"
     assert LifecycleRepository().get_current("transfer-identity") is None
+
+
+def test_grouped_list_collapses_episodes_by_identity():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    projector.record(
+        identity_id="series-1",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="library.present",
+        media_type="tv",
+        season=1,
+        episode=1,
+        title="Series",
+        event_key="ep1",
+    )
+    projector.record(
+        identity_id="series-1",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="library.present",
+        media_type="tv",
+        season=1,
+        episode=2,
+        title="Series",
+        event_key="ep2",
+    )
+    rows, total = repo.list_grouped(page=1, pagenum=20)
+    assert total == 1
+    assert len(rows) == 1
+    assert rows[0]["EPISODE_COUNT"] == 2
+    assert rows[0]["COMPLETED_EPISODES"] == 2
+    assert rows[0]["STAGE"] == LifecycleStage.IN_LIBRARY.value

@@ -11,13 +11,16 @@ import log
 from app.db.models.lifecycle import MediaLifecycle, MediaLifecycleEvent
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.data_scope import apply_owner_scope
+from app.domain.lifecycle import LifecycleStage, LifecycleStatus, stage_rank
 from app.utils.json_utils import JsonUtils
 
 
 class LifecycleRepository(BaseRepository):
     """生命周期当前状态与事件时间线仓储."""
 
-    def record_event(self, event: MediaLifecycleEvent, snapshot: dict[str, Any]) -> bool:
+    def record_event(
+        self, event: MediaLifecycleEvent, snapshot: dict[str, Any], *, update_snapshot: bool = True
+    ) -> bool:
         """幂等写入事件并更新当前快照；EVENT_KEY 已存在时返回 False."""
         with self.session() as db:
             exists = (
@@ -28,6 +31,9 @@ class LifecycleRepository(BaseRepository):
             if exists is not None:
                 return False
             db.add(event)
+            if not update_snapshot:
+                db.commit()
+                return True
             current = (
                 db.query(MediaLifecycle)
                 .filter(
@@ -143,9 +149,102 @@ class LifecycleRepository(BaseRepository):
                 .all()
             )
 
+    def list_grouped(
+        self,
+        *,
+        stage: str | None = None,
+        status: str | None = None,
+        media_type: str | None = None,
+        keyword: str | None = None,
+        page: int = 1,
+        pagenum: int = 20,
+        user=None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        with self.readonly() as db:
+            query = db.query(MediaLifecycle)
+            if user is not None:
+                query = apply_owner_scope(query, MediaLifecycle, user, include_shared=False)
+            if media_type:
+                query = query.filter(MediaLifecycle.MEDIA_TYPE == media_type)
+            if keyword:
+                query = query.filter(MediaLifecycle.TITLE.ilike(f"%{keyword}%"))
+            rows = query.order_by(MediaLifecycle.LAST_EVENT_AT.desc(), MediaLifecycle.ID.desc()).all()
+        grouped = _group_lifecycle_rows(rows)
+        if stage:
+            grouped = [item for item in grouped if item["STAGE"] == stage]
+        if status:
+            grouped = [item for item in grouped if item["STATUS"] == status]
+        total = len(grouped)
+        start = (max(1, page) - 1) * max(1, pagenum)
+        return grouped[start : start + max(1, pagenum)], total
+
+    def stats_grouped(self, *, user=None) -> dict[str, Any]:
+        with self.readonly() as db:
+            query = db.query(MediaLifecycle)
+            if user is not None:
+                query = apply_owner_scope(query, MediaLifecycle, user, include_shared=False)
+            grouped = _group_lifecycle_rows(query.all())
+        by_status: dict[str, int] = {}
+        by_stage: dict[str, int] = {}
+        for item in grouped:
+            by_status[item["STATUS"]] = by_status.get(item["STATUS"], 0) + 1
+            by_stage[item["STAGE"]] = by_stage.get(item["STAGE"], 0) + 1
+        return {"total": len(grouped), "by_status": by_status, "by_stage": by_stage}
+
     @staticmethod
     def event_payload(value: Any) -> str:
         return JsonUtils.dumps(JsonUtils.to_jsonable(value or {}))
+
+
+def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
+    groups: dict[str, list[MediaLifecycle]] = {}
+    for row in rows:
+        groups.setdefault(str(row.IDENTITY_ID), []).append(row)
+    result: list[dict[str, Any]] = []
+    status_priority = {
+        LifecycleStatus.SUCCEEDED.value: 0,
+        LifecycleStatus.CANCELLED.value: 1,
+        LifecycleStatus.QUEUED.value: 2,
+        LifecycleStatus.RETRYING.value: 3,
+        LifecycleStatus.RUNNING.value: 4,
+        LifecycleStatus.BLOCKED.value: 5,
+        LifecycleStatus.FAILED.value: 6,
+        LifecycleStatus.DEAD.value: 7,
+    }
+    for items in groups.values():
+        representative = max(items, key=lambda item: item.LAST_EVENT_AT or item.UPDATED_AT)
+        stage = min(items, key=lambda item: stage_rank(item.STAGE)).STAGE
+        status = max(items, key=lambda item: status_priority.get(item.STATUS, 0)).STATUS
+        completed = sum(
+            1
+            for item in items
+            if item.STAGE in {LifecycleStage.SCRAPED.value, LifecycleStage.IN_LIBRARY.value}
+            and item.STATUS == LifecycleStatus.SUCCEEDED.value
+        )
+        in_library = sum(1 for item in items if item.STAGE == LifecycleStage.IN_LIBRARY.value)
+        data = representative.as_dict()
+        if status == LifecycleStatus.SUCCEEDED.value and stage not in {
+            LifecycleStage.SCRAPED.value,
+            LifecycleStage.IN_LIBRARY.value,
+        }:
+            status = LifecycleStatus.RUNNING.value
+        data["STAGE"] = stage
+        data["STATUS"] = status
+        data["STAGE_STARTED_AT"] = max(
+            (item.STAGE_STARTED_AT for item in items),
+            default=representative.STAGE_STARTED_AT,
+        )
+        data["LAST_EVENT_AT"] = max(
+            (item.LAST_EVENT_AT for item in items),
+            default=representative.LAST_EVENT_AT,
+        )
+        data["PROGRESS"] = int(completed * 100 / len(items)) if items else 0
+        data["EPISODE_COUNT"] = len(items)
+        data["COMPLETED_EPISODES"] = completed
+        data["IN_LIBRARY_EPISODES"] = in_library
+        result.append(data)
+    result.sort(key=lambda item: item.get("LAST_EVENT_AT") or datetime.min, reverse=True)
+    return result
 
 
 def lifecycle_row_to_dict(row: MediaLifecycle) -> dict[str, Any]:

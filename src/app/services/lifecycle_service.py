@@ -15,6 +15,7 @@ import log
 from app.db.models.download import DOWNLOADHISTORY
 from app.db.models.lifecycle import MediaLifecycleEvent
 from app.db.models.media_sync import MEDIASYNCITEMS
+from app.db.models.subscribe import SubscribeHistory
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
@@ -56,6 +57,7 @@ class LifecycleProjector:
         payload: dict[str, Any] | None = None,
         occurred_at: datetime | None = None,
         event_key: str | None = None,
+        update_snapshot: bool = True,
     ) -> bool:
         if not identity_id:
             raise ValueError("identity_id is required")
@@ -108,7 +110,7 @@ class LifecycleProjector:
         if progress is not None:
             snapshot["PROGRESS"] = max(0, min(100, int(progress)))
         try:
-            created = self._repo.record_event(event, snapshot)
+            created = self._repo.record_event(event, snapshot, update_snapshot=update_snapshot)
             if created:
                 log.debug(
                     f"[Lifecycle]记录事件 {event_type} identity={identity_id} "
@@ -253,6 +255,13 @@ class LifecycleReconciler:
                 .limit(max(1, int(limit)))
                 .all()
             )
+            subscriptions = (
+                db.query(SubscribeHistory)
+                .filter(SubscribeHistory.IDENTITY_ID.isnot(None))
+                .order_by(SubscribeHistory.ID.desc())
+                .limit(max(1, int(limit)))
+                .all()
+            )
             sync_rows = db.query(
                 MEDIASYNCITEMS.IDENTITY_ID,
                 MEDIASYNCITEMS.TITLE,
@@ -304,6 +313,31 @@ class LifecycleReconciler:
                     event_key=f"download-history:{row.ID}:{row.STATE}",
                 ):
                     count += 1
+            for row in reversed(subscriptions):
+                if not row.IDENTITY_ID:
+                    continue
+                occurred = _parse_history_time(row.FINISH_TIME)
+                if self._projector.record(
+                    identity_id=str(row.IDENTITY_ID),
+                    stage=LifecycleStage.SUBSCRIBED,
+                    status=LifecycleStatus.SUCCEEDED,
+                    event_type="reconcile.subscribe.completed",
+                    media_type=_row_media_type(row.TYPE),
+                    title=row.NAME,
+                    year=row.YEAR,
+                    source_provider=row.ANCHOR_PROVIDER,
+                    content_profile=row.CONTENT_PROFILE,
+                    user_id=row.USER_ID,
+                    run_id=f"subscribe-history:{row.ID}",
+                    trace_id=f"media:{row.IDENTITY_ID}",
+                    message="从订阅历史回填",
+                    payload={"source": "SUBSCRIBE_HISTORY", "id": row.ID},
+                    occurred_at=occurred,
+                    event_key=f"subscribe-history:{row.ID}",
+                    update_snapshot=False,
+                ):
+                    count += 1
+
             for row in reversed(transfers):
                 season, episode = _parse_season_episode(row.SEASON_EPISODE)
                 occurred = _parse_history_time(row.DATE)
@@ -366,7 +400,13 @@ class LifecycleReconciler:
                         event_key=f"scrape-history:{row.ID}",
                     ):
                         count += 1
-                    if identity_id in in_library_ids or _matches_library(target, in_library_tokens):
+                    # 与 LibraryPresenceService 保持一致：转移历史命中即可视为库内存在。
+                    # 这里再要求 NFO 已生成，确保至少完成元数据落盘。
+                    if (
+                        nfo_time is not None
+                        or identity_id in in_library_ids
+                        or _matches_library(target, in_library_tokens)
+                    ):
                         if self._projector.record(
                             identity_id=identity_id,
                             stage=LifecycleStage.IN_LIBRARY,

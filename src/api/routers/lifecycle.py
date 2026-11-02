@@ -21,8 +21,13 @@ router = APIRouter()
 
 
 def _row_payload(row) -> dict[str, Any]:
-    data = lifecycle_row_to_dict(row)
-    started = row.STAGE_STARTED_AT or row.LAST_EVENT_AT
+    data = dict(row) if isinstance(row, dict) else lifecycle_row_to_dict(row)
+    started = data.get("STAGE_STARTED_AT")
+    if isinstance(started, str) and started:
+        try:
+            started = datetime.fromisoformat(started)
+        except ValueError:
+            started = None
     elapsed = int((datetime.now() - started).total_seconds()) if started else 0
     return {
         "identity_id": data.get("IDENTITY_ID"),
@@ -45,6 +50,9 @@ def _row_payload(row) -> dict[str, Any]:
         "next_retry_at": data.get("NEXT_RETRY_AT"),
         "retry_count": data.get("RETRY_COUNT"),
         "last_error": data.get("LAST_ERROR"),
+        "episode_count": data.get("EPISODE_COUNT", 1),
+        "completed_episodes": data.get("COMPLETED_EPISODES", 0),
+        "in_library_episodes": data.get("IN_LIBRARY_EPISODES", 0),
         "elapsed_seconds": max(0, elapsed),
     }
 
@@ -74,7 +82,7 @@ def list_lifecycle(
     pagenum: int = Query(default=20, ge=1, le=100),
     current_user: UserContext = Depends(require_any_permission("library:view", "library:manage")),
 ):
-    rows, total = LifecycleRepository().list_current(
+    rows, total = LifecycleRepository().list_grouped(
         stage=stage,
         status=status,
         media_type=media_type,
@@ -98,7 +106,7 @@ def reconcile_lifecycle(
 def lifecycle_stats(
     current_user: UserContext = Depends(require_any_permission("library:view", "library:manage")),
 ):
-    return success(data=LifecycleRepository().stats_current(user=current_user))
+    return success(data=LifecycleRepository().stats_grouped(user=current_user))
 
 
 @router.get("/{identity_id}", summary="媒体生命周期详情")
