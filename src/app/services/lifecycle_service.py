@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import or_
+
 import log
 from app.db.models.download import DOWNLOADHISTORY
 from app.db.models.lifecycle import MediaLifecycleEvent
@@ -241,7 +243,12 @@ class LifecycleReconciler:
             )
             transfers = (
                 db.query(TRANSFERHISTORY)
-                .filter(TRANSFERHISTORY.IDENTITY_ID.isnot(None))
+                .filter(
+                    or_(
+                        TRANSFERHISTORY.IDENTITY_ID.isnot(None),
+                        TRANSFERHISTORY.ANCHOR_EXTERNAL_ID.isnot(None),
+                    )
+                )
                 .order_by(TRANSFERHISTORY.ID.desc())
                 .limit(max(1, int(limit)))
                 .all()
@@ -306,8 +313,10 @@ class LifecycleReconciler:
                     or identity_by_title.get(
                         (str(row.TITLE or "").lower(), str(row.YEAR or ""), str(row.SEASON_EPISODE or ""))
                     )
-                    or str(row.IDENTITY_ID)
+                    or str(row.IDENTITY_ID or "")
                 )
+                if not identity_id:
+                    continue
                 if self._projector.record(
                     identity_id=identity_id,
                     stage=LifecycleStage.TRANSFERRED,

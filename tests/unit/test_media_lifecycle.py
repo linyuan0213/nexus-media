@@ -175,7 +175,7 @@ def test_reconciler_backfills_download_and_transfer_history():
             DEST_PATH="/tmp/dest",
             DEST_FILENAME="dest.mkv",
             DATE="2026-11-02 11:00:00",
-            IDENTITY_ID="transfer-identity",
+            IDENTITY_ID=None,
             ANCHOR_PROVIDER="dmm",
             ANCHOR_EXTERNAL_ID="550",
             CONTENT_PROFILE="default",
