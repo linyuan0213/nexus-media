@@ -6,6 +6,7 @@ import pytest
 
 from app.db.engine import get_engine
 from app.db.models import Base
+from app.db.models.lifecycle import MediaLifecycle
 from app.db.models.subscribe import SubscribeTvs
 from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.lifecycle import (
@@ -268,3 +269,110 @@ def test_grouped_incomplete_subscription_is_not_completed():
     assert item["COMPLETED_EPISODES"] == 4
     assert item["STAGE"] == LifecycleStage.DOWNLOADING.value
     assert item["STATUS"] == LifecycleStatus.RUNNING.value
+
+
+def test_snapshot_does_not_regress_to_earlier_stage():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    assert projector.record(
+        identity_id="identity-monotonic",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="library.present",
+        event_key="library-1",
+        occurred_at=now,
+    )
+    assert projector.record(
+        identity_id="identity-monotonic",
+        stage=LifecycleStage.DOWNLOADED,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="download.completed",
+        event_key="download-late",
+        occurred_at=now + timedelta(hours=1),
+    )
+    current = repo.get_current("identity-monotonic")
+    assert current is not None
+    assert current.STAGE == LifecycleStage.IN_LIBRARY.value
+
+
+def test_existing_event_repairs_regressed_snapshot():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    projector.record(
+        identity_id="identity-repair",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="library.present",
+        event_key="library-repair",
+        occurred_at=now,
+    )
+    with repo.session() as db:
+        current = db.query(MediaLifecycle).filter(MediaLifecycle.IDENTITY_ID == "identity-repair").one()
+        current.STAGE = LifecycleStage.DOWNLOADED.value
+        current.LAST_EVENT_AT = now + timedelta(hours=1)
+        db.commit()
+    projector.record(
+        identity_id="identity-repair",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="library.present",
+        event_key="library-repair",
+        occurred_at=now,
+    )
+    current = repo.get_current("identity-repair")
+    assert current is not None
+    assert current.STAGE == LifecycleStage.IN_LIBRARY.value
+
+
+def test_grouped_stage_uses_furthest_episode():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    for episode, stage in ((1, LifecycleStage.DOWNLOADED), (2, LifecycleStage.IN_LIBRARY)):
+        projector.record(
+            identity_id="identity-stage",
+            stage=stage,
+            status=LifecycleStatus.SUCCEEDED,
+            event_type="episode",
+            media_type="tv",
+            season=1,
+            episode=episode,
+            event_key=f"episode-{episode}",
+            occurred_at=now,
+        )
+    rows, total = repo.list_grouped(pagenum=10)
+    assert total == 1
+    assert rows[0]["STAGE"] == LifecycleStage.IN_LIBRARY.value
+
+
+def test_grouped_ignores_series_level_placeholder_when_episodes_exist():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    projector.record(
+        identity_id="identity-placeholder",
+        stage=LifecycleStage.DOWNLOADED,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="season.downloaded",
+        media_type="tv",
+        event_key="season-level",
+        occurred_at=now,
+    )
+    projector.record(
+        identity_id="identity-placeholder",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="episode.library",
+        media_type="tv",
+        season=1,
+        episode=1,
+        event_key="episode-1",
+        occurred_at=now,
+    )
+    rows, total = repo.list_grouped(pagenum=10)
+    assert total == 1
+    assert rows[0]["EPISODE_COUNT"] == 1
+    assert rows[0]["COMPLETED_EPISODES"] == 1
+    assert rows[0]["STAGE"] == LifecycleStage.IN_LIBRARY.value

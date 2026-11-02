@@ -26,35 +26,60 @@ class LifecycleRepository(BaseRepository):
         with self.session() as db:
             exists = db.query(MediaLifecycleEvent.ID).filter(MediaLifecycleEvent.EVENT_KEY == event.EVENT_KEY).first()
             if exists is not None:
+                if update_snapshot:
+                    self._apply_snapshot(db, event, snapshot)
+                db.commit()
                 return False
             db.add(event)
             if not update_snapshot:
                 db.commit()
                 return True
-            current = (
-                db.query(MediaLifecycle)
-                .filter(
-                    MediaLifecycle.IDENTITY_ID == event.IDENTITY_ID,
-                    MediaLifecycle.SEASON == event.SEASON,
-                    MediaLifecycle.EPISODE == event.EPISODE,
-                )
-                .first()
-            )
-            if current is None:
-                current = MediaLifecycle(**snapshot)
-                db.add(current)
-            elif event.OCCURRED_AT >= (current.LAST_EVENT_AT or event.OCCURRED_AT):
-                stage_changed = current.STAGE != event.STAGE
-                for key, value in snapshot.items():
-                    if key in {"IDENTITY_ID", "SEASON", "EPISODE", "CREATED_AT", "STAGE_STARTED_AT"}:
-                        continue
-                    if key in {"TITLE", "YEAR", "POSTER", "USER_ID"} and value in {None, ""}:
-                        continue
-                    setattr(current, key, value)
-                if stage_changed:
-                    current.STAGE_STARTED_AT = event.OCCURRED_AT
+            self._apply_snapshot(db, event, snapshot)
             db.commit()
             return True
+
+    def _apply_snapshot(self, db, event: MediaLifecycleEvent, snapshot: dict[str, Any]) -> None:
+        """按阶段单调推进快照；旧阶段事件只保留在时间线，不回退当前状态。"""
+        current = (
+            db.query(MediaLifecycle)
+            .filter(
+                MediaLifecycle.IDENTITY_ID == event.IDENTITY_ID,
+                MediaLifecycle.SEASON == event.SEASON,
+                MediaLifecycle.EPISODE == event.EPISODE,
+            )
+            .first()
+        )
+        if current is None:
+            db.add(MediaLifecycle(**snapshot))
+            return
+        current_rank = stage_rank(current.STAGE)
+        event_rank = stage_rank(event.STAGE)
+        advanced = event_rank > current_rank
+        regressed = event_rank < current_rank
+        if not advanced and event.OCCURRED_AT < (current.LAST_EVENT_AT or event.OCCURRED_AT):
+            return
+        skip_keys = {"IDENTITY_ID", "SEASON", "EPISODE", "CREATED_AT", "STAGE_STARTED_AT"}
+        if regressed:
+            skip_keys |= {
+                "STAGE",
+                "STATUS",
+                "PROGRESS",
+                "RUN_ID",
+                "TRACE_ID",
+                "LAST_ERROR",
+                "NEXT_RETRY_AT",
+                "RETRY_COUNT",
+            }
+        for key, value in snapshot.items():
+            if key in skip_keys:
+                continue
+            if key in {"TITLE", "YEAR", "POSTER", "USER_ID"} and value in {None, ""}:
+                continue
+            if key == "LAST_EVENT_AT" and advanced:
+                value = max(value, current.LAST_EVENT_AT or value)
+            setattr(current, key, value)
+        if advanced:
+            current.STAGE_STARTED_AT = event.OCCURRED_AT
 
     def get_current(self, identity_id: str, season: int = 0, episode: int = 0, *, user=None) -> MediaLifecycle | None:
         with self.readonly() as db:
@@ -165,7 +190,7 @@ class LifecycleRepository(BaseRepository):
         user=None,
     ) -> tuple[list[dict[str, Any]], int]:
         with self.readonly() as db:
-            query = db.query(MediaLifecycle)
+            query = db.query(MediaLifecycle).filter(MediaLifecycle.IDENTITY_ID != "preview")
             if user is not None:
                 query = apply_owner_scope(query, MediaLifecycle, user, include_shared=False)
             if media_type:
@@ -249,7 +274,7 @@ class LifecycleRepository(BaseRepository):
 
     def stats_grouped(self, *, user=None) -> dict[str, Any]:
         with self.readonly() as db:
-            query = db.query(MediaLifecycle)
+            query = db.query(MediaLifecycle).filter(MediaLifecycle.IDENTITY_ID != "preview")
             if user is not None:
                 query = apply_owner_scope(query, MediaLifecycle, user, include_shared=False)
             rows = query.all()
@@ -322,15 +347,16 @@ def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
     }
     for items in groups.values():
         representative = max(items, key=lambda item: item.LAST_EVENT_AT or item.UPDATED_AT)
-        stage = min(items, key=lambda item: stage_rank(item.STAGE)).STAGE
-        status = max(items, key=lambda item: status_priority.get(item.STATUS, 0)).STATUS
-        completed = sum(
+        episode_items = [item for item in items if int(item.EPISODE or 0) > 0]
+        state_items = episode_items or items
+        stage = max(state_items, key=lambda item: stage_rank(item.STAGE)).STAGE
+        status = max(state_items, key=lambda item: status_priority.get(item.STATUS, 0)).STATUS
+        in_library = sum(
             1
-            for item in items
-            if item.STAGE in {LifecycleStage.SCRAPED.value, LifecycleStage.IN_LIBRARY.value}
-            and item.STATUS == LifecycleStatus.SUCCEEDED.value
+            for item in state_items
+            if item.STAGE == LifecycleStage.IN_LIBRARY.value and item.STATUS == LifecycleStatus.SUCCEEDED.value
         )
-        in_library = sum(1 for item in items if item.STAGE == LifecycleStage.IN_LIBRARY.value)
+        completed = in_library
         data = representative.as_dict()
         if status == LifecycleStatus.SUCCEEDED.value and stage not in {
             LifecycleStage.SCRAPED.value,
@@ -347,8 +373,8 @@ def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
             (item.LAST_EVENT_AT for item in items),
             default=representative.LAST_EVENT_AT,
         )
-        data["PROGRESS"] = int(completed * 100 / len(items)) if items else 0
-        data["EPISODE_COUNT"] = len(items)
+        data["PROGRESS"] = int(completed * 100 / len(state_items)) if state_items else 0
+        data["EPISODE_COUNT"] = len(state_items)
         data["COMPLETED_EPISODES"] = completed
         data["IN_LIBRARY_EPISODES"] = in_library
         result.append(data)

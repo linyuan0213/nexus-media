@@ -64,9 +64,7 @@ class LifecycleProjector:
         occurred = occurred_at or datetime.now()
         stage_value = LifecycleStage(stage).value
         status_value = LifecycleStatus(status).value
-        key = event_key or self._event_key(
-            identity_id, season, episode, stage_value, event_type, trace_id, occurred
-        )
+        key = event_key or self._event_key(identity_id, season, episode, stage_value, event_type, trace_id, occurred)
         event = MediaLifecycleEvent(
             EVENT_KEY=key,
             IDENTITY_ID=identity_id,
@@ -113,8 +111,7 @@ class LifecycleProjector:
             created = self._repo.record_event(event, snapshot, update_snapshot=update_snapshot)
             if created:
                 log.debug(
-                    f"[Lifecycle]记录事件 {event_type} identity={identity_id} "
-                    f"stage={stage_value} status={status_value}"
+                    f"[Lifecycle]记录事件 {event_type} identity={identity_id} stage={stage_value} status={status_value}"
                 )
             return created
         except Exception as exc:  # noqa: BLE001 - 生命周期失败不影响业务
@@ -278,21 +275,25 @@ class LifecycleReconciler:
             identity_by_external: dict[str, str] = {}
             identity_by_title: dict[tuple[str, str, str], str] = {}
             for row in downloads:
-                if not row.IDENTITY_ID:
+                identity_id = _valid_identity(row.IDENTITY_ID)
+                if not identity_id:
                     continue
                 external_id = str(row.ANCHOR_EXTERNAL_ID or "")
                 if external_id:
-                    identity_by_external.setdefault(external_id, str(row.IDENTITY_ID))
+                    identity_by_external.setdefault(external_id, identity_id)
                 identity_by_title.setdefault(
                     (str(row.TITLE or "").lower(), str(row.YEAR or ""), str(row.SE or "")),
-                    str(row.IDENTITY_ID),
+                    identity_id,
                 )
             for row in reversed(downloads):
+                identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
+                if not identity_id:
+                    continue
                 stage, status = map_download_state(row.STATE)
                 season, episode = _parse_season_episode(row.SE)
                 occurred = _parse_history_time(row.DATE)
                 if self._projector.record(
-                    identity_id=str(row.IDENTITY_ID),
+                    identity_id=identity_id,
                     stage=stage,
                     status=status,
                     event_type=f"reconcile.download.{str(row.STATE).lower()}",
@@ -300,7 +301,7 @@ class LifecycleReconciler:
                     season=season,
                     episode=episode,
                     run_id=f"download-history:{row.ID}",
-                    trace_id=f"media:{row.IDENTITY_ID}",
+                    trace_id=f"media:{identity_id}",
                     title=row.TITLE,
                     year=row.YEAR,
                     poster=row.POSTER,
@@ -314,11 +315,12 @@ class LifecycleReconciler:
                 ):
                     count += 1
             for row in reversed(subscriptions):
-                if not row.IDENTITY_ID:
+                identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
+                if not identity_id:
                     continue
                 occurred = _parse_history_time(row.FINISH_TIME)
                 if self._projector.record(
-                    identity_id=str(row.IDENTITY_ID),
+                    identity_id=identity_id,
                     stage=LifecycleStage.SUBSCRIBED,
                     status=LifecycleStatus.SUCCEEDED,
                     event_type="reconcile.subscribe.completed",
@@ -329,7 +331,7 @@ class LifecycleReconciler:
                     content_profile=row.CONTENT_PROFILE,
                     user_id=row.USER_ID,
                     run_id=f"subscribe-history:{row.ID}",
-                    trace_id=f"media:{row.IDENTITY_ID}",
+                    trace_id=f"media:{identity_id}",
                     message="从订阅历史回填",
                     payload={"source": "SUBSCRIBE_HISTORY", "id": row.ID},
                     occurred_at=occurred,
@@ -342,13 +344,7 @@ class LifecycleReconciler:
                 season, episode = _parse_season_episode(row.SEASON_EPISODE)
                 occurred = _parse_history_time(row.DATE)
                 failed = str(row.DEST_STATE or "") in {"missing", "deleted"}
-                identity_id = (
-                    identity_by_external.get(str(row.ANCHOR_EXTERNAL_ID or ""))
-                    or identity_by_title.get(
-                        (str(row.TITLE or "").lower(), str(row.YEAR or ""), str(row.SEASON_EPISODE or ""))
-                    )
-                    or str(row.IDENTITY_ID or "")
-                )
+                identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
                 if not identity_id:
                     continue
                 if self._projector.record(
@@ -369,7 +365,7 @@ class LifecycleReconciler:
                     message="从转移历史回填",
                     payload={"source": "TRANSFER_HISTORY", "id": row.ID},
                     occurred_at=occurred,
-                    event_key=f"transfer-history:{row.ID}",
+                    event_key=_scoped_event_key(f"transfer-history:{row.ID}", row.IDENTITY_ID, identity_id),
                 ):
                     count += 1
                 if failed:
@@ -397,7 +393,7 @@ class LifecycleReconciler:
                         message="从目标目录 NFO 回填",
                         payload={"source": "NFO", "path": str(target)},
                         occurred_at=nfo_time,
-                        event_key=f"scrape-history:{row.ID}",
+                        event_key=_scoped_event_key(f"scrape-history:{row.ID}", row.IDENTITY_ID, identity_id),
                     ):
                         count += 1
                     # 与 LibraryPresenceService 保持一致：转移历史命中即可视为库内存在。
@@ -425,10 +421,37 @@ class LifecycleReconciler:
                             message="从媒体同步索引回填",
                             payload={"source": "MEDIASYNC_ITEMS"},
                             occurred_at=nfo_time + timedelta(seconds=1),
-                            event_key=f"library-history:{row.ID}",
+                            event_key=_scoped_event_key(f"library-history:{row.ID}", row.IDENTITY_ID, identity_id),
                         ):
                             count += 1
         return {"imported": count}
+
+
+def _valid_identity(value: Any) -> str:
+    text = str(value or "")
+    return "" if text.lower() in {"", "preview"} else text
+
+
+def _canonical_identity(row: Any, by_external: dict[str, str], by_title: dict[tuple[str, str, str], str]) -> str:
+    """优先按 anchor 归并历史表中的重复/占位 identity。"""
+    external_id = str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or "")
+    if external_id and external_id in by_external:
+        return by_external[external_id]
+    identity_id = _valid_identity(getattr(row, "IDENTITY_ID", None))
+    if identity_id:
+        return identity_id
+    key = (
+        str(getattr(row, "TITLE", "") or "").lower(),
+        str(getattr(row, "YEAR", "") or ""),
+        str(getattr(row, "SE", None) or getattr(row, "SEASON_EPISODE", "") or ""),
+    )
+    return by_title.get(key, "")
+
+
+def _scoped_event_key(base: str, row_identity: Any, canonical_identity: str) -> str:
+    if str(row_identity or "") == canonical_identity:
+        return base
+    return f"{base}:{canonical_identity}"
 
 
 def _library_token(value: Any) -> str:

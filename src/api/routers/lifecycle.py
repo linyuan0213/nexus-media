@@ -134,6 +134,8 @@ def list_lifecycle_episodes(
     repo = LifecycleRepository()
     rows = repo.list_identity_rows(identity_id, user=current_user)
     payloads = [_row_payload(row) for row in rows]
+    if any(int(item.get("episode") or 0) > 0 for item in payloads):
+        payloads = [item for item in payloads if int(item.get("episode") or 0) > 0]
     existing = {(int(item.get("season") or 0), int(item.get("episode") or 0)) for item in payloads}
     first = payloads[0] if payloads else {}
     for summary in repo.list_subscription_summaries(identity_id, user=current_user):
