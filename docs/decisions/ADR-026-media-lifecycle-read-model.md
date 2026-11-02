@@ -142,6 +142,9 @@ class LifecycleStatus(str, Enum):
 | MEDIA_TYPE | varchar(16) | movie/tv/anime |
 | SEASON | int | 电影为 0 |
 | EPISODE | int | 电影为 0 |
+| TITLE | varchar(255) | 展示标题（冗余） |
+| YEAR | varchar(8) | 年份 |
+| POSTER | varchar(1024) | 海报 URL |
 | STAGE | varchar(32) | `LifecycleStage` |
 | STATUS | varchar(16) | `LifecycleStatus` |
 | RUN_ID | varchar(64) | 本次获取运行 |
@@ -188,6 +191,7 @@ UNIQUE(IDENTITY_ID, SEASON, EPISODE)
 | STATUS | varchar(16) | 统一状态 |
 | MESSAGE | varchar(512) | 展示信息 |
 | PAYLOAD | json/text | 队列、任务 ID、路径、错误摘要 |
+| USER_ID | bigint nullable | 归属用户，权限过滤 |
 | OCCURRED_AT | datetime | 事件发生时间 |
 | CREATED_AT | datetime | 入库时间 |
 

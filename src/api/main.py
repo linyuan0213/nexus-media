@@ -26,6 +26,7 @@ from api.routers import (
     image,
     kb,
     library_rename,
+    lifecycle,
     media,
     message_webhook,
     plugin_framework,
@@ -237,6 +238,7 @@ app.include_router(rss_automation.router, prefix="/api/rss-automation", tags=["r
 app.include_router(custom_rss.router, prefix="/api/site", tags=["custom-rss"])
 app.include_router(words.router, prefix="/api/words", tags=["words"])
 app.include_router(media.router, prefix="/api/media", tags=["media"])
+app.include_router(lifecycle.router, prefix="/api/media/lifecycle", tags=["media-lifecycle"])
 app.include_router(library_rename.router, prefix="/api/media", tags=["media-library-rename"])
 app.include_router(rbac.router, prefix="/api/rbac", tags=["rbac"])
 app.include_router(browser_fingerprint.router, prefix="/api", tags=["browser-fingerprint"])

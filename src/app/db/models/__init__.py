@@ -72,6 +72,9 @@ from app.db.models.library_rename import (
     LIBRARYRENAMEJOB,
 )
 
+# 媒体生命周期读模型
+from app.db.models.lifecycle import MediaLifecycle, MediaLifecycleEvent
+
 # 媒体身份与元数据快照模型
 from app.db.models.media_identity import (
     MEDIA_EXTERNAL_REF,
