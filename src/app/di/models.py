@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
     from app.events.bus import EventBus
-    from app.infrastructure.queue.base import MessageQueue
+    from app.infrastructure.message_queue.base import MessageQueue
     from app.infrastructure.thread import ThreadExecutor
     from app.media.identity.builder import IdentityIndexBuilder
     from app.media.identity.graph import EditionGraph
@@ -134,6 +134,8 @@ class ServiceObjects:
     channel_binding_service: Any = None
     metadata_service: Any = None
     discovery_service: Any = None
+    scrape_queue_service: Any = None
+    transfer_queue_service: Any = None
 
 
 @dataclass(frozen=True)

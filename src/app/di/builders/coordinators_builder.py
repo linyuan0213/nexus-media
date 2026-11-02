@@ -128,6 +128,8 @@ def build_coordinators(
         conversation_store=agent_rag.conversation_store,
         plugin_market_service=services.plugin_market_service,
         message=message,
+        scrape_queue_service=services.scrape_queue_service,
+        transfer_queue_service=services.transfer_queue_service,
     )
 
     # RAG 知识库自动更新：媒体转移完成后节流重建 media_library 命名空间

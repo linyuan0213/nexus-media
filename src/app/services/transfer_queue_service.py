@@ -1,0 +1,106 @@
+"""转移任务队列 — download.completed 事件的持久化转移入口."""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import log
+from app.domain.entities.transfer_task import SourceType, TransferTask
+from app.infrastructure.task_queue import Task, TaskQueue, TaskWorker, create_task_queue
+
+
+class TransferQueueService:
+    """将下载完成转移放入持久队列，按固定并发执行."""
+
+    def __init__(self, pipeline: Any, client_factory: Any, *, max_workers: int = 2, queue_name: str = "transfer"):
+        self._pipeline = pipeline
+        self._client_factory = client_factory
+        self._max_workers = max(1, int(max_workers))
+        self._queue_name = queue_name
+        self._queue: TaskQueue | None = None
+        self._worker: TaskWorker | None = None
+        self._failed = False
+
+    def start(self) -> None:
+        if self._queue is not None or self._failed:
+            return
+        try:
+            self._queue = create_task_queue(self._queue_name)
+            self._worker = TaskWorker(
+                self._queue,
+                {"transfer.task": self._handle_task},
+                consumer=f"transfer-{os.getpid()}",
+                concurrency=self._max_workers,
+                poll_block_ms=1000,
+            )
+            self._worker.start()
+            log.info(f"[TransferQueue]转移队列已启动 queue={self._queue_name} durable={self._queue.durable}")
+        except Exception as exc:  # noqa: BLE001
+            self._failed = True
+            log.warn(f"[TransferQueue]转移队列不可用，事件将回退直连: {exc}")
+
+    def stop(self) -> None:
+        if self._worker is not None:
+            self._worker.stop()
+            self._worker = None
+        if self._queue is not None:
+            self._queue.close()
+            self._queue = None
+
+    def submit(self, payload: dict[str, Any]) -> bool:
+        self.start()
+        if self._queue is None:
+            return False
+        dedup = str(payload.get("dedup_key") or f"{payload.get('downloader_id')}:{payload.get('task_id')}")
+        try:
+            self._queue.enqueue("transfer.task", payload, dedup_key=dedup)
+            return True
+        except Exception as exc:  # noqa: BLE001
+            log.warn(f"[TransferQueue]入队失败，回退直连: {exc}")
+            return False
+
+    def _handle_task(self, task: Task) -> dict[str, Any]:
+        payload = task.payload
+        downloader_id = str(payload.get("downloader_id") or "")
+        task_id = str(payload.get("task_id") or "")
+        source_type_value = str(payload.get("source_type") or SourceType.DOWNLOADER.value)
+        source_type = SourceType.DIRECTORY if source_type_value == SourceType.DIRECTORY.value else SourceType.DOWNLOADER
+        client = self._client_factory.get_client(downloader_id) if downloader_id else None
+        tags = payload.get("tags")
+        post_process = None
+        if source_type == SourceType.DOWNLOADER:
+
+            def _post_process(_task: TransferTask, success: bool, msg: str) -> None:
+                if not success:
+                    log.warn(f"[TransferQueue]任务 {task_id} 转移失败: {msg}")
+                    if client:
+                        client.set_torrents_status(ids=task_id, tags=tags)
+                    return
+                if payload.get("operation") == "move":
+                    log.info(f"[TransferQueue]移动模式删除种子: {task_id}")
+                    if client:
+                        client.delete_torrents(delete_file=True, ids=task_id)
+                elif client:
+                    client.set_torrents_status(ids=task_id, tags=tags)
+
+            post_process = _post_process
+
+        transfer_task = TransferTask(
+            source_type=source_type,
+            source_id=str(payload.get("source_id") or payload.get("name") or ""),
+            file_paths=list(payload.get("file_paths") or [payload.get("path") or ""]),
+            operation=str(payload.get("operation") or ""),
+            target_dir=payload.get("target_dir"),
+            unknown_dir=payload.get("unknown_dir"),
+            dst_backend_id=str(payload.get("dst_backend_id") or "local"),
+            provider_data=payload.get("provider_data"),
+            media_type=payload.get("media_type"),
+            season=payload.get("season"),
+            fallback_episode=payload.get("fallback_episode"),
+            post_process=post_process,
+        )
+        success, message = self._pipeline.process(transfer_task)
+        if not success:
+            raise RuntimeError(message or "转移失败")
+        return {"success": True, "message": message}

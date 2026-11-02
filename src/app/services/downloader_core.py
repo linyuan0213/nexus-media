@@ -52,6 +52,7 @@ class DownloaderCore:
         download_core: DownloadCore,
         download_history_repo=None,
         download_monitor: "DownloadMonitor | None" = None,
+        transfer_queue_service=None,
     ):
         self._client_factory = client_factory
         self._pipeline = transfer_pipeline
@@ -59,6 +60,7 @@ class DownloaderCore:
         self._download_core = download_core
         self._download_history_repo = download_history_repo
         self._download_monitor = download_monitor
+        self._transfer_queue_service = transfer_queue_service
 
     # ---------- 生命周期（由外部 SystemLifecycleService 控制） ----------
 
@@ -70,12 +72,17 @@ class DownloaderCore:
             log.error(f"[Downloader]刷新下载器缓存失败: {e}")
 
     def start_service(self):
-        """启动转移任务调度"""
+        """启动转移任务调度和下载队列"""
         self._transfer_coordinator.start_service(self.transfer)
+        self._download_core.start_download_queue()
 
     def stop_service(self):
-        """停止转移任务调度"""
+        """停止转移任务调度和下载队列"""
         self._transfer_coordinator.stop_service()
+        self._download_core.stop_download_queue()
+
+    def start_download_queue(self) -> None:
+        self._download_core.start_download_queue()
 
     # ---------- 属性代理 ----------
 
@@ -194,6 +201,23 @@ class DownloaderCore:
                         else:
                             client.set_torrents_status(ids=tid, tags=tags)
 
+                    if self._transfer_queue_service is not None:
+                        queued = self._transfer_queue_service.submit(
+                            {
+                                "downloader_id": str(did),
+                                "task_id": str(task_id),
+                                "path": task_path,
+                                "name": name or "",
+                                "tags": task.get("tags"),
+                                "operation": operation,
+                                "provider_data": None,
+                                "media_type": None,
+                                "season": None,
+                                "fallback_episode": None,
+                            }
+                        )
+                        if queued:
+                            continue
                     pipeline_task = TransferTask(
                         source_type=SourceType.DOWNLOADER,
                         source_id=name or "",

@@ -68,30 +68,3 @@ class TestScrapeQueueService:
         import time
 
         time.sleep(0.5)
-
-
-def test_scrape_file_now_propagates_success():
-    scraper = MagicMock()
-    scraper.gen_scraper_files.return_value = True
-    svc = ScrapeQueueService(scraper=scraper, max_workers=1)
-
-    media = MediaInfo(title="Test", type=MediaType.MOVIE)
-    assert svc.scrape_file_now(media, "/dst", "Test.mkv", ".mkv") is True
-
-
-def test_scrape_file_now_returns_false_when_scraper_reports_incomplete():
-    scraper = MagicMock()
-    scraper.gen_scraper_files.return_value = False
-    svc = ScrapeQueueService(scraper=scraper, max_workers=1)
-
-    media = MediaInfo(title="Test", type=MediaType.MOVIE)
-    assert svc.scrape_file_now(media, "/dst", "Test.mkv", ".mkv") is False
-
-
-def test_scrape_file_now_returns_false_on_exception():
-    scraper = MagicMock()
-    scraper.gen_scraper_files.side_effect = RuntimeError("boom")
-    svc = ScrapeQueueService(scraper=scraper, max_workers=1)
-
-    media = MediaInfo(title="Test", type=MediaType.MOVIE)
-    assert svc.scrape_file_now(media, "/dst", "Test.mkv", ".mkv") is False

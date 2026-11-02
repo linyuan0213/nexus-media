@@ -20,6 +20,7 @@ import log
 from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
+from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
@@ -36,11 +37,12 @@ from app.events.payloads import (
     TransferFailPayload,
 )
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.infrastructure.message_queue.memory_queue import MemoryMessageQueue
 from app.infrastructure.progress import ProgressTracker
-from app.infrastructure.queue.memory_queue import MemoryMessageQueue
 from app.infrastructure.thread import ThreadExecutor
 from app.media import MediaService
 from app.media import meta_info as meta_info_fn
+from app.media.category_matcher import get_category
 from app.media.metadata.parsing import ParserChain
 from app.media.metadata.refs import parse_media_ref
 from app.media.metadata.registry import registry as metadata_registry
@@ -55,6 +57,7 @@ from app.services.transfer.library_rename_backend import target_dir_lock_key
 from app.services.transfer.path_resolver import TransferPathResolver
 from app.services.transfer_engine import TransferEngine
 from app.utils import ExceptionUtils, PathUtils, StringUtils
+from app.utils.json_utils import JsonUtils
 
 # 多后端镜像上传：后端间写入间隔（秒），避免连续上传压垮后端
 MIRROR_BACKEND_DELAY = 1.0
@@ -707,6 +710,9 @@ class FileTransferService:
             value = getattr(value, "value", value)
             if value:
                 setattr(media_info, key, value)
+        category = self._category_from_snapshot(snapshot, media_info)
+        if category:
+            media_info.category = category
         images = getattr(snapshot, "images", {}) or {}
         poster = images.get("poster") or []
         extra = getattr(snapshot, "extra", {}) or {}
@@ -794,6 +800,43 @@ class FileTransferService:
             media_info.anchor_provider = str(source)
         elif getattr(snapshot, "primary_provider", ""):
             media_info.anchor_provider = str(snapshot.primary_provider)
+
+    def _category_from_snapshot(self, snapshot, media_info) -> str:
+        """用统一分类规则，从任意 provider 的快照计算媒体分类."""
+        try:
+            media_type = getattr(media_info, "type", None) or getattr(snapshot, "media_type", None)
+            media_type_value = getattr(media_type, "value", media_type)
+            key = str(media_type_value or "movie").lower()
+            if key not in {"movie", "tv", "anime"}:
+                key = "movie"
+            now = time.time()
+            cached = getattr(self, "_category_rule_cache", None)
+            if cached is not None and now - cached[0] < 60:
+                rule_map = cached[1]
+            else:
+                entities = CategoryConfigRepositoryAdapter().get_all()
+                rule_map = {"movie": {}, "tv": {}, "anime": {}}
+                for entity in entities:
+                    mt = str(getattr(entity, "media_type", "") or "").lower()
+                    if mt in rule_map and bool(getattr(entity, "enabled", True)):
+                        rule_map[mt][entity.name] = {} if getattr(entity, "is_default", False) else entity.rules
+                self._category_rule_cache = (now, rule_map)
+            info = {
+                "genres": list(getattr(snapshot, "genres", []) or []),
+                "countries": list(getattr(snapshot, "countries", []) or []),
+                "spoken_languages": list(getattr(snapshot, "spoken_languages", []) or []),
+                "tags": list(getattr(snapshot, "tags", []) or []),
+                "content_profile": getattr(snapshot, "content_profile", "") or "",
+                "providers": [str(getattr(snapshot, "primary_provider", "") or "")]
+                + [str(getattr(ref, "provider", "") or "") for ref in getattr(snapshot, "refs", []) or []],
+            }
+            return str(
+                get_category(rule_map.get(key), info, str(media_type_value or key))
+                or ""
+            )
+        except Exception as exc:  # noqa: BLE001 - 分类失败不阻断转移
+            log.debug(f"[Rmt]快照分类匹配失败: {exc}")
+            return ""
 
     def _discover_files(self, in_path, files, episode, min_filesize, src_backend=None):
         """发现待处理文件列表，返回 (bluray_disk_dir, file_list). 支持远程源（src_backend 非空）。"""
@@ -1396,37 +1439,30 @@ class FileTransferService:
                         message_medias[message_key].total_episodes += media.total_episodes
                         message_medias[message_key].size += media.size
 
-                # 刮削必须在转移完成事件前落盘：Emby/Jellyfin 收到事件后立即扫描，
-                # 异步队列会造成“先入库、后出元数据”的空窗。
-                scrape_ok = self._scrape_queue_service.scrape_file_now(
+                # 文件已到达最终路径；刮削任务完成后才发布 transfer_finished，
+                # 避免媒体服务器先扫描到无 NFO/图片的目录。
+                finalize = {
+                    "in_path": in_path,
+                    "file_item": file_item,
+                    "out_path": out_path or "",
+                    "dist_path": dist_path,
+                    "media": JsonUtils.model_to_jsonable(media),
+                    "media_info": media.to_dict(),
+                    "in_from": getattr(in_from, "value", in_from),
+                    "exist_filenum": exist_filenum,
+                    "category_flag": self._path_resolver.movie_category_flag or False,
+                    "bluray": bool(bluray_disk_dir),
+                    "file_ext": file_ext,
+                    "ret_file_path": ret_file_path or "",
+                }
+                self._scrape_queue_service.submit_file_scrape(
                     media=media,
                     dir_path=ret_dir_path,
                     file_name=self._scrape_file_base_name(ret_file_path, ret_dir_path),
                     file_ext=file_ext,
                     dst_backend=dst_backend,
+                    finalize=finalize,
                 )
-                if not scrape_ok:
-                    # 同步刮削失败时投递一次后台重试，并把失败显式暴露在日志中；
-                    # 不能静默当作成功，否则媒体库会长期保持空元数据。
-                    log.error(f"[Rmt]刮削未完成，已提交后台重试：{ret_file_path}")
-                    self._scrape_queue_service.submit_file_scrape(
-                        media=media,
-                        dir_path=ret_dir_path,
-                        file_name=self._scrape_file_base_name(ret_file_path, ret_dir_path),
-                        file_ext=file_ext,
-                        dst_backend=dst_backend,
-                    )
-                elif media.type == MediaType.MOVIE:
-                    # 刮削成功后才提示“已入库”，避免刮削失败仍显示成功。
-                    self.message.send_transfer_movie_message(
-                        in_from, media, exist_filenum, self._path_resolver.movie_category_flag or False
-                    )
-
-                self._publish_subtitle_download(media, ret_file_path, file_ext, bool(bluray_disk_dir))
-                self._publish_transfer_finished(in_path, file_item, out_path, dist_path, media)
-                # TV/动漫单集转移完成事件（驱动订阅进度更新）
-                if media.type in (MediaType.TV, MediaType.ANIME) and media.get_episode_list():
-                    self._publish_episode_transferred(media)
 
                 self.progress.update(
                     ptype=ProgressKey.FileTransfer,
@@ -1666,9 +1702,15 @@ class FileTransferService:
         self._duplicate_scrape_at[key] = now
         log.info(f"[Rmt]目标已存在但元数据不完整，补刮：{key}")
         try:
-            self._scrape_queue_service.scrape_file_now(media, dir_path, file_name, file_ext, dst_backend, force=force)
+            self._scrape_queue_service.submit_file_scrape(
+                media=media,
+                dir_path=dir_path,
+                file_name=file_name,
+                file_ext=file_ext,
+                dst_backend=dst_backend,
+            )
         except Exception as e:  # noqa: BLE001 - 补刮失败不改变转移结果
-            log.warn(f"[Rmt]补刮失败 {key}: {e}")
+            log.warn(f"[Rmt]补刮提交失败 {key}: {e}")
 
     def _do_transfer_file(
         self,

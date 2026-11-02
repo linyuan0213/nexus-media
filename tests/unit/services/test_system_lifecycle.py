@@ -49,12 +49,16 @@ class TestSystemLifecycleService:
         lifecycle,
     ):
         lifecycle.start_service()
-        assert lifecycle._thread_executor.submit.call_count == 5
+        assert lifecycle._thread_executor.submit.call_count == 7
+        assert any(
+            call.args[2] == lifecycle._downloader.start_download_queue
+            for call in lifecycle._thread_executor.submit.call_args_list
+        )
         lifecycle._download_monitor.start.assert_called_once()
 
     @patch("app.services.system.lifecycle.HttpClient.close_all")
     @patch("app.services.system.lifecycle.AsyncHttpClient.close_all")
     def test_stop_service_submits_parallel_tasks(self, mock_async_close, mock_http_close, lifecycle):
         lifecycle.stop_service()
-        assert lifecycle._thread_executor.submit.call_count == 7
+        assert lifecycle._thread_executor.submit.call_count == 8
         lifecycle._scheduler.stop_service.assert_called_once()

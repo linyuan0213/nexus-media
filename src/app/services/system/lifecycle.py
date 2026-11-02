@@ -125,6 +125,8 @@ class SystemLifecycleService:
         conversation_store=None,
         plugin_market_service=None,
         message=None,
+        scrape_queue_service=None,
+        transfer_queue_service=None,
     ):
         self._scheduler = scheduler_core
         self._message = message
@@ -146,6 +148,8 @@ class SystemLifecycleService:
         self._knowledge_ingestor = knowledge_ingestor
         self._conversation_store = conversation_store
         self._plugin_market_service = plugin_market_service
+        self._scrape_queue_service = scrape_queue_service
+        self._transfer_queue_service = transfer_queue_service
 
     @property
     def subscription_monitor(self) -> SubscriptionMonitor | None:
@@ -182,6 +186,10 @@ class SystemLifecycleService:
         # 2. 并行启动各业务服务（此时调度器已运行，init_config 里的 stop/start_job 可正常执行）
         startup_tasks = [
             ("file_index", self._file_index.start) if self._file_index else None,
+            ("scrape_queue", self._scrape_queue_service.start) if self._scrape_queue_service else None,
+            ("transfer_queue", self._transfer_queue_service.start) if self._transfer_queue_service else None,
+            ("download_queue", self._downloader.start_download_queue) if self._downloader else None,
+            ("sync_queue", self._sync.start_queue) if self._sync else None,
             ("sync", self._sync.init),
             ("brush", self._brush.start_service) if self._brush else None,
             ("rss_checker", self._rss_checker._refresh) if self._rss_checker else None,
@@ -220,11 +228,14 @@ class SystemLifecycleService:
         self._scheduler.stop_service()
         stop_tasks = [
             ("download_monitor", self._download_monitor.stop) if self._download_monitor else None,
+            ("sync_queue", self._sync.stop_queue) if self._sync else None,
             ("sync", self._sync.stop) if self._sync else None,
             ("brush", self._brush.stop_service) if self._brush else None,
             ("rss_checker", self._rss_checker.stop_service) if self._rss_checker else None,
             ("torrent_remover", self._torrent_remover.stop_service) if self._torrent_remover else None,
             ("downloader", self._downloader.stop_service) if self._downloader else None,
+            ("scrape_queue", self._scrape_queue_service.stop) if self._scrape_queue_service else None,
+            ("transfer_queue", self._transfer_queue_service.stop) if self._transfer_queue_service else None,
             ("file_index", self._file_index.stop) if self._file_index else None,
         ]
         futures = []
