@@ -1408,7 +1408,8 @@ class FileTransferService:
                     year=media.year or "",
                     season_episode=season_episode,
                     poster=media.get_poster_image() or "",
-                    identity_id=getattr(snapshot, "identity_id", None),
+                    identity_id=getattr(snapshot, "identity_id", None)
+                    or getattr(media, "identity_id", None),
                     anchor_provider=getattr(media, "anchor_provider", None),
                     anchor_external_id=getattr(media, "anchor_external_id", None),
                     content_profile=getattr(media, "content_profile", None),
