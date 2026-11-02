@@ -7,9 +7,12 @@ from datetime import datetime
 from typing import Any
 
 import log
+from app.db.models.download import DOWNLOADHISTORY
 from app.db.models.lifecycle import MediaLifecycleEvent
+from app.db.models.transfer import TRANSFERHISTORY
+from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
-from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_task_status
+from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_download_state, map_task_status
 
 
 class LifecycleProjector:
@@ -110,6 +113,67 @@ class LifecycleProjector:
             log.warn(f"[Lifecycle]写入生命周期事件失败: {exc}")
             return False
 
+    def record_media(
+        self,
+        media: Any,
+        *,
+        stage: LifecycleStage | str,
+        status: LifecycleStatus | str,
+        event_type: str,
+        run_id: str | None = None,
+        trace_id: str | None = None,
+        progress: int | None = None,
+        retry_count: int = 0,
+        next_retry_at: datetime | None = None,
+        error: str | None = None,
+        message: str | None = None,
+        payload: dict[str, Any] | None = None,
+        occurred_at: datetime | None = None,
+        event_key: str | None = None,
+    ) -> bool:
+        """从 MediaInfo 投影事件；没有稳定身份时跳过，不影响业务."""
+        identity_id = str(getattr(media, "identity_id", "") or "")
+        if not identity_id:
+            provider = str(getattr(media, "anchor_provider", "") or "")
+            external_id = str(getattr(media, "anchor_external_id", "") or "")
+            if provider and external_id:
+                identity_id = f"{provider}:{external_id}"
+        if not identity_id:
+            return False
+        media_type = getattr(getattr(media, "type", None), "value", getattr(media, "type", "movie")) or "movie"
+        season = 0
+        episode = 0
+        if hasattr(media, "get_season_seq"):
+            try:
+                season = int(media.get_season_seq() or 0)
+            except (TypeError, ValueError):
+                season = 0
+        return self.record(
+            identity_id=identity_id,
+            stage=stage,
+            status=status,
+            event_type=event_type,
+            media_type=str(media_type),
+            season=season,
+            episode=episode,
+            run_id=run_id,
+            trace_id=trace_id,
+            title=str(getattr(media, "title", "") or "") or None,
+            year=str(getattr(media, "year", "") or "") or None,
+            poster=str(getattr(media, "poster_path", "") or "") or None,
+            progress=progress,
+            source_provider=str(getattr(media, "anchor_provider", "") or "") or None,
+            content_profile=str(getattr(media, "content_profile", "") or "") or None,
+            user_id=getattr(media, "user_id", None),
+            retry_count=retry_count,
+            next_retry_at=next_retry_at,
+            error=error,
+            message=message,
+            payload=payload,
+            occurred_at=occurred_at,
+            event_key=event_key,
+        )
+
     def record_task(
         self,
         task: Any,
@@ -153,3 +217,101 @@ class LifecycleProjector:
     ) -> str:
         raw = f"{identity_id}|{season}|{episode}|{stage}|{event_type}|{trace_id or ''}|{occurred.isoformat()}"
         return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+
+class LifecycleReconciler:
+    """从现有历史表回填生命周期；用于事件缺失/重启恢复/首次上线."""
+
+    def __init__(self, projector: LifecycleProjector | None = None):
+        self._projector = projector or LifecycleProjector()
+
+    def reconcile_recent(self, limit: int = 500) -> dict[str, int]:
+        count = 0
+        with BaseRepository().readonly() as db:
+            downloads = (
+                db.query(DOWNLOADHISTORY)
+                .filter(DOWNLOADHISTORY.IDENTITY_ID.isnot(None))
+                .order_by(DOWNLOADHISTORY.ID.desc())
+                .limit(max(1, int(limit)))
+                .all()
+            )
+            transfers = (
+                db.query(TRANSFERHISTORY)
+                .filter(TRANSFERHISTORY.IDENTITY_ID.isnot(None))
+                .order_by(TRANSFERHISTORY.ID.desc())
+                .limit(max(1, int(limit)))
+                .all()
+            )
+            for row in reversed(downloads):
+                stage, status = map_download_state(row.STATE)
+                season, episode = _parse_season_episode(row.SE)
+                occurred = _parse_history_time(row.DATE)
+                if self._projector.record(
+                    identity_id=str(row.IDENTITY_ID),
+                    stage=stage,
+                    status=status,
+                    event_type=f"reconcile.download.{str(row.STATE).lower()}",
+                    media_type=_row_media_type(row.TYPE),
+                    season=season,
+                    episode=episode,
+                    title=row.TITLE,
+                    year=row.YEAR,
+                    poster=row.POSTER,
+                    source_provider=row.ANCHOR_PROVIDER,
+                    content_profile=row.CONTENT_PROFILE,
+                    user_id=row.USER_ID,
+                    message=f"从下载历史回填: {row.STATE}",
+                    payload={"source": "DOWNLOAD_HISTORY", "id": row.ID},
+                    occurred_at=occurred,
+                    event_key=f"download-history:{row.ID}:{row.STATE}",
+                ):
+                    count += 1
+            for row in reversed(transfers):
+                season, episode = _parse_season_episode(row.SEASON_EPISODE)
+                occurred = _parse_history_time(row.DATE)
+                failed = str(row.DEST_STATE or "") in {"missing", "deleted"}
+                if self._projector.record(
+                    identity_id=str(row.IDENTITY_ID),
+                    stage=LifecycleStage.TRANSFERRED,
+                    status=LifecycleStatus.FAILED if failed else LifecycleStatus.SUCCEEDED,
+                    event_type="reconcile.transfer.failed" if failed else "reconcile.transfer.completed",
+                    media_type=_row_media_type(row.TYPE),
+                    season=season,
+                    episode=episode,
+                    title=row.TITLE,
+                    year=row.YEAR,
+                    poster=row.POSTER,
+                    source_provider=row.ANCHOR_PROVIDER,
+                    content_profile=row.CONTENT_PROFILE,
+                    message="从转移历史回填",
+                    payload={"source": "TRANSFER_HISTORY", "id": row.ID},
+                    occurred_at=occurred,
+                    event_key=f"transfer-history:{row.ID}",
+                ):
+                    count += 1
+        return {"imported": count}
+
+
+def _parse_season_episode(value: Any) -> tuple[int, int]:
+    text = str(value or "")
+    if text.startswith("S") and "E" in text:
+        try:
+            return int(text[1:].split("E", 1)[0]), int(text.split("E", 1)[1])
+        except (TypeError, ValueError):
+            return 0, 0
+    return 0, 0
+
+
+def _parse_history_time(value: Any) -> datetime | None:
+    text = str(value or "")
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _row_media_type(value: Any) -> str:
+    key = str(value or "").lower()
+    return {"mov": "movie", "movie": "movie", "tv": "tv", "ani": "anime", "anime": "anime"}.get(key, "movie")

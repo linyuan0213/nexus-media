@@ -14,9 +14,11 @@ from typing import Any
 
 import log
 from app.core.settings import settings
+from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.mediatypes import MediaType
 from app.infrastructure.task_queue import Task, TaskQueue, TaskWorker, create_task_queue
 from app.media.models import MediaInfo
+from app.services.lifecycle_service import LifecycleProjector
 from app.utils.json_utils import JsonUtils
 
 _MAX_QUEUED_TORRENT_BYTES = 20 * 1024 * 1024
@@ -32,10 +34,17 @@ class DownloadQueueService:
     - 历史和任务 ID 在入队时先落 queued 占位，添加成功后更新为真实任务 ID
     """
 
-    def __init__(self, pipeline: Any, client_factory: Any, history_repo: Any):
+    def __init__(
+        self,
+        pipeline: Any,
+        client_factory: Any,
+        history_repo: Any,
+        lifecycle: LifecycleProjector | None = None,
+    ):
         self._pipeline = pipeline
         self._client_factory = client_factory
         self._history_repo = history_repo
+        self._lifecycle = lifecycle
         self._stacks: dict[str, tuple[TaskQueue, TaskWorker, int]] = {}
         self._locks: dict[str, threading.Lock] = {}
         self._guard = threading.Lock()
@@ -115,6 +124,8 @@ class DownloadQueueService:
         payload = {
             "media_info": JsonUtils.model_to_jsonable(media_info),
             "history_id": int(history_id),
+            "run_id": task_id,
+            "trace_id": task_id,
             "downloader_id": str(downloader_id),
             "max_active": max_active,
             "is_paused": is_paused,
@@ -147,6 +158,14 @@ class DownloadQueueService:
         if task.id != task_id:
             # 幂等命中已有任务，删除本次占位历史
             self._history_repo.delete_download_history_by_id(history_id)
+        else:
+            self._record_media(
+                media_info,
+                LifecycleStage.DOWNLOAD_QUEUED,
+                LifecycleStatus.QUEUED,
+                "download.queued",
+                task,
+            )
         return task
 
     def _ensure_stack(self, downloader_id: str, max_active: int) -> tuple[TaskQueue, TaskWorker, int]:
@@ -186,6 +205,13 @@ class DownloadQueueService:
                 and existing.DOWNLOAD_ID != task.id
             ):
                 return {"download_id": existing.DOWNLOAD_ID}
+            self._record_media(
+                media_info,
+                LifecycleStage.DOWNLOADING,
+                LifecycleStatus.RUNNING,
+                "download.started",
+                task,
+            )
             self._wait_for_slot(downloader_id, max_active)
             with self._downloader_lock(downloader_id):
                 self._wait_for_slot(downloader_id, max_active)
@@ -210,7 +236,23 @@ class DownloadQueueService:
             if not download_id:
                 if task.attempts + 1 >= task.max_attempts:
                     self._history_repo.update_download_history_task(history_id, "", "", state="error")
+                self._record_media(
+                    media_info,
+                    LifecycleStage.DOWNLOADING,
+                    LifecycleStatus.FAILED,
+                    "download.failed",
+                    task,
+                    error=error or "下载器添加任务失败",
+                )
                 raise RuntimeError(error or "下载器添加任务失败")
+            self._record_media(
+                media_info,
+                LifecycleStage.DOWNLOADED,
+                LifecycleStatus.SUCCEEDED,
+                "download.completed",
+                task,
+                progress=100,
+            )
             return {"download_id": download_id}
         finally:
             if torrent_path:
@@ -218,6 +260,40 @@ class DownloadQueueService:
                     os.remove(torrent_path)
                 except OSError:
                     pass
+
+    def _record_media(
+        self,
+        media_info: MediaInfo,
+        stage: LifecycleStage,
+        status: LifecycleStatus,
+        event_type: str,
+        task: Task,
+        *,
+        progress: int | None = None,
+        error: str | None = None,
+    ) -> None:
+        if self._lifecycle is None:
+            return
+        try:
+            self._lifecycle.record_media(
+                media_info,
+                stage=stage,
+                status=status,
+                event_type=event_type,
+                run_id=task.payload.get("run_id") or task.id,
+                trace_id=task.payload.get("trace_id") or task.id,
+                progress=progress,
+                retry_count=task.attempts,
+                error=error,
+                payload={
+                    "queue": task.queue_name,
+                    "task_id": task.id,
+                    "downloader_id": task.payload.get("downloader_id"),
+                },
+                event_key=f"download:{task.id}:{event_type}:{task.attempts}",
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warn(f"[Lifecycle]记录下载生命周期失败: {exc}")
 
     def _wait_for_slot(self, downloader_id: str, max_active: int) -> None:
         client = self._client_factory.get_client(str(downloader_id))

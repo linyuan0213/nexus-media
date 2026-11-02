@@ -8,15 +8,26 @@ from typing import Any
 import log
 from app.core.settings import settings
 from app.domain.entities.transfer_task import SourceType, TransferTask
+from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.infrastructure.task_queue import Task, TaskQueue, TaskWorker, create_task_queue
+from app.services.lifecycle_service import LifecycleProjector
 
 
 class TransferQueueService:
     """将下载完成转移放入持久队列，按固定并发执行."""
 
-    def __init__(self, pipeline: Any, client_factory: Any, *, max_workers: int = 2, queue_name: str = "transfer"):
+    def __init__(
+        self,
+        pipeline: Any,
+        client_factory: Any,
+        *,
+        max_workers: int = 2,
+        queue_name: str = "transfer",
+        lifecycle: LifecycleProjector | None = None,
+    ):
         self._pipeline = pipeline
         self._client_factory = client_factory
+        self._lifecycle = lifecycle
         self._max_workers = max(1, int(max_workers))
         self._queue_name = queue_name
         self._queue: TaskQueue | None = None
@@ -67,7 +78,8 @@ class TransferQueueService:
             return False
         dedup = str(payload.get("dedup_key") or f"{payload.get('downloader_id')}:{payload.get('task_id')}")
         try:
-            self._queue.enqueue("transfer.task", payload, dedup_key=dedup)
+            task = self._queue.enqueue("transfer.task", payload, dedup_key=dedup)
+            self._record(payload, LifecycleStage.TRANSFER_QUEUED, LifecycleStatus.QUEUED, "transfer.queued", task)
             return True
         except Exception as exc:  # noqa: BLE001
             log.warn(f"[TransferQueue]入队失败，回退直连: {exc}")
@@ -113,7 +125,57 @@ class TransferQueueService:
             fallback_episode=payload.get("fallback_episode"),
             post_process=post_process,
         )
+        self._record(payload, LifecycleStage.TRANSFERRING, LifecycleStatus.RUNNING, "transfer.started", task)
         success, message = self._pipeline.process(transfer_task)
         if not success:
+            self._record(
+                payload,
+                LifecycleStage.TRANSFERRING,
+                LifecycleStatus.FAILED,
+                "transfer.failed",
+                task,
+                error=message,
+            )
             raise RuntimeError(message or "转移失败")
+        self._record(payload, LifecycleStage.TRANSFERRED, LifecycleStatus.SUCCEEDED, "transfer.completed", task)
         return {"success": True, "message": message}
+
+    def _record(
+        self,
+        payload: dict[str, Any],
+        stage: LifecycleStage,
+        status: LifecycleStatus,
+        event_type: str,
+        task: Task,
+        *,
+        error: str | None = None,
+    ) -> None:
+        if self._lifecycle is None:
+            return
+        identity_id = str(payload.get("identity_id") or "")
+        if not identity_id:
+            return
+        try:
+            self._lifecycle.record(
+                identity_id=identity_id,
+                stage=stage,
+                status=status,
+                event_type=event_type,
+                media_type=str(payload.get("media_type") or "movie"),
+                season=int(payload.get("season") or 0),
+                episode=int(payload.get("episode") or 0),
+                run_id=payload.get("run_id") or f"transfer:{payload.get('task_id')}",
+                trace_id=payload.get("trace_id") or f"identity:{identity_id}",
+                title=payload.get("title"),
+                year=payload.get("year"),
+                poster=payload.get("poster"),
+                source_provider=payload.get("source_provider"),
+                content_profile=payload.get("content_profile"),
+                user_id=payload.get("user_id"),
+                retry_count=task.attempts,
+                error=error,
+                payload={"queue": task.queue_name, "task_id": task.id, "source_task_id": payload.get("task_id")},
+                event_key=f"transfer:{task.id}:{event_type}:{task.attempts}",
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warn(f"[Lifecycle]记录转移生命周期失败: {exc}")

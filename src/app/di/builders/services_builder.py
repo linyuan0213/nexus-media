@@ -65,6 +65,7 @@ from app.services.file_index_service import FileIndexService
 from app.services.filter_service import FilterService
 from app.services.indexer_service import IndexerService
 from app.services.library_presence_service import LibraryPresenceService
+from app.services.lifecycle_service import LifecycleProjector
 from app.services.media_config_service import MediaConfigService
 from app.services.media_file_service import MediaFileService
 from app.services.media_info_service import MediaInfoService
@@ -168,11 +169,13 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         ),
     )
     shared_scraper = Scraper(media_service=media_service, metadata_service=metadata_service)
+    lifecycle_projector = LifecycleProjector()
     scrape_queue_service = ScrapeQueueService(
         scraper=shared_scraper,
         max_workers=settings.queue.scrape_workers,
         message=message,
         event_bus=event_bus,
+        lifecycle=lifecycle_projector,
     )
 
     filetransfer_service = FileTransferService(
@@ -202,12 +205,14 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         pipeline=transfer_pipeline,
         client_factory=shared_client_factory,
         max_workers=settings.queue.transfer_workers,
+        lifecycle=lifecycle_projector,
     )
     sync_queue_service = TransferQueueService(
         pipeline=transfer_pipeline,
         client_factory=shared_client_factory,
         max_workers=settings.queue.sync_workers,
         queue_name="sync",
+        lifecycle=lifecycle_projector,
     )
     register_download_completed_handler(
         event_bus=event_bus,

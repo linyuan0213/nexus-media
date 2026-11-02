@@ -7,13 +7,14 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 
-from api.deps import require_any_permission
+from api.deps import require_any_permission, require_permission
 from app.db.repositories.lifecycle_repository import (
     LifecycleRepository,
     lifecycle_event_to_dict,
     lifecycle_row_to_dict,
 )
 from app.schemas.auth import UserContext
+from app.services.lifecycle_service import LifecycleReconciler
 from app.utils.response import success
 
 router = APIRouter()
@@ -83,6 +84,14 @@ def list_lifecycle(
         user=current_user,
     )
     return success(data={"items": [_row_payload(row) for row in rows], "total": total})
+
+
+@router.post("/reconcile", summary="从历史表回填生命周期")
+def reconcile_lifecycle(
+    limit: int = Query(default=500, ge=1, le=5000),
+    _current_user: UserContext = Depends(require_permission("library:manage")),
+):
+    return success(data=LifecycleReconciler().reconcile_recent(limit=limit))
 
 
 @router.get("/{identity_id}", summary="媒体生命周期详情")

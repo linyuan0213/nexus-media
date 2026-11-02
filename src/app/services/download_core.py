@@ -46,6 +46,7 @@ from app.services.download_strategies import (
     mark_download_failed,
 )
 from app.services.filetransfer_service import FileTransferService as FileTransfer
+from app.services.lifecycle_service import LifecycleProjector
 from app.sites import SiteConf, SiteSubtitle
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
@@ -128,6 +129,7 @@ class DownloadCore:
             pipeline=self._pipeline,
             client_factory=self._client_factory,
             history_repo=self._download_repo,
+            lifecycle=LifecycleProjector(),
         )
 
     # ---------- 媒体存在性检查 ----------

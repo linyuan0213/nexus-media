@@ -8,6 +8,7 @@ from typing import Any
 import log
 from app.core.settings import settings
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
+from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.bus import EventBus
@@ -17,6 +18,7 @@ from app.infrastructure.task_queue import QueueUnavailableError, Task, TaskQueue
 from app.infrastructure.thread import ThreadExecutor
 from app.media.models import MediaInfo
 from app.media.scraper import Scraper
+from app.services.lifecycle_service import LifecycleProjector
 from app.storage.backends.base import StorageBackend, StorageType
 from app.storage.config_models import LocalStorageConfig
 from app.storage.factory import StorageBackendFactory
@@ -40,11 +42,13 @@ class ScrapeQueueService:
         message: Any = None,
         event_bus: EventBus | None = None,
         queue_name: str = "scrape",
+        lifecycle: LifecycleProjector | None = None,
     ):
         self._scraper = scraper
         self._max_workers = max(1, int(max_workers))
         self._message = message
         self._event_bus = event_bus
+        self._lifecycle = lifecycle
         self._queue_name = queue_name
         self._queues: dict[str, TaskQueue] = {}
         self._workers: list[TaskWorker] = []
@@ -118,7 +122,9 @@ class ScrapeQueueService:
             "finalize": finalize or {},
         }
         dedup = self._file_dedup_key(dir_path, file_name, file_ext, finalize)
-        if self._enqueue("file", "scrape.file", payload, dedup):
+        task = self._enqueue("file", "scrape.file", payload, dedup)
+        if task is not None:
+            self._record_media(media, LifecycleStage.SCRAPE_QUEUED, LifecycleStatus.QUEUED, "scrape.queued", task)
             return
         # 队列不可用时仍异步执行，避免阻塞转移
         self._executor.submit(self._run_file_payload, payload, None)
@@ -130,21 +136,20 @@ class ScrapeQueueService:
             "mode": mode,
         }
         dedup = self._folder_dedup_key(path, mode)
-        if self._enqueue("folder", "scrape.folder", payload, dedup):
+        if self._enqueue("folder", "scrape.folder", payload, dedup) is not None:
             return
         self._executor.submit(self._run_folder_payload, payload, None)
 
-    def _enqueue(self, suffix: str, task_type: str, payload: dict[str, Any], dedup_key: str) -> bool:
+    def _enqueue(self, suffix: str, task_type: str, payload: dict[str, Any], dedup_key: str) -> Task | None:
         self.start()
         queue = self._queues.get(suffix)
         if queue is None:
-            return False
+            return None
         try:
-            queue.enqueue(task_type, payload, dedup_key=dedup_key)
-            return True
+            return queue.enqueue(task_type, payload, dedup_key=dedup_key)
         except Exception as exc:  # noqa: BLE001
             log.warn(f"[ScrapeQueue]入队失败，回退线程池: {exc}")
-            return False
+            return None
 
     def _run_file_task(self, task: Task) -> dict[str, Any]:
         return self._run_file_payload(task.payload, task)
@@ -152,6 +157,8 @@ class ScrapeQueueService:
     def _run_file_payload(self, payload: dict[str, Any], task: Task | None) -> dict[str, Any]:
         media = MediaInfo.model_validate(payload["media"])
         backend = self._resolve_backend(payload.get("backend_id"))
+        if task is not None:
+            self._record_media(media, LifecycleStage.SCRAPING, LifecycleStatus.RUNNING, "scrape.started", task)
         ok = self._scrape_file(
             media,
             str(payload.get("dir_path") or ""),
@@ -162,7 +169,20 @@ class ScrapeQueueService:
         finalize = payload.get("finalize") or {}
         if ok:
             self._finalize(media, finalize, metadata_ok=True)
+            if task is not None:
+                self._record_media(
+                    media, LifecycleStage.SCRAPED, LifecycleStatus.SUCCEEDED, "scrape.completed", task, progress=100
+                )
             return {"scraped": True}
+        if task is not None:
+            self._record_media(
+                media,
+                LifecycleStage.SCRAPING,
+                LifecycleStatus.FAILED,
+                "scrape.failed",
+                task,
+                error="刮削失败",
+            )
         if task is None or task.attempts + 1 >= task.max_attempts:
             self._finalize(media, finalize, metadata_ok=False)
         raise RuntimeError(f"刮削失败: {payload.get('dir_path')}/{payload.get('file_name')}")
@@ -257,6 +277,36 @@ class ScrapeQueueService:
             ExceptionUtils.exception_traceback(e)
             log.error(f"[ScrapeQueue]单文件刮削失败 {dir_path}/{file_name}: {e}")
             return False
+
+    def _record_media(
+        self,
+        media: MediaInfo,
+        stage: LifecycleStage,
+        status: LifecycleStatus,
+        event_type: str,
+        task: Task | None,
+        *,
+        progress: int | None = None,
+        error: str | None = None,
+    ) -> None:
+        if self._lifecycle is None:
+            return
+        try:
+            self._lifecycle.record_media(
+                media,
+                stage=stage,
+                status=status,
+                event_type=event_type,
+                run_id=(task.payload.get("run_id") if task else None) or (task.id if task else None),
+                trace_id=(task.payload.get("trace_id") if task else None) or (task.id if task else None),
+                progress=progress,
+                retry_count=task.attempts if task else 0,
+                error=error,
+                payload={"queue": task.queue_name, "task_id": task.id} if task else {},
+                event_key=f"scrape:{task.id}:{event_type}:{task.attempts}" if task else None,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warn(f"[Lifecycle]记录刮削生命周期失败: {exc}")
 
     def _resolve_backend(self, backend_id: str | None) -> StorageBackend | None:
         if not backend_id or backend_id == "local":
