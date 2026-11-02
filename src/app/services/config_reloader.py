@@ -44,12 +44,14 @@ class ConfigReloader:
         self._agent_snapshot: dict | None = None
         self._media_snapshot: dict | None = None
         self._scheduler_snapshot: dict | None = None
+        self._queue_snapshot: dict = settings.get("queue") or {}
         self._register_defaults()
 
     def _register_defaults(self) -> None:
         """注册需要重建的 provider 及工厂函数."""
         self.register("system_config", self.PRIORITY_SETTINGS)
         self.register("tmdb_client", self.PRIORITY_INFRA, factory=self._reset_tmdb_client)
+        self.register("task_queues", self.PRIORITY_INFRA + 1, factory=self._reload_task_queues)
         self.register_media_server()
         self.register_agent_rag()
         self.register_scheduler_jobs()
@@ -67,6 +69,27 @@ class ConfigReloader:
             return None
         client.reset()
         return None
+
+    def _reload_task_queues(self) -> None:
+        """队列并发/后端配置变更时按新 settings 重建 worker."""
+        current = settings.get("queue") or {}
+        if current == self._queue_snapshot:
+            return
+        scrape_queue = getattr(self._context, "scrape_queue_service", None)
+        transfer_queue = getattr(self._context, "transfer_queue_service", None)
+        sync_engine = getattr(self._context, "sync_engine", None)
+        if scrape_queue is not None:
+            scrape_queue.restart()
+        if transfer_queue is not None:
+            transfer_queue.restart()
+        if sync_engine is not None:
+            sync_engine.restart_queue()
+        self._queue_snapshot = current
+        log.info(
+            "[ConfigReloader]队列 worker 已按新配置重启 "
+            f"transfer={current.get('transfer_workers')} sync={current.get('sync_workers')} "
+            f"scrape={current.get('scrape_workers')}"
+        )
 
     def register_media_server(self) -> None:
         """媒体服务器配置变更时清除类型/实例缓存，下次访问按新配置重建（支持 emby↔jellyfin 切换）。"""

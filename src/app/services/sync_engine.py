@@ -127,6 +127,10 @@ class SyncEngine:
         if self._transfer_queue_service is not None:
             self._transfer_queue_service.stop()
 
+    def restart_queue(self) -> None:
+        if self._transfer_queue_service is not None:
+            self._transfer_queue_service.restart()
+
     def _resolve_backend(self, backend_id: str):
         if backend_id == "local":
             return LocalStorageBackend(StorageConfig(id="local", name="local", type=StorageType.LOCAL))

@@ -6,6 +6,7 @@ import os
 from typing import Any
 
 import log
+from app.core.settings import settings
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.infrastructure.task_queue import Task, TaskQueue, TaskWorker, create_task_queue
 
@@ -25,6 +26,12 @@ class TransferQueueService:
     def start(self) -> None:
         if self._queue is not None or self._failed:
             return
+        configured = (
+            settings.queue.sync_workers
+            if self._queue_name == "sync"
+            else settings.queue.transfer_workers
+        )
+        self._max_workers = max(1, int(configured))
         try:
             self._queue = create_task_queue(self._queue_name)
             self._worker = TaskWorker(
@@ -40,7 +47,13 @@ class TransferQueueService:
             self._failed = True
             log.warn(f"[TransferQueue]转移队列不可用，事件将回退直连: {exc}")
 
+    def restart(self) -> None:
+        """配置热重载：按新并发重建 worker."""
+        self.stop()
+        self.start()
+
     def stop(self) -> None:
+        self._failed = False
         if self._worker is not None:
             self._worker.stop()
             self._worker = None

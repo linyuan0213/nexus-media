@@ -6,6 +6,7 @@ import os
 from typing import Any
 
 import log
+from app.core.settings import settings
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.domain.mediatypes import MediaType
 from app.events import Event
@@ -55,6 +56,7 @@ class ScrapeQueueService:
         if self._started:
             return
         self._started = True
+        self._max_workers = max(1, int(settings.queue.scrape_workers))
         plans = (
             ("file", max(1, min(2, self._max_workers)), "scrape.file", self._run_file_task),
             ("folder", self._max_workers, "scrape.folder", self._run_folder_task),
@@ -81,14 +83,21 @@ class ScrapeQueueService:
             except Exception as exc:  # noqa: BLE001
                 log.warn(f"[ScrapeQueue]刮削队列 {suffix} 启动失败，回退线程池: {exc}")
 
-    def stop(self) -> None:
+    def restart(self) -> None:
+        """配置热重载：只重建 worker，不关闭线程池."""
+        self.stop(shutdown_executor=False)
+        self.start()
+
+    def stop(self, shutdown_executor: bool = True) -> None:
+        self._started = False
         for worker in self._workers:
             worker.stop()
         for queue in self._queues.values():
             queue.close()
         self._workers.clear()
         self._queues.clear()
-        self._executor.shutdown()
+        if shutdown_executor:
+            self._executor.shutdown()
 
     def submit_file_scrape(
         self,
