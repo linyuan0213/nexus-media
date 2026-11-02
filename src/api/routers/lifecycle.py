@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -53,6 +54,7 @@ def _row_payload(row) -> dict[str, Any]:
         "episode_count": data.get("EPISODE_COUNT", 1),
         "completed_episodes": data.get("COMPLETED_EPISODES", 0),
         "in_library_episodes": data.get("IN_LIBRARY_EPISODES", 0),
+        "missing": bool(data.get("MISSING")),
         "elapsed_seconds": max(0, elapsed),
     }
 
@@ -116,9 +118,11 @@ def get_lifecycle(
     episode: int = Query(default=0, ge=0),
     current_user: UserContext = Depends(require_any_permission("library:view", "library:manage")),
 ):
-    row = LifecycleRepository().get_current(
-        identity_id, season=season, episode=episode, user=current_user
-    )
+    repo = LifecycleRepository()
+    if season == 0 and episode == 0:
+        row = repo.get_grouped_identity(identity_id, user=current_user)
+    else:
+        row = repo.get_current(identity_id, season=season, episode=episode, user=current_user)
     return success(data=_row_payload(row) if row is not None else None)
 
 
@@ -127,8 +131,45 @@ def list_lifecycle_episodes(
     identity_id: str,
     current_user: UserContext = Depends(require_any_permission("library:view", "library:manage")),
 ):
-    rows = LifecycleRepository().list_identity_rows(identity_id, user=current_user)
-    return success(data=[_row_payload(row) for row in rows])
+    repo = LifecycleRepository()
+    rows = repo.list_identity_rows(identity_id, user=current_user)
+    payloads = [_row_payload(row) for row in rows]
+    existing = {(int(item.get("season") or 0), int(item.get("episode") or 0)) for item in payloads}
+    first = payloads[0] if payloads else {}
+    for summary in repo.list_subscription_summaries(identity_id, user=current_user):
+        match = re.search(r"\d+", str(summary.get("season") or ""))
+        season = int(match.group()) if match else int(first.get("season") or 0)
+        total_ep = int(summary.get("total_ep") or 0)
+        if total_ep <= 0:
+            continue
+        for episode in range(1, total_ep + 1):
+            if (season, episode) in existing:
+                continue
+            payloads.append(
+                _row_payload(
+                    {
+                        "IDENTITY_ID": identity_id,
+                        "MEDIA_TYPE": first.get("media_type") or "tv",
+                        "SEASON": season,
+                        "EPISODE": episode,
+                        "TITLE": first.get("title") or summary.get("name"),
+                        "YEAR": first.get("year"),
+                        "POSTER": first.get("poster"),
+                        "STAGE": "subscribed",
+                        "STATUS": "queued",
+                        "PROGRESS": 0,
+                        "SOURCE_PROVIDER": first.get("source_provider"),
+                        "CONTENT_PROFILE": first.get("content_profile"),
+                        "USER_ID": first.get("user_id"),
+                        "EPISODE_COUNT": 1,
+                        "COMPLETED_EPISODES": 0,
+                        "IN_LIBRARY_EPISODES": 0,
+                        "MISSING": True,
+                    }
+                )
+            )
+    payloads.sort(key=lambda item: (item.get("season") or 0, item.get("episode") or 0))
+    return success(data=payloads)
 
 
 @router.get("/{identity_id}/events", summary="媒体生命周期时间线")

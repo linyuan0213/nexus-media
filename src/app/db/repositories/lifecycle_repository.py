@@ -9,6 +9,7 @@ from sqlalchemy import func
 
 import log
 from app.db.models.lifecycle import MediaLifecycle, MediaLifecycleEvent
+from app.db.models.subscribe import SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.data_scope import apply_owner_scope
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, stage_rank
@@ -23,11 +24,7 @@ class LifecycleRepository(BaseRepository):
     ) -> bool:
         """幂等写入事件并更新当前快照；EVENT_KEY 已存在时返回 False."""
         with self.session() as db:
-            exists = (
-                db.query(MediaLifecycleEvent.ID)
-                .filter(MediaLifecycleEvent.EVENT_KEY == event.EVENT_KEY)
-                .first()
-            )
+            exists = db.query(MediaLifecycleEvent.ID).filter(MediaLifecycleEvent.EVENT_KEY == event.EVENT_KEY).first()
             if exists is not None:
                 return False
             db.add(event)
@@ -59,9 +56,7 @@ class LifecycleRepository(BaseRepository):
             db.commit()
             return True
 
-    def get_current(
-        self, identity_id: str, season: int = 0, episode: int = 0, *, user=None
-    ) -> MediaLifecycle | None:
+    def get_current(self, identity_id: str, season: int = 0, episode: int = 0, *, user=None) -> MediaLifecycle | None:
         with self.readonly() as db:
             query = db.query(MediaLifecycle).filter(
                 MediaLifecycle.IDENTITY_ID == identity_id,
@@ -192,19 +187,23 @@ class LifecycleRepository(BaseRepository):
                 )
                 for identity, occurred, event_type in events:
                     # 入库回填/今天重扫 NFO 的时间不代表真实入库顺序
-                    if event_type in {
-                        "reconcile.library.present",
-                        "reconcile.scrape.completed",
-                    } or occurred is None:
+                    if (
+                        event_type
+                        in {
+                            "reconcile.library.present",
+                            "reconcile.scrape.completed",
+                        }
+                        or occurred is None
+                    ):
                         continue
                     key = str(identity)
                     if key not in activity or occurred > activity[key]:
                         activity[key] = occurred
+            subscription_map = _subscription_map(db, identities)
         grouped = _group_lifecycle_rows(rows)
         for item in grouped:
-            item["ACTIVITY_AT"] = activity.get(
-                str(item.get("IDENTITY_ID")), datetime.min
-            )
+            item["ACTIVITY_AT"] = activity.get(str(item.get("IDENTITY_ID")), datetime.min)
+        _apply_subscription_state(grouped, subscription_map)
         grouped.sort(
             key=lambda item: (item.get("ACTIVITY_AT") or datetime.min, item.get("ID") or 0),
             reverse=True,
@@ -217,12 +216,46 @@ class LifecycleRepository(BaseRepository):
         start = (max(1, page) - 1) * max(1, pagenum)
         return grouped[start : start + max(1, pagenum)], total
 
+    def get_grouped_identity(self, identity_id: str, *, user=None) -> dict[str, Any] | None:
+        """按作品聚合单集记录，并叠加订阅总集数。"""
+        with self.readonly() as db:
+            query = db.query(MediaLifecycle).filter(MediaLifecycle.IDENTITY_ID == identity_id)
+            if user is not None:
+                query = apply_owner_scope(query, MediaLifecycle, user, include_shared=False)
+            rows = query.all()
+            grouped = _group_lifecycle_rows(rows)
+            if not grouped:
+                return None
+            _apply_subscription_state(grouped, _subscription_map(db, [identity_id]))
+            return grouped[0]
+
+    def list_subscription_summaries(self, identity_id: str, *, user=None) -> list[dict[str, Any]]:
+        """读取订阅侧总集数，用于补齐尚未进入生命周期记录的分集。"""
+        with self.readonly() as db:
+            query = db.query(SubscribeTvs).filter(SubscribeTvs.IDENTITY_ID == identity_id)
+            if user is not None:
+                query = apply_owner_scope(query, SubscribeTvs, user, include_shared=False)
+            rows = query.order_by(SubscribeTvs.SEASON.asc()).all()
+            return [
+                {
+                    "season": row.SEASON,
+                    "total_ep": int(row.TOTAL_EP or 0),
+                    "current_ep": int(row.CURRENT_EP or 0),
+                    "state": row.STATE,
+                    "name": row.NAME,
+                }
+                for row in rows
+            ]
+
     def stats_grouped(self, *, user=None) -> dict[str, Any]:
         with self.readonly() as db:
             query = db.query(MediaLifecycle)
             if user is not None:
                 query = apply_owner_scope(query, MediaLifecycle, user, include_shared=False)
-            grouped = _group_lifecycle_rows(query.all())
+            rows = query.all()
+            identities = list({str(row.IDENTITY_ID) for row in rows})
+            grouped = _group_lifecycle_rows(rows)
+            _apply_subscription_state(grouped, _subscription_map(db, identities))
         by_status: dict[str, int] = {}
         by_stage: dict[str, int] = {}
         for item in grouped:
@@ -233,6 +266,43 @@ class LifecycleRepository(BaseRepository):
     @staticmethod
     def event_payload(value: Any) -> str:
         return JsonUtils.dumps(JsonUtils.to_jsonable(value or {}))
+
+
+def _subscription_map(db, identities: list[str]) -> dict[str, tuple[int, str]]:
+    if not identities:
+        return {}
+    subscriptions = (
+        db.query(SubscribeTvs.IDENTITY_ID, SubscribeTvs.TOTAL_EP, SubscribeTvs.STATE)
+        .filter(SubscribeTvs.IDENTITY_ID.in_(identities))
+        .all()
+    )
+    result: dict[str, tuple[int, str]] = {}
+    for identity, total_ep, sub_state in subscriptions:
+        if not identity:
+            continue
+        key = str(identity)
+        total_value = int(total_ep or 0)
+        previous = result.get(key)
+        if previous is None or total_value > previous[0]:
+            result[key] = (total_value, str(sub_state or ""))
+    return result
+
+
+def _apply_subscription_state(grouped: list[dict[str, Any]], subscription_map: dict[str, tuple[int, str]]) -> None:
+    """用订阅总集数约束整季状态，避免只统计已产生生命周期记录的分集。"""
+    for item in grouped:
+        sub = subscription_map.get(str(item.get("IDENTITY_ID")))
+        if not sub or sub[0] <= 0:
+            continue
+        total_ep, sub_state = sub
+        item["EPISODE_COUNT"] = max(int(item.get("EPISODE_COUNT") or 0), total_ep)
+        item["COMPLETED_EPISODES"] = min(total_ep, int(item.get("COMPLETED_EPISODES") or 0))
+        item["PROGRESS"] = round(item["COMPLETED_EPISODES"] * 100 / total_ep)
+        if item["COMPLETED_EPISODES"] < total_ep and sub_state in {"D", "S", "R"}:
+            item["STAGE"] = "downloading" if item["COMPLETED_EPISODES"] else "download_queued"
+            item["STATUS"] = "running" if sub_state != "D" or item["COMPLETED_EPISODES"] else "queued"
+        elif item["COMPLETED_EPISODES"] < total_ep and sub_state == "E":
+            item["STATUS"] = "failed"
 
 
 def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:

@@ -6,6 +6,7 @@ import pytest
 
 from app.db.engine import get_engine
 from app.db.models import Base
+from app.db.models.subscribe import SubscribeTvs
 from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.lifecycle import (
     LifecycleStage,
@@ -228,3 +229,42 @@ def test_grouped_list_collapses_episodes_by_identity():
     assert rows[0]["EPISODE_COUNT"] == 2
     assert rows[0]["COMPLETED_EPISODES"] == 2
     assert rows[0]["STAGE"] == LifecycleStage.IN_LIBRARY.value
+
+
+def test_grouped_incomplete_subscription_is_not_completed():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    for episode in range(1, 5):
+        projector.record(
+            identity_id="identity-tv",
+            stage=LifecycleStage.IN_LIBRARY,
+            status=LifecycleStatus.SUCCEEDED,
+            event_type="library.present",
+            title="Demo TV",
+            media_type="tv",
+            season=1,
+            episode=episode,
+            event_key=f"library-{episode}",
+            occurred_at=now,
+        )
+    with repo.session() as db:
+        db.add(
+            SubscribeTvs(
+                NAME="Demo TV",
+                SEASON="S01",
+                TOTAL_EP=12,
+                CURRENT_EP=6,
+                STATE="D",
+                IDENTITY_ID="identity-tv",
+            )
+        )
+        db.commit()
+
+    rows, total = repo.list_grouped(pagenum=100)
+    assert total == 1
+    item = rows[0]
+    assert item["EPISODE_COUNT"] == 12
+    assert item["COMPLETED_EPISODES"] == 4
+    assert item["STAGE"] == LifecycleStage.DOWNLOADING.value
+    assert item["STATUS"] == LifecycleStatus.RUNNING.value
