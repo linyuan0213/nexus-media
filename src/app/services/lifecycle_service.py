@@ -424,6 +424,55 @@ class LifecycleReconciler:
                             event_key=_scoped_event_key(f"library-history:{row.ID}", row.IDENTITY_ID, identity_id),
                         ):
                             count += 1
+
+            # 媒体库中可能存在没有转移历史的分集（手工放入、旧任务丢失等），
+            # 用转移目标目录里的 NFO + 视频文件直接回填 in_library。
+            scanned_library: set[tuple[str, int, int]] = set()
+            for row in transfers:
+                identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
+                if not identity_id:
+                    continue
+                target = Path(str(row.DEST_PATH or row.DEST or ""))
+                if target.is_file():
+                    target = target.parent
+                if not target.is_dir():
+                    continue
+                for nfo in target.glob("*.nfo"):
+                    match = re.search(r"S(\d+)E(\d+)", nfo.stem, re.IGNORECASE)
+                    if not match:
+                        continue
+                    season, episode = int(match.group(1)), int(match.group(2))
+                    key = (identity_id, season, episode)
+                    if key in scanned_library:
+                        continue
+                    if not any(nfo.with_suffix(ext).is_file() for ext in (".mp4", ".mkv", ".ts", ".avi")):
+                        continue
+                    try:
+                        occurred = datetime.fromtimestamp(nfo.stat().st_mtime)
+                    except OSError:
+                        continue
+                    scanned_library.add(key)
+                    if self._projector.record(
+                        identity_id=identity_id,
+                        stage=LifecycleStage.IN_LIBRARY,
+                        status=LifecycleStatus.SUCCEEDED,
+                        event_type="reconcile.library.scanned",
+                        media_type=_row_media_type(row.TYPE),
+                        season=season,
+                        episode=episode,
+                        run_id=f"library-scan:{row.ID}",
+                        trace_id=f"media:{identity_id}",
+                        title=row.TITLE,
+                        year=row.YEAR,
+                        poster=row.POSTER,
+                        source_provider=row.ANCHOR_PROVIDER,
+                        content_profile=row.CONTENT_PROFILE,
+                        message="从媒体目录扫描回填",
+                        payload={"source": "LIBRARY_SCAN", "path": str(nfo)},
+                        occurred_at=occurred,
+                        event_key=f"library-scan:{identity_id}:{season}:{episode}",
+                    ):
+                        count += 1
         return {"imported": count}
 
 
