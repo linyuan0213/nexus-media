@@ -4,7 +4,8 @@ from typing import Any
 
 import log
 from app.domain.enums import SearchType
-from app.infrastructure.queue import MessageQueueFactory
+from app.infrastructure.image_proxy import ImageProxy
+from app.infrastructure.message_queue import MessageQueueFactory
 from app.message.web_store import WebMessageStore
 from app.utils import StringUtils
 
@@ -79,6 +80,11 @@ class MessageDispatcher:
             return
         cname = client.get("name")
         log.info(f"[Message]开始发送消息 {cname}：title={title}")
+        if image and client.get("type") != "web" and not image.startswith("data:"):
+            if not image.startswith(("http://", "https://")):
+                image = ImageProxy.get_proxy_image_url(image)
+            elif "/img/" not in image:
+                image = ImageProxy.get_proxy_image_url(image)
         if self._domain:
             if url:
                 if "/open?url=" in url:

@@ -126,6 +126,20 @@ def _guard_image_url(url: str) -> None:
         raise NexusError("不允许访问的图片地址", errcode=ErrorCode.IMAGE_FETCH_FAILED, http_status=400)
 
 
+def _to_jpeg_bytes(data: bytes) -> bytes:
+    """第三方消息渠道兼容：统一转 JPEG."""
+    try:
+        with Image.open(io.BytesIO(data)) as img:
+            if img.format == "JPEG":
+                return data
+            output = io.BytesIO()
+            img.convert("RGB").save(output, format="JPEG", quality=90, optimize=True)
+            return output.getvalue()
+    except Exception as exc:  # noqa: BLE001
+        log.debug(f"[ImageProxy]转 JPEG 失败: {exc}")
+        return data
+
+
 async def _serve_image(
     cache_path: str,
     image_url: str,
@@ -133,6 +147,7 @@ async def _serve_image(
     referer: str | None = None,
     media_type: str = "image/jpeg",
     downloader=None,
+    convert_jpeg: bool = False,
 ):
     """FastAPI 版本的缓存检查/下载/返回图片"""
     # 检查缓存（30 天过期），空缓存直接删除重下
@@ -140,6 +155,14 @@ async def _serve_image(
         try:
             stat = os.stat(cache_path)
             if stat.st_size > 0 and time.time() - stat.st_mtime < MAX_CACHE_DAYS * 24 * 3600:
+                if convert_jpeg:
+                    with open(cache_path, "rb") as handle:
+                        cached_data = handle.read()
+                    jpeg_data = await asyncio.to_thread(_to_jpeg_bytes, cached_data)
+                    if jpeg_data != cached_data:
+                        with open(cache_path, "wb") as handle:
+                            handle.write(jpeg_data)
+                    return Response(jpeg_data, media_type="image/jpeg")
                 return FileResponse(cache_path, media_type=media_type)
             else:
                 os.remove(cache_path)
@@ -160,6 +183,8 @@ async def _serve_image(
     # 调整尺寸（PIL CPU 密集，放线程池）
     if size and size != "original":
         image_data = await asyncio.to_thread(resize_image, image_data, size)
+    if convert_jpeg:
+        image_data = await asyncio.to_thread(_to_jpeg_bytes, image_data)
 
     # 保存到缓存
     try:
@@ -194,7 +219,7 @@ async def proxy_douban_image(img_path: str):
     else:
         image_url = f"https://{SOURCE_DOMAINS['douban']}/{decoded_path}"
     _guard_image_url(image_url)
-    return await _serve_image(cache_path, image_url, referer="https://movie.douban.com")
+    return await _serve_image(cache_path, image_url, referer="https://movie.douban.com", convert_jpeg=True)
 
 
 @router.get("/bgm/{img_path:path}", summary="代理 Bangumi 图片")
