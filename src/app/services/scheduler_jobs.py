@@ -13,6 +13,7 @@ from app.core.settings import settings
 from app.indexer.core.miss_collector import weekly_miss_review
 from app.infrastructure.image_proxy import clean_old_cache
 from app.infrastructure.temp import TempCleanup
+from app.services.lifecycle_service import LifecycleReconciler
 from app.services.site_parse_health_service import SiteParseHealthService
 
 
@@ -34,6 +35,7 @@ DEFAULT_JOB_IDS = (
     "ImageProxy.clean_old_cache",
     "AgentMaintenance.daily",
     "SiteParseHealth.daily_check",
+    "MediaLifecycle.reconcile",
 )
 
 
@@ -287,6 +289,28 @@ def load_default_jobs(
         jobstore=_jobstore,
     )
     log.info("站点解析健康自检任务已注册（每日 03:20）")
+
+    # 生命周期读模型对账（事件丢失/重启/历史数据补投影）
+    reconcile_seconds = _parse_interval(
+        (settings.get("queue") or {}).get("lifecycle_reconcile_seconds"), default=300
+    )
+    if reconcile_seconds > 0:
+        def _reconcile_lifecycle() -> None:
+            try:
+                result = LifecycleReconciler().reconcile_recent(limit=500)
+                if result.get("imported"):
+                    log.info(f"[Lifecycle]历史对账完成: {result}")
+            except Exception as e:  # noqa: BLE001
+                log.warn(f"[Lifecycle]历史对账失败: {e}")
+
+        scheduler.register_interval(
+            job_id="MediaLifecycle.reconcile",
+            name="媒体生命周期对账",
+            func=_reconcile_lifecycle,
+            seconds=max(60, reconcile_seconds),
+            jobstore=_jobstore,
+        )
+        log.info(f"媒体生命周期对账任务已注册（每 {max(60, reconcile_seconds)}s）")
 
     # 消息治理聚合 flush（批量通知折叠为摘要，避免 1000+ 条刷屏）
     flush_seconds = 0

@@ -161,6 +161,7 @@ class ConfigReloader:
             "pt": cfg.get("pt"),
             "subscribe": cfg.get("subscribe"),
             "media": cfg.get("media"),
+            "queue": cfg.get("queue"),
             "agent_memory": (cfg.get("agent") or {}).get("memory"),
             "kb_available": self._context.knowledge_ingestor is not None
             or self._context.conversation_store is not None,

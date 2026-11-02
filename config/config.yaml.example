@@ -97,6 +97,8 @@ queue:
   transfer_workers: 2
   sync_workers: 2
   scrape_workers: 3
+  # 生命周期历史对账周期（秒，0 关闭）
+  lifecycle_reconcile_seconds: 300
 
 log:
   # 【日志记录类型】：file、console

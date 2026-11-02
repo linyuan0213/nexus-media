@@ -360,6 +360,7 @@ class QueueConfig(BaseModel):
     transfer_workers: int = 2
     sync_workers: int = 2
     scrape_workers: int = 3
+    lifecycle_reconcile_seconds: int = 300
 
 
 class LogConfig(BaseModel):

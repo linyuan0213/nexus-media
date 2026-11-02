@@ -120,3 +120,74 @@ def test_list_and_owner_filter():
     rows, total = repo.list_current(keyword="Owner", user=None)
     assert total == 2
     assert len(rows) == 2
+
+
+def test_reconciler_backfills_download_and_transfer_history():
+    from sqlalchemy.orm import sessionmaker
+
+    from app.db.engine import get_engine
+    from app.db.models.download import DOWNLOADHISTORY
+    from app.db.models.transfer import TRANSFERHISTORY
+    from app.services.lifecycle_service import LifecycleReconciler
+
+    session = sessionmaker(bind=get_engine())()
+    session.add(
+        DOWNLOADHISTORY(
+            TITLE="Reconcile Demo",
+            YEAR="2024",
+            TYPE="MOV",
+            TMDBID="",
+            SE="",
+            VOTE="",
+            POSTER="",
+            OVERVIEW="",
+            TORRENT="",
+            ENCLOSURE="",
+            SITE="",
+            DESC="",
+            DOWNLOADER="4",
+            DOWNLOAD_ID="reconcile-1",
+            SAVE_PATH="/tmp",
+            STATE="completed",
+            DATE="2026-11-02 10:00:00",
+            IDENTITY_ID="reconcile-identity",
+            ANCHOR_PROVIDER="tmdb",
+            ANCHOR_EXTERNAL_ID="550",
+            CONTENT_PROFILE="default",
+        )
+    )
+    session.add(
+        TRANSFERHISTORY(
+            MODE="copy",
+            TYPE="MOV",
+            CATEGORY="外语电影",
+            TMDBID=550,
+            TITLE="Reconcile Demo",
+            YEAR="2024",
+            SEASON_EPISODE="",
+            SOURCE="download",
+            SOURCE_PATH="/tmp/source",
+            SOURCE_FILENAME="source.mkv",
+            DEST="/tmp/dest",
+            DEST_PATH="/tmp/dest",
+            DEST_FILENAME="dest.mkv",
+            DATE="2026-11-02 11:00:00",
+            IDENTITY_ID="reconcile-identity",
+            ANCHOR_PROVIDER="tmdb",
+            ANCHOR_EXTERNAL_ID="550",
+            CONTENT_PROFILE="default",
+            SOURCE_STATE="present",
+            DEST_STATE="present",
+        )
+    )
+    session.commit()
+    session.close()
+
+    result = LifecycleReconciler().reconcile_recent(limit=10)
+
+    assert result["imported"] == 2
+    current = LifecycleRepository().get_current("reconcile-identity")
+    assert current is not None
+    assert current.STAGE == LifecycleStage.TRANSFERRED.value
+    assert current.STATUS == LifecycleStatus.SUCCEEDED.value
+    assert current.TITLE == "Reconcile Demo"
