@@ -143,10 +143,19 @@ class LifecycleRepository(BaseRepository):
             )
             if user is not None:
                 query = apply_owner_scope(query, MediaLifecycleEvent, user, include_shared=False)
-            return (
+            rows = (
                 query.order_by(MediaLifecycleEvent.OCCURRED_AT.asc(), MediaLifecycleEvent.ID.asc())
                 .limit(max(1, min(1000, int(limit))))
                 .all()
+            )
+            # 生命周期页面按阶段顺序展示；同一阶段内再按发生时间排序。
+            return sorted(
+                rows,
+                key=lambda event: (
+                    stage_rank(event.STAGE) if stage_rank(event.STAGE) >= 0 else 999,
+                    event.OCCURRED_AT,
+                    event.ID,
+                ),
             )
 
     def list_grouped(
