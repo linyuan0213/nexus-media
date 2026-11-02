@@ -195,7 +195,7 @@ class AppContext:
 # app/di/builders/infrastructure_builder.py
 from app.events.bus import EventBus
 from app.events.registry import EventHandlerRegistry
-from app.infrastructure.queue.factory import MessageQueueFactory
+from app.infrastructure.message_queue.factory import MessageQueueFactory
 from app.infrastructure.thread import ThreadExecutor
 from app.message.message import Message
 from app.plugin_framework.hook_system import HookSystem

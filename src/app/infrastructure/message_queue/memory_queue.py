@@ -11,7 +11,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
 import log
-from app.infrastructure.queue.base import MessageQueue
+from app.infrastructure.message_queue.base import MessageQueue
 
 
 class MemoryMessageQueue(MessageQueue):

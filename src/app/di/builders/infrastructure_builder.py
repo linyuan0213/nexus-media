@@ -18,7 +18,7 @@ from app.events.decorators import auto_register
 from app.events.middleware import ErrorHandlingMiddleware, LoggingMiddleware
 from app.events.registry import EventHandlerRegistry
 from app.indexer.configuration import IndexerHelper
-from app.infrastructure.queue.factory import MessageQueueFactory
+from app.infrastructure.message_queue.factory import MessageQueueFactory
 from app.infrastructure.thread import ThreadExecutor
 from app.message.message import Message
 from app.plugin_framework.hook_system import HookSystem

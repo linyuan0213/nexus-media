@@ -17,8 +17,8 @@ from app.db.repositories.media_sync_repo_adapter import MediaSyncRepositoryAdapt
 from app.domain.enums import ProgressKey, SystemConfigKey
 from app.domain.mediatypes import MediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.infrastructure.message_queue.base import MessageQueue
 from app.infrastructure.progress import ProgressTracker
-from app.infrastructure.queue.base import MessageQueue
 from app.mediaserver.registry import get_all_clients
 from app.message import Message
 from app.utils import ExceptionUtils

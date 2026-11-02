@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from app.events.bus import EventBus
-    from app.infrastructure.queue.base import MessageQueue
+    from app.infrastructure.message_queue.base import MessageQueue
     from app.infrastructure.thread import ThreadExecutor
     from app.media.identity.builder import IdentityIndexBuilder
     from app.media.identity.graph import EditionGraph

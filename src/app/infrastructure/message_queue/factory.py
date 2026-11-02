@@ -5,9 +5,9 @@
 import threading
 
 import log
-from app.infrastructure.queue.base import MessageQueue
-from app.infrastructure.queue.memory_queue import MemoryMessageQueue
-from app.infrastructure.queue.redis_queue import RedisMessageQueue
+from app.infrastructure.message_queue.base import MessageQueue
+from app.infrastructure.message_queue.memory_queue import MemoryMessageQueue
+from app.infrastructure.message_queue.redis_queue import RedisMessageQueue
 
 
 class MessageQueueFactory:

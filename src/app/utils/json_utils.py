@@ -9,6 +9,39 @@ import log
 
 class JsonUtils:
     @staticmethod
+    def to_jsonable(obj: Any) -> Any:
+        """递归转换为 JSON 可序列化对象，兼容 AsObj/dataclass/Pydantic 等."""
+        if obj is None or isinstance(obj, (str, int, float, bool)):
+            return obj
+        if isinstance(obj, Enum):
+            return obj.value
+        if isinstance(obj, dict):
+            return {str(k): JsonUtils.to_jsonable(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple, set)):
+            return [JsonUtils.to_jsonable(v) for v in obj]
+        if hasattr(obj, "model_dump"):
+            try:
+                return JsonUtils.to_jsonable(obj.model_dump(mode="python"))
+            except Exception as err:  # noqa: BLE001
+                log.debug(f"[JsonUtils]model_dump 失败，回退 __dict__: {err}")
+        if hasattr(obj, "__dict__"):
+            return {
+                str(k): JsonUtils.to_jsonable(v)
+                for k, v in vars(obj).items()
+                if not str(k).startswith("_")
+            }
+        return str(obj)
+
+    @staticmethod
+    def model_to_jsonable(model: Any) -> Any:
+        """优先使用 model_dump，失败时回退 vars."""
+        try:
+            return JsonUtils.to_jsonable(model.model_dump(mode="python"))
+        except Exception as err:  # noqa: BLE001
+            log.debug(f"[JsonUtils]model_dump 失败，回退 vars: {err}")
+            return JsonUtils.to_jsonable(vars(model))
+
+    @staticmethod
     def json_serializable(obj):
         """
         将普通对象转化为支持json序列化的对象

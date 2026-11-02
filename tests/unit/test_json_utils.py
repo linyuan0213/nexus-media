@@ -17,6 +17,14 @@ class _Point:
 
 
 class TestJsonUtils:
+    def test_to_jsonable_handles_object_payload(self):
+        from app.infrastructure.external.tmdbv3api.as_obj import AsObj
+
+        payload = {"media": AsObj(title="Demo", nested=[AsObj(value=1)])}
+        safe = JsonUtils.to_jsonable(payload)
+        assert safe == {"media": {"title": "Demo", "nested": [{"value": 1}]}}
+        assert '"title":"Demo"' in JsonUtils.dumps(safe)
+
     def test_json_serializable_dict(self):
         result = JsonUtils.json_serializable({"a": 1})
         assert result == {"a": 1}

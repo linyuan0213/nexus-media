@@ -1,6 +1,6 @@
 """
 事件总线
-复用 app.infrastructure.queue 作为异步投递后端
+复用 app.infrastructure.message_queue 作为异步投递后端
 """
 
 import log
@@ -8,7 +8,7 @@ from app.events.bridge import PluginBridge
 from app.events.middleware import Middleware, MiddlewareChain
 from app.events.registry import EventHandlerRegistry
 from app.events.types import Event
-from app.infrastructure.queue.base import MessageQueue
+from app.infrastructure.message_queue.base import MessageQueue
 
 
 class EventBus:
