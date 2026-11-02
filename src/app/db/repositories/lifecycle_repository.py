@@ -317,17 +317,26 @@ def _apply_subscription_state(grouped: list[dict[str, Any]], subscription_map: d
     """用订阅总集数约束整季状态，避免只统计已产生生命周期记录的分集。"""
     for item in grouped:
         sub = subscription_map.get(str(item.get("IDENTITY_ID")))
-        if not sub or sub[0] <= 0:
+        if not sub:
             continue
         total_ep, sub_state = sub
-        item["EPISODE_COUNT"] = max(int(item.get("EPISODE_COUNT") or 0), total_ep)
-        item["COMPLETED_EPISODES"] = min(total_ep, int(item.get("COMPLETED_EPISODES") or 0))
-        item["PROGRESS"] = round(item["COMPLETED_EPISODES"] * 100 / total_ep)
-        if item["COMPLETED_EPISODES"] < total_ep and sub_state in {"D", "S", "R"}:
-            item["STAGE"] = "downloading" if item["COMPLETED_EPISODES"] else "download_queued"
-            item["STATUS"] = "running" if sub_state != "D" or item["COMPLETED_EPISODES"] else "queued"
-        elif item["COMPLETED_EPISODES"] < total_ep and sub_state == "E":
+        completed = int(item.get("COMPLETED_EPISODES") or 0)
+        if total_ep > 0:
+            item["EPISODE_COUNT"] = max(int(item.get("EPISODE_COUNT") or 0), total_ep)
+            completed = min(total_ep, completed)
+            item["COMPLETED_EPISODES"] = completed
+            item["PROGRESS"] = round(completed * 100 / total_ep)
+        if sub_state in {"D", "S", "R"}:
+            # 仍在订阅中：即使现有分集全部入库，也不能标记为整部作品完成。
+            if total_ep > 0 and completed < total_ep:
+                item["STAGE"] = "downloading" if completed else "download_queued"
+            else:
+                item["STAGE"] = "subscribed"
+            item["STATUS"] = "queued" if sub_state == "D" else "running"
+        elif sub_state == "E":
             item["STATUS"] = "failed"
+        elif sub_state == "N":
+            item["STATUS"] = "cancelled"
 
 
 def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
@@ -363,6 +372,9 @@ def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
             LifecycleStage.IN_LIBRARY.value,
         }:
             status = LifecycleStatus.RUNNING.value
+        if episode_items:
+            data["SEASON"] = max(int(item.SEASON or 0) for item in episode_items)
+            data["EPISODE"] = max(int(item.EPISODE or 0) for item in episode_items)
         data["STAGE"] = stage
         data["STATUS"] = status
         data["STAGE_STARTED_AT"] = max(

@@ -268,7 +268,7 @@ def test_grouped_incomplete_subscription_is_not_completed():
     assert item["EPISODE_COUNT"] == 12
     assert item["COMPLETED_EPISODES"] == 4
     assert item["STAGE"] == LifecycleStage.DOWNLOADING.value
-    assert item["STATUS"] == LifecycleStatus.RUNNING.value
+    assert item["STATUS"] == LifecycleStatus.QUEUED.value
 
 
 def test_snapshot_does_not_regress_to_earlier_stage():
@@ -376,3 +376,37 @@ def test_grouped_ignores_series_level_placeholder_when_episodes_exist():
     assert rows[0]["EPISODE_COUNT"] == 1
     assert rows[0]["COMPLETED_EPISODES"] == 1
     assert rows[0]["STAGE"] == LifecycleStage.IN_LIBRARY.value
+
+
+def test_active_subscription_with_all_known_episodes_is_not_completed():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    for episode in (1, 2):
+        projector.record(
+            identity_id="identity-active",
+            stage=LifecycleStage.IN_LIBRARY,
+            status=LifecycleStatus.SUCCEEDED,
+            event_type="library.present",
+            media_type="tv",
+            season=1,
+            episode=episode,
+            event_key=f"library-active-{episode}",
+            occurred_at=now,
+        )
+    with repo.session() as db:
+        db.add(
+            SubscribeTvs(
+                NAME="Active TV",
+                SEASON="S01",
+                TOTAL_EP=2,
+                CURRENT_EP=2,
+                STATE="R",
+                IDENTITY_ID="identity-active",
+            )
+        )
+        db.commit()
+    rows, total = repo.list_grouped(pagenum=10)
+    assert total == 1
+    assert rows[0]["STAGE"] == LifecycleStage.SUBSCRIBED.value
+    assert rows[0]["STATUS"] == LifecycleStatus.RUNNING.value

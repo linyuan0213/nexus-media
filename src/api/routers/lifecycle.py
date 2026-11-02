@@ -141,6 +141,8 @@ def list_lifecycle_episodes(
     for summary in repo.list_subscription_summaries(identity_id, user=current_user):
         match = re.search(r"\d+", str(summary.get("season") or ""))
         season = int(match.group()) if match else int(first.get("season") or 0)
+        if season <= 0:
+            season = 1
         total_ep = int(summary.get("total_ep") or 0)
         if total_ep <= 0:
             continue
