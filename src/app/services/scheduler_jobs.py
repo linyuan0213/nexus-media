@@ -173,7 +173,7 @@ def load_default_jobs(
                 scheduler.register_interval(
                     job_id="MediaServer.sync_mediaserver",
                     name="媒体库同步",
-                    func=media_server.sync_mediaserver,
+                    func=media_server.sync_all_mediaservers,
                     hours=mediasync_interval,
                     jobstore=_jobstore,
                 )

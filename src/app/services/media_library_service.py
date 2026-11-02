@@ -48,15 +48,20 @@ class MediaLibraryService:
         return self._media_server.get_server_options()
 
     def start_sync(self, librarys: list, server_id: int | None = None):
-        """开始指定实例的媒体库同步。"""
+        """开始指定实例的媒体库同步，并按实例持久化库选择."""
         TokenCache.delete("index")
-        if server_id is None:
-            self._system_config.set(key=SystemConfigKey.SyncLibrary, value=librarys)
-            self._thread_executor.submit(self._media_server.sync_mediaserver)
-            return
         if not librarys:
             raise ValueError("请选择需要同步的媒体库")
-        self._thread_executor.submit(self._media_server.sync_mediaserver, server_id, librarys)
+        target_server_id = self._media_server.resolve_server_id(server_id)
+        if target_server_id is None:
+            raise ValueError("未找到可用的媒体服务器")
+        self._system_config.set(
+            key=f"{SystemConfigKey.SyncLibrary.value}::{target_server_id}",
+            value=librarys,
+        )
+        # 保留全局键作为旧版本/单实例兼容
+        self._system_config.set(key=SystemConfigKey.SyncLibrary, value=librarys)
+        self._thread_executor.submit(self._media_server.sync_mediaserver, target_server_id, librarys)
 
     def refresh_library(self, server_id: int | None = None, items: list | None = None):
         """刷新指定实例，可按项目刷新或刷新整库。"""
