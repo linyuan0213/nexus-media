@@ -6,7 +6,8 @@ import re
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from api.deps import require_any_permission, require_permission
 from app.db.repositories.lifecycle_repository import (
@@ -15,6 +16,7 @@ from app.db.repositories.lifecycle_repository import (
     lifecycle_row_to_dict,
 )
 from app.schemas.auth import UserContext
+from app.services.lifecycle_action_service import LifecycleActionError, LifecycleActionService
 from app.services.lifecycle_service import LifecycleReconciler
 from app.utils.response import success
 
@@ -110,6 +112,62 @@ def lifecycle_stats(
     current_user: UserContext = Depends(require_any_permission("library:view", "library:manage")),
 ):
     return success(data=LifecycleRepository().stats_grouped(user=current_user))
+
+
+class IdentifyRequest(BaseModel):
+    provider: str
+    external_id: str
+    title: str | None = None
+    year: str | None = None
+    poster: str | None = None
+    season: int = 0
+    episode: int = 0
+
+
+@router.post("/{identity_id}/retry", summary="重试生命周期任务")
+def retry_lifecycle(
+    identity_id: str,
+    season: int = Query(default=0, ge=0),
+    episode: int = Query(default=0, ge=0),
+    _current_user: UserContext = Depends(require_permission("library:manage")),
+):
+    try:
+        return success(data=LifecycleActionService().retry(identity_id, season, episode))
+    except LifecycleActionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/{identity_id}/cancel", summary="取消生命周期任务")
+def cancel_lifecycle(
+    identity_id: str,
+    season: int = Query(default=0, ge=0),
+    episode: int = Query(default=0, ge=0),
+    _current_user: UserContext = Depends(require_permission("library:manage")),
+):
+    return success(data=LifecycleActionService().cancel(identity_id, season, episode))
+
+
+@router.post("/{identity_id}/identify", summary="手动识别媒体")
+def identify_lifecycle(
+    identity_id: str,
+    payload: IdentifyRequest,
+    _current_user: UserContext = Depends(require_permission("library:manage")),
+):
+    try:
+        return success(
+            data=LifecycleActionService().identify(
+                identity_id,
+                provider=payload.provider,
+                external_id=payload.external_id,
+                title=payload.title,
+                year=payload.year,
+                poster=payload.poster,
+                season=payload.season,
+                episode=payload.episode,
+            )
+        )
+    except LifecycleActionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/{identity_id}", summary="媒体生命周期详情")

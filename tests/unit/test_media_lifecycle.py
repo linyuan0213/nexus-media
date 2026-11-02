@@ -418,3 +418,32 @@ def test_parse_season_episodes_expands_range():
     assert _parse_season_episodes("S01E06-E08") == [(1, 6), (1, 7), (1, 8)]
     assert _parse_season_episodes("S01 E04") == [(1, 4)]
     assert _parse_season_episodes("") == [(0, 0)]
+
+
+def test_manual_identify_updates_metadata():
+    from app.services.lifecycle_action_service import LifecycleActionService
+
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    projector.record(
+        identity_id="identity-identify",
+        stage=LifecycleStage.IDENTIFIED,
+        status=LifecycleStatus.FAILED,
+        event_type="identify.failed",
+        title="Old",
+        event_key="identify-failed",
+        occurred_at=now,
+    )
+    LifecycleActionService(repo, projector).identify(
+        "identity-identify",
+        provider="tmdb",
+        external_id="123",
+        title="New title",
+        year="2024",
+    )
+    current = repo.get_current("identity-identify")
+    assert current is not None
+    assert current.TITLE == "New title"
+    assert current.YEAR == "2024"
+    assert current.SOURCE_PROVIDER == "tmdb"

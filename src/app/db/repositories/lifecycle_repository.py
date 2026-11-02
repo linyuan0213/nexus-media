@@ -194,6 +194,17 @@ class LifecycleRepository(BaseRepository):
                 ),
             )
 
+    def latest_event(
+        self, identity_id: str, *, season: int | None = None, episode: int | None = None
+    ) -> MediaLifecycleEvent | None:
+        with self.readonly() as db:
+            query = db.query(MediaLifecycleEvent).filter(MediaLifecycleEvent.IDENTITY_ID == identity_id)
+            if season is not None:
+                query = query.filter(MediaLifecycleEvent.SEASON == int(season))
+            if episode is not None:
+                query = query.filter(MediaLifecycleEvent.EPISODE == int(episode))
+            return query.order_by(MediaLifecycleEvent.OCCURRED_AT.desc(), MediaLifecycleEvent.ID.desc()).first()
+
     def list_grouped(
         self,
         *,
@@ -256,6 +267,38 @@ class LifecycleRepository(BaseRepository):
         total = len(grouped)
         start = (max(1, page) - 1) * max(1, pagenum)
         return grouped[start : start + max(1, pagenum)], total
+
+    def update_metadata(
+        self,
+        identity_id: str,
+        *,
+        title: str | None = None,
+        year: str | None = None,
+        poster: str | None = None,
+        source_provider: str | None = None,
+        season: int | None = None,
+        episode: int | None = None,
+    ) -> int:
+        with self.session() as db:
+            query = db.query(MediaLifecycle).filter(MediaLifecycle.IDENTITY_ID == identity_id)
+            if season:
+                query = query.filter(MediaLifecycle.SEASON == int(season))
+            if episode:
+                query = query.filter(MediaLifecycle.EPISODE == int(episode))
+            changes = {}
+            if title:
+                changes[MediaLifecycle.TITLE] = title
+            if year:
+                changes[MediaLifecycle.YEAR] = year
+            if poster:
+                changes[MediaLifecycle.POSTER] = poster
+            if source_provider:
+                changes[MediaLifecycle.SOURCE_PROVIDER] = source_provider
+            if not changes:
+                return 0
+            updated = query.update(changes, synchronize_session=False)
+            db.commit()
+            return int(updated or 0)
 
     def get_grouped_identity(self, identity_id: str, *, user=None) -> dict[str, Any] | None:
         """按作品聚合单集记录，并叠加订阅总集数。"""
