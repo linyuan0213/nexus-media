@@ -191,8 +191,11 @@ class LifecycleRepository(BaseRepository):
                     .all()
                 )
                 for identity, occurred, event_type in events:
-                    # in_library 的旧回填时间是执行对账的时间，不代表真实入库时间
-                    if event_type == "reconcile.library.present" or occurred is None:
+                    # 入库回填/今天重扫 NFO 的时间不代表真实入库顺序
+                    if event_type in {
+                        "reconcile.library.present",
+                        "reconcile.scrape.completed",
+                    } or occurred is None:
                         continue
                     key = str(identity)
                     if key not in activity or occurred > activity[key]:
@@ -200,7 +203,7 @@ class LifecycleRepository(BaseRepository):
         grouped = _group_lifecycle_rows(rows)
         for item in grouped:
             item["ACTIVITY_AT"] = activity.get(
-                str(item.get("IDENTITY_ID")), item.get("LAST_EVENT_AT")
+                str(item.get("IDENTITY_ID")), datetime.min
             )
         grouped.sort(
             key=lambda item: (item.get("ACTIVITY_AT") or datetime.min, item.get("ID") or 0),
