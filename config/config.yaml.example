@@ -76,6 +76,28 @@ database:
   # api_connection_reserve: 8
   # sync_workers: 4
   # sync_workers_max: 8
+# 【任务队列】：Redis Streams 持久队列；Redis 明确禁用时退回内存队列
+queue:
+  # auto：Redis 启用则用 Redis，明确禁用则用内存；redis：强制 Redis；memory：强制内存
+  backend: auto
+  # Redis 未启用 AOF 时是否拒绝作为持久队列
+  require_aof: true
+  # 内存队列上限（仅 backend=memory 或 Redis 未启用时生效）
+  memory_maxsize: 1000
+  # 任务 key 前缀
+  key_prefix: nexus:task
+  # 租约与重试
+  lease_seconds: 120
+  retry_idle_ms: 30000
+  max_attempts: 5
+  # 幂等键与任务状态保留时间
+  dedup_ttl_seconds: 86400
+  task_ttl_seconds: 86400
+  # 转移/刮削队列并发
+  transfer_workers: 2
+  sync_workers: 2
+  scrape_workers: 3
+
 log:
   # 【日志记录类型】：file、console
   # 如果是使用Docker安装建议设置为console，通过Docker管理器查看日志

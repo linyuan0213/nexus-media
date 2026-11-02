@@ -34,6 +34,8 @@ class RedisStore:
                 client.close()
 
     def _ensure_connection(self) -> StrictRedis | None:
+        if not getattr(redis_cfg, "enabled", True):
+            return None
         with self._lock:
             now = time.time()
             if self._available and self._client is not None:

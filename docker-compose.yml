@@ -38,6 +38,7 @@ services:
       REDIS__HOST: redis
       REDIS__PORT: "6379"
       REDIS__DB: "0"
+      QUEUE__REQUIRE_AOF: "true"
     depends_on:
       redis:
         condition: service_started
@@ -56,7 +57,7 @@ services:
       - nexus-media-network
     volumes:
       - ./data/redis_data:/data
-    command: redis-server --save "" --appendonly no --dir /data
+    command: redis-server --save "" --appendonly yes --appendfsync everysec --dir /data
 
 networks:
   nexus-media-network:

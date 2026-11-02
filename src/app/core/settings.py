@@ -334,10 +334,32 @@ class DatabaseConfig(BaseModel):
 class RedisConfig(BaseModel):
     """Redis 缓存配置"""
 
+    enabled: bool = True
     host: str = "127.0.0.1"
     port: int = 6379
     password: str = ""
     db: int = 0
+
+
+class QueueConfig(BaseModel):
+    """任务队列配置.
+
+    backend=auto: Redis 启用时使用 Redis Streams，明确禁用时退回内存队列。
+    Redis 已启用但不可用时不会静默降级到内存。
+    """
+
+    backend: str = "auto"
+    require_aof: bool = True
+    memory_maxsize: int = 1000
+    key_prefix: str = "nexus:task"
+    lease_seconds: int = 120
+    retry_idle_ms: int = 30000
+    max_attempts: int = 5
+    dedup_ttl_seconds: int = 86400
+    task_ttl_seconds: int = 86400
+    transfer_workers: int = 2
+    sync_workers: int = 2
+    scrape_workers: int = 3
 
 
 class LogConfig(BaseModel):
@@ -434,6 +456,7 @@ class AppSettings(BaseSettings):
     agent: AgentConfig = Field(default_factory=AgentConfig, validate_default=True)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
+    queue: QueueConfig = Field(default_factory=QueueConfig)
     message_governor: MessageGovernorConfig = Field(default_factory=MessageGovernorConfig)
 
     @field_validator("agent", mode="before")
