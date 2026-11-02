@@ -54,6 +54,26 @@ class TestMakeWebSearchFn:
         assert code == -1
         orchestrator.orchestrate.assert_not_called()
 
+    def test_content_id_anchor_unresolved_falls_back_to_keyword(self):
+        orchestrator = MagicMock()
+        orchestrator.resolve_content_id_media.return_value = None
+        orchestrator.orchestrate.return_value = (None, {}, 2, 0)
+        fn = make_web_search_fn(orchestrator, system_config=None)
+        code, msg = fn(
+            "DEMO-4025269",
+            anchor_provider="content_id",
+            anchor_external_id="DEMO-4025269",
+            content_profile="demo",
+            media_type=MediaType.MOVIE,
+        )
+        assert code == 0
+        assert msg == ""
+        ctx = orchestrator.orchestrate.call_args[0][0]
+        assert ctx.match_media is not None
+        assert ctx.match_media.content_profile == "demo"
+        assert ctx.match_media.anchor_provider == "content_id"
+        assert ctx.match_media.anchor_external_id == "DEMO-4025269"
+
     def test_default_sites_applied(self):
         orchestrator = MagicMock()
         orchestrator.orchestrate.return_value = (None, {}, 1, 0)

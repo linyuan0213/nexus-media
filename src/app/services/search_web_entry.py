@@ -74,7 +74,14 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     content_profile=resolved_profile,
                 )
             if not match_media:
-                return -1, f"{content} 未识别到媒体信息！"
+                if anchor_provider == "content_id":
+                    # 编号锚点只是内部定位；元数据源临时熔断/限流时仍应能按编号搜资源。
+                    log.warn(
+                        f"[Orchestrator]编号锚点解析失败 {anchor_provider}:{anchor_external_id}，"
+                        f"回退关键词搜索: {content}"
+                    )
+                else:
+                    return -1, f"{content} 未识别到媒体信息！"
             if anchor_provider not in ("content_id", profile) and not orchestrator.identity_matches_keyword(
                 match_media, content
             ):
