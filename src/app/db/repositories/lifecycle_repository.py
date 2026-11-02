@@ -8,8 +8,10 @@ from typing import Any
 from sqlalchemy import func
 
 import log
+from app.db.models.download import DOWNLOADHISTORY
 from app.db.models.lifecycle import MediaLifecycle, MediaLifecycleEvent
 from app.db.models.subscribe import SubscribeTvEpisodes, SubscribeTvs
+from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.data_scope import apply_owner_scope
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, stage_rank
@@ -253,6 +255,39 @@ class LifecycleRepository(BaseRepository):
                 return None
             _apply_subscription_state(grouped, _subscription_map(db, [identity_id]))
             return grouped[0]
+
+    def resolve_identity_by_anchor(self, provider: str | None, external_id: str | None) -> str | None:
+        """按 anchor 找到业务表里的稳定 identity，避免产生 provider:external 影子条目。"""
+        provider = str(provider or "").strip()
+        external_id = str(external_id or "").strip()
+        if not provider or not external_id:
+            return None
+        with self.readonly() as db:
+            transfer = (
+                db.query(TRANSFERHISTORY.IDENTITY_ID)
+                .filter(
+                    TRANSFERHISTORY.ANCHOR_PROVIDER == provider,
+                    TRANSFERHISTORY.ANCHOR_EXTERNAL_ID == external_id,
+                    TRANSFERHISTORY.IDENTITY_ID.isnot(None),
+                )
+                .order_by(TRANSFERHISTORY.ID.desc())
+                .first()
+            )
+            if transfer and transfer[0]:
+                return str(transfer[0])
+            download = (
+                db.query(DOWNLOADHISTORY.IDENTITY_ID)
+                .filter(
+                    DOWNLOADHISTORY.ANCHOR_PROVIDER == provider,
+                    DOWNLOADHISTORY.ANCHOR_EXTERNAL_ID == external_id,
+                    DOWNLOADHISTORY.IDENTITY_ID.isnot(None),
+                )
+                .order_by(DOWNLOADHISTORY.ID.desc())
+                .first()
+            )
+            if download and download[0]:
+                return str(download[0])
+        return None
 
     def list_subscription_summaries(self, identity_id: str, *, user=None) -> list[dict[str, Any]]:
         """读取订阅侧总集数，用于补齐尚未进入生命周期记录的分集。"""

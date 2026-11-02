@@ -138,11 +138,12 @@ class LifecycleProjector:
     ) -> bool:
         """从 MediaInfo 投影事件；没有稳定身份时跳过，不影响业务."""
         identity_id = str(getattr(media, "identity_id", "") or "")
+        provider = str(getattr(media, "anchor_provider", "") or "")
+        external_id = str(getattr(media, "anchor_external_id", "") or "")
         if not identity_id:
-            provider = str(getattr(media, "anchor_provider", "") or "")
-            external_id = str(getattr(media, "anchor_external_id", "") or "")
-            if provider and external_id:
-                identity_id = f"{provider}:{external_id}"
+            identity_id = self._repo.resolve_identity_by_anchor(provider, external_id) or ""
+        if not identity_id and provider and external_id:
+            identity_id = f"{provider}:{external_id}"
         if not identity_id:
             return False
         media_type = getattr(getattr(media, "type", None), "value", getattr(media, "type", "movie")) or "movie"
