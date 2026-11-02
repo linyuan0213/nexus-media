@@ -178,7 +178,34 @@ class LifecycleRepository(BaseRepository):
             if keyword:
                 query = query.filter(MediaLifecycle.TITLE.ilike(f"%{keyword}%"))
             rows = query.order_by(MediaLifecycle.LAST_EVENT_AT.desc(), MediaLifecycle.ID.desc()).all()
+            identities = list({str(row.IDENTITY_ID) for row in rows})
+            activity: dict[str, datetime] = {}
+            if identities:
+                events = (
+                    db.query(
+                        MediaLifecycleEvent.IDENTITY_ID,
+                        MediaLifecycleEvent.OCCURRED_AT,
+                        MediaLifecycleEvent.EVENT_TYPE,
+                    )
+                    .filter(MediaLifecycleEvent.IDENTITY_ID.in_(identities))
+                    .all()
+                )
+                for identity, occurred, event_type in events:
+                    # in_library 的旧回填时间是执行对账的时间，不代表真实入库时间
+                    if event_type == "reconcile.library.present" or occurred is None:
+                        continue
+                    key = str(identity)
+                    if key not in activity or occurred > activity[key]:
+                        activity[key] = occurred
         grouped = _group_lifecycle_rows(rows)
+        for item in grouped:
+            item["ACTIVITY_AT"] = activity.get(
+                str(item.get("IDENTITY_ID")), item.get("LAST_EVENT_AT")
+            )
+        grouped.sort(
+            key=lambda item: (item.get("ACTIVITY_AT") or datetime.min, item.get("ID") or 0),
+            reverse=True,
+        )
         if stage:
             grouped = [item for item in grouped if item["STAGE"] == stage]
         if status:
