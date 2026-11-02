@@ -160,7 +160,10 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     discovery_service = DiscoveryService(
         media_service=media_service,
         media_server=media_server,
-        library_presence_service=LibraryPresenceService(media_server=media_server),
+        library_presence_service=LibraryPresenceService(
+            media_server=media_server,
+            warm_in_background=False,
+        ),
     )
     shared_scraper = Scraper(media_service=media_service, metadata_service=metadata_service)
     scrape_queue_service = ScrapeQueueService(scraper=shared_scraper)
