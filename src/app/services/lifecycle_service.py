@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime
+import os
+import re
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import log
 from app.db.models.download import DOWNLOADHISTORY
 from app.db.models.lifecycle import MediaLifecycleEvent
+from app.db.models.media_sync import MEDIASYNCITEMS
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
@@ -242,6 +246,31 @@ class LifecycleReconciler:
                 .limit(max(1, int(limit)))
                 .all()
             )
+            sync_rows = db.query(
+                MEDIASYNCITEMS.IDENTITY_ID,
+                MEDIASYNCITEMS.TITLE,
+                MEDIASYNCITEMS.ORGIN_TITLE,
+                MEDIASYNCITEMS.PATH,
+            ).all()
+            in_library_ids = {str(item[0]) for item in sync_rows if item[0]}
+            in_library_tokens: set[str] = set()
+            for _identity, title, origin_title, path in sync_rows:
+                for text in (title, origin_title, path):
+                    token = _library_token(text)
+                    if token:
+                        in_library_tokens.add(token)
+            identity_by_external: dict[str, str] = {}
+            identity_by_title: dict[tuple[str, str, str], str] = {}
+            for row in downloads:
+                if not row.IDENTITY_ID:
+                    continue
+                external_id = str(row.ANCHOR_EXTERNAL_ID or "")
+                if external_id:
+                    identity_by_external.setdefault(external_id, str(row.IDENTITY_ID))
+                identity_by_title.setdefault(
+                    (str(row.TITLE or "").lower(), str(row.YEAR or ""), str(row.SE or "")),
+                    str(row.IDENTITY_ID),
+                )
             for row in reversed(downloads):
                 stage, status = map_download_state(row.STATE)
                 season, episode = _parse_season_episode(row.SE)
@@ -254,6 +283,8 @@ class LifecycleReconciler:
                     media_type=_row_media_type(row.TYPE),
                     season=season,
                     episode=episode,
+                    run_id=f"download-history:{row.ID}",
+                    trace_id=f"media:{row.IDENTITY_ID}",
                     title=row.TITLE,
                     year=row.YEAR,
                     poster=row.POSTER,
@@ -270,14 +301,23 @@ class LifecycleReconciler:
                 season, episode = _parse_season_episode(row.SEASON_EPISODE)
                 occurred = _parse_history_time(row.DATE)
                 failed = str(row.DEST_STATE or "") in {"missing", "deleted"}
+                identity_id = (
+                    identity_by_external.get(str(row.ANCHOR_EXTERNAL_ID or ""))
+                    or identity_by_title.get(
+                        (str(row.TITLE or "").lower(), str(row.YEAR or ""), str(row.SEASON_EPISODE or ""))
+                    )
+                    or str(row.IDENTITY_ID)
+                )
                 if self._projector.record(
-                    identity_id=str(row.IDENTITY_ID),
+                    identity_id=identity_id,
                     stage=LifecycleStage.TRANSFERRED,
                     status=LifecycleStatus.FAILED if failed else LifecycleStatus.SUCCEEDED,
                     event_type="reconcile.transfer.failed" if failed else "reconcile.transfer.completed",
                     media_type=_row_media_type(row.TYPE),
                     season=season,
                     episode=episode,
+                    run_id=f"transfer-history:{row.ID}",
+                    trace_id=f"media:{identity_id}",
                     title=row.TITLE,
                     year=row.YEAR,
                     poster=row.POSTER,
@@ -289,7 +329,87 @@ class LifecycleReconciler:
                     event_key=f"transfer-history:{row.ID}",
                 ):
                     count += 1
+                if failed:
+                    continue
+                target = Path(str(row.DEST_PATH or row.DEST or ""))
+                if target.is_file():
+                    target = target.parent
+                nfo_time = _find_nfo_time(target)
+                if nfo_time is not None:
+                    if self._projector.record(
+                        identity_id=identity_id,
+                        stage=LifecycleStage.SCRAPED,
+                        status=LifecycleStatus.SUCCEEDED,
+                        event_type="reconcile.scrape.completed",
+                        media_type=_row_media_type(row.TYPE),
+                        season=season,
+                        episode=episode,
+                        run_id=f"transfer-history:{row.ID}",
+                        trace_id=f"media:{identity_id}",
+                        title=row.TITLE,
+                        year=row.YEAR,
+                        poster=row.POSTER,
+                        source_provider=row.ANCHOR_PROVIDER,
+                        content_profile=row.CONTENT_PROFILE,
+                        message="从目标目录 NFO 回填",
+                        payload={"source": "NFO", "path": str(target)},
+                        occurred_at=nfo_time,
+                        event_key=f"scrape-history:{row.ID}",
+                    ):
+                        count += 1
+                    if identity_id in in_library_ids or _matches_library(target, in_library_tokens):
+                        if self._projector.record(
+                            identity_id=identity_id,
+                            stage=LifecycleStage.IN_LIBRARY,
+                            status=LifecycleStatus.SUCCEEDED,
+                            event_type="reconcile.library.present",
+                            media_type=_row_media_type(row.TYPE),
+                            season=season,
+                            episode=episode,
+                            run_id=f"transfer-history:{row.ID}",
+                            trace_id=f"media:{identity_id}",
+                            title=row.TITLE,
+                            year=row.YEAR,
+                            poster=row.POSTER,
+                            source_provider=row.ANCHOR_PROVIDER,
+                            content_profile=row.CONTENT_PROFILE,
+                            message="从媒体同步索引回填",
+                            payload={"source": "MEDIASYNC_ITEMS"},
+                            occurred_at=nfo_time + timedelta(seconds=1),
+                            event_key=f"library-history:{row.ID}",
+                        ):
+                            count += 1
         return {"imported": count}
+
+
+def _library_token(value: Any) -> str:
+    text = str(value or "").upper()
+    if not text:
+        return ""
+    candidate = Path(text)
+    if candidate.suffix or "/" in text:
+        return (candidate.parent.name if candidate.suffix else candidate.name).upper()
+    match = re.search(r"[A-Z0-9]{2,}[-_]\d{2,}", text)
+    return match.group(0) if match else ""
+
+
+def _matches_library(path: Path, tokens: set[str]) -> bool:
+    name = path.name.upper()
+    if not name:
+        return False
+    return any(token and token in name for token in tokens)
+
+
+def _find_nfo_time(path: Path) -> datetime | None:
+    try:
+        if not path or not path.is_dir():
+            return None
+        nfo = next(path.glob("*.nfo"), None)
+        if nfo is None or not nfo.is_file():
+            return None
+        return datetime.fromtimestamp(os.path.getmtime(nfo))
+    except OSError:
+        return None
 
 
 def _parse_season_episode(value: Any) -> tuple[int, int]:
