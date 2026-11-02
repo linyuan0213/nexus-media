@@ -324,10 +324,54 @@ class DownloadRepository(BaseRepository):
                     )
                 return query.all()
 
-            # 使用子查询获取每个 TMDBID + SE 组合的最大日期，而非仅按 TITLE 聚合
+            # 按统一身份去重；非 TMDB 记录不再因为 TMDBID 为空而互相合并。
+            group_key = case(
+                (
+                    and_(
+                        DOWNLOADHISTORY.IDENTITY_ID.isnot(None),
+                        DOWNLOADHISTORY.IDENTITY_ID != "",
+                    ),
+                    func.concat(
+                        "identity:",
+                        DOWNLOADHISTORY.IDENTITY_ID,
+                        "|",
+                        func.coalesce(DOWNLOADHISTORY.SE, ""),
+                    ),
+                ),
+                (
+                    and_(
+                        DOWNLOADHISTORY.TMDBID.isnot(None),
+                        DOWNLOADHISTORY.TMDBID != "",
+                    ),
+                    func.concat(
+                        "tmdb:",
+                        DOWNLOADHISTORY.TMDBID,
+                        "|",
+                        func.coalesce(DOWNLOADHISTORY.SE, ""),
+                    ),
+                ),
+                (
+                    and_(
+                        DOWNLOADHISTORY.ANCHOR_PROVIDER.isnot(None),
+                        DOWNLOADHISTORY.ANCHOR_PROVIDER != "",
+                    ),
+                    func.concat(
+                        "anchor:",
+                        DOWNLOADHISTORY.ANCHOR_PROVIDER,
+                        ":",
+                        func.coalesce(DOWNLOADHISTORY.ANCHOR_EXTERNAL_ID, ""),
+                        "|",
+                        func.coalesce(DOWNLOADHISTORY.SE, ""),
+                    ),
+                ),
+                else_=func.concat("download:", DOWNLOADHISTORY.ID),
+            )
             sub_query = (
-                db.query(DOWNLOADHISTORY.TMDBID, DOWNLOADHISTORY.SE, func.max(DOWNLOADHISTORY.DATE).label("max_date"))
-                .group_by(DOWNLOADHISTORY.TMDBID, DOWNLOADHISTORY.SE)
+                db.query(
+                    group_key.label("group_key"),
+                    func.max(DOWNLOADHISTORY.DATE).label("max_date"),
+                )
+                .group_by(group_key)
                 .subquery()
             )
 
@@ -343,12 +387,11 @@ class DownloadRepository(BaseRepository):
                     base.join(
                         sub_query,
                         and_(
-                            sub_query.c.TMDBID == DOWNLOADHISTORY.TMDBID,
-                            sub_query.c.SE == DOWNLOADHISTORY.SE,
+                            sub_query.c.group_key == group_key,
                             sub_query.c.max_date == DOWNLOADHISTORY.DATE,
                         ),
                     )
-                    .order_by(DOWNLOADHISTORY.DATE.desc())
+                    .order_by(DOWNLOADHISTORY.DATE.desc(), DOWNLOADHISTORY.ID.desc())
                     .all()
                 )
             else:
@@ -360,12 +403,11 @@ class DownloadRepository(BaseRepository):
                     base.join(
                         sub_query,
                         and_(
-                            sub_query.c.TMDBID == DOWNLOADHISTORY.TMDBID,
-                            sub_query.c.SE == DOWNLOADHISTORY.SE,
+                            sub_query.c.group_key == group_key,
                             sub_query.c.max_date == DOWNLOADHISTORY.DATE,
                         ),
                     )
-                    .order_by(DOWNLOADHISTORY.DATE.desc())
+                    .order_by(DOWNLOADHISTORY.DATE.desc(), DOWNLOADHISTORY.ID.desc())
                     .limit(num)
                     .offset(offset)
                     .all()
