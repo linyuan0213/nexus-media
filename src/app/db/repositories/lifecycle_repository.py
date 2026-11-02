@@ -59,6 +59,14 @@ class LifecycleRepository(BaseRepository):
         advanced = event_rank > current_rank
         regressed = event_rank < current_rank
         if not advanced and event.OCCURRED_AT < (current.LAST_EVENT_AT or event.OCCURRED_AT):
+            # 旧事件不回退状态，但可以用更具体的元数据来源修复 content_id 兜底。
+            provider = str(snapshot.get("SOURCE_PROVIDER") or "")
+            if provider not in {"", "content_id"} and current.SOURCE_PROVIDER in {
+                None,
+                "",
+                "content_id",
+            }:
+                current.SOURCE_PROVIDER = provider
             return
         skip_keys = {"IDENTITY_ID", "SEASON", "EPISODE", "CREATED_AT", "STAGE_STARTED_AT"}
         if regressed:
@@ -76,6 +84,12 @@ class LifecycleRepository(BaseRepository):
             if key in skip_keys:
                 continue
             if key in {"TITLE", "YEAR", "POSTER", "USER_ID"} and value in {None, ""}:
+                continue
+            if (
+                key == "SOURCE_PROVIDER"
+                and value in {None, "", "content_id"}
+                and current.SOURCE_PROVIDER not in {None, "", "content_id"}
+            ):
                 continue
             if key == "LAST_EVENT_AT" and advanced:
                 value = max(value, current.LAST_EVENT_AT or value)
@@ -442,6 +456,11 @@ def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
         if episode_items:
             data["SEASON"] = max(int(item.SEASON or 0) for item in episode_items)
             data["EPISODE"] = max(int(item.EPISODE or 0) for item in episode_items)
+        providers = [
+            str(item.SOURCE_PROVIDER) for item in state_items if item.SOURCE_PROVIDER not in {None, "", "content_id"}
+        ]
+        if providers:
+            data["SOURCE_PROVIDER"] = providers[0]
         data["STAGE"] = stage
         data["STATUS"] = status
         data["STAGE_STARTED_AT"] = max(

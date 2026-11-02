@@ -415,41 +415,38 @@ class LifecycleReconciler:
                             ),
                         ):
                             count += 1
-                    # 与 LibraryPresenceService 保持一致：转移历史命中即可视为库内存在。
-                    # 这里再要求 NFO 已生成，确保至少完成元数据落盘。
-                    if (
-                        nfo_time is not None
-                        or identity_id in in_library_ids
-                        or _matches_library(target, in_library_tokens)
-                    ):
-                        for season, episode in episode_pairs:
-                            if self._projector.record(
-                                identity_id=identity_id,
-                                stage=LifecycleStage.IN_LIBRARY,
-                                status=LifecycleStatus.SUCCEEDED,
-                                event_type="reconcile.library.present",
-                                media_type=_row_media_type(row.TYPE),
-                                season=season,
-                                episode=episode,
-                                run_id=f"transfer-history:{row.ID}",
-                                trace_id=f"media:{identity_id}",
-                                title=row.TITLE,
-                                year=row.YEAR,
-                                poster=row.POSTER,
-                                source_provider=row.ANCHOR_PROVIDER,
-                                content_profile=row.CONTENT_PROFILE,
-                                message="从媒体同步索引回填",
-                                payload={"source": "MEDIASYNC_ITEMS"},
-                                occurred_at=nfo_time + timedelta(seconds=1),
-                                event_key=_scoped_event_key(
-                                    f"library-history:{row.ID}:{season}:{episode}"
-                                    if len(episode_pairs) > 1
-                                    else f"library-history:{row.ID}",
-                                    row.IDENTITY_ID,
-                                    identity_id,
-                                ),
-                            ):
-                                count += 1
+                # 与 LibraryPresenceService 保持一致：转移历史命中即可视为库内存在。
+                # 这里再要求 NFO 已生成，确保至少完成元数据落盘。
+                if nfo_time is not None or identity_id in in_library_ids or _matches_library(target, in_library_tokens):
+                    library_occurred = (nfo_time or occurred or datetime.now()) + timedelta(seconds=1)
+                    for season, episode in episode_pairs:
+                        if self._projector.record(
+                            identity_id=identity_id,
+                            stage=LifecycleStage.IN_LIBRARY,
+                            status=LifecycleStatus.SUCCEEDED,
+                            event_type="reconcile.library.present",
+                            media_type=_row_media_type(row.TYPE),
+                            season=season,
+                            episode=episode,
+                            run_id=f"transfer-history:{row.ID}",
+                            trace_id=f"media:{identity_id}",
+                            title=row.TITLE,
+                            year=row.YEAR,
+                            poster=row.POSTER,
+                            source_provider=row.ANCHOR_PROVIDER,
+                            content_profile=row.CONTENT_PROFILE,
+                            message="从媒体同步索引回填",
+                            payload={"source": "MEDIASYNC_ITEMS"},
+                            occurred_at=library_occurred,
+                            event_key=_scoped_event_key(
+                                f"library-history:{row.ID}:{season}:{episode}"
+                                if len(episode_pairs) > 1
+                                else f"library-history:{row.ID}",
+                                row.IDENTITY_ID,
+                                identity_id,
+                            ),
+                        ):
+                            count += 1
 
             # 媒体库中可能存在没有转移历史的分集（手工放入、旧任务丢失等），
             # 用转移目标目录里的 NFO + 视频文件直接回填 in_library。
