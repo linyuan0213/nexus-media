@@ -54,7 +54,9 @@ def _row_payload(row) -> dict[str, Any]:
         "episode_count": data.get("EPISODE_COUNT", 1),
         "completed_episodes": data.get("COMPLETED_EPISODES", 0),
         "in_library_episodes": data.get("IN_LIBRARY_EPISODES", 0),
+        "subscribed_episodes": data.get("SUBSCRIBED_EPISODES", 0),
         "missing": bool(data.get("MISSING")),
+        "inferred": bool(data.get("INFERRED")),
         "elapsed_seconds": max(0, elapsed),
     }
 
@@ -146,9 +148,11 @@ def list_lifecycle_episodes(
         total_ep = int(summary.get("total_ep") or 0)
         if total_ep <= 0:
             continue
+        missing_episodes = {int(value) for value in summary.get("missing_episodes") or []}
         for episode in range(1, total_ep + 1):
             if (season, episode) in existing:
                 continue
+            is_missing = episode in missing_episodes
             payloads.append(
                 _row_payload(
                     {
@@ -168,7 +172,8 @@ def list_lifecycle_episodes(
                         "EPISODE_COUNT": 1,
                         "COMPLETED_EPISODES": 0,
                         "IN_LIBRARY_EPISODES": 0,
-                        "MISSING": True,
+                        "MISSING": is_missing,
+                        "INFERRED": not is_missing,
                     }
                 )
             )

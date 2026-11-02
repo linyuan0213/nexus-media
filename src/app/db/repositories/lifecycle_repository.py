@@ -9,7 +9,7 @@ from sqlalchemy import func
 
 import log
 from app.db.models.lifecycle import MediaLifecycle, MediaLifecycleEvent
-from app.db.models.subscribe import SubscribeTvs
+from app.db.models.subscribe import SubscribeTvEpisodes, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.data_scope import apply_owner_scope
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, stage_rank
@@ -261,16 +261,35 @@ class LifecycleRepository(BaseRepository):
             if user is not None:
                 query = apply_owner_scope(query, SubscribeTvs, user, include_shared=False)
             rows = query.order_by(SubscribeTvs.SEASON.asc()).all()
-            return [
-                {
-                    "season": row.SEASON,
-                    "total_ep": int(row.TOTAL_EP or 0),
-                    "current_ep": int(row.CURRENT_EP or 0),
-                    "state": row.STATE,
-                    "name": row.NAME,
-                }
-                for row in rows
-            ]
+            episode_rows = (
+                db.query(SubscribeTvEpisodes.RSSID, SubscribeTvEpisodes.EPISODES)
+                .filter(SubscribeTvEpisodes.IDENTITY_ID == identity_id)
+                .all()
+            )
+            missing_by_rss: dict[str, list[int]] = {}
+            for rssid, value in episode_rows:
+                missing_by_rss[str(rssid)] = [
+                    int(part) for part in str(value or "").split(",") if part.strip().isdigit()
+                ]
+            result = []
+            for row in rows:
+                total = int(row.TOTAL or row.TOTAL_EP or 0)
+                current = int(row.CURRENT_EP or 0)
+                lack = int(row.LACK or 0)
+                if total and 0 < current <= total:
+                    lack = max(0, total - current + 1)
+                result.append(
+                    {
+                        "season": row.SEASON,
+                        "total_ep": total,
+                        "current_ep": int(row.CURRENT_EP or 0),
+                        "completed_ep": max(0, total - lack),
+                        "missing_episodes": missing_by_rss.get(str(row.ID), []),
+                        "state": row.STATE,
+                        "name": row.NAME,
+                    }
+                )
+            return result
 
     def stats_grouped(self, *, user=None) -> dict[str, Any]:
         with self.readonly() as db:
@@ -293,38 +312,51 @@ class LifecycleRepository(BaseRepository):
         return JsonUtils.dumps(JsonUtils.to_jsonable(value or {}))
 
 
-def _subscription_map(db, identities: list[str]) -> dict[str, tuple[int, str]]:
+def _subscription_map(db, identities: list[str]) -> dict[str, tuple[int, str, int]]:
     if not identities:
         return {}
     subscriptions = (
-        db.query(SubscribeTvs.IDENTITY_ID, SubscribeTvs.TOTAL_EP, SubscribeTvs.STATE)
+        db.query(
+            SubscribeTvs.IDENTITY_ID,
+            SubscribeTvs.TOTAL_EP,
+            SubscribeTvs.TOTAL,
+            SubscribeTvs.CURRENT_EP,
+            SubscribeTvs.LACK,
+            SubscribeTvs.STATE,
+        )
         .filter(SubscribeTvs.IDENTITY_ID.in_(identities))
         .all()
     )
-    result: dict[str, tuple[int, str]] = {}
-    for identity, total_ep, sub_state in subscriptions:
+    result: dict[str, tuple[int, str, int]] = {}
+    for identity, total_ep, total, current_ep, lack, sub_state in subscriptions:
         if not identity:
             continue
         key = str(identity)
-        total_value = int(total_ep or 0)
+        total_value = int(total or total_ep or 0)
+        current_value = int(current_ep or 0)
+        lack_value = int(lack or 0)
+        if total_value and 0 < current_value <= total_value:
+            lack_value = max(0, total_value - current_value + 1)
+        completed_value = max(0, total_value - lack_value)
         previous = result.get(key)
         if previous is None or total_value > previous[0]:
-            result[key] = (total_value, str(sub_state or ""))
+            result[key] = (total_value, str(sub_state or ""), completed_value)
     return result
 
 
-def _apply_subscription_state(grouped: list[dict[str, Any]], subscription_map: dict[str, tuple[int, str]]) -> None:
+def _apply_subscription_state(grouped: list[dict[str, Any]], subscription_map: dict[str, tuple[int, str, int]]) -> None:
     """用订阅总集数约束整季状态，避免只统计已产生生命周期记录的分集。"""
     for item in grouped:
         sub = subscription_map.get(str(item.get("IDENTITY_ID")))
         if not sub:
             continue
-        total_ep, sub_state = sub
+        total_ep, sub_state, subscribed_episodes = sub
         completed = int(item.get("COMPLETED_EPISODES") or 0)
         if total_ep > 0:
             item["EPISODE_COUNT"] = max(int(item.get("EPISODE_COUNT") or 0), total_ep)
             completed = min(total_ep, completed)
             item["COMPLETED_EPISODES"] = completed
+            item["SUBSCRIBED_EPISODES"] = min(total_ep, subscribed_episodes)
             item["PROGRESS"] = round(completed * 100 / total_ep)
         if sub_state in {"D", "S", "R"}:
             # 仍在订阅中：即使现有分集全部入库，也不能标记为整部作品完成。

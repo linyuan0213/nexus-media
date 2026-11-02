@@ -267,6 +267,7 @@ def test_grouped_incomplete_subscription_is_not_completed():
     item = rows[0]
     assert item["EPISODE_COUNT"] == 12
     assert item["COMPLETED_EPISODES"] == 4
+    assert item["SUBSCRIBED_EPISODES"] == 5
     assert item["STAGE"] == LifecycleStage.DOWNLOADING.value
     assert item["STATUS"] == LifecycleStatus.QUEUED.value
 
