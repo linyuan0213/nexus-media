@@ -697,6 +697,9 @@ def get_downloaded(
                     "site": item.SITE,
                     "content_profile": getattr(item, "CONTENT_PROFILE", "") or "",
                     "state": item.STATE,
+                    "identity_id": getattr(item, "IDENTITY_ID", "") or "",
+                    "anchor_provider": getattr(item, "ANCHOR_PROVIDER", "") or "",
+                    "anchor_external_id": getattr(item, "ANCHOR_EXTERNAL_ID", "") or "",
                     "history_id": item.ID,
                 }
                 for item in items
