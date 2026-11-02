@@ -290,30 +290,34 @@ class LifecycleReconciler:
                 if not identity_id:
                     continue
                 stage, status = map_download_state(row.STATE)
-                season, episode = _parse_season_episode(row.SE)
+                episode_pairs = _parse_season_episodes(row.SE)
                 occurred = _parse_history_time(row.DATE)
-                if self._projector.record(
-                    identity_id=identity_id,
-                    stage=stage,
-                    status=status,
-                    event_type=f"reconcile.download.{str(row.STATE).lower()}",
-                    media_type=_row_media_type(row.TYPE),
-                    season=season,
-                    episode=episode,
-                    run_id=f"download-history:{row.ID}",
-                    trace_id=f"media:{identity_id}",
-                    title=row.TITLE,
-                    year=row.YEAR,
-                    poster=row.POSTER,
-                    source_provider=row.ANCHOR_PROVIDER,
-                    content_profile=row.CONTENT_PROFILE,
-                    user_id=row.USER_ID,
-                    message=f"从下载历史回填: {row.STATE}",
-                    payload={"source": "DOWNLOAD_HISTORY", "id": row.ID},
-                    occurred_at=occurred,
-                    event_key=f"download-history:{row.ID}:{row.STATE}",
-                ):
-                    count += 1
+                for season, episode in episode_pairs:
+                    event_key = f"download-history:{row.ID}:{row.STATE}"
+                    if len(episode_pairs) > 1:
+                        event_key = f"{event_key}:{season}:{episode}"
+                    if self._projector.record(
+                        identity_id=identity_id,
+                        stage=stage,
+                        status=status,
+                        event_type=f"reconcile.download.{str(row.STATE).lower()}",
+                        media_type=_row_media_type(row.TYPE),
+                        season=season,
+                        episode=episode,
+                        run_id=f"download-history:{row.ID}",
+                        trace_id=f"media:{identity_id}",
+                        title=row.TITLE,
+                        year=row.YEAR,
+                        poster=row.POSTER,
+                        source_provider=row.ANCHOR_PROVIDER,
+                        content_profile=row.CONTENT_PROFILE,
+                        user_id=row.USER_ID,
+                        message=f"从下载历史回填: {row.STATE}",
+                        payload={"source": "DOWNLOAD_HISTORY", "id": row.ID},
+                        occurred_at=occurred,
+                        event_key=event_key,
+                    ):
+                        count += 1
             for row in reversed(subscriptions):
                 identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
                 if not identity_id:
@@ -341,45 +345,18 @@ class LifecycleReconciler:
                     count += 1
 
             for row in reversed(transfers):
-                season, episode = _parse_season_episode(row.SEASON_EPISODE)
+                episode_pairs = _parse_season_episodes(row.SEASON_EPISODE)
                 occurred = _parse_history_time(row.DATE)
                 failed = str(row.DEST_STATE or "") in {"missing", "deleted"}
                 identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
                 if not identity_id:
                     continue
-                if self._projector.record(
-                    identity_id=identity_id,
-                    stage=LifecycleStage.TRANSFERRED,
-                    status=LifecycleStatus.FAILED if failed else LifecycleStatus.SUCCEEDED,
-                    event_type="reconcile.transfer.failed" if failed else "reconcile.transfer.completed",
-                    media_type=_row_media_type(row.TYPE),
-                    season=season,
-                    episode=episode,
-                    run_id=f"transfer-history:{row.ID}",
-                    trace_id=f"media:{identity_id}",
-                    title=row.TITLE,
-                    year=row.YEAR,
-                    poster=row.POSTER,
-                    source_provider=row.ANCHOR_PROVIDER,
-                    content_profile=row.CONTENT_PROFILE,
-                    message="从转移历史回填",
-                    payload={"source": "TRANSFER_HISTORY", "id": row.ID},
-                    occurred_at=occurred,
-                    event_key=_scoped_event_key(f"transfer-history:{row.ID}", row.IDENTITY_ID, identity_id),
-                ):
-                    count += 1
-                if failed:
-                    continue
-                target = Path(str(row.DEST_PATH or row.DEST or ""))
-                if target.is_file():
-                    target = target.parent
-                nfo_time = _find_nfo_time(target)
-                if nfo_time is not None:
+                for season, episode in episode_pairs:
                     if self._projector.record(
                         identity_id=identity_id,
-                        stage=LifecycleStage.SCRAPED,
-                        status=LifecycleStatus.SUCCEEDED,
-                        event_type="reconcile.scrape.completed",
+                        stage=LifecycleStage.TRANSFERRED,
+                        status=LifecycleStatus.FAILED if failed else LifecycleStatus.SUCCEEDED,
+                        event_type="reconcile.transfer.failed" if failed else "reconcile.transfer.completed",
                         media_type=_row_media_type(row.TYPE),
                         season=season,
                         episode=episode,
@@ -390,24 +367,31 @@ class LifecycleReconciler:
                         poster=row.POSTER,
                         source_provider=row.ANCHOR_PROVIDER,
                         content_profile=row.CONTENT_PROFILE,
-                        message="从目标目录 NFO 回填",
-                        payload={"source": "NFO", "path": str(target)},
-                        occurred_at=nfo_time,
-                        event_key=_scoped_event_key(f"scrape-history:{row.ID}", row.IDENTITY_ID, identity_id),
+                        message="从转移历史回填",
+                        payload={"source": "TRANSFER_HISTORY", "id": row.ID},
+                        occurred_at=occurred,
+                        event_key=_scoped_event_key(
+                            f"transfer-history:{row.ID}:{season}:{episode}"
+                            if len(episode_pairs) > 1
+                            else f"transfer-history:{row.ID}",
+                            row.IDENTITY_ID,
+                            identity_id,
+                        ),
                     ):
                         count += 1
-                    # 与 LibraryPresenceService 保持一致：转移历史命中即可视为库内存在。
-                    # 这里再要求 NFO 已生成，确保至少完成元数据落盘。
-                    if (
-                        nfo_time is not None
-                        or identity_id in in_library_ids
-                        or _matches_library(target, in_library_tokens)
-                    ):
+                if failed:
+                    continue
+                target = Path(str(row.DEST_PATH or row.DEST or ""))
+                if target.is_file():
+                    target = target.parent
+                nfo_time = _find_nfo_time(target)
+                if nfo_time is not None:
+                    for season, episode in episode_pairs:
                         if self._projector.record(
                             identity_id=identity_id,
-                            stage=LifecycleStage.IN_LIBRARY,
+                            stage=LifecycleStage.SCRAPED,
                             status=LifecycleStatus.SUCCEEDED,
-                            event_type="reconcile.library.present",
+                            event_type="reconcile.scrape.completed",
                             media_type=_row_media_type(row.TYPE),
                             season=season,
                             episode=episode,
@@ -418,12 +402,53 @@ class LifecycleReconciler:
                             poster=row.POSTER,
                             source_provider=row.ANCHOR_PROVIDER,
                             content_profile=row.CONTENT_PROFILE,
-                            message="从媒体同步索引回填",
-                            payload={"source": "MEDIASYNC_ITEMS"},
-                            occurred_at=nfo_time + timedelta(seconds=1),
-                            event_key=_scoped_event_key(f"library-history:{row.ID}", row.IDENTITY_ID, identity_id),
+                            message="从目标目录 NFO 回填",
+                            payload={"source": "NFO", "path": str(target)},
+                            occurred_at=nfo_time,
+                            event_key=_scoped_event_key(
+                                f"scrape-history:{row.ID}:{season}:{episode}"
+                                if len(episode_pairs) > 1
+                                else f"scrape-history:{row.ID}",
+                                row.IDENTITY_ID,
+                                identity_id,
+                            ),
                         ):
                             count += 1
+                    # 与 LibraryPresenceService 保持一致：转移历史命中即可视为库内存在。
+                    # 这里再要求 NFO 已生成，确保至少完成元数据落盘。
+                    if (
+                        nfo_time is not None
+                        or identity_id in in_library_ids
+                        or _matches_library(target, in_library_tokens)
+                    ):
+                        for season, episode in episode_pairs:
+                            if self._projector.record(
+                                identity_id=identity_id,
+                                stage=LifecycleStage.IN_LIBRARY,
+                                status=LifecycleStatus.SUCCEEDED,
+                                event_type="reconcile.library.present",
+                                media_type=_row_media_type(row.TYPE),
+                                season=season,
+                                episode=episode,
+                                run_id=f"transfer-history:{row.ID}",
+                                trace_id=f"media:{identity_id}",
+                                title=row.TITLE,
+                                year=row.YEAR,
+                                poster=row.POSTER,
+                                source_provider=row.ANCHOR_PROVIDER,
+                                content_profile=row.CONTENT_PROFILE,
+                                message="从媒体同步索引回填",
+                                payload={"source": "MEDIASYNC_ITEMS"},
+                                occurred_at=nfo_time + timedelta(seconds=1),
+                                event_key=_scoped_event_key(
+                                    f"library-history:{row.ID}:{season}:{episode}"
+                                    if len(episode_pairs) > 1
+                                    else f"library-history:{row.ID}",
+                                    row.IDENTITY_ID,
+                                    identity_id,
+                                ),
+                            ):
+                                count += 1
 
             # 媒体库中可能存在没有转移历史的分集（手工放入、旧任务丢失等），
             # 用转移目标目录里的 NFO + 视频文件直接回填 in_library。
@@ -533,14 +558,21 @@ def _find_nfo_time(path: Path) -> datetime | None:
         return None
 
 
-def _parse_season_episode(value: Any) -> tuple[int, int]:
+def _parse_season_episodes(value: Any) -> list[tuple[int, int]]:
     text = str(value or "")
-    if text.startswith("S") and "E" in text:
-        try:
-            return int(text[1:].split("E", 1)[0]), int(text.split("E", 1)[1])
-        except (TypeError, ValueError):
-            return 0, 0
-    return 0, 0
+    pairs: list[tuple[int, int]] = []
+    for match in re.finditer(r"S(\d+)\s*E(\d+)(?:\s*[-~]\s*E?(\d+))?", text, re.IGNORECASE):
+        season = int(match.group(1))
+        start = int(match.group(2))
+        end = int(match.group(3) or start)
+        if end < start:
+            end = start
+        pairs.extend((season, episode) for episode in range(start, min(end, start + 200) + 1))
+    return pairs or [(0, 0)]
+
+
+def _parse_season_episode(value: Any) -> tuple[int, int]:
+    return _parse_season_episodes(value)[0]
 
 
 def _parse_history_time(value: Any) -> datetime | None:

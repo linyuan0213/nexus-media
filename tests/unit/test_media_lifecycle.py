@@ -17,7 +17,7 @@ from app.domain.lifecycle import (
     map_task_status,
     map_torrent_status,
 )
-from app.services.lifecycle_service import LifecycleProjector
+from app.services.lifecycle_service import LifecycleProjector, _parse_season_episodes
 
 
 @pytest.fixture(autouse=True)
@@ -411,3 +411,10 @@ def test_active_subscription_with_all_known_episodes_is_not_completed():
     assert total == 1
     assert rows[0]["STAGE"] == LifecycleStage.SUBSCRIBED.value
     assert rows[0]["STATUS"] == LifecycleStatus.RUNNING.value
+
+
+def test_parse_season_episodes_expands_range():
+    assert _parse_season_episodes("S01 E01-E03") == [(1, 1), (1, 2), (1, 3)]
+    assert _parse_season_episodes("S01E06-E08") == [(1, 6), (1, 7), (1, 8)]
+    assert _parse_season_episodes("S01 E04") == [(1, 4)]
+    assert _parse_season_episodes("") == [(0, 0)]
