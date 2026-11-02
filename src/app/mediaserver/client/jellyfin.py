@@ -357,7 +357,12 @@ class Jellyfin(_IMediaClient):
                 if res_items:
                     ret_movies = []
                     for res_item in res_items:
-                        if res_item.get("Name") == title and (
+                        item_name = str(res_item.get("Name") or "")
+                        item_path = str(res_item.get("Path") or "")
+                        title_match = item_name == title or (
+                            bool(title) and str(title).casefold() in item_path.casefold()
+                        )
+                        if title_match and (
                             not year or str(res_item.get("ProductionYear")) == str(year)
                         ):
                             ret_movies.append(

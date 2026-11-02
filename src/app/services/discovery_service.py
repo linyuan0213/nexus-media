@@ -34,7 +34,10 @@ class DiscoveryService:
         self._registry = registry or global_registry
         self._media_service = media_service
         self._media_server = media_server
-        self._library_presence = library_presence_service or LibraryPresenceService(media_server=media_server)
+        self._library_presence = library_presence_service or LibraryPresenceService(
+            media_server=media_server,
+            warm_in_background=False,
+        )
         self._builtin_lock = threading.Lock()
         self._builtin_ready = not register_builtins
         self._cache_ttl = max(0, cache_ttl_seconds)
@@ -95,6 +98,8 @@ class DiscoveryService:
         )
         cached = self._cache_get(cache_key)
         if cached is not None:
+            # 入库状态是异步预热的，不能把第一次的 false 固化在页面缓存里。
+            self._library_presence.annotate(cached.items)
             return cached
         try:
             result = target.items(feed, max(1, page), filters or {}, None)

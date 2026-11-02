@@ -422,7 +422,7 @@ class Emby(_IMediaClient):
         if not self._host or not self._apikey:
             return None
         req_url = (
-            f"{self._host}emby/Items?IncludeItemTypes=Movie&Fields=ProductionYear"
+            f"{self._host}emby/Items?IncludeItemTypes=Movie&Fields=ProductionYear,Path"
             f"&StartIndex=0&Recursive=true&SearchTerm={title}&Limit=10"
             f"&IncludeSearchTypes=false&api_key={self._apikey}"
         )
@@ -433,7 +433,12 @@ class Emby(_IMediaClient):
                 if res_items:
                     ret_movies = []
                     for res_item in res_items:
-                        if res_item.get("Name") == title and (
+                        item_name = str(res_item.get("Name") or "")
+                        item_path = str(res_item.get("Path") or "")
+                        title_match = item_name == title or (
+                            bool(title) and str(title).casefold() in item_path.casefold()
+                        )
+                        if title_match and (
                             not year or str(res_item.get("ProductionYear")) == str(year)
                         ):
                             ret_movies.append(
