@@ -102,3 +102,13 @@ def test_content_id_anchor_resolves_through_identity_graph():
     cast(Any, service._identity_repo).find_by_ref.assert_called()
     cast(Any, service._transfer_repo).get_existing_identity_ids.assert_called_with(["identity-1"])
 
+
+
+def test_plugin_library_alias_is_consumed_generically():
+    item = _item("DEMO-PPV-4025269")
+    item.extra = {"library_aliases": ["DEMO-4025269", "4025269"]}
+    service = _service(transfer={("content_id", "DEMO-4025269")})
+
+    service.annotate([item])
+
+    assert item.extra["in_library"] is True
