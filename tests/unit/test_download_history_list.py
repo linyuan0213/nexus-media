@@ -78,3 +78,35 @@ def test_recent_downloads_keep_distinct_non_tmdb_items_in_time_order():
     assert "A-old" not in titles
     assert {"A-new", "B", "EP1", "EP2", "anchor-only", "legacy-only"} <= set(titles)
     assert [row.DATE for row in rows] == sorted([row.DATE for row in rows], reverse=True)
+
+
+def test_queued_history_can_be_promoted_to_real_download_id():
+    from app.domain.mediatypes import MediaType
+    from app.media.models import MediaInfo
+
+    media = MediaInfo(
+        type=MediaType.MOVIE,
+        title="Demo",
+        org_string="DEMO-001",
+        enclosure="magnet:?xt=urn:btih:abc123",
+    )
+    repo = DownloadRepository()
+    history_id = repo.insert_download_history(
+        media_info=media,
+        downloader="4",
+        download_id="queue-task-1",
+        save_dir="",
+        user_id=7,
+        state="queued",
+    )
+    assert history_id is not None
+    row = repo.get_download_history_by_row_id(history_id)
+    assert row is not None
+    assert row.STATE == "queued"
+
+    assert repo.update_download_history_task(history_id, "real-task-1", "/downloads", state="downloading")
+    row = repo.get_download_history_by_row_id(history_id)
+    assert row is not None
+    assert row.DOWNLOAD_ID == "real-task-1"
+    assert row.STATE == "downloading"
+    assert row.SAVE_PATH == "/downloads"

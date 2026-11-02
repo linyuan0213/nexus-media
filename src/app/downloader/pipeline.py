@@ -81,6 +81,7 @@ class DownloadPipeline:
         file_indices=None,
         file_names=None,
         user_id: int | None = None,
+        history_id: int | None = None,
     ) -> tuple[str | None, str | None, str]:
         """
         执行完整下载流水线
@@ -212,6 +213,7 @@ class DownloadPipeline:
             in_from=in_from,
             user_name=user_name,
             user_id=user_id,
+            history_id=history_id,
         )
 
         # 清理本次由 URL 下载的临时种子文件；用户上传的 torrent_file 需保留
@@ -334,6 +336,26 @@ class DownloadPipeline:
 
     # ---------- 阶段2：配置解析 ----------
 
+    def resolve_downloader_id(self, media_info, download_setting=None, downloader_id=None):
+        """在不取种子的情况下解析目标下载器，用于队列准入判断."""
+        if downloader_id:
+            return downloader_id
+        if self._client_factory is None:
+            return None
+        if not download_setting and media_info.site:
+            download_setting = self._sites.get_site_download_setting(media_info.site)
+            if not download_setting:
+                download_setting = self._site_config_repo.get_download_setting(media_info.site)
+        if download_setting == "-2":
+            return None
+        if download_setting:
+            download_attr = self._client_factory.get_download_setting(
+                download_setting
+            ) or self._client_factory.get_download_setting(self._client_factory.default_download_setting_id)
+        else:
+            download_attr = self._client_factory.get_download_setting(self._client_factory.default_download_setting_id)
+        return download_attr.get("downloader") or None
+
     def _stage_resolve(self, media_info, download_setting, downloader_id, tag, is_paused, site_info, torrent_attr):
         if self._client_factory is None:
             return {"download_attr": {}, "downloader_id": downloader_id, "tags": [], "is_paused": is_paused}
@@ -451,6 +473,7 @@ class DownloadPipeline:
         in_from,
         user_name,
         user_id=None,
+        history_id: int | None = None,
     ):
         if not self._client_factory:
             return
@@ -482,13 +505,22 @@ class DownloadPipeline:
                 return
 
         try:
-            self._download_history_repo.insert_download_history(
-                media_info=media_info,
-                downloader=downloader_id,
-                download_id=download_id,
-                save_dir=save_dir or "",
-                user_id=user_id,
-            )
+            if history_id:
+                self._download_history_repo.update_download_history_task(
+                    history_id=history_id,
+                    download_id=download_id,
+                    save_dir=save_dir or "",
+                    state="downloading",
+                    media_info=media_info,
+                )
+            else:
+                self._download_history_repo.insert_download_history(
+                    media_info=media_info,
+                    downloader=downloader_id,
+                    download_id=download_id,
+                    save_dir=save_dir or "",
+                    user_id=user_id,
+                )
         except Exception as e:
             log.warn(f"[Pipeline]写入下载历史失败（任务已提交至下载器）: {e}")
 

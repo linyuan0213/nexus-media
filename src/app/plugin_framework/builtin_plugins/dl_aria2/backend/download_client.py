@@ -3,7 +3,7 @@ from typing import Any
 
 from app.core.exceptions import InfrastructureError, NetworkError
 from app.downloader.client._base import _IDownloadClient
-from app.downloader.schema import ConfigField, DownloaderConfigSchema
+from app.downloader.schema import ConfigField, DownloaderConfigSchema, queue_config_fields
 from app.downloader.strategy import RemoveStrategy
 from app.infrastructure.http.client import HttpClient
 from app.schemas.download import Torrent, TorrentStatus
@@ -32,6 +32,7 @@ class Aria2(_IDownloadClient):
             ),
             ConfigField(id="port", required=True, title="端口", type="text", placeholder="6800"),
             ConfigField(id="secret", required=True, title="令牌", type="text", placeholder=""),
+            *queue_config_fields("native", 5),
         ],
     )
 

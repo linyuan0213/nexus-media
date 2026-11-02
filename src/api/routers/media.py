@@ -696,6 +696,7 @@ def get_downloaded(
                     "date": item.DATE,
                     "site": item.SITE,
                     "content_profile": getattr(item, "CONTENT_PROFILE", "") or "",
+                    "state": item.STATE,
                     "history_id": item.ID,
                 }
                 for item in items

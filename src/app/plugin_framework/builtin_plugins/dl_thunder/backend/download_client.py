@@ -6,7 +6,7 @@ from urllib.parse import quote
 import log
 from app.core.exceptions import InfrastructureError, NetworkError
 from app.downloader.client._base import _IDownloadClient
-from app.downloader.schema import ConfigField, DownloaderConfigSchema
+from app.downloader.schema import ConfigField, DownloaderConfigSchema, queue_config_fields
 from app.downloader.strategy import RemoveStrategy
 from app.schemas.download import Torrent, TorrentStatus
 
@@ -49,6 +49,7 @@ class Thunder(_IDownloadClient):
                 type="text",
                 placeholder="Basic bGlueXVhbjIxMzpMeTE5OTYwMjEzKio=",
             ),
+            *queue_config_fields("nexus", 5),
         ],
     )
 

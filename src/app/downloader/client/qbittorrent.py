@@ -11,7 +11,7 @@ from bencode import bdecode, bencode
 import log
 from app.core.exceptions import InfrastructureError, NetworkError
 from app.downloader.client._base import _IDownloadClient
-from app.downloader.schema import ConfigField, DownloaderConfigSchema
+from app.downloader.schema import ConfigField, DownloaderConfigSchema, queue_config_fields
 from app.downloader.strategy import RemoveStrategy
 from app.infrastructure.cache_system.decorators import cached
 from app.schemas.download import Torrent, TorrentStatus
@@ -40,6 +40,7 @@ class Qbittorrent(_IDownloadClient):
                 options={"default": "默认", "manual": "手动", "auto": "自动"},
                 default="default",
             ),
+            *queue_config_fields("native", 5),
         ],
     )
 

@@ -33,10 +33,12 @@ from app.downloader.strategy import RemoveStrategy
 from app.events.bus import EventBus
 from app.events.registry import EventHandlerRegistry  # noqa: F401
 from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.task_queue import QueueUnavailableError
 from app.media import meta_info
 from app.mediaserver import MediaServer
 from app.message import Message
 from app.schemas.download import Torrent as TorrentInfo
+from app.services.download_queue_service import DownloadQueueService
 from app.services.download_strategies import (
     EpisodeStrategy,
     MovieDownloadStrategy,
@@ -98,6 +100,7 @@ class DownloadCore:
         self._downloader_repo = downloader_repo
         self._site_engine = site_engine
         self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
+        self._download_queue: DownloadQueueService
         cache_manager = get_cache_manager()
         # 轮内种子解析缓存：key -> (episodes, file_path)，避免同一链接被多阶段反复下载
         self._episode_cache = cache_manager.get_or_create(
@@ -120,6 +123,11 @@ class DownloadCore:
             download_history_repo=self._download_repo,
             site_engine=self._site_engine,
             site_config_repo=self._site_config_repo,
+        )
+        self._download_queue = DownloadQueueService(
+            pipeline=self._pipeline,
+            client_factory=self._client_factory,
+            history_repo=self._download_repo,
         )
 
     # ---------- 媒体存在性检查 ----------
@@ -184,6 +192,23 @@ class DownloadCore:
 
         :return: 下载器类型, 种子ID，错误信息
         """
+        download_kwargs = {
+            "media_info": media_info,
+            "is_paused": is_paused,
+            "tag": tag,
+            "download_dir": download_dir,
+            "download_setting": download_setting,
+            "downloader_id": downloader_id,
+            "upload_limit": upload_limit,
+            "download_limit": download_limit,
+            "torrent_file": torrent_file,
+            "in_from": in_from,
+            "user_name": user_name,
+            "proxy": proxy,
+            "file_indices": file_indices,
+            "file_names": file_names,
+            "user_id": user_id,
+        }
         fail_key = media_info.enclosure or media_info.page_url or ""
         if fail_key:
             # 单飞：并发同一链接串行执行，锁内复查失败负缓存，避免并发重复取链
@@ -192,46 +217,74 @@ class DownloadCore:
                 if cached_fail:
                     log.info(f"[Downloader]同一资源已失败并处于短路期，跳过重复下载：{fail_key[:120]}")
                     return None, None, cached_fail
-                result = self._pipeline.execute(
-                    media_info=media_info,
-                    is_paused=is_paused,
-                    tag=tag,
-                    download_dir=download_dir,
-                    download_setting=download_setting,
-                    downloader_id=downloader_id,
-                    upload_limit=upload_limit,
-                    download_limit=download_limit,
-                    torrent_file=torrent_file,
-                    in_from=in_from,
-                    user_name=user_name,
-                    proxy=proxy,
-                    file_indices=file_indices,
-                    file_names=file_names,
-                    user_id=user_id,
-                )
+                queued = self._enqueue_download_if_needed(**download_kwargs)
+                if queued is not None:
+                    return queued
+                result = self._pipeline.execute(**download_kwargs)
                 _, download_id, msg = result
                 if not download_id and msg:
                     ttl = _DOWNLOAD_UNRETRYABLE_TTL if "[不可重试]" in msg else _DOWNLOAD_FAIL_TTL
                     self._download_fail_cache.set(fail_key, msg, ttl=ttl)
                 return result
 
-        return self._pipeline.execute(
-            media_info=media_info,
-            is_paused=is_paused,
-            tag=tag,
-            download_dir=download_dir,
-            download_setting=download_setting,
-            downloader_id=downloader_id,
-            upload_limit=upload_limit,
-            download_limit=download_limit,
-            torrent_file=torrent_file,
-            in_from=in_from,
-            user_name=user_name,
-            proxy=proxy,
-            file_indices=file_indices,
-            file_names=file_names,
-            user_id=user_id,
+        queued = self._enqueue_download_if_needed(**download_kwargs)
+        if queued is not None:
+            return queued
+        return self._pipeline.execute(**download_kwargs)
+
+    def _enqueue_download_if_needed(self, **kwargs):
+        """Thunder 电影走 Nexus 队列；其他下载器和剧集保持直接下载."""
+        media_info = kwargs.get("media_info")
+        if media_info is None:
+            return None
+        target_id = self._pipeline.resolve_downloader_id(
+            media_info,
+            kwargs.get("download_setting"),
+            kwargs.get("downloader_id"),
         )
+        if not target_id:
+            return None
+        queue_service = self._get_download_queue()
+        if not queue_service.should_queue(media_info, target_id):
+            return None
+        try:
+            task = queue_service.submit(
+                media_info,
+                downloader_id=str(target_id),
+                is_paused=kwargs.get("is_paused"),
+                tag=kwargs.get("tag"),
+                download_dir=kwargs.get("download_dir"),
+                download_setting=kwargs.get("download_setting"),
+                upload_limit=kwargs.get("upload_limit"),
+                download_limit=kwargs.get("download_limit"),
+                torrent_file=kwargs.get("torrent_file"),
+                in_from=kwargs.get("in_from"),
+                user_name=kwargs.get("user_name"),
+                proxy=kwargs.get("proxy"),
+                file_indices=kwargs.get("file_indices"),
+                file_names=kwargs.get("file_names"),
+                user_id=kwargs.get("user_id"),
+            )
+        except QueueUnavailableError as exc:
+            log.error(f"[DownloadQueue]队列不可用，拒绝绕过并发限制: {exc}")
+            return target_id, None, f"下载队列不可用: {exc}"
+        except Exception as exc:  # noqa: BLE001
+            log.error(f"[DownloadQueue]入队失败，拒绝绕过并发限制: {exc}")
+            return target_id, None, f"加入下载队列失败: {exc}"
+        if task is None:
+            return target_id, None, "无法写入下载队列历史"
+        log.info(f"[DownloadQueue]已加入队列 task={task.id} downloader={target_id}")
+        return target_id, task.id, ""
+
+    def start_download_queue(self) -> None:
+        """由生命周期在插件/下载器初始化完成后调用."""
+        self._download_queue.start()
+
+    def stop_download_queue(self) -> None:
+        self._download_queue.stop()
+
+    def _get_download_queue(self) -> DownloadQueueService:
+        return self._download_queue
 
     def batch_download(
         self,

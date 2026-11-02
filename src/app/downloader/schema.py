@@ -48,3 +48,27 @@ class DownloaderConfigSchema:
                 field_dict["options"] = cfg_field.options
             result["config"][cfg_field.id] = field_dict
         return result
+
+
+def queue_config_fields(default_mode: str = "native", default_max_active: int = 5) -> list[ConfigField]:
+    """下载器设置的队列字段：并发上限属于设备能力，不放到下载设置."""
+    return [
+        ConfigField(
+            id="queue_mode",
+            required=False,
+            title="队列模式",
+            type="select",
+            options={"native": "下载器原生队列", "nexus": "Nexus 队列"},
+            default=default_mode,
+            tooltip="native 交给下载器排队；nexus 由 Nexus 控制并发并在超出时等待",
+        ),
+        ConfigField(
+            id="max_active_tasks",
+            required=False,
+            title="最大同时下载",
+            type="text",
+            placeholder="5",
+            default=str(default_max_active),
+            tooltip="Nexus 队列模式下允许同时进行的任务数；native 模式忽略",
+        ),
+    ]

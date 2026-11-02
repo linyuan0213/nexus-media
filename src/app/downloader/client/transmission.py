@@ -6,7 +6,7 @@ import transmission_rpc
 import log
 from app.core.exceptions import InfrastructureError, NetworkError
 from app.downloader.client._base import _IDownloadClient
-from app.downloader.schema import ConfigField, DownloaderConfigSchema
+from app.downloader.schema import ConfigField, DownloaderConfigSchema, queue_config_fields
 from app.downloader.strategy import RemoveStrategy
 from app.schemas.download import Torrent, TorrentStatus
 from app.utils import ExceptionUtils
@@ -52,6 +52,7 @@ class Transmission(_IDownloadClient):
                 type="password",
                 placeholder="password",
             ),
+            *queue_config_fields("native", 5),
         ],
     )
 

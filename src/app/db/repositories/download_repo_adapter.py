@@ -124,9 +124,17 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
 
     # 兼容旧Repository方法名
     def insert_download_history(
-        self, media_info, downloader: str, download_id: str, save_dir: str, user_id: int | None = None
-    ) -> None:
-        self._repo.insert_download_history(media_info, downloader, download_id, save_dir, user_id=user_id)
+        self,
+        media_info,
+        downloader: str,
+        download_id: str,
+        save_dir: str,
+        user_id: int | None = None,
+        state: str = "downloading",
+    ) -> int | None:
+        return self._repo.insert_download_history(
+            media_info, downloader, download_id, save_dir, user_id=user_id, state=state
+        )
 
     # 兼容旧Repository方法名
     def get_download_history(self, date=None, hid=None, num=30, page=1, user=None):
@@ -148,6 +156,21 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
 
     def get_by_id(self, download_id: str):
         return self._repo.get_download_history_by_id(download_id)
+
+    def get_download_history_by_row_id(self, history_id: int):
+        return self._repo.get_download_history_by_row_id(history_id)
+
+    def update_download_history_task(
+        self,
+        history_id: int,
+        download_id: str,
+        save_dir: str,
+        state: str = "downloading",
+        media_info=None,
+    ) -> bool:
+        return self._repo.update_download_history_task(
+            history_id, download_id, save_dir, state=state, media_info=media_info
+        )
 
     def is_exists_download_history_by_tmdb(self, tmdb_id, season_episode):
         return self._repo.is_exists_download_history_by_tmdb(int(tmdb_id), season_episode)
