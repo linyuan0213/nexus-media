@@ -120,6 +120,9 @@ def test_list_and_owner_filter():
     rows, total = repo.list_current(keyword="Owner", user=None)
     assert total == 2
     assert len(rows) == 2
+    summary = repo.stats_current()
+    assert summary["total"] == 2
+    assert summary["by_status"]["running"] == 2
 
 
 def test_reconciler_backfills_download_and_transfer_history():

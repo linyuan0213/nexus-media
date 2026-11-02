@@ -87,6 +87,16 @@ DEFAULT_MENUS = [
         "permission_code": "search:view",
     },
     {
+        "name": "媒体流转",
+        "code": "MediaLifecycle",
+        "path": "/media/lifecycle",
+        "icon": "lucide:activity",
+        "component": "/media/lifecycle/index",
+        "sort_order": 3,
+        "level": 1,
+        "permission_code": "library:view",
+    },
+    {
         "name": "探索",
         "code": "Discovery",
         "path": "",

@@ -94,6 +94,13 @@ def reconcile_lifecycle(
     return success(data=LifecycleReconciler().reconcile_recent(limit=limit))
 
 
+@router.get("/stats", summary="媒体生命周期统计")
+def lifecycle_stats(
+    current_user: UserContext = Depends(require_any_permission("library:view", "library:manage")),
+):
+    return success(data=LifecycleRepository().stats_current(user=current_user))
+
+
 @router.get("/{identity_id}", summary="媒体生命周期详情")
 def get_lifecycle(
     identity_id: str,
@@ -105,6 +112,15 @@ def get_lifecycle(
         identity_id, season=season, episode=episode, user=current_user
     )
     return success(data=_row_payload(row) if row is not None else None)
+
+
+@router.get("/{identity_id}/episodes", summary="媒体生命周期季集列表")
+def list_lifecycle_episodes(
+    identity_id: str,
+    current_user: UserContext = Depends(require_any_permission("library:view", "library:manage")),
+):
+    rows = LifecycleRepository().list_identity_rows(identity_id, user=current_user)
+    return success(data=[_row_payload(row) for row in rows])
 
 
 @router.get("/{identity_id}/events", summary="媒体生命周期时间线")

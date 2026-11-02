@@ -98,6 +98,34 @@ class LifecycleRepository(BaseRepository):
             )
             return rows, int(total)
 
+    def list_identity_rows(self, identity_id: str, *, user=None) -> list[MediaLifecycle]:
+        with self.readonly() as db:
+            query = db.query(MediaLifecycle).filter(MediaLifecycle.IDENTITY_ID == identity_id)
+            if user is not None:
+                query = apply_owner_scope(query, MediaLifecycle, user, include_shared=False)
+            return query.order_by(MediaLifecycle.SEASON.asc(), MediaLifecycle.EPISODE.asc()).all()
+
+    def stats_current(self, *, user=None) -> dict[str, Any]:
+        with self.readonly() as db:
+            base = db.query(MediaLifecycle)
+            if user is not None:
+                base = apply_owner_scope(base, MediaLifecycle, user, include_shared=False)
+            status_rows = (
+                base.with_entities(MediaLifecycle.STATUS, func.count(MediaLifecycle.ID))
+                .group_by(MediaLifecycle.STATUS)
+                .all()
+            )
+            stage_rows = (
+                base.with_entities(MediaLifecycle.STAGE, func.count(MediaLifecycle.ID))
+                .group_by(MediaLifecycle.STAGE)
+                .all()
+            )
+            return {
+                "total": sum(int(count) for _, count in status_rows),
+                "by_status": {str(key): int(count) for key, count in status_rows},
+                "by_stage": {str(key): int(count) for key, count in stage_rows},
+            }
+
     def list_events(
         self, identity_id: str, season: int = 0, episode: int = 0, limit: int = 200, *, user=None
     ) -> list[MediaLifecycleEvent]:
