@@ -17,7 +17,7 @@ from app.db.repositories.download_repository import DownloadRepository
 from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
-from app.indexer.client._base import _IIndexClient
+from app.indexer.client.base import IndexerClientBase
 from app.indexer.configuration import IndexerHelper
 from app.indexer.contract import (
     IndexerGateway,
@@ -74,7 +74,7 @@ class Indexer:
         self.site_grant_service: SiteGrantService | None = None
         self._client = None
         self._client_type = None
-        self._clients: dict[str, _IIndexClient] = {}
+        self._clients: dict[str, IndexerClientBase] = {}
         self._clients_lock = threading.Lock()
         self._external_registry = IndexerProviderRegistry()
 
@@ -90,7 +90,7 @@ class Indexer:
         with self._clients_lock:
             if self._clients:
                 return
-            clients: dict[str, _IIndexClient] = {}
+            clients: dict[str, IndexerClientBase] = {}
             builtin_cfg = self._idx_config_repo.get_by_client_id("builtin")
             if builtin_cfg is None or builtin_cfg.enabled:
                 builtin = self.__get_client("builtin")

@@ -15,7 +15,7 @@ from app.db.repositories.download_repository import DownloadRepository
 from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
-from app.indexer.client._base import _IIndexClient
+from app.indexer.client.base import IndexerClientBase
 from app.indexer.configuration import IndexerHelper
 from app.indexer.schema import IndexerConfigSchema
 from app.infrastructure.progress import ProgressTracker
@@ -32,7 +32,7 @@ _STATS_LOCK = Lock()
 _MAX_SEARCH_PAGES = 5
 
 
-class BuiltinIndexer(_IIndexClient):
+class BuiltinIndexer(IndexerClientBase):
     """
     内置索引器
 

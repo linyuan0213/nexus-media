@@ -1,4 +1,4 @@
-"""把现有 _IIndexClient 适配成新的 IndexerProvider 契约。"""
+"""把现有 IndexerClientBase 适配成新的 IndexerProvider 契约。"""
 
 from __future__ import annotations
 

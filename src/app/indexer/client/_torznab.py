@@ -10,11 +10,11 @@ from typing import Any
 
 import log
 from app.domain.enums import ProgressKey, SearchType
-from app.indexer.client._base import _IIndexClient
+from app.indexer.client.base import IndexerClientBase
 from app.utils import StringUtils
 
 
-class TorznabIndexerClient(_IIndexClient):
+class TorznabIndexerClient(IndexerClientBase):
     """Jackett/Prowlarr 等 Torznab 兼容客户端的公共实现。"""
 
     indexer_cache_ttl = 60.0
