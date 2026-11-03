@@ -148,9 +148,10 @@ class CompositeProgressGroup:
         with self._lock:
             if not 0 <= index < self._total:
                 return
-            if self._values[index] < 100:
+            if self._values[index] < 95:
                 self._completed += 1
-            self._values[index] = 100.0
+            # 搜索子任务完成只到 95%，100% 留给结果落库/入库完成。
+            self._values[index] = 95.0
             if text:
                 self._texts[index] = text
             self._tracker.update_max(
