@@ -8,10 +8,7 @@
 """
 
 import datetime
-import os
 import threading
-import time
-from concurrent.futures import FIRST_COMPLETED, wait
 from typing import TYPE_CHECKING
 
 import log
@@ -33,7 +30,6 @@ from app.indexer.contract import (
 )
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
-from app.infrastructure.cache_system import get_cache_manager
 from app.infrastructure.progress import ProgressTracker
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
@@ -41,127 +37,6 @@ from app.utils import ExceptionUtils, StringUtils
 
 if TYPE_CHECKING:
     from app.services.site_grant_service import SiteGrantService
-
-
-# 站点级搜索超时上下限（秒）：按历史延迟在区间内自适应。
-# 站点延迟样本不足时直接使用上限；样本充足后按 p95*1.5 收敛在 [MIN, MAX]。
-# 上限可用环境变量 NEXUS_MEDIA_INDEXER_TIMEOUT 调大（慢站建议 ≥45）。
-def _env_float(name: str, default: float) -> float:
-    """解析正整数型超时环境变量；缺失/非法/非正数一律回退默认值，避免导入崩溃."""
-    raw = os.getenv(name)
-    if not raw:
-        return default
-    try:
-        value = float(raw)
-    except ValueError:
-        log.warn(f"[Indexer]环境变量 {name} 非法（{raw!r}），回退默认值 {default}")
-        return default
-    return value if value > 0 else default
-
-
-def _clamp_timeouts(min_value: float, max_value: float) -> tuple[float, float]:
-    if min_value > max_value:
-        log.warn(f"[Indexer]索引器搜索超时 MIN({min_value}) 大于 MAX({max_value})，已对齐到 MAX")
-        min_value = max_value
-    return min_value, max_value
-
-
-_SITE_TIMEOUT_MIN, _SITE_TIMEOUT_MAX = _clamp_timeouts(
-    _env_float("NEXUS_MEDIA_INDEXER_TIMEOUT_MIN", 15.0),
-    _env_float("NEXUS_MEDIA_INDEXER_TIMEOUT", 45.0),
-)
-
-
-class SiteLatencyTracker:
-    """站点搜索延迟跟踪：按最近样本 p95 × 1.5 自适应超时，慢站不拖垮每次搜索"""
-
-    _KEEP = 20
-    _TTL = 7 * 24 * 3600
-
-    def __init__(self):
-        self._cache = get_cache_manager().get_or_create("site_latency", "tiered", memory_maxsize=300, ttl=self._TTL)
-
-    def timeout_for(self, indexer) -> float:
-        samples = self._cache.get(f"lat:{indexer.name}") or []
-        if len(samples) < 3:
-            return _SITE_TIMEOUT_MAX
-        ordered = sorted(samples)
-        p95 = ordered[max(0, int(len(ordered) * 0.95) - 1)]
-        return min(_SITE_TIMEOUT_MAX, max(_SITE_TIMEOUT_MIN, round(p95 * 1.5, 1)))
-
-    def record(self, indexer, seconds: float) -> None:
-        key = f"lat:{indexer.name}"
-        samples = self._cache.get(key) or []
-        samples.append(round(seconds, 2))
-        self._cache.set(key, samples[-self._KEEP :], ttl=self._TTL)
-
-
-_tracker: SiteLatencyTracker | None = None
-
-
-def get_site_latency_tracker() -> SiteLatencyTracker:
-    global _tracker
-    if _tracker is None:
-        _tracker = SiteLatencyTracker()
-    return _tracker
-
-
-def collect_search_results(futures: dict, timeout_for, on_advance=None) -> list:
-    """
-    带站点级超时的并发结果收集。
-
-    :param futures: {Future: (client, indexer)}
-    :param timeout_for: 按站点返回超时秒数的回调，超时放弃等待（线程由 HTTP 层自然终结）
-    :param on_advance: 每完成/超时一个站点的回调
-        (completed, total, indexer, timed_out, elapsed, site_status)
-        site_status: {"name", "status": ok/error/timeout, "count", "error"}
-    """
-    pending = dict(futures)
-    started = {f: time.monotonic() for f in futures}
-    total = len(futures)
-    completed = 0
-    results: list = []
-    while pending:
-        done, _ = wait(list(pending), timeout=0.5, return_when=FIRST_COMPLETED)
-        for future in done:
-            client, indexer = pending.pop(future)
-            completed += 1
-            elapsed = time.monotonic() - started[future]
-            site_status = {"name": indexer.name, "status": "ok", "count": 0, "error": ""}
-            try:
-                result = future.result()
-                if result:
-                    results.extend(result)
-                    site_status["count"] = len(result)
-            except Exception:
-                site_status["status"] = "error"
-                site_status["error"] = getattr(client, "last_error", "") or "执行异常"
-                log.error(f"[Indexer]{client.client_id} 搜索 {indexer.name} 失败")
-            else:
-                err = getattr(client, "last_error", "")
-                if not result and err:
-                    site_status["status"] = "error"
-                    site_status["error"] = err
-            if on_advance:
-                on_advance(completed, total, indexer, False, elapsed, site_status)
-        now = time.monotonic()
-        for future, (client, indexer) in list(pending.items()):
-            limit = timeout_for(indexer)
-            if now - started[future] > limit:
-                pending.pop(future)
-                completed += 1
-                elapsed = now - started[future]
-                log.warn(f"[Indexer]{indexer.name} 搜索超时({limit}s)，跳过")
-                if on_advance:
-                    on_advance(
-                        completed,
-                        total,
-                        indexer,
-                        True,
-                        elapsed,
-                        {"name": indexer.name, "status": "timeout", "count": 0, "error": f"超过 {limit}s"},
-                    )
-    return results
 
 
 class Indexer:
