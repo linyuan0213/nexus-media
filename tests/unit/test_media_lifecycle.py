@@ -459,6 +459,7 @@ def test_pause_download_calls_downloader():
     repo.latest_download_task.return_value = ("qbittorrent", "hash-1")
     repo.get_current.return_value = SimpleNamespace(
         STAGE=LifecycleStage.DOWNLOADING.value,
+        STATUS="running",
         MEDIA_TYPE="movie",
         SEASON=0,
         EPISODE=0,

@@ -27,7 +27,24 @@ class LifecycleActionService:
         self._projector = projector or LifecycleProjector(self._repo)
         self._downloader = downloader
 
+    def _state(self, identity_id: str, season: int, episode: int) -> tuple[str, str]:
+        current = self._repo.get_current(identity_id, season=season, episode=episode)
+        if current is None:
+            current = self._repo.get_grouped_identity(identity_id)
+        if current is None:
+            raise LifecycleActionError("找不到该分集的流转记录")
+        if isinstance(current, dict):
+            return str(current.get("STAGE") or ""), str(current.get("STATUS") or "")
+        return str(current.STAGE or ""), str(current.STATUS or "")
+
     def retry(self, identity_id: str, season: int = 0, episode: int = 0) -> dict[str, Any]:
+        _, status = self._state(identity_id, season, episode)
+        if status not in {
+            LifecycleStatus.FAILED.value,
+            LifecycleStatus.DEAD.value,
+            LifecycleStatus.BLOCKED.value,
+        }:
+            raise LifecycleActionError("当前状态不需要重试")
         latest = self._latest_event(identity_id, season, episode)
         payload = self._payload(latest)
         queue_name = str(payload.get("queue") or "")
@@ -79,6 +96,13 @@ class LifecycleActionService:
         return {"action": "retry", "task_id": new_task.id, "queue": queue_name}
 
     def pause(self, identity_id: str, season: int = 0, episode: int = 0) -> dict[str, Any]:
+        stage, status = self._state(identity_id, season, episode)
+        if stage != LifecycleStage.DOWNLOADING.value or status not in {
+            LifecycleStatus.QUEUED.value,
+            LifecycleStatus.RUNNING.value,
+            LifecycleStatus.RETRYING.value,
+        }:
+            raise LifecycleActionError("只有下载中的任务可以暂停")
         task = self._repo.latest_download_task(identity_id)
         if task is None or self._downloader is None:
             raise LifecycleActionError("没有找到可暂停的下载任务")
@@ -88,6 +112,9 @@ class LifecycleActionService:
         return {"action": "pause", "download_id": download_id}
 
     def resume(self, identity_id: str, season: int = 0, episode: int = 0) -> dict[str, Any]:
+        stage, status = self._state(identity_id, season, episode)
+        if stage != LifecycleStage.DOWNLOADING.value or status != LifecycleStatus.PAUSED.value:
+            raise LifecycleActionError("只有已暂停的下载可以继续")
         task = self._repo.latest_download_task(identity_id)
         if task is None or self._downloader is None:
             raise LifecycleActionError("没有找到可继续的下载任务")
@@ -97,6 +124,16 @@ class LifecycleActionService:
         return {"action": "resume", "download_id": download_id}
 
     def cancel(self, identity_id: str, season: int = 0, episode: int = 0) -> dict[str, Any]:
+        stage, status = self._state(identity_id, season, episode)
+        if status in {
+            LifecycleStatus.SUCCEEDED.value,
+            LifecycleStatus.CANCELLED.value,
+        } or stage in {
+            LifecycleStage.IN_LIBRARY.value,
+            LifecycleStage.SCRAPED.value,
+            LifecycleStage.TRANSFERRED.value,
+        }:
+            raise LifecycleActionError("已完成或已入库的任务不能取消")
         latest = self._latest_event(identity_id, season, episode)
         payload = self._payload(latest)
         queue_name = str(payload.get("queue") or "")
