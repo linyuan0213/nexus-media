@@ -90,7 +90,7 @@ DEFAULT_MENUS = [
         "name": "媒体流转",
         "code": "MediaLifecycle",
         "path": "/media/lifecycle",
-        "icon": "lucide:activity",
+        "icon": "lucide:workflow",
         "component": "/media/lifecycle/index",
         "sort_order": 3,
         "level": 1,
