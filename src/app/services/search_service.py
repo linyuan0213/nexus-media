@@ -141,10 +141,16 @@ class SearchExecutor:
         media_list = []
         all_task = []
 
+        total_names = len(search_names)
         with ThreadExecutor(max_workers=optimal_workers, name=self._thread_name_prefix) as executor:
-            for search_name in search_names:
+            for index, search_name in enumerate(search_names):
+                task_args = dict(filter_args)
+                task_args["progress_range"] = (
+                    index * 100 / total_names,
+                    100 / total_names,
+                )
                 try:
-                    task = executor.submit(search_func, search_name, filter_args, media_info, in_from)
+                    task = executor.submit(search_func, search_name, task_args, media_info, in_from)
                 except RuntimeError as e:
                     # 应用退出/线程池关闭时提交会抛 RuntimeError，静默跳过，避免订阅处理报错刷屏
                     log.debug(f"[Search]执行器不可用，跳过搜索：{e}")
@@ -427,9 +433,11 @@ class Searcher:
         def _update_progress(finish_count, total):
             if self.progress is None:
                 return
-            self.progress.update(
-                ptype=ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search,
+            pkey = ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search
+            self.progress.update_max(
+                ptype=pkey,
                 value=round(100 * (finish_count / total)),
+                text=f"搜索关键词 {finish_count}/{total} 完成",
             )
 
         media_list = executor.execute(

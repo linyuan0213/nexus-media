@@ -17,7 +17,7 @@ from app.domain.enums import ProgressKey, SearchType
 from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.models import FilterStats, PipelineResult
 from app.indexer.core.result_filter import ResultFilter
-from app.infrastructure.progress import ProgressTracker
+from app.infrastructure.progress import ProgressTracker, ScopedProgressTracker
 
 
 class SearchPipeline:
@@ -44,6 +44,7 @@ class SearchPipeline:
         in_from: SearchType | None = None,
         progress_key=ProgressKey.Search,
         search_name="",
+        progress_range: tuple[float, float] | None = None,
     ):
         """
         执行三阶段全局批量搜索过滤流水线
@@ -58,9 +59,14 @@ class SearchPipeline:
         """
         start_time = datetime.datetime.now()
         total_raw = len(all_results)
+        progress = (
+            ScopedProgressTracker(self.progress, progress_key, progress_range[0], progress_range[1])
+            if progress_range
+            else self.progress
+        )
 
         # ---------- 阶段1：本地解析和过滤 ----------
-        self.progress.update_max(
+        progress.update_max(
             ptype=progress_key,
             value=60,
             text=f"本地解析过滤 {total_raw} 条结果...",
@@ -75,7 +81,7 @@ class SearchPipeline:
         # ---------- 阶段2：批量识别（跨站点去重） ----------
         if candidates:
             ident_count = sum(1 for c in candidates if not c.skip_tmdb)
-            self.progress.update_max(
+            progress.update_max(
                 ptype=progress_key,
                 value=70,
                 text=f"批量识别 {ident_count} 条不重复结果...",
@@ -84,7 +90,7 @@ class SearchPipeline:
 
         # ---------- 阶段3：TMDB匹配和最终过滤 ----------
         if match_media and candidates:
-            self.progress.update_max(
+            progress.update_max(
                 ptype=progress_key,
                 value=85,
                 text=f"TMDB 匹配过滤 {len(candidates)} 条候选...",
@@ -93,7 +99,7 @@ class SearchPipeline:
                 candidates=candidates,
                 match_media=match_media,
                 filter_args=filter_args,
-                progress=self.progress,
+                progress=progress,
                 progress_key=progress_key,
             )
         else:
@@ -114,7 +120,7 @@ class SearchPipeline:
             f"有效 {total_stats.index_sucess}，"
             f"耗时 {elapsed} 秒"
         )
-        self.progress.update_max(
+        progress.update_max(
             ptype=progress_key,
             value=95,
             text=(

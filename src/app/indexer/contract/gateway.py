@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .models import IndexerHealth, IndexerInfo, IndexerItem, IndexerPage, IndexerQuery
@@ -9,9 +10,16 @@ from .registry import IndexerProviderRegistry
 
 
 class IndexerGateway:
-    def __init__(self, registry: IndexerProviderRegistry, *, max_workers: int = 8):
+    def __init__(
+        self,
+        registry: IndexerProviderRegistry,
+        *,
+        max_workers: int = 8,
+        on_progress: Callable | None = None,
+    ):
         self._registry = registry
         self._max_workers = max(1, max_workers)
+        self._on_progress = on_progress
 
     def search(self, query: IndexerQuery) -> IndexerPage:
         return self._run(query, "search")
@@ -43,6 +51,9 @@ class IndexerGateway:
             limit=query.offset + query.limit,
             since=query.since,
         )
+        if self._on_progress:
+            self._on_progress(0, len(providers), None, 0, None)
+        completed = 0
         with ThreadPoolExecutor(max_workers=min(self._max_workers, len(providers))) as pool:
             futures = {
                 pool.submit(provider.search if mode == "search" else provider.list, provider_query): provider
@@ -50,13 +61,18 @@ class IndexerGateway:
             }
             for future in as_completed(futures):
                 provider = futures[future]
+                completed += 1
                 try:
                     page = future.result()
                 except Exception as exc:  # noqa: BLE001
                     warnings.append(f"{provider.provider_id}: {type(exc).__name__}")
+                    if self._on_progress:
+                        self._on_progress(completed, len(providers), provider, 0, str(exc))
                     continue
                 items.extend(page.items)
                 warnings.extend(page.warnings)
+                if self._on_progress:
+                    self._on_progress(completed, len(providers), provider, len(page.items), None)
         deduped: list[IndexerItem] = []
         seen: set[tuple[str, str]] = set()
         for item in items:

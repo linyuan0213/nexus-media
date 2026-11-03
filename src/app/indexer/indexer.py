@@ -315,11 +315,40 @@ class Indexer:
         if isinstance(sites, str):
             sites = (sites,)
         start_time = datetime.datetime.now()
-        self.progress.update(
-            ptype=progress_key,
-            text=f"开始通过 provider 搜索 {key_word}，站点数：{len(registry.list())} ...",
-        )
-        page = IndexerGateway(registry, max_workers=15).search(
+
+        def set_progress(pct: float, text: str) -> None:
+            progress_range = filter_args.get("progress_range")
+            value = (
+                int(pct)
+                if not progress_range
+                else round(progress_range[0] + progress_range[1] * max(0, min(100, pct)) / 100)
+            )
+            self.progress.update_max(ptype=progress_key, value=value, text=text)
+
+        site_statuses: list[dict] = []
+
+        def on_provider_progress(completed, total, provider, count, error):
+            name = getattr(provider, "provider_id", "provider") if provider else "provider"
+            suffix = f"，返回 {count} 条" if count else (f"，失败：{error}" if error else "")
+            set_progress(
+                5 + (50 * completed / total if total else 0),
+                f"索引器搜索 {completed}/{total}（{name}）{suffix}",
+            )
+            if provider is not None:
+                site_statuses.append(
+                    {
+                        "name": name,
+                        "status": "error" if error else "ok",
+                        "count": count,
+                        "error": error or "",
+                    }
+                )
+                detail = self.progress.get_process(progress_key)
+                if detail is not None:
+                    detail["sites"] = list(site_statuses)
+
+        set_progress(2, f"准备索引器，站点/提供方 {len(registry.list())} 个 ...")
+        page = IndexerGateway(registry, max_workers=15, on_progress=on_provider_progress).search(
             IndexerQuery(
                 keyword=key_word,
                 sites=tuple(sites),
@@ -331,6 +360,7 @@ class Indexer:
         raw_results = [self._provider_to_raw(item) for item in page.items]
         if page.warnings:
             log.warn(f"[Indexer]provider 告警: {page.warnings}")
+        set_progress(58, f"聚合 {len(raw_results)} 条结果，开始识别过滤 ...")
 
         pipeline_result = self._pipeline.process(
             all_results=self._dedup(raw_results),
@@ -339,6 +369,7 @@ class Indexer:
             in_from=in_from,
             progress_key=progress_key,
             search_name=key_word,
+            progress_range=filter_args.get("progress_range"),
         )
         end_time = datetime.datetime.now()
         failed_summary = ""

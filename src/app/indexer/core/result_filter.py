@@ -22,7 +22,7 @@ from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.miss_collector import get_miss_collector
 from app.indexer.core.models import FilterStats, SearchCandidate
 from app.infrastructure.cache_system import get_cache_manager
-from app.infrastructure.progress import ProgressTracker
+from app.infrastructure.progress import ProgressTracker, ScopedProgressTracker
 from app.media.identity.matcher import get_target_matcher
 from app.media.identity.models import EDITION_MARKERS as _EDITION_MARKERS
 from app.media.parser._metainfo import meta_info
@@ -703,7 +703,7 @@ class ResultFilter:
         candidates,
         match_media,
         filter_args,
-        progress: ProgressTracker | None = None,
+        progress: ProgressTracker | ScopedProgressTracker | None = None,
         progress_key=ProgressKey.Search,
     ):
         """

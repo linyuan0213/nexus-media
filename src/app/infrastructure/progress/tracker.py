@@ -64,3 +64,29 @@ class ProgressTracker:
         if not detail:
             return None
         return detail
+
+
+class ScopedProgressTracker:
+    """把 0-100 的局部阶段进度映射到父进度的区间。"""
+
+    def __init__(self, tracker: ProgressTracker, ptype, base: float, span: float):
+        self._tracker = tracker
+        self._ptype = ptype
+        self._base = max(0.0, float(base))
+        self._span = max(0.0, float(span))
+
+    def _value(self, value: float) -> int:
+        return round(self._base + self._span * max(0.0, min(100.0, float(value))) / 100)
+
+    def update(self, value=None, text=None, ptype=None):
+        if value is not None:
+            value = self._value(value)
+        self._tracker.update_max(value=value, text=text, ptype=self._ptype)
+
+    def update_max(self, value=None, text=None, ptype=None):
+        if value is not None:
+            value = self._value(value)
+        self._tracker.update_max(value=value, text=text, ptype=self._ptype)
+
+    def get_process(self, ptype=None):
+        return self._tracker.get_process(self._ptype)
