@@ -81,7 +81,11 @@ class SearchOrchestrator:
             return None, ctx.no_exists or {}, 0, 0
 
         # 4. 排序（复用 SearchResultProcessor，全系统统一排序键；尊重做种数/站点优先规则）
-        self._progress.update_max(value=95, text=f"排序 {len(media_list)} 条结果...", ptype=progress_key)
+        self._progress.update_max(
+            value=95,
+            text=f"关键词完成 {len(search_names)}/{len(search_names)} · 排序 {len(media_list)} 条结果...",
+            ptype=progress_key,
+        )
         media_list = SearchResultProcessor.sort_results(
             media_list, download_order=(settings.get("pt") or {}).get("download_order")
         )
@@ -92,7 +96,10 @@ class SearchOrchestrator:
 
         self._progress.update_max(
             value=100,
-            text=f"搜索完成，共 {len(media_list)} 条{self._failed_sites_summary(progress_key)}",
+            text=(
+                f"关键词完成 {len(search_names)}/{len(search_names)} · "
+                f"搜索完成，共 {len(media_list)} 条{self._failed_sites_summary(progress_key)}"
+            ),
             ptype=progress_key,
         )
         self._progress.end(progress_key)
@@ -419,7 +426,7 @@ class SearchOrchestrator:
             result = self._search_one(SearchType.WEB, search_names[0], task_args, ctx.match_media)
             if result:
                 media_list.extend(result)
-            child.update_max(value=100, text=f"关键词完成，找到 {len(media_list)} 条")
+            group.complete_child(0, f"找到 {len(media_list)} 条")
             return media_list
 
         with self._search_executor(max_workers) as executor:
@@ -428,12 +435,15 @@ class SearchOrchestrator:
                 child = group.child(index)
                 task_args = {**filter_args, "progress_child": child}
                 tasks.append(
-                    (executor.submit(self._search_one, SearchType.WEB, name, task_args, ctx.match_media), child)
+                    (
+                        index,
+                        executor.submit(self._search_one, SearchType.WEB, name, task_args, ctx.match_media),
+                    )
                 )
 
-            for future, child in tasks:
+            for index, future in tasks:
                 result = future.result()
-                child.update_max(value=100, text=f"关键词完成，找到 {len(result or [])} 条")
+                group.complete_child(index, f"找到 {len(result or [])} 条")
                 if result:
                     if isinstance(result, list):
                         media_list.extend(result)

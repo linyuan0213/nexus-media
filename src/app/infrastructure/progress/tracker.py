@@ -122,6 +122,7 @@ class CompositeProgressGroup:
         self._title = title
         self._values = [0.0] * self._total
         self._texts = [""] * self._total
+        self._completed = 0
         self._lock = threading.RLock()
         tracker.update_max(value=1, text=f"{title}：准备 {self._total} 个关键词...", ptype=self._ptype)
 
@@ -140,6 +141,21 @@ class CompositeProgressGroup:
             self._tracker.update_max(
                 value=round(average),
                 text=f"{self._title} 第 {index + 1}/{self._total} 个关键词 · {detail_text}",
+                ptype=self._ptype,
+            )
+
+    def complete_child(self, index: int, text: str | None = None):
+        with self._lock:
+            if not 0 <= index < self._total:
+                return
+            if self._values[index] < 100:
+                self._completed += 1
+            self._values[index] = 100.0
+            if text:
+                self._texts[index] = text
+            self._tracker.update_max(
+                value=round(sum(self._values) / self._total),
+                text=(f"{self._title}：关键词完成 {self._completed}/{self._total}" + (f" · {text}" if text else "")),
                 ptype=self._ptype,
             )
 
