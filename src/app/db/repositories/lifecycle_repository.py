@@ -339,6 +339,36 @@ class LifecycleRepository(BaseRepository):
                 return str(download[0])
         return None
 
+    def list_stale_running(self, before: datetime, limit: int = 500) -> list[MediaLifecycle]:
+        with self.readonly() as db:
+            return (
+                db.query(MediaLifecycle)
+                .filter(
+                    MediaLifecycle.IDENTITY_ID != "preview",
+                    MediaLifecycle.STATUS.in_(
+                        [
+                            LifecycleStatus.QUEUED.value,
+                            LifecycleStatus.RUNNING.value,
+                            LifecycleStatus.RETRYING.value,
+                        ]
+                    ),
+                    MediaLifecycle.STAGE.in_(
+                        [
+                            LifecycleStage.DOWNLOAD_QUEUED.value,
+                            LifecycleStage.DOWNLOADING.value,
+                            LifecycleStage.TRANSFER_QUEUED.value,
+                            LifecycleStage.TRANSFERRING.value,
+                            LifecycleStage.SCRAPE_QUEUED.value,
+                            LifecycleStage.SCRAPING.value,
+                        ]
+                    ),
+                    MediaLifecycle.LAST_EVENT_AT < before,
+                )
+                .order_by(MediaLifecycle.LAST_EVENT_AT.asc())
+                .limit(max(1, int(limit)))
+                .all()
+            )
+
     def list_subscription_summaries(self, identity_id: str, *, user=None) -> list[dict[str, Any]]:
         """读取订阅侧总集数，用于补齐尚未进入生命周期记录的分集。"""
         with self.readonly() as db:

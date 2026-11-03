@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy import or_
 
 import log
+from app.core.settings import settings
 from app.db.models.download import DOWNLOADHISTORY
 from app.db.models.lifecycle import MediaLifecycleEvent
 from app.db.models.media_sync import MEDIASYNCITEMS
@@ -496,6 +497,31 @@ class LifecycleReconciler:
                         event_key=f"library-scan:{identity_id}:{season}:{episode}",
                     ):
                         count += 1
+        stale_hours = int((settings.get("queue") or {}).get("lifecycle_stale_hours", 24) or 0)
+        if stale_hours > 0:
+            before = datetime.now() - timedelta(hours=stale_hours)
+            for row in LifecycleRepository().list_stale_running(before):
+                if self._projector.record(
+                    identity_id=str(row.IDENTITY_ID),
+                    stage=str(row.STAGE),
+                    status=LifecycleStatus.BLOCKED,
+                    event_type="reconcile.stale",
+                    media_type=str(row.MEDIA_TYPE or "movie"),
+                    season=int(row.SEASON or 0),
+                    episode=int(row.EPISODE or 0),
+                    run_id=str(row.RUN_ID or ""),
+                    trace_id=str(row.TRACE_ID or ""),
+                    title=row.TITLE,
+                    year=row.YEAR,
+                    poster=row.POSTER,
+                    source_provider=row.SOURCE_PROVIDER,
+                    content_profile=row.CONTENT_PROFILE,
+                    user_id=row.USER_ID,
+                    message=f"超过 {stale_hours} 小时没有任务更新，已标记为停滞",
+                    occurred_at=datetime.now(),
+                    event_key=f"stale:{row.IDENTITY_ID}:{row.SEASON}:{row.EPISODE}:{row.LAST_EVENT_AT.isoformat()}",
+                ):
+                    count += 1
         return {"imported": count}
 
 
