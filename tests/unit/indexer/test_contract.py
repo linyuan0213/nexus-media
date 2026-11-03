@@ -8,7 +8,7 @@ from app.indexer.contract import (
     IndexerGateway,
     IndexerProviderRegistry,
     IndexerQuery,
-    LegacyClientIndexerProvider,
+    SiteIndexerProvider,
 )
 
 
@@ -63,20 +63,25 @@ class FakeClient:
         pass
 
 
-def test_legacy_provider_normalizes_search_and_dedup():
-    provider = LegacyClientIndexerProvider(FakeClient())
+def make_provider(site_name: str = "Site A"):
+    client = FakeClient()
+    indexer = next(item for item in client.indexers if item.name == site_name)
+    return SiteIndexerProvider(client, indexer)
+
+
+def test_site_provider_normalizes_search_and_dedup():
+    provider = make_provider()
     page = provider.search(IndexerQuery(keyword="demo", limit=10))
-    assert page.total == 2
-    assert page.items[0].site in {"Site A", "Site B"}
-    assert page.items[0].provider_id == "fake"
+    assert page.total == 1
+    assert page.items[0].site == "Site A"
+    assert page.items[0].provider_id == "fake:Site A"
     assert page.items[0].download_url.startswith("magnet:")
     assert page.items[0].size_bytes == 1024
     assert page.items[0].item_id
-    assert len({(item.site, item.dedup_key) for item in page.items}) == 2
 
 
-def test_legacy_provider_list_and_site_filter():
-    provider = LegacyClientIndexerProvider(FakeClient())
+def test_site_provider_list_and_site_filter():
+    provider = make_provider()
     page = provider.list(IndexerQuery(sites=("Site A",), limit=10))
     assert page.total == 1
     assert page.items[0].site == "Site A"
@@ -85,13 +90,13 @@ def test_legacy_provider_list_and_site_filter():
 
 def test_registry_rejects_duplicate_and_unregisters():
     registry = IndexerProviderRegistry()
-    provider = LegacyClientIndexerProvider(FakeClient())
+    provider = make_provider()
     registry.register(provider)
-    assert registry.get("fake") is provider
+    assert registry.get("fake:Site A") is provider
     with pytest.raises(ValueError):
         registry.register(provider)
-    registry.unregister("fake")
-    assert registry.get("fake") is None
+    registry.unregister("fake:Site A")
+    assert registry.get("fake:Site A") is None
 
 
 class BrokenProvider:
@@ -115,25 +120,21 @@ class BrokenProvider:
 
 def test_gateway_keeps_partial_results_and_warnings():
     registry = IndexerProviderRegistry()
-    registry.register(LegacyClientIndexerProvider(FakeClient()))
+    registry.register(make_provider())
     registry.register(BrokenProvider())
     page = IndexerGateway(registry).search(IndexerQuery(keyword="demo", limit=10))
-    assert len(page.items) == 2
+    assert len(page.items) == 1
     assert any("broken" in warning for warning in page.warnings)
 
 
 def test_list_and_gateway_apply_offset_once():
-    provider = LegacyClientIndexerProvider(FakeClient())
-    page = provider.list(IndexerQuery(offset=1, limit=1))
-    assert page.total == 2
-    assert len(page.items) == 1
-    assert page.items[0].site == "Site B"
-
     registry = IndexerProviderRegistry()
-    registry.register(provider)
+    registry.register(make_provider("Site A"))
+    registry.register(make_provider("Site B"))
     gateway_page = IndexerGateway(registry).list(IndexerQuery(offset=1, limit=1))
     assert len(gateway_page.items) == 1
     assert gateway_page.offset == 1
+    assert gateway_page.items[0].site == "Site B"
 
 
 class FakeResponse:
@@ -227,7 +228,7 @@ def test_external_provider_item_converts_to_pipeline_raw():
     from app.indexer.contract import IndexerItem
     from app.indexer.indexer import Indexer
 
-    raw = Indexer._external_to_raw(
+    raw = Indexer._provider_to_raw(
         IndexerItem(
             provider_id="crawler-a",
             site="site-a",
@@ -251,11 +252,11 @@ def test_global_registry_tracks_plugin_owner():
         unregister_plugin_indexers,
     )
 
-    provider = LegacyClientIndexerProvider(FakeClient(), provider_id="plugin-indexer")
+    provider = make_provider()
     register_indexer_provider(provider, "plugin-x")
-    assert get_global_registry().get("plugin-indexer") is provider
+    assert get_global_registry().get("fake:Site A") is provider
     unregister_plugin_indexers("plugin-x")
-    assert get_global_registry().get("plugin-indexer") is None
+    assert get_global_registry().get("fake:Site A") is None
 
 
 def test_plugin_manifest_parses_indexer_providers():

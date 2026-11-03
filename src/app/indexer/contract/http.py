@@ -128,6 +128,7 @@ class HttpIndexerProvider:
             info_hash=row.get("info_hash"),
             resource_type=str(row.get("resource_type") or "magnet"),
             description=str(row.get("description") or ""),
+            extra={"external": True},
         )
 
 

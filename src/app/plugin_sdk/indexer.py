@@ -11,7 +11,6 @@ from app.indexer.contract import (
     IndexerProviderRegistry,
     IndexerQuery,
     IndexerSite,
-    LegacyClientIndexerProvider,
     build_provider,
     get_global_registry,
     load_providers,
@@ -37,5 +36,4 @@ __all__ = [
     "IndexerProviderRegistry",
     "IndexerQuery",
     "IndexerSite",
-    "LegacyClientIndexerProvider",
 ]

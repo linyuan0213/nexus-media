@@ -11,7 +11,7 @@ import datetime
 import os
 import threading
 import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, wait
 from typing import TYPE_CHECKING
 
 import log
@@ -27,7 +27,7 @@ from app.indexer.contract import (
     IndexerItem,
     IndexerProviderRegistry,
     IndexerQuery,
-    LegacyClientIndexerProvider,
+    SiteIndexerProvider,
     get_global_registry,
     load_providers,
 )
@@ -287,19 +287,18 @@ class Indexer:
                 log.warn(f"[Indexer]加载外部 provider 失败: {exc}")
         self._external_registry = registry
 
-    def build_provider_registry(self) -> IndexerProviderRegistry:
-        """构建新 provider 契约的注册表；旧搜索链路保持原样，便于逐步迁移。"""
+    def build_search_registry(self, filter_args: dict | None = None) -> IndexerProviderRegistry:
+        """构建站点级 provider 注册表；旧客户端只作为 provider 内部实现。"""
         self._ensure_clients()
         registry = IndexerProviderRegistry()
         for client in self._clients.values():
-            try:
-                registry.register(LegacyClientIndexerProvider(client))
-            except ValueError:
-                log.warn(f"[Indexer]重复的 provider_id: {client.get_client_id()}")
+            for indexer in self._filter_indexers(client, check=True, filter_args=filter_args):
+                order_seq = 100 - int(getattr(indexer, "pri", 0))
+                registry.register(SiteIndexerProvider(client, indexer, order_seq), replace=True)
+        self._ensure_external_providers()
+        for provider in self._external_registry.list():
+            registry.register(provider, replace=True)
         return registry
-
-    def build_provider_gateway(self) -> IndexerGateway:
-        return IndexerGateway(self.build_provider_registry())
 
     def get_indexers(self, check=False):
         """获取默认搜索索引器的站点列表（兼容旧调用）"""
@@ -421,158 +420,71 @@ class Indexer:
         return None
 
     def search_by_keyword(self, key_word, filter_args: dict, match_media=None, in_from: SearchType | None = None):
-        """
-        根据关键字调用所有已配置索引器并发搜索
-
-        :param key_word: 搜索关键词
-        :param filter_args: 过滤条件
-        :param match_media: 需要匹配的媒体信息
-        :param in_from: 搜索渠道
-        :return: 命中的资源媒体信息列表
-        """
+        """统一通过 IndexerGateway 搜索所有内置、第三方和插件索引器。"""
         if not key_word:
             return []
-
-        # 优先使用调用方传入的 per-session progress key（WEB 搜索按会话隔离进度）
+        filter_args = filter_args or {}
+        site_filter = filter_args.get("site")
+        if site_filter is not None and len(site_filter) == 0:
+            log.info("站点列表为空，跳过搜索")
+            return []
         progress_key = filter_args.get("progress_key") or (
             ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search
         )
-        self._ensure_clients()
-        if not self._clients:
-            log.error("没有配置索引器，无法搜索！")
-            return []
-
-        # 扁平化所有 (client, indexer) 工作项
-        work_items = []
-        for client in self._clients.values():
-            indexers = self._filter_indexers(client, check=True, filter_args=filter_args)
-            for indexer in indexers:
-                order_seq = 100 - int(getattr(indexer, "pri", 0))
-                work_items.append((client, indexer, order_seq))
-
-        # 同域名索引器去重：内置优先，跳过被内置覆盖的第三方(如 jackett)重复站点
-        builtin_domains = {
-            StringUtils.get_url_domain(getattr(indexer, "domain", "") or "")
-            for client, indexer, _ in work_items
-            if client.get_client_id() == "builtin"
-        }
-        builtin_domains.discard("")
-        if builtin_domains:
-            filtered_items = []
-            for client, indexer, order_seq in work_items:
-                if client.get_client_id() != "builtin":
-                    dom = StringUtils.get_url_domain(getattr(indexer, "domain", "") or "")
-                    if dom and dom in builtin_domains:
-                        log.info(f"[Indexer]跳过第三方重复站点 {indexer.name}（内置已覆盖 {dom}）")
-                        continue
-                filtered_items.append((client, indexer, order_seq))
-            work_items = filtered_items
-
-        self._ensure_external_providers()
-        if not work_items and not self._external_registry.list():
+        registry = self.build_search_registry(filter_args)
+        if not registry.list():
             log.error("没有可用索引器站点，无法搜索！")
             return []
 
+        sites = site_filter or ()
+        if isinstance(sites, str):
+            sites = (sites,)
         start_time = datetime.datetime.now()
-        max_workers = min(len(work_items), 15) or 1
-        all_raw_results = []
-        site_statuses: list[dict] = []
-
-        if work_items and filter_args and filter_args.get("site"):
-            log.info("开始搜索 %s，站点：%s，并发数：%s ..." % (key_word, filter_args.get("site"), max_workers))
-            self.progress.update(
-                ptype=progress_key, text="开始搜索 {}，站点：{} ...".format(key_word, filter_args.get("site"))
+        self.progress.update(
+            ptype=progress_key,
+            text=f"开始通过 provider 搜索 {key_word}，站点数：{len(registry.list())} ...",
+        )
+        page = IndexerGateway(registry, max_workers=15).search(
+            IndexerQuery(
+                keyword=key_word,
+                sites=tuple(sites),
+                content_profile=filter_args.get("content_profile"),
+                offset=0,
+                limit=500,
             )
-        else:
-            log.info("开始并行搜索 %s，工作项：%s，并发数：%s ..." % (key_word, len(work_items), max_workers))
-            self.progress.update(ptype=progress_key, text=f"开始并行搜索 {key_word}，站点数：{len(work_items)} ...")
+        )
+        raw_results = [self._provider_to_raw(item) for item in page.items]
+        if page.warnings:
+            log.warn(f"[Indexer]provider 告警: {page.warnings}")
 
-        # ---------- 阶段1：单层并发搜索，站点级超时熔断 ----------
-        if work_items:
-            executor = ThreadPoolExecutor(max_workers=max_workers)
-            try:
-                futures = {
-                    executor.submit(client.search, order_seq, indexer, key_word, filter_args, match_media, in_from): (
-                        client,
-                        indexer,
-                    )
-                    for client, indexer, order_seq in work_items
-                }
-
-                tracker = get_site_latency_tracker()
-
-                def _on_advance(completed, total, indexer, timed_out, elapsed, site_status=None):
-                    tracker.record(indexer, elapsed)
-                    pct = 10 + round(50 * (completed / total))
-                    tag = "超时跳过" if timed_out else "完成"
-                    text = f"站点搜索 {completed}/{total} {tag}（{indexer.name}）"
-                    if site_status:
-                        if site_status.get("status") == "ok":
-                            text += f"：{site_status['count']} 条"
-                        elif site_status.get("error"):
-                            text += f"：{site_status['error']}"
-                    self.progress.update_max(ptype=progress_key, value=pct, text=text)
-                    if site_status:
-                        site_statuses.append(site_status)
-                        detail = self.progress.get_process(progress_key)
-                        if detail is not None:
-                            detail["sites"] = list(site_statuses)
-
-                all_raw_results = collect_search_results(
-                    futures, timeout_for=tracker.timeout_for, on_advance=_on_advance
-                )
-            finally:
-                executor.shutdown(wait=False)
-
-        # 外部 provider（crawler/第三方索引器）合并到同一识别/过滤管线。
-        if self._external_registry.list():
-            external_page = IndexerGateway(self._external_registry).search(
-                IndexerQuery(
-                    keyword=key_word,
-                    sites=tuple(filter_args.get("site") or ()),
-                    offset=0,
-                    limit=500,
-                )
-            )
-            all_raw_results.extend(self._external_to_raw(item) for item in external_page.items)
-            if external_page.warnings:
-                log.warn(f"[Indexer]外部 provider 告警: {external_page.warnings}")
-
-        # ---------- 阶段2：去重 + 统一批量识别和过滤 ----------
         pipeline_result = self._pipeline.process(
-            all_results=self._dedup(all_raw_results),
+            all_results=self._dedup(raw_results),
             filter_args=filter_args,
             match_media=match_media,
             in_from=in_from,
             progress_key=progress_key,
             search_name=key_word,
         )
-
         end_time = datetime.datetime.now()
-        failed_sites = [s for s in site_statuses if s.get("status") in ("error", "timeout")]
         failed_summary = ""
-        if failed_sites:
-            failed_summary = "；失败站点：" + "、".join(
-                f"{s['name']}({s.get('error') or s['status']})" for s in failed_sites
-            )
+        if page.warnings:
+            failed_summary = "；provider 告警：" + "；".join(page.warnings)
         log.info(
-            f"搜索关键词 {key_word} 所有站点完成，"
-            f"原始结果 {len(all_raw_results)} 条，有效资源数：{len(pipeline_result.results)}，"
+            f"搜索关键词 {key_word} 所有 provider 完成，"
+            f"原始结果 {len(raw_results)} 条，有效资源数：{len(pipeline_result.results)}，"
             f"总耗时 {(end_time - start_time).seconds} 秒{failed_summary}"
         )
         self.progress.update(
             ptype=progress_key,
             text=(
-                f"搜索关键词 {key_word} 所有站点完成，"
-                f"有效资源数：{len(pipeline_result.results)}，"
+                f"搜索关键词 {key_word} 完成，有效资源数：{len(pipeline_result.results)}，"
                 f"总耗时 {(end_time - start_time).seconds} 秒{failed_summary}"
             ),
         )
-
         return pipeline_result.results
 
     @staticmethod
-    def _external_to_raw(item: IndexerItem) -> dict:
+    def _provider_to_raw(item: IndexerItem) -> dict:
         return {
             "title": item.title,
             "enclosure": item.download_url or item.magnet or item.ed2k or "",
@@ -584,7 +496,7 @@ class Indexer:
             "_indexer_name": item.site or item.site_name,
             "_indexer_display_name": item.site_name or item.site,
             "_indexer_source": item.provider_id,
-            "_external_indexer": True,
+            "_external_indexer": bool(item.extra.get("external")),
             "_indexer_order": 0,
         }
 
