@@ -468,14 +468,17 @@ class Indexer:
                 filtered_items.append((client, indexer, order_seq))
             work_items = filtered_items
 
-        if not work_items:
+        self._ensure_external_providers()
+        if not work_items and not self._external_registry.list():
             log.error("没有可用索引器站点，无法搜索！")
             return []
 
         start_time = datetime.datetime.now()
-        max_workers = min(len(work_items), 15)
+        max_workers = min(len(work_items), 15) or 1
+        all_raw_results = []
+        site_statuses: list[dict] = []
 
-        if filter_args and filter_args.get("site"):
+        if work_items and filter_args and filter_args.get("site"):
             log.info("开始搜索 %s，站点：%s，并发数：%s ..." % (key_word, filter_args.get("site"), max_workers))
             self.progress.update(
                 ptype=progress_key, text="开始搜索 {}，站点：{} ...".format(key_word, filter_args.get("site"))
@@ -485,42 +488,43 @@ class Indexer:
             self.progress.update(ptype=progress_key, text=f"开始并行搜索 {key_word}，站点数：{len(work_items)} ...")
 
         # ---------- 阶段1：单层并发搜索，站点级超时熔断 ----------
-        executor = ThreadPoolExecutor(max_workers=max_workers)
-        try:
-            futures = {
-                executor.submit(client.search, order_seq, indexer, key_word, filter_args, match_media, in_from): (
-                    client,
-                    indexer,
+        if work_items:
+            executor = ThreadPoolExecutor(max_workers=max_workers)
+            try:
+                futures = {
+                    executor.submit(client.search, order_seq, indexer, key_word, filter_args, match_media, in_from): (
+                        client,
+                        indexer,
+                    )
+                    for client, indexer, order_seq in work_items
+                }
+
+                tracker = get_site_latency_tracker()
+
+                def _on_advance(completed, total, indexer, timed_out, elapsed, site_status=None):
+                    tracker.record(indexer, elapsed)
+                    pct = 10 + round(50 * (completed / total))
+                    tag = "超时跳过" if timed_out else "完成"
+                    text = f"站点搜索 {completed}/{total} {tag}（{indexer.name}）"
+                    if site_status:
+                        if site_status.get("status") == "ok":
+                            text += f"：{site_status['count']} 条"
+                        elif site_status.get("error"):
+                            text += f"：{site_status['error']}"
+                    self.progress.update_max(ptype=progress_key, value=pct, text=text)
+                    if site_status:
+                        site_statuses.append(site_status)
+                        detail = self.progress.get_process(progress_key)
+                        if detail is not None:
+                            detail["sites"] = list(site_statuses)
+
+                all_raw_results = collect_search_results(
+                    futures, timeout_for=tracker.timeout_for, on_advance=_on_advance
                 )
-                for client, indexer, order_seq in work_items
-            }
-
-            tracker = get_site_latency_tracker()
-            site_statuses: list[dict] = []
-
-            def _on_advance(completed, total, indexer, timed_out, elapsed, site_status=None):
-                tracker.record(indexer, elapsed)
-                pct = 10 + round(50 * (completed / total))
-                tag = "超时跳过" if timed_out else "完成"
-                text = f"站点搜索 {completed}/{total} {tag}（{indexer.name}）"
-                if site_status:
-                    if site_status.get("status") == "ok":
-                        text += f"：{site_status['count']} 条"
-                    elif site_status.get("error"):
-                        text += f"：{site_status['error']}"
-                self.progress.update_max(ptype=progress_key, value=pct, text=text)
-                if site_status:
-                    site_statuses.append(site_status)
-                    detail = self.progress.get_process(progress_key)
-                    if detail is not None:
-                        detail["sites"] = list(site_statuses)
-
-            all_raw_results = collect_search_results(futures, timeout_for=tracker.timeout_for, on_advance=_on_advance)
-        finally:
-            executor.shutdown(wait=False)
+            finally:
+                executor.shutdown(wait=False)
 
         # 外部 provider（crawler/第三方索引器）合并到同一识别/过滤管线。
-        self._ensure_external_providers()
         if self._external_registry.list():
             external_page = IndexerGateway(self._external_registry).search(
                 IndexerQuery(
@@ -577,7 +581,8 @@ class Indexer:
             "peers": item.peers or 0,
             "page_url": item.detail_url,
             "description": item.description,
-            "_indexer_name": item.site_name or item.site,
+            "_indexer_name": item.site or item.site_name,
+            "_indexer_display_name": item.site_name or item.site,
             "_indexer_source": item.provider_id,
             "_indexer_order": 0,
         }

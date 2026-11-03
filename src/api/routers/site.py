@@ -19,6 +19,9 @@ from api.deps import (
 )
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import DomainError, ServiceError  # noqa: F401
+from app.indexer.contract.gateway import IndexerGateway
+from app.indexer.contract.global_registry import get_global_registry
+from app.indexer.contract.models import IndexerQuery
 from app.infrastructure.thread import ThreadExecutor
 from app.schemas.common import CommonResponse
 from app.services.indexer_service import IndexerService
@@ -289,6 +292,88 @@ def get_site_definitions(
     return success(data=data)
 
 
+@router.get("/sites/indexer-providers", response_model=CommonResponse, summary="列出已注册索引器 provider")
+def list_indexer_providers(
+    _user=Depends(require_any_permission("site:view", "site:manage")),
+):
+    data = []
+    for provider in get_global_registry().list():
+        try:
+            info = provider.info()
+            data.append(
+                {
+                    "provider_id": info.provider_id,
+                    "name": info.name,
+                    "api_version": info.api_version,
+                    "capabilities": list(info.capabilities),
+                    "sites": [{"id": site.id, "name": site.name} for site in info.sites],
+                    "health": provider.health().ok,
+                }
+            )
+        except Exception as exc:  # noqa: BLE001
+            data.append({"provider_id": provider.provider_id, "error": str(exc), "health": False})
+    return success(data=data)
+
+
+def _external_indexer_sites() -> list[dict]:
+    """把已启用插件的 provider sites 映射成站点管理项。"""
+    result: list[dict] = []
+    for provider in get_global_registry().list():
+        try:
+            info = provider.info()
+        except Exception as exc:  # noqa: BLE001
+            log.warn(f"[Site]读取索引器 provider 失败 {provider.provider_id}: {exc}")
+            continue
+        for site in info.sites:
+            result.append(
+                {
+                    "id": f"provider:{info.provider_id}:{site.id}",
+                    "name": site.id,
+                    "display_name": site.name,
+                    "url": "",
+                    "source": info.provider_id,
+                    "source_label": info.name,
+                    "source_icon": "lucide:search-code",
+                    "third_party": True,
+                    "enabled": True,
+                    "public": site.public,
+                    "site_public": site.public,
+                    "has_rss": False,
+                    "rss_enable": False,
+                    "brush_enable": False,
+                    "parse": False,
+                }
+            )
+    return result
+
+
+@router.get("/sites/indexer-providers/search", response_model=CommonResponse, summary="调试索引器 provider 搜索")
+def search_indexer_providers(
+    keyword: str = "",
+    limit: int = 5,
+    _user=Depends(require_any_permission("site:view", "site:manage")),
+):
+    gateway = IndexerGateway(get_global_registry())
+    page = gateway.search(IndexerQuery(keyword=keyword, limit=max(1, min(50, limit))))
+    return success(
+        data={
+            "total": page.total,
+            "items": [
+                {
+                    "provider_id": item.provider_id,
+                    "site": item.site,
+                    "site_name": item.site_name,
+                    "item_id": item.item_id,
+                    "title": item.title,
+                }
+                for item in page.items
+            ],
+            "warnings": page.warnings,
+        }
+    )
+
+
+@router.post("/sites", response_model=CommonResponse, summary="获取站点列表")
 @router.post("/sites", response_model=CommonResponse, summary="获取站点列表")
 def get_sites(
     req: SiteFilterRequest,
@@ -303,6 +388,7 @@ def get_sites(
         basic=bool(req.basic),
         source=req.source,
     )
+    sites.extend(_external_indexer_sites())
     # 无站点管理权限的用户按站点授权过滤（ADR-021 4.3）
     grant_service = getattr(app_context, "site_grant_service", None)
     can_manage = user.is_superadmin or "site:manage" in user.permissions or "*" in user.permissions
@@ -387,6 +473,43 @@ def get_site_user_statistics(
     return success(data=statistics)
 
 
+def _provider_resources(index_id: str, keyword: str, page: int, page_size: int) -> dict:
+    parts = index_id.split(":", 2)
+    if len(parts) != 3:
+        raise ValueError("无效的 provider 站点 id")
+    _, provider_id, site_id = parts
+    provider = get_global_registry().get(provider_id)
+    if provider is None:
+        raise ValueError("索引器 provider 未注册")
+    query = IndexerQuery(
+        keyword=keyword or None,
+        sites=(site_id,),
+        offset=max(0, page) * page_size,
+        limit=page_size,
+    )
+    result = provider.search(query) if keyword else provider.list(query)
+    return {
+        "list": [
+            {
+                "id": item.item_id,
+                "indexer": item.site_name or item.site,
+                "title": item.title,
+                "description": item.description,
+                "size": item.size_bytes,
+                "seeders": item.seeders or 0,
+                "leechers": item.peers or 0,
+                "pubdate": item.published_at,
+                "labels": [],
+                "enclosure": item.download_url or item.magnet or item.ed2k or "",
+                "page_url": item.detail_url,
+            }
+            for item in result.items
+        ],
+        "has_more": result.has_more,
+        "total": result.total,
+    }
+
+
 @router.post("/sites/resources", response_model=CommonResponse, summary="获取站点资源列表")
 def list_site_resources(
     req: SiteResourcesRequest,
@@ -397,6 +520,18 @@ def list_site_resources(
     allowed = _allowed_site_names(user, app_context)
     if not _index_id_allowed(allowed, app_context, req.id):
         return fail(msg="无权查看该站点资源")
+    if str(req.id or "").startswith("provider:"):
+        try:
+            return success(
+                data=_provider_resources(
+                    str(req.id),
+                    str(req.keyword or ""),
+                    int(req.page or 0),
+                    int(req.page_size or 100),
+                )
+            )
+        except Exception as exc:  # noqa: BLE001
+            return fail(msg=str(exc))
     resources = svc.list_site_resources(
         index_id=req.id or "",
         page=req.page or 0,
@@ -586,6 +721,10 @@ def get_visible_sites(
             perms = _permissions(item["name"], grants)
             if perms:
                 sites.append({**item, "permissions": perms})
+    for site in _external_indexer_sites():
+        perms = _permissions(site["name"], None if visible is None else visible.get(f"indexer:{site['name']}", set()))
+        if perms:
+            sites.append({**site, "permissions": perms})
     custom_rss_service = getattr(app_context, "custom_rss_service", None)
     if custom_rss_service is not None:
         sites.extend(custom_rss_service.visible_sites(current_user))
