@@ -22,6 +22,7 @@ from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConf
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 from app.indexer.client._base import _IIndexClient
 from app.indexer.configuration import IndexerHelper
+from app.indexer.contract import IndexerGateway, IndexerProviderRegistry, LegacyClientIndexerProvider
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
 from app.infrastructure.cache_system import get_cache_manager
@@ -260,6 +261,20 @@ class Indexer:
     def get_client_type(self):
         self._ensure_client()
         return self._client_type
+
+    def build_provider_registry(self) -> IndexerProviderRegistry:
+        """构建新 provider 契约的注册表；旧搜索链路保持原样，便于逐步迁移。"""
+        self._ensure_clients()
+        registry = IndexerProviderRegistry()
+        for client in self._clients.values():
+            try:
+                registry.register(LegacyClientIndexerProvider(client))
+            except ValueError:
+                log.warn(f"[Indexer]重复的 provider_id: {client.get_client_id()}")
+        return registry
+
+    def build_provider_gateway(self) -> IndexerGateway:
+        return IndexerGateway(self.build_provider_registry())
 
     def get_indexers(self, check=False):
         """获取默认搜索索引器的站点列表（兼容旧调用）"""
