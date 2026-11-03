@@ -221,3 +221,23 @@ def test_provider_factory_loads_multiple_instances():
     )
     assert registry.get("crawler-home") is not None
     assert registry.get("crawler-vps") is not None
+
+
+def test_external_provider_item_converts_to_pipeline_raw():
+    from app.indexer.contract import IndexerItem
+    from app.indexer.indexer import Indexer
+
+    raw = Indexer._external_to_raw(
+        IndexerItem(
+            provider_id="crawler-a",
+            site="site-a",
+            site_name="Site A",
+            item_id="1",
+            title="Demo",
+            download_url="magnet:?xt=urn:btih:abc",
+            size_bytes=1024,
+        )
+    )
+    assert raw["enclosure"].startswith("magnet:")
+    assert raw["_indexer_source"] == "crawler-a"
+    assert raw["_indexer_name"] == "Site A"

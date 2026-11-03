@@ -22,7 +22,14 @@ from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConf
 from app.domain.enums import ProgressKey, SearchType, SystemConfigKey
 from app.indexer.client._base import _IIndexClient
 from app.indexer.configuration import IndexerHelper
-from app.indexer.contract import IndexerGateway, IndexerProviderRegistry, LegacyClientIndexerProvider
+from app.indexer.contract import (
+    IndexerGateway,
+    IndexerItem,
+    IndexerProviderRegistry,
+    IndexerQuery,
+    LegacyClientIndexerProvider,
+    load_providers,
+)
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
 from app.infrastructure.cache_system import get_cache_manager
@@ -193,6 +200,8 @@ class Indexer:
         self._client_type = None
         self._clients: dict[str, _IIndexClient] = {}
         self._clients_lock = threading.Lock()
+        self._external_registry = IndexerProviderRegistry()
+        self._external_loaded = False
 
     def _ensure_client(self) -> None:
         """延迟加载 builtin 索引器客户端（兼容旧调用）"""
@@ -261,6 +270,19 @@ class Indexer:
     def get_client_type(self):
         self._ensure_client()
         return self._client_type
+
+    def _ensure_external_providers(self) -> None:
+        if self._external_loaded:
+            return
+        self._external_loaded = True
+        config = self._system_config.get(SystemConfigKey.IndexerConfig) or {}
+        specs = config.get("providers") if isinstance(config, dict) else None
+        if not isinstance(specs, list):
+            return
+        try:
+            load_providers(self._external_registry, specs)
+        except Exception as exc:  # noqa: BLE001
+            log.warn(f"[Indexer]加载外部 provider 失败: {exc}")
 
     def build_provider_registry(self) -> IndexerProviderRegistry:
         """构建新 provider 契约的注册表；旧搜索链路保持原样，便于逐步迁移。"""
@@ -494,6 +516,21 @@ class Indexer:
         finally:
             executor.shutdown(wait=False)
 
+        # 外部 provider（crawler/第三方索引器）合并到同一识别/过滤管线。
+        self._ensure_external_providers()
+        if self._external_registry.list():
+            external_page = IndexerGateway(self._external_registry).search(
+                IndexerQuery(
+                    keyword=key_word,
+                    sites=tuple(filter_args.get("site") or ()),
+                    offset=0,
+                    limit=500,
+                )
+            )
+            all_raw_results.extend(self._external_to_raw(item) for item in external_page.items)
+            if external_page.warnings:
+                log.warn(f"[Indexer]外部 provider 告警: {external_page.warnings}")
+
         # ---------- 阶段2：去重 + 统一批量识别和过滤 ----------
         pipeline_result = self._pipeline.process(
             all_results=self._dedup(all_raw_results),
@@ -526,6 +563,21 @@ class Indexer:
         )
 
         return pipeline_result.results
+
+    @staticmethod
+    def _external_to_raw(item: IndexerItem) -> dict:
+        return {
+            "title": item.title,
+            "enclosure": item.download_url or item.magnet or item.ed2k or "",
+            "size": item.size_bytes or 0,
+            "seeders": item.seeders or 0,
+            "peers": item.peers or 0,
+            "page_url": item.detail_url,
+            "description": item.description,
+            "_indexer_name": item.site_name or item.site,
+            "_indexer_source": item.provider_id,
+            "_indexer_order": 0,
+        }
 
     @staticmethod
     def _dedup(results: list[dict]) -> list[dict]:
