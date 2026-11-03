@@ -5,23 +5,26 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from .crawler import CrawlerIndexerProvider
+from .http import HttpIndexerProvider
 from .provider import IndexerProvider
 from .registry import IndexerProviderRegistry
 
 ProviderFactory = Callable[[dict[str, Any]], IndexerProvider]
 
 
-def _build_crawler(spec: dict[str, Any]) -> IndexerProvider:
-    return CrawlerIndexerProvider(
+def _build_http(spec: dict[str, Any]) -> IndexerProvider:
+    return HttpIndexerProvider(
         str(spec.get("base_url") or ""),
         token=spec.get("token"),
         timeout=float(spec.get("timeout") or 30),
-        provider_id=str(spec.get("id") or "nexus-crawler"),
+        provider_id=str(spec.get("id") or "remote-indexer"),
+        info_path=str(spec.get("info_path") or "/api/indexer/info"),
+        search_path=str(spec.get("search_path") or "/api/indexer/search"),
+        list_path=str(spec.get("list_path") or "/api/indexer/list"),
     )
 
 
-_FACTORIES: dict[str, ProviderFactory] = {"crawler": _build_crawler}
+_FACTORIES: dict[str, ProviderFactory] = {"http": _build_http}
 
 
 def register_provider_factory(kind: str, factory: ProviderFactory) -> None:

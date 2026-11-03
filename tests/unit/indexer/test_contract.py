@@ -189,12 +189,12 @@ class FakeHttpClient:
 def test_crawler_provider_maps_search_list_and_info():
     from typing import Any, cast
 
-    from app.indexer.contract import CrawlerIndexerProvider
+    from app.indexer.contract import HttpIndexerProvider
 
     http = FakeHttpClient()
-    provider = CrawlerIndexerProvider("http://crawler", client=cast(Any, http))
+    provider = HttpIndexerProvider("http://crawler", provider_id="http-test", client=cast(Any, http))
     info = provider.info()
-    assert info.provider_id == "nexus-crawler"
+    assert info.provider_id == "http-test"
     assert info.sites[0].name == "Site A"
 
     page = provider.search(IndexerQuery(keyword="demo", offset=10, limit=10))
@@ -215,12 +215,12 @@ def test_provider_factory_loads_multiple_instances():
     load_providers(
         registry,
         [
-            {"id": "crawler-home", "type": "crawler", "base_url": "http://home"},
-            {"id": "crawler-vps", "type": "crawler", "base_url": "http://vps"},
+            {"id": "indexer-home", "type": "http", "base_url": "http://home"},
+            {"id": "indexer-vps", "type": "http", "base_url": "http://vps"},
         ],
     )
-    assert registry.get("crawler-home") is not None
-    assert registry.get("crawler-vps") is not None
+    assert registry.get("indexer-home") is not None
+    assert registry.get("indexer-vps") is not None
 
 
 def test_external_provider_item_converts_to_pipeline_raw():

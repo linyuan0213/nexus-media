@@ -1,8 +1,8 @@
 """索引器 provider 稳定契约。"""
 
-from .crawler import CrawlerIndexerProvider
 from .factory import build_provider, load_providers, register_provider_factory
 from .gateway import IndexerGateway
+from .http import HttpIndexerProvider
 from .legacy import LegacyClientIndexerProvider, LegacyClientLike
 from .models import IndexerHealth, IndexerInfo, IndexerItem, IndexerPage, IndexerQuery, IndexerSite
 from .provider import IndexerProvider
@@ -12,7 +12,7 @@ __all__ = [
     "build_provider",
     "load_providers",
     "register_provider_factory",
-    "CrawlerIndexerProvider",
+    "HttpIndexerProvider",
     "IndexerGateway",
     "IndexerHealth",
     "IndexerInfo",

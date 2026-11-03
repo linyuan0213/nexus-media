@@ -1,4 +1,4 @@
-"""nexus-crawler 远程索引器 provider。"""
+"""标准 HTTP 索引器 provider。"""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ import httpx
 from .models import IndexerHealth, IndexerInfo, IndexerItem, IndexerPage, IndexerQuery, IndexerSite
 
 
-class CrawlerIndexerProvider:
-    provider_id = "nexus-crawler"
+class HttpIndexerProvider:
+    """通过标准 /api/indexer/* JSON 契约接入任意远程索引器。"""
 
     def __init__(
         self,
@@ -19,17 +19,23 @@ class CrawlerIndexerProvider:
         token: str | None = None,
         timeout: float = 30.0,
         client: httpx.Client | None = None,
-        provider_id: str = "nexus-crawler",
+        provider_id: str = "remote-indexer",
+        info_path: str = "/api/indexer/info",
+        search_path: str = "/api/indexer/search",
+        list_path: str = "/api/indexer/list",
     ):
         self.base_url = base_url.rstrip("/")
         self.provider_id = provider_id
+        self._info_path = info_path
+        self._search_path = search_path
+        self._list_path = list_path
         self._client = client or httpx.Client(
             timeout=timeout,
             headers={"Authorization": f"Bearer {token}"} if token else {},
         )
 
     def info(self) -> IndexerInfo:
-        payload = self._request("/api/indexer/info")
+        payload = self._request(self._info_path)
         sites = tuple(
             IndexerSite(
                 id=str(site.get("id") or site.get("name") or ""),
@@ -40,7 +46,7 @@ class CrawlerIndexerProvider:
         )
         return IndexerInfo(
             provider_id=self.provider_id,
-            name=str(payload.get("name") or "Nexus Crawler"),
+            name=str(payload.get("name") or "Remote Indexer"),
             version=str(payload.get("version") or "1"),
             api_version=str(payload.get("api_version") or "1"),
             capabilities=tuple(payload.get("capabilities") or ("search", "list")),
@@ -50,7 +56,7 @@ class CrawlerIndexerProvider:
 
     def health(self) -> IndexerHealth:
         try:
-            self._request("/api/indexer/info")
+            self._request(self._info_path)
             return IndexerHealth(ok=True)
         except Exception as exc:  # noqa: BLE001
             return IndexerHealth(ok=False, message=str(exc))
@@ -60,11 +66,11 @@ class CrawlerIndexerProvider:
         params = self._params(query)
         if query.keyword:
             params["keyword"] = query.keyword
-        return self._page("/api/indexer/search", params, query)
+        return self._page(self._search_path, params, query)
 
     def list(self, query: IndexerQuery) -> IndexerPage:
         query = query.normalized()
-        return self._page("/api/indexer/list", self._params(query), query)
+        return self._page(self._list_path, self._params(query), query)
 
     def close(self) -> None:
         self._client.close()
