@@ -5,13 +5,13 @@
 所有结果按 session_id 隔离存储，新搜索覆盖旧结果。
 """
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from typing import Any
 
 import log
 from app.core.settings import settings
-from app.domain.enums import ProgressKey, SearchType, channel_name
+from app.domain.enums import SearchType, channel_name
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.intent import IntentResolver
 from app.domain.interfaces.search_repo import ISearchRepository
@@ -21,7 +21,7 @@ from app.events.bus import EventBus
 from app.events.constants import SEARCH_START
 from app.events.payloads import SearchStartPayload
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
-from app.infrastructure.progress import ProgressTracker
+from app.infrastructure.progress import CompositeProgressGroup, ProgressTracker
 from app.media import meta_info
 from app.media.image_resolver import DEFAULT_TMDB_IMAGE
 from app.media.service import MediaService
@@ -61,6 +61,7 @@ class SearchOrchestrator:
     def orchestrate(self, ctx: SearchContext) -> tuple[Any | None, dict | None, int, int]:
         progress_key: str = f"search:{ctx.session_id}"
         self._progress.start(progress_key)
+        self._progress.update(value=2, text="准备搜索...", ptype=progress_key)
 
         # 1. 构建搜索词和过滤条件
         search_names, max_workers, filter_args = self._prepare_search(ctx)
@@ -80,7 +81,7 @@ class SearchOrchestrator:
             return None, ctx.no_exists or {}, 0, 0
 
         # 4. 排序（复用 SearchResultProcessor，全系统统一排序键；尊重做种数/站点优先规则）
-        self._progress.update(value=85, text=f"排序 {len(media_list)} 条结果...", ptype=progress_key)
+        self._progress.update_max(value=95, text=f"排序 {len(media_list)} 条结果...", ptype=progress_key)
         media_list = SearchResultProcessor.sort_results(
             media_list, download_order=(settings.get("pt") or {}).get("download_order")
         )
@@ -89,7 +90,7 @@ class SearchOrchestrator:
         if ctx.persist:
             self._enrich_and_persist(ctx, media_list)
 
-        self._progress.update(
+        self._progress.update_max(
             value=100,
             text=f"搜索完成，共 {len(media_list)} 条{self._failed_sites_summary(progress_key)}",
             ptype=progress_key,
@@ -409,27 +410,30 @@ class SearchOrchestrator:
         media_list = []
         progress_key: str = f"search:{ctx.session_id}"
         total = len(search_names)
-        # 关键：把 per-session progress_key 注入 filter_args，否则索引器退回全局 key，
-        # 站点级进度（"站点搜索 X/Y（站点名）：N 条"）就写不进前端 SSE 可见的会话进度
         filter_args = {**filter_args, "progress_key": progress_key}
+        group = CompositeProgressGroup(self._progress, progress_key, total, "搜索")
 
         if max_workers <= 1 and total == 1:
-            self._progress.update(value=30, text=f"正在搜索: {search_names[0]}", ptype=progress_key)
-            result = self._search_one(SearchType.WEB, search_names[0], filter_args, ctx.match_media)
+            child = group.child(0)
+            task_args = {**filter_args, "progress_child": child}
+            result = self._search_one(SearchType.WEB, search_names[0], task_args, ctx.match_media)
             if result:
                 media_list.extend(result)
-            self._progress.update(value=80, text=f"搜索完成，找到 {len(media_list)} 条", ptype=progress_key)
+            child.update_max(value=100, text=f"关键词完成，找到 {len(media_list)} 条")
             return media_list
 
         with self._search_executor(max_workers) as executor:
             tasks = []
-            for name in search_names:
-                tasks.append(executor.submit(self._search_one, SearchType.WEB, name, filter_args, ctx.match_media))
+            for index, name in enumerate(search_names):
+                child = group.child(index)
+                task_args = {**filter_args, "progress_child": child}
+                tasks.append(
+                    (executor.submit(self._search_one, SearchType.WEB, name, task_args, ctx.match_media), child)
+                )
 
-            for idx, future in enumerate(as_completed(tasks), start=1):
+            for future, child in tasks:
                 result = future.result()
-                pct = 10 + round(70 * (idx / total))
-                self._progress.update(value=pct, text=f"搜索关键词 {idx}/{total} 完成", ptype=progress_key)
+                child.update_max(value=100, text=f"关键词完成，找到 {len(result or [])} 条")
                 if result:
                     if isinstance(result, list):
                         media_list.extend(result)
@@ -565,14 +569,7 @@ class SearchOrchestrator:
         # session 已结束 → 返回结束状态，防止重新开启
         if session_detail and not session_detail.get("enable") and session_detail.get("value", 0) >= 100:
             return session_detail
-        # session 进行中 → 用全局 key 获取 search_by_keyword 内部的详细进度
-        global_detail = self._progress.get_process(ProgressKey.Search)
-        if global_detail and global_detail.get("enable") and global_detail.get("value", 0) > 0:
-            return global_detail
-        # 回退到 session key（刚开始/全局 key 还没更新）
-        if session_detail and session_detail.get("value", -1) >= 0:
-            return session_detail
-        return None
+        return session_detail
 
     def cleanup_expired_sessions(self, ttl_hours: int = 24):
         self._search_repo.delete_expired(ttl_hours)

@@ -306,6 +306,7 @@ class Indexer:
         progress_key = filter_args.get("progress_key") or (
             ProgressKey.SubscribeSearch if in_from == SearchType.SUBSCRIBE else ProgressKey.Search
         )
+        progress = filter_args.get("progress_child") or self.progress
         registry = self.build_search_registry(filter_args)
         if not registry.list():
             log.error("没有可用索引器站点，无法搜索！")
@@ -343,7 +344,7 @@ class Indexer:
                         "error": error or "",
                     }
                 )
-                detail = self.progress.get_process(progress_key)
+                detail = progress.get_process(progress_key)
                 if detail is not None:
                     detail["sites"] = list(site_statuses)
 
@@ -369,7 +370,7 @@ class Indexer:
             in_from=in_from,
             progress_key=progress_key,
             search_name=key_word,
-            progress_range=filter_args.get("progress_range"),
+            progress=progress,
         )
         end_time = datetime.datetime.now()
         failed_summary = ""

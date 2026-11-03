@@ -45,6 +45,7 @@ class SearchPipeline:
         progress_key=ProgressKey.Search,
         search_name="",
         progress_range: tuple[float, float] | None = None,
+        progress=None,
     ):
         """
         执行三阶段全局批量搜索过滤流水线
@@ -59,11 +60,12 @@ class SearchPipeline:
         """
         start_time = datetime.datetime.now()
         total_raw = len(all_results)
-        progress = (
-            ScopedProgressTracker(self.progress, progress_key, progress_range[0], progress_range[1])
-            if progress_range
-            else self.progress
-        )
+        if progress is None:
+            progress = (
+                ScopedProgressTracker(self.progress, progress_key, progress_range[0], progress_range[1])
+                if progress_range
+                else self.progress
+            )
 
         # ---------- 阶段1：本地解析和过滤 ----------
         progress.update_max(

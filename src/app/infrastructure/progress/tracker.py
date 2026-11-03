@@ -2,6 +2,7 @@
 进度追踪器
 """
 
+import threading
 from enum import Enum
 from typing import Union
 
@@ -89,4 +90,58 @@ class ScopedProgressTracker:
         self._tracker.update_max(value=value, text=text, ptype=self._ptype)
 
     def get_process(self, ptype=None):
+        return self._tracker.get_process(self._ptype)
+
+
+class CompositeProgress:
+    """单个子任务进度，写入父级 CompositeProgressGroup。"""
+
+    def __init__(self, group: "CompositeProgressGroup", index: int):
+        self._group = group
+        self._index = index
+
+    def update(self, value=None, text=None, ptype=None):
+        if value is not None:
+            self._group.set_child(self._index, value, text)
+
+    def update_max(self, value=None, text=None, ptype=None):
+        if value is not None:
+            self._group.set_child(self._index, value, text)
+
+    def get_process(self, ptype=None):
+        return self._group.get_process()
+
+
+class CompositeProgressGroup:
+    """多关键词并发搜索的根进度：百分比取子任务平均值。"""
+
+    def __init__(self, tracker: ProgressTracker, ptype, total: int, title: str = "搜索"):
+        self._tracker = tracker
+        self._ptype = ptype.value if isinstance(ptype, Enum) else ptype
+        self._total = max(1, int(total))
+        self._title = title
+        self._values = [0.0] * self._total
+        self._texts = [""] * self._total
+        self._lock = threading.RLock()
+        tracker.update_max(value=1, text=f"{title}：准备 {self._total} 个关键词...", ptype=self._ptype)
+
+    def child(self, index: int) -> CompositeProgress:
+        return CompositeProgress(self, index)
+
+    def set_child(self, index: int, value: float, text: str | None = None):
+        with self._lock:
+            if not 0 <= index < self._total:
+                return
+            self._values[index] = max(self._values[index], max(0.0, min(100.0, float(value))))
+            if text:
+                self._texts[index] = text
+            average = sum(self._values) / self._total
+            detail_text = self._texts[index] or ""
+            self._tracker.update_max(
+                value=round(average),
+                text=f"{self._title} 第 {index + 1}/{self._total} 个关键词 · {detail_text}",
+                ptype=self._ptype,
+            )
+
+    def get_process(self):
         return self._tracker.get_process(self._ptype)
