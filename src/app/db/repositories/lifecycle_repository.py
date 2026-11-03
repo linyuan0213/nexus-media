@@ -467,11 +467,10 @@ def _apply_subscription_state(grouped: list[dict[str, Any]], subscription_map: d
             item["SUBSCRIBED_EPISODES"] = min(total_ep, subscribed_episodes)
             item["PROGRESS"] = round(completed * 100 / total_ep)
         if sub_state in {"D", "S", "R"}:
-            # 仍在订阅中：即使现有分集全部入库，也不能标记为整部作品完成。
-            if total_ep > 0 and completed < total_ep:
-                item["STAGE"] = "downloading" if completed else "download_queued"
-            else:
-                item["STAGE"] = "subscribed"
+            # 活跃订阅只在存在真实队列任务时进入下载/转移/刮削阶段；
+            # 否则停留在订阅中，避免把“等待下一集”误报成下载中。
+            active_stage = str(item.get("ACTIVE_STAGE") or "")
+            item["STAGE"] = active_stage or LifecycleStage.SUBSCRIBED.value
             item["STATUS"] = "queued" if sub_state == "D" else "running"
         elif sub_state == "E":
             item["STATUS"] = "failed"
@@ -506,7 +505,19 @@ def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
             if item.STAGE == LifecycleStage.IN_LIBRARY.value and item.STATUS == LifecycleStatus.SUCCEEDED.value
         )
         completed = in_library
+        active_items = [
+            item
+            for item in state_items
+            if item.STATUS
+            in {
+                LifecycleStatus.QUEUED.value,
+                LifecycleStatus.RUNNING.value,
+                LifecycleStatus.RETRYING.value,
+            }
+            and stage_rank(item.STAGE) >= stage_rank(LifecycleStage.DOWNLOAD_QUEUED.value)
+        ]
         data = representative.as_dict()
+        data["ACTIVE_STAGE"] = max(active_items, key=lambda item: stage_rank(item.STAGE)).STAGE if active_items else ""
         if status == LifecycleStatus.SUCCEEDED.value and stage not in {
             LifecycleStage.SCRAPED.value,
             LifecycleStage.IN_LIBRARY.value,
