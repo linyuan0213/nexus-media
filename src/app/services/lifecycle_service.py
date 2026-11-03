@@ -521,9 +521,8 @@ def _canonical_identity(row: Any, by_external: dict[str, str], by_title: dict[tu
 
 
 def _scoped_event_key(base: str, row_identity: Any, canonical_identity: str) -> str:
-    if str(row_identity or "") == canonical_identity:
-        return base
-    return f"{base}:{canonical_identity}"
+    # 事件键必须只由历史记录本身决定；identity 归一后不能产生第二份同一事件。
+    return base
 
 
 def _library_token(value: Any) -> str:

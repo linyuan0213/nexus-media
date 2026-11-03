@@ -184,54 +184,8 @@ class LifecycleRepository(BaseRepository):
                 .limit(max(1, min(1000, int(limit))))
                 .all()
             )
-            current_rows = db.query(MediaLifecycle).filter(MediaLifecycle.IDENTITY_ID == identity_id).all()
-            current_map = {(int(row.SEASON or 0), int(row.EPISODE or 0)): row for row in current_rows}
-            success_runs = {
-                str(event.RUN_ID or "") for event in rows if event.RUN_ID and event.EVENT_TYPE.endswith(".completed")
-            }
-            # 已被更高阶段覆盖的失败/重试尝试只保留在审计表，页面时间线不重复展示。
-            filtered = []
-            for event in rows:
-                current = current_map.get((int(event.SEASON or 0), int(event.EPISODE or 0)))
-                if current is None:
-                    filtered.append(event)
-                    continue
-                current_rank = stage_rank(current.STAGE)
-                run_id = str(event.RUN_ID or "")
-                superseded = run_id not in success_runs
-                if superseded:
-                    if event.EVENT_TYPE in {
-                        "transfer.queued",
-                        "transfer.started",
-                        "transfer.failed",
-                    } and current_rank >= stage_rank(LifecycleStage.TRANSFERRED.value):
-                        continue
-                    if event.EVENT_TYPE in {"scrape.started", "scrape.failed"} and current_rank >= stage_rank(
-                        LifecycleStage.SCRAPED.value
-                    ):
-                        continue
-                    if event.EVENT_TYPE in {
-                        "download.queued",
-                        "download.started",
-                        "download.failed",
-                    } and current_rank >= stage_rank(LifecycleStage.DOWNLOADED.value):
-                        continue
-                filtered.append(event)
-            deduped = []
-            seen = set()
-            for event in filtered:
-                key = (
-                    str(event.STAGE or ""),
-                    str(event.EVENT_TYPE or ""),
-                    str(event.RUN_ID or ""),
-                    event.OCCURRED_AT,
-                )
-                if key in seen:
-                    continue
-                seen.add(key)
-                deduped.append(event)
-            # 时间线按真实发生时间展示，避免旧的完成事件排到新事件后面。
-            return sorted(deduped, key=lambda event: (event.OCCURRED_AT, event.ID))
+            # 时间线按真实发生时间展示，不按阶段重排。
+            return sorted(rows, key=lambda event: (event.OCCURRED_AT, event.ID))
 
     def latest_event(
         self, identity_id: str, *, season: int | None = None, episode: int | None = None

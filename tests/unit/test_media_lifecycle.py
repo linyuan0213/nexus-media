@@ -478,7 +478,7 @@ def test_pause_download_calls_downloader():
     projector.record.assert_called_once()
 
 
-def test_timeline_hides_failures_superseded_by_library():
+def test_timeline_is_chronological():
     repo = LifecycleRepository()
     projector = LifecycleProjector(repo)
     now = datetime(2026, 11, 2, 10, 0, 0)
@@ -510,4 +510,8 @@ def test_timeline_hides_failures_superseded_by_library():
         occurred_at=now + timedelta(hours=1),
     )
     events = repo.list_events("identity-timeline")
-    assert all(event.EVENT_TYPE != "transfer.failed" for event in events)
+    assert [event.EVENT_TYPE for event in events] == [
+        "transfer.completed",
+        "reconcile.library.present",
+        "transfer.failed",
+    ]

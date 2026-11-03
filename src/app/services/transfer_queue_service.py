@@ -7,6 +7,7 @@ from typing import Any
 
 import log
 from app.core.settings import settings
+from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.infrastructure.task_queue import Task, TaskQueue, TaskWorker, create_task_queue
@@ -37,11 +38,7 @@ class TransferQueueService:
     def start(self) -> None:
         if self._queue is not None or self._failed:
             return
-        configured = (
-            settings.queue.sync_workers
-            if self._queue_name == "sync"
-            else settings.queue.transfer_workers
-        )
+        configured = settings.queue.sync_workers if self._queue_name == "sync" else settings.queue.transfer_workers
         self._max_workers = max(1, int(configured))
         try:
             self._queue = create_task_queue(self._queue_name)
@@ -87,6 +84,29 @@ class TransferQueueService:
 
     def _handle_task(self, task: Task) -> dict[str, Any]:
         payload = task.payload
+        identity_id = str(payload.get("identity_id") or "")
+        if identity_id:
+            repo = LifecycleRepository()
+            current = repo.get_current(
+                identity_id,
+                season=int(payload.get("season") or 0),
+                episode=int(payload.get("episode") or 0),
+            )
+            if current is None:
+                current = repo.get_grouped_identity(identity_id)
+            stage = (
+                str(current.get("STAGE") or "")
+                if isinstance(current, dict)
+                else str(getattr(current, "STAGE", "") or "")
+            )
+            status = (
+                str(current.get("STATUS") or "")
+                if isinstance(current, dict)
+                else str(getattr(current, "STATUS", "") or "")
+            )
+            if stage == LifecycleStage.IN_LIBRARY.value and status == LifecycleStatus.SUCCEEDED.value:
+                log.info(f"[TransferQueue]跳过已入库的旧转移任务 {task.id} identity={identity_id}")
+                return {"success": True, "skipped": True}
         downloader_id = str(payload.get("downloader_id") or "")
         task_id = str(payload.get("task_id") or "")
         source_type_value = str(payload.get("source_type") or SourceType.DOWNLOADER.value)
