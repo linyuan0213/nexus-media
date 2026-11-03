@@ -5,6 +5,7 @@ from app.domain.episode_utils import infer_episode_key
 from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
+from app.media import meta_info
 from app.media.models import MediaInfo
 from app.mediaserver.media_server import MediaServer
 from app.schemas.media import MediaSearchResultDTO
@@ -45,6 +46,16 @@ class SearchResultService:
             title_string = f"{item.TITLE}"
             mtype = item.TYPE or ""
             parsed_mtype = MediaType.from_string(mtype)
+            media_type = mtype or MediaType.UNKNOWN.value
+            # 兼容修复前落库的旧结果：TYPE/ES_STRING 为空时从种子名补解析，
+            # 避免旧搜索会话把动漫/剧集全部归到 movie。
+            if (not item.TYPE or not item.ES_STRING) and item.TORRENT_NAME:
+                parsed = meta_info(title=item.TORRENT_NAME, subtitle=item.DESCRIPTION or "")
+                if parsed is not None and not item.TYPE:
+                    parsed_mtype = parsed.type or MediaType.UNKNOWN
+                    media_type = parsed.type.value if parsed.type is not None else media_type
+                if parsed is not None and not item.ES_STRING:
+                    item.ES_STRING = parsed.get_season_episode_string() or ""
             # 剧集/动漫按标题聚合，避免同一部剧的 2025/2026 季标签拆成多张卡片；
             # 电影保留年份，用于区分同名翻拍。
             if item.YEAR and parsed_mtype == MediaType.MOVIE:
@@ -52,7 +63,8 @@ class SearchResultService:
             se_key = item.ES_STRING if item.ES_STRING and parsed_mtype != MediaType.MOVIE else MediaType.MOVIE.value
             if parsed_mtype != MediaType.MOVIE:
                 se_key = infer_episode_key(se_key, item.TORRENT_NAME)
-            media_type = parsed_mtype.value if parsed_mtype != MediaType.UNKNOWN else mtype
+            if parsed_mtype != MediaType.UNKNOWN:
+                media_type = parsed_mtype.value
             labels = [label.strip() for label in str(item.NOTE).split("|") if label.strip()]
             torrent_item = {
                 "id": item.ID,

@@ -251,32 +251,41 @@ class TmdbProvider:
         self._search = search
 
     def search(self, query: SearchQuery, ctx: object) -> list[SearchHit]:
-        media_type = query.media_type or MediaType.MOVIE
-        if media_type == MediaType.MOVIE:
-            raw = self._search.search_movie_infos(query.query, query.year)
-        else:
-            raw = self._search.search_tv_infos(query.query, query.year)
+        media_types = [query.media_type] if query.media_type is not None else [MediaType.MOVIE, MediaType.TV]
         hits: list[SearchHit] = []
-        for item in raw or []:
-            if not item.get("id"):
-                continue
-            hit_type, hit_profile = classify_media_type(media_type, item.get("genre_ids"), query.content_profile)
-            hits.append(
-                SearchHit(
-                    provider="tmdb",
-                    ref=ProviderRef(
+        seen: set[tuple[str, str]] = set()
+        for media_type in media_types:
+            if media_type == MediaType.MOVIE:
+                raw = self._search.search_movie_infos(query.query, query.year)
+            else:
+                raw = self._search.search_tv_infos(query.query, query.year)
+            for item in raw or []:
+                if not item.get("id"):
+                    continue
+                hit_type, hit_profile = classify_media_type(media_type, item.get("genre_ids"), query.content_profile)
+                external_id = str(item.get("id"))
+                key = (hit_type.value, external_id)
+                if key in seen:
+                    continue
+                seen.add(key)
+                hits.append(
+                    SearchHit(
                         provider="tmdb",
-                        external_id=str(item.get("id")),
+                        ref=ProviderRef(
+                            provider="tmdb",
+                            external_id=external_id,
+                            media_type=hit_type,
+                        ),
+                        title=item.get("title") or item.get("name") or "",
+                        year=(item.get("release_date") or item.get("first_air_date") or "")[:4] or None,
                         media_type=hit_type,
-                    ),
-                    title=item.get("title") or item.get("name") or "",
-                    year=(item.get("release_date") or item.get("first_air_date") or "")[:4] or None,
-                    media_type=hit_type,
-                    content_profile=hit_profile,
-                    poster=ImageProxy.get_tmdbimage_url(item.get("poster_path")) if item.get("poster_path") else None,
-                    score=float(item.get("popularity") or 0.0),
+                        content_profile=hit_profile,
+                        poster=ImageProxy.get_tmdbimage_url(item.get("poster_path"))
+                        if item.get("poster_path")
+                        else None,
+                        score=float(item.get("popularity") or 0.0),
+                    )
                 )
-            )
         return hits
 
     def detail(self, ref: ProviderRef, ctx: object) -> ProviderRecord | None:
