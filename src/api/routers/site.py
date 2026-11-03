@@ -347,7 +347,6 @@ def search_indexer_providers(
 
 
 @router.post("/sites", response_model=CommonResponse, summary="获取站点列表")
-@router.post("/sites", response_model=CommonResponse, summary="获取站点列表")
 def get_sites(
     req: SiteFilterRequest,
     user=Depends(require_any_permission("site:view", "site:manage")),
@@ -361,7 +360,10 @@ def get_sites(
         basic=bool(req.basic),
         source=req.source,
     )
-    sites.extend(_external_indexer_sites())
+    external_sites = _external_indexer_sites()
+    if req.source:
+        external_sites = [site for site in external_sites if site.get("source") == req.source]
+    sites.extend(external_sites)
     # 无站点管理权限的用户按站点授权过滤（ADR-021 4.3）
     grant_service = getattr(app_context, "site_grant_service", None)
     can_manage = user.is_superadmin or "site:manage" in user.permissions or "*" in user.permissions
