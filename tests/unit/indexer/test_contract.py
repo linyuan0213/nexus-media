@@ -134,3 +134,90 @@ def test_list_and_gateway_apply_offset_once():
     gateway_page = IndexerGateway(registry).list(IndexerQuery(offset=1, limit=1))
     assert len(gateway_page.items) == 1
     assert gateway_page.offset == 1
+
+
+class FakeResponse:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self._payload
+
+
+class FakeHttpClient:
+    def __init__(self):
+        self.calls = []
+
+    def get(self, url, params=None):
+        self.calls.append((url, params))
+        if url.endswith("/api/indexer/info"):
+            return FakeResponse(
+                {
+                    "name": "Crawler",
+                    "version": "1.0",
+                    "capabilities": ["search", "list"],
+                    "sites": [{"id": "site-a", "name": "Site A"}],
+                    "resource_types": ["magnet"],
+                }
+            )
+        return FakeResponse(
+            {
+                "total": 25,
+                "offset": 10,
+                "limit": 10,
+                "has_more": True,
+                "next_offset": 20,
+                "items": [
+                    {
+                        "item_id": "1",
+                        "site": "site-a",
+                        "site_name": "Site A",
+                        "title": "Demo",
+                        "size": 1024,
+                        "download_url": "magnet:?xt=urn:btih:abc",
+                        "magnet": "magnet:?xt=urn:btih:abc",
+                        "resource_type": "magnet",
+                    }
+                ],
+            }
+        )
+
+
+def test_crawler_provider_maps_search_list_and_info():
+    from typing import Any, cast
+
+    from app.indexer.contract import CrawlerIndexerProvider
+
+    http = FakeHttpClient()
+    provider = CrawlerIndexerProvider("http://crawler", client=cast(Any, http))
+    info = provider.info()
+    assert info.provider_id == "nexus-crawler"
+    assert info.sites[0].name == "Site A"
+
+    page = provider.search(IndexerQuery(keyword="demo", offset=10, limit=10))
+    assert page.total == 25
+    assert page.has_more is True
+    assert page.items[0].item_id == "1"
+    assert http.calls[-1][1]["keyword"] == "demo"
+
+    provider.list(IndexerQuery(offset=0, limit=20))
+    assert http.calls[-1][0].endswith("/api/indexer/list")
+    assert http.calls[-1][1]["limit"] == 20
+
+
+def test_provider_factory_loads_multiple_instances():
+    from app.indexer.contract import IndexerProviderRegistry, load_providers
+
+    registry = IndexerProviderRegistry()
+    load_providers(
+        registry,
+        [
+            {"id": "crawler-home", "type": "crawler", "base_url": "http://home"},
+            {"id": "crawler-vps", "type": "crawler", "base_url": "http://vps"},
+        ],
+    )
+    assert registry.get("crawler-home") is not None
+    assert registry.get("crawler-vps") is not None
