@@ -80,6 +80,7 @@ class IndexerSite:
 class IndexerInfo:
     provider_id: str
     name: str
+    icon: str = ""
     version: str = "1"
     api_version: str = "1"
     capabilities: tuple[str, ...] = ("search", "list")

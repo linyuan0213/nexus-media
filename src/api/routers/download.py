@@ -31,6 +31,7 @@ from app.downloader.client_factory import DownloadClientFactory
 from app.downloader.registry import get_all_clients
 from app.downloader.status import TORRENT_STATUS_LABELS
 from app.events.constants import DOWNLOAD_FAILED
+from app.indexer.contract.site_catalog import external_indexer_sites
 from app.infrastructure.thread import ThreadExecutor
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
@@ -526,7 +527,12 @@ def get_indexers(
     svc: IndexerService = Depends(get_indexer_service),
 ):
     indexers = svc.get_all_user_indexers()
-    return success(data=[{"id": i.id, "name": i.name} for i in indexers])
+    data = [{"id": i.id, "name": i.name} for i in indexers]
+    data.extend(
+        {"id": site["id"], "name": site["name"], "display_name": site["display_name"]}
+        for site in external_indexer_sites()
+    )
+    return success(data=data)
 
 
 @router.post("/torrent-remove-tasks/candidates", response_model=CommonResponse, summary="获取可删除种子列表")

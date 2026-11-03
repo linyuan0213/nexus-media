@@ -23,12 +23,14 @@ class HttpIndexerProvider:
         info_path: str = "/api/indexer/info",
         search_path: str = "/api/indexer/search",
         list_path: str = "/api/indexer/list",
+        icon: str = "",
     ):
         self.base_url = base_url.rstrip("/")
         self.provider_id = provider_id
         self._info_path = info_path
         self._search_path = search_path
         self._list_path = list_path
+        self._icon = icon
         self._client = client or httpx.Client(
             timeout=timeout,
             headers={"Authorization": f"Bearer {token}"} if token else {},
@@ -47,6 +49,7 @@ class HttpIndexerProvider:
         return IndexerInfo(
             provider_id=self.provider_id,
             name=str(payload.get("name") or "Remote Indexer"),
+            icon=str(payload.get("icon") or self._icon or ""),
             version=str(payload.get("version") or "1"),
             api_version=str(payload.get("api_version") or "1"),
             capabilities=tuple(payload.get("capabilities") or ("search", "list")),

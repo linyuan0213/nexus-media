@@ -240,7 +240,8 @@ def test_external_provider_item_converts_to_pipeline_raw():
     )
     assert raw["enclosure"].startswith("magnet:")
     assert raw["_indexer_source"] == "crawler-a"
-    assert raw["_indexer_name"] == "Site A"
+    assert raw["_indexer_name"] == "site-a"
+    assert raw["_indexer_display_name"] == "Site A"
 
 
 def test_global_registry_tracks_plugin_owner():

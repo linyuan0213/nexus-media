@@ -22,6 +22,7 @@ from app.core.exceptions import DomainError, ServiceError  # noqa: F401
 from app.indexer.contract.gateway import IndexerGateway
 from app.indexer.contract.global_registry import get_global_registry
 from app.indexer.contract.models import IndexerQuery
+from app.indexer.contract.site_catalog import external_indexer_sites
 from app.infrastructure.thread import ThreadExecutor
 from app.schemas.common import CommonResponse
 from app.services.indexer_service import IndexerService
@@ -316,35 +317,7 @@ def list_indexer_providers(
 
 
 def _external_indexer_sites() -> list[dict]:
-    """把已启用插件的 provider sites 映射成站点管理项。"""
-    result: list[dict] = []
-    for provider in get_global_registry().list():
-        try:
-            info = provider.info()
-        except Exception as exc:  # noqa: BLE001
-            log.warn(f"[Site]读取索引器 provider 失败 {provider.provider_id}: {exc}")
-            continue
-        for site in info.sites:
-            result.append(
-                {
-                    "id": f"provider:{info.provider_id}:{site.id}",
-                    "name": site.id,
-                    "display_name": site.name,
-                    "url": "",
-                    "source": info.provider_id,
-                    "source_label": info.name,
-                    "source_icon": "lucide:search-code",
-                    "third_party": True,
-                    "enabled": True,
-                    "public": site.public,
-                    "site_public": site.public,
-                    "has_rss": False,
-                    "rss_enable": False,
-                    "brush_enable": False,
-                    "parse": False,
-                }
-            )
-    return result
+    return external_indexer_sites()
 
 
 @router.get("/sites/indexer-providers/search", response_model=CommonResponse, summary="调试索引器 provider 搜索")

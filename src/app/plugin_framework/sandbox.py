@@ -382,6 +382,7 @@ class PluginSandbox:
                                 token=config.get("token") or None,
                                 timeout=float(config.get("timeout") or 30),
                                 provider_id=key,
+                                icon=str(item.get("icon") or getattr(manifest, "icon", "") or ""),
                                 info_path=str(config.get("info_path") or "/api/indexer/info"),
                                 search_path=str(config.get("search_path") or "/api/indexer/search"),
                                 list_path=str(config.get("list_path") or "/api/indexer/list"),
