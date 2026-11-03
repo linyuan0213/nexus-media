@@ -18,7 +18,7 @@ class ProgressTracker:
     def __reset(self, ptype: ProgressKey | Union[str, None] = ProgressKey.Search):
         if isinstance(ptype, Enum):
             ptype = ptype.value
-        self._process_detail[ptype] = {"enable": False, "value": 0, "text": "请稍候..."}
+        self._process_detail[ptype] = {"enable": False, "value": 1, "text": "初始化..."}
 
     def start(self, ptype: ProgressKey | str = ProgressKey.Search):
         self.__reset(ptype)

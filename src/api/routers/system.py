@@ -627,7 +627,7 @@ async def search_progress(session_id: str):
 
     async def event_stream():
         tracker = ProgressTracker()
-        last_val = -1
+        last_sig = None
         loop = asyncio.get_running_loop()
         deadline = loop.time() + 600
         missing_since: float | None = None
@@ -645,8 +645,13 @@ async def search_progress(session_id: str):
                 continue
             missing_since = None
             val = detail.get("value", 0)
-            if val != last_val:
-                last_val = val
+            signature = (
+                val,
+                detail.get("text", ""),
+                json.dumps(detail.get("sites"), ensure_ascii=False, sort_keys=True),
+            )
+            if signature != last_sig:
+                last_sig = signature
                 yield f"data: {json.dumps(detail, ensure_ascii=False)}\n\n"
             # 已结束（enable=False 且 value>=100）→ 关闭流
             if not detail.get("enable") and val >= 100:
