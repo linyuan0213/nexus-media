@@ -19,8 +19,10 @@ from api.deps import (
 )
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import DomainError, ServiceError  # noqa: F401
+from app.db.repositories.indexer_site_config_repository import IndexerSiteConfigRepository
 from app.indexer.contract.gateway import IndexerGateway
 from app.indexer.contract.global_registry import get_global_registry
+from app.indexer.contract.http import HttpIndexerProvider
 from app.indexer.contract.models import IndexerQuery
 from app.indexer.contract.site_catalog import external_indexer_sites
 from app.infrastructure.thread import ThreadExecutor
@@ -123,8 +125,16 @@ class SiteResourcesRequest(BaseModel):
     keyword: str | None = None
 
 
+class IndexerProviderTestRequest(BaseModel):
+    base_url: str
+    token: str | None = None
+    timeout: float = 30
+    info_path: str = "/api/indexer/info"
+
+
 class IndexerSiteConfigUpdateRequest(BaseModel):
     site_name: str
+    source: str | None = None
     enabled: bool | None = None
     download_setting: int | None = None
     default_settings: dict | None = None
@@ -317,7 +327,46 @@ def list_indexer_providers(
 
 
 def _external_indexer_sites() -> list[dict]:
-    return external_indexer_sites()
+    sites = external_indexer_sites()
+    settings = {(str(row.SOURCE), str(row.SITE_NAME)): row for row in IndexerSiteConfigRepository().list_all()}
+    for site in sites:
+        row = settings.get((str(site.get("source") or ""), str(site.get("name") or "")))
+        if row is not None:
+            site["enabled"] = bool(row.ENABLED)
+            site["download_setting"] = row.DOWNLOAD_SETTING
+    return sites
+
+
+@router.post("/sites/indexer-providers/test", response_model=CommonResponse, summary="测试 HTTP 索引器连通性")
+def test_indexer_provider(
+    req: IndexerProviderTestRequest,
+    user=Depends(require_any_permission("site:view", "site:manage")),
+):
+    base_url = req.base_url.strip()
+    if not base_url:
+        return fail(msg="索引器地址不能为空")
+    provider = HttpIndexerProvider(
+        base_url,
+        token=req.token or None,
+        timeout=float(req.timeout or 30),
+        provider_id="test",
+        info_path=req.info_path,
+    )
+    try:
+        info = provider.info()
+        return success(
+            data={
+                "ok": True,
+                "name": info.name,
+                "api_version": info.api_version,
+                "capabilities": list(info.capabilities),
+                "sites": [{"id": site.id, "name": site.name} for site in info.sites],
+            }
+        )
+    except Exception as exc:  # noqa: BLE001
+        return fail(msg=f"连接失败: {exc}")
+    finally:
+        provider.close()
 
 
 @router.get("/sites/indexer-providers/search", response_model=CommonResponse, summary="调试索引器 provider 搜索")
@@ -363,7 +412,14 @@ def get_sites(
     external_sites = _external_indexer_sites()
     if req.source:
         external_sites = [site for site in external_sites if site.get("source") == req.source]
-    sites.extend(external_sites)
+    existing = {(str(site.get("source") or ""), str(site.get("name") or "")): site for site in sites}
+    for external in external_sites:
+        key = (str(external.get("source") or ""), str(external.get("name") or ""))
+        current = existing.get(key)
+        if current is not None:
+            external["enabled"] = current.get("enabled", external["enabled"])
+            external["download_setting"] = current.get("download_setting", external.get("download_setting"))
+        sites.append(external)
     # 无站点管理权限的用户按站点授权过滤（ADR-021 4.3）
     grant_service = getattr(app_context, "site_grant_service", None)
     can_manage = user.is_superadmin or "site:manage" in user.permissions or "*" in user.permissions
@@ -525,9 +581,9 @@ def update_indexer_site_config(
     idx_svc: IndexerService = Depends(get_indexer_service),
 ):
     if req.enabled is not None:
-        idx_svc.update_site_enabled(req.site_name, req.enabled)
+        idx_svc.update_site_enabled(req.site_name, req.enabled, source=req.source)
     if req.download_setting is not None:
-        idx_svc.update_site_download_setting(req.site_name, req.download_setting)
+        idx_svc.update_site_download_setting(req.site_name, req.download_setting, source=req.source)
     if req.default_settings is not None:
         idx_svc.update_site_default_settings(req.site_name, req.default_settings)
     return success()
@@ -555,10 +611,11 @@ def batch_update_indexer_site_config(
         site_name = item.get("site_name")
         if not site_name:
             continue
+        source = item.get("source")
         if "enabled" in item:
-            idx_svc.update_site_enabled(site_name, bool(item.get("enabled")))
+            idx_svc.update_site_enabled(site_name, bool(item.get("enabled")), source=source)
         if "download_setting" in item:
-            idx_svc.update_site_download_setting(site_name, item.get("download_setting"))
+            idx_svc.update_site_download_setting(site_name, item.get("download_setting"), source=source)
         if "default_settings" in item:
             idx_svc.update_site_default_settings(site_name, item.get("default_settings"))
     return success()

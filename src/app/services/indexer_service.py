@@ -116,12 +116,20 @@ class IndexerService:
             )
         return result
 
-    def update_site_enabled(self, site_name: str, enabled: bool) -> None:
-        """更新第三方站点启用状态"""
+    def update_site_enabled(self, site_name: str, enabled: bool, source: str | None = None) -> None:
+        """更新第三方站点启用状态；provider 站点首次写入时补齐来源。"""
+        if source:
+            self._site_config_repo.upsert_site(site_name=site_name, source=source, enabled=enabled)
+            return
         self._site_config_repo.update_enabled(site_name=site_name, enabled=enabled)
 
-    def update_site_download_setting(self, site_name: str, download_setting: int | None) -> None:
-        """更新第三方站点下载设置"""
+    def update_site_download_setting(
+        self, site_name: str, download_setting: int | None, source: str | None = None
+    ) -> None:
+        """更新第三方站点下载设置；provider 站点首次写入时补齐来源。"""
+        if source:
+            self._site_config_repo.upsert_site(site_name=site_name, source=source, download_setting=download_setting)
+            return
         self._site_config_repo.update_download_setting(site_name=site_name, download_setting=download_setting)
 
     def update_site_default_settings(self, site_name: str, default_settings: dict | None) -> None:

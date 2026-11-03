@@ -51,6 +51,7 @@ def external_indexer_sites() -> list[dict]:
                     "source_icon": info.icon,
                     "third_party": True,
                     "enabled": True,
+                    "download_setting": None,
                     "public": site.public,
                     "site_public": site.public,
                     "has_rss": False,
