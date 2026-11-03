@@ -415,7 +415,11 @@ class ResultFilter:
             # 外部 HTTP/索引器 provider 在无元数据匹配的手动搜索中直出，
             # 避免成人番号等无法被本地解析器识别的标题被过滤掉。
             if item.get("_external_indexer") and not match_media:
-                mi = meta_info(title=torrent_name, mtype=MediaType.MOVIE)
+                # 直出也要先解析标题，保留动漫/剧集的季集信息；
+                # 只有完全无法解析时才退回 movie。
+                mi = meta_info(title=torrent_name, subtitle=description)
+                if not mi.get_name():
+                    mi = meta_info(title=torrent_name, subtitle=description, mtype=MediaType.MOVIE)
                 mi.set_torrent_info(
                     site=item.get("_indexer_name", ""),
                     site_order=item.get("_indexer_order", 0),

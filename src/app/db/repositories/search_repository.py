@@ -76,12 +76,14 @@ class SearchRepository(BaseRepository):
                     "TORRENT_NAME": media_item.org_string or "",
                     "ENCLOSURE": enclosure,
                     "DESCRIPTION": media_item.description or "",
-                    "TYPE": mtype if ident_flag else "",
+                    # 类型/季集来自本地解析，不依赖 TMDB 识别开关；
+                    # ident_flag 只影响标题、年份等外部元数据是否回填。
+                    "TYPE": mtype,
                     "TITLE": (media_item.title if ident_flag else title) or "",
                     "YEAR": (media_item.year if ident_flag else "") or "",
-                    "SEASON": (media_item.get_season_string() if ident_flag else "") or "",
-                    "EPISODE": (media_item.get_episode_string() if ident_flag else "") or "",
-                    "ES_STRING": (media_item.get_season_episode_string() if ident_flag else "") or "",
+                    "SEASON": media_item.get_season_string() or "",
+                    "EPISODE": media_item.get_episode_string() or "",
+                    "ES_STRING": media_item.get_season_episode_string() or "",
                     "VOTE": media_item.vote_average or "0",
                     "IMAGE": (media_item.get_backdrop_image(default=False, original=True) or ""),
                     "POSTER": (media_item.get_poster_image() or ""),
