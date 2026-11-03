@@ -30,6 +30,7 @@ class LifecycleStatus(str, Enum):
     RETRYING = "retrying"
     BLOCKED = "blocked"
     CANCELLED = "cancelled"
+    PAUSED = "paused"
     DEAD = "dead"
 
 

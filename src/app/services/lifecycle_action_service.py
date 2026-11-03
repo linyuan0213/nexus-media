@@ -17,9 +17,15 @@ class LifecycleActionError(Exception):
 
 
 class LifecycleActionService:
-    def __init__(self, repo: LifecycleRepository | None = None, projector: LifecycleProjector | None = None):
+    def __init__(
+        self,
+        repo: LifecycleRepository | None = None,
+        projector: LifecycleProjector | None = None,
+        downloader: Any | None = None,
+    ):
         self._repo = repo or LifecycleRepository()
         self._projector = projector or LifecycleProjector(self._repo)
+        self._downloader = downloader
 
     def retry(self, identity_id: str, season: int = 0, episode: int = 0) -> dict[str, Any]:
         latest = self._latest_event(identity_id, season, episode)
@@ -43,6 +49,11 @@ class LifecycleActionService:
         finally:
             queue.close()
         current = self._repo.get_current(identity_id, season=season, episode=episode)
+        if current is not None and str(current.STAGE or "").startswith("download"):
+            task = self._repo.latest_download_task(identity_id)
+            if task is not None and self._downloader is not None:
+                downloader_id, download_id = task
+                self._downloader.delete_torrents(downloader_id=downloader_id, delete_file=True, ids=[download_id])
         if current is not None:
             self._projector.record(
                 identity_id=identity_id,
@@ -66,6 +77,24 @@ class LifecycleActionService:
             )
         log.info(f"[LifecycleAction]重试 identity={identity_id} task={new_task.id}")
         return {"action": "retry", "task_id": new_task.id, "queue": queue_name}
+
+    def pause(self, identity_id: str, season: int = 0, episode: int = 0) -> dict[str, Any]:
+        task = self._repo.latest_download_task(identity_id)
+        if task is None or self._downloader is None:
+            raise LifecycleActionError("没有找到可暂停的下载任务")
+        downloader_id, download_id = task
+        self._downloader.stop_torrents(downloader_id, [download_id])
+        self._record_state(identity_id, season, episode, LifecycleStatus.PAUSED, "lifecycle.paused", "下载已暂停")
+        return {"action": "pause", "download_id": download_id}
+
+    def resume(self, identity_id: str, season: int = 0, episode: int = 0) -> dict[str, Any]:
+        task = self._repo.latest_download_task(identity_id)
+        if task is None or self._downloader is None:
+            raise LifecycleActionError("没有找到可继续的下载任务")
+        downloader_id, download_id = task
+        self._downloader.start_torrents(downloader_id, [download_id])
+        self._record_state(identity_id, season, episode, LifecycleStatus.RUNNING, "lifecycle.resumed", "下载已继续")
+        return {"action": "resume", "download_id": download_id}
 
     def cancel(self, identity_id: str, season: int = 0, episode: int = 0) -> dict[str, Any]:
         latest = self._latest_event(identity_id, season, episode)
@@ -161,6 +190,57 @@ class LifecycleActionService:
         )
         log.info(f"[LifecycleAction]手动识别 identity={identity_id} ref={provider}:{external_id}")
         return {"action": "identify", "updated": updated, "provider": provider, "external_id": external_id}
+
+    def _record_state(
+        self,
+        identity_id: str,
+        season: int,
+        episode: int,
+        status: LifecycleStatus,
+        event_type: str,
+        message: str,
+    ) -> None:
+        current = self._repo.get_current(identity_id, season=season, episode=episode)
+        if current is None:
+            current = self._repo.get_grouped_identity(identity_id)
+        if current is None:
+            return
+        if isinstance(current, dict):
+            data = current
+        else:
+            data = {
+                "STAGE": current.STAGE,
+                "MEDIA_TYPE": current.MEDIA_TYPE,
+                "SEASON": current.SEASON,
+                "EPISODE": current.EPISODE,
+                "RUN_ID": current.RUN_ID,
+                "TRACE_ID": current.TRACE_ID,
+                "TITLE": current.TITLE,
+                "YEAR": current.YEAR,
+                "POSTER": current.POSTER,
+                "SOURCE_PROVIDER": current.SOURCE_PROVIDER,
+                "CONTENT_PROFILE": current.CONTENT_PROFILE,
+                "USER_ID": current.USER_ID,
+            }
+        self._projector.record(
+            identity_id=identity_id,
+            stage=str(data.get("STAGE") or LifecycleStage.DOWNLOADING.value),
+            status=status,
+            event_type=event_type,
+            media_type=str(data.get("MEDIA_TYPE") or "movie"),
+            season=int(data.get("SEASON") or season or 0),
+            episode=int(data.get("EPISODE") or episode or 0),
+            run_id=str(data.get("RUN_ID") or ""),
+            trace_id=str(data.get("TRACE_ID") or ""),
+            title=data.get("TITLE"),
+            year=data.get("YEAR"),
+            poster=data.get("POSTER"),
+            source_provider=data.get("SOURCE_PROVIDER"),
+            content_profile=data.get("CONTENT_PROFILE"),
+            user_id=data.get("USER_ID"),
+            message=message,
+            event_key=f"{event_type}:{identity_id}:{uuid.uuid4().hex}",
+        )
 
     def _latest_event(self, identity_id: str, season: int, episode: int):
         latest = self._repo.latest_event(identity_id, season=season, episode=episode)

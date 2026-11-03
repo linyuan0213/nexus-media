@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from api.deps import require_any_permission, require_permission
+from api.deps import get_downloader_service, require_any_permission, require_permission
 from app.db.repositories.lifecycle_repository import (
     LifecycleRepository,
     lifecycle_event_to_dict,
@@ -137,14 +137,43 @@ def retry_lifecycle(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@router.post("/{identity_id}/pause", summary="暂停下载任务")
+def pause_lifecycle(
+    identity_id: str,
+    season: int = Query(default=0, ge=0),
+    episode: int = Query(default=0, ge=0),
+    downloader: Any = Depends(get_downloader_service),
+    _current_user: UserContext = Depends(require_permission("library:manage")),
+):
+    try:
+        return success(data=LifecycleActionService(downloader=downloader).pause(identity_id, season, episode))
+    except LifecycleActionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/{identity_id}/resume", summary="继续下载任务")
+def resume_lifecycle(
+    identity_id: str,
+    season: int = Query(default=0, ge=0),
+    episode: int = Query(default=0, ge=0),
+    downloader: Any = Depends(get_downloader_service),
+    _current_user: UserContext = Depends(require_permission("library:manage")),
+):
+    try:
+        return success(data=LifecycleActionService(downloader=downloader).resume(identity_id, season, episode))
+    except LifecycleActionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @router.post("/{identity_id}/cancel", summary="取消生命周期任务")
 def cancel_lifecycle(
     identity_id: str,
     season: int = Query(default=0, ge=0),
     episode: int = Query(default=0, ge=0),
+    downloader: Any = Depends(get_downloader_service),
     _current_user: UserContext = Depends(require_permission("library:manage")),
 ):
-    return success(data=LifecycleActionService().cancel(identity_id, season, episode))
+    return success(data=LifecycleActionService(downloader=downloader).cancel(identity_id, season, episode))
 
 
 @router.post("/{identity_id}/identify", summary="手动识别媒体")

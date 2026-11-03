@@ -194,6 +194,22 @@ class LifecycleRepository(BaseRepository):
                 ),
             )
 
+    def latest_download_task(self, identity_id: str) -> tuple[str, str] | None:
+        with self.readonly() as db:
+            row = (
+                db.query(DOWNLOADHISTORY.DOWNLOADER, DOWNLOADHISTORY.DOWNLOAD_ID)
+                .filter(
+                    DOWNLOADHISTORY.IDENTITY_ID == identity_id,
+                    DOWNLOADHISTORY.DOWNLOAD_ID.isnot(None),
+                    DOWNLOADHISTORY.DOWNLOAD_ID != "",
+                )
+                .order_by(DOWNLOADHISTORY.ID.desc())
+                .first()
+            )
+            if row and row[1]:
+                return str(row[0] or ""), str(row[1])
+        return None
+
     def latest_event(
         self, identity_id: str, *, season: int | None = None, episode: int | None = None
     ) -> MediaLifecycleEvent | None:

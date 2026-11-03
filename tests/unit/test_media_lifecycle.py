@@ -1,6 +1,8 @@
 """媒体生命周期读模型与状态映射测试."""
 
 from datetime import datetime, timedelta
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -447,3 +449,30 @@ def test_manual_identify_updates_metadata():
     assert current.TITLE == "New title"
     assert current.YEAR == "2024"
     assert current.SOURCE_PROVIDER == "tmdb"
+
+
+def test_pause_download_calls_downloader():
+    from app.domain.lifecycle import LifecycleStage
+    from app.services.lifecycle_action_service import LifecycleActionService
+
+    repo = Mock()
+    repo.latest_download_task.return_value = ("qbittorrent", "hash-1")
+    repo.get_current.return_value = SimpleNamespace(
+        STAGE=LifecycleStage.DOWNLOADING.value,
+        MEDIA_TYPE="movie",
+        SEASON=0,
+        EPISODE=0,
+        RUN_ID="run-1",
+        TRACE_ID="trace-1",
+        TITLE="Demo",
+        YEAR="2024",
+        POSTER=None,
+        SOURCE_PROVIDER="tmdb",
+        CONTENT_PROFILE="default",
+        USER_ID=1,
+    )
+    projector = Mock()
+    downloader = Mock()
+    LifecycleActionService(repo, projector, downloader).pause("identity-pause")
+    downloader.stop_torrents.assert_called_once_with("qbittorrent", ["hash-1"])
+    projector.record.assert_called_once()
