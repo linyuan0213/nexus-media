@@ -1,15 +1,17 @@
-import datetime
+"""Prowlarr 索引器客户端。"""
+
+from __future__ import annotations
+
+from typing import Any
 from urllib.parse import quote
 
-import log
-from app.indexer.client._base import _IIndexClient
+from app.indexer.client._torznab import TorznabIndexerClient
 from app.indexer.configuration import IndexerConf
 from app.indexer.schema import ConfigField, IndexerConfigSchema
 from app.infrastructure.http.client import HttpClient
-from app.utils import ExceptionUtils
 
 
-class Prowlarr(_IIndexClient):
+class Prowlarr(TorznabIndexerClient):
     schema = "prowlarr"
     index_type = "Prowlarr"
     client_id = "prowlarr"
@@ -43,10 +45,10 @@ class Prowlarr(_IIndexClient):
         self._client_config = config or {}
         self._refresh()
 
-    def _refresh(self):
+    def _refresh(self) -> None:
         if self._client_config:
-            self.api_key = self._client_config.get("api_key")
-            self.host = self._client_config.get("host")
+            self.api_key = self._client_config.get("api_key", "")
+            self.host = self._client_config.get("host", "")
             if self.host:
                 if not self.host.startswith("http"):
                     self.host = "http://" + self.host
@@ -63,72 +65,29 @@ class Prowlarr(_IIndexClient):
     def get_client_id(self):
         return self.client_id
 
-    def get_status(self):
-        """
-        检查连通性
-        :return: True、False
-        """
-        if not self.api_key or not self.host:
-            return False
-        return bool(self.get_indexers())
-
-    def get_indexers(self, check=True, indexer_id=None, public=True):
-        """
-        获取配置的prowlarr indexer
-        :return: indexer 信息 [(indexerId, indexerName, url)]
-        """
-        indexer_query_url = f"{self.host}api/v1/indexer?apikey={self.api_key}"
-        try:
-            ret = HttpClient().get(indexer_query_url)
-        except Exception as e2:
-            ExceptionUtils.exception_traceback(e2)
-            return []
-        indexers = ret.json()
+    def _fetch_indexers(self) -> list[Any]:
+        ret = HttpClient().get(f"{self.host}api/v1/indexer?apikey={self.api_key}")
+        if not ret:
+            raise RuntimeError("Prowlarr 索引器列表请求无响应")
         return [
             IndexerConf(
                 {
-                    "id": v.get("id"),
-                    "name": v.get("name"),
-                    "domain": f"{self.host}{v.get('id')}/api",
+                    "id": row.get("id"),
+                    "name": row.get("name"),
+                    "domain": f"{self.host}{row.get('id')}/api",
                 },
                 builtin=False,
-                public=v.get("privacy") in ("public", "semiPrivate"),
+                public=row.get("privacy") in ("public", "semiPrivate"),
             )
-            for v in indexers
+            for row in ret.json()
         ]
 
-    def list(self, index_id, page=0, page_size=100, keyword=None):
-        if not index_id:
-            return None
-        start_time = datetime.datetime.now()
-        indexers = self.get_indexers()
-        matched = [i for i in indexers if str(i.id) == str(index_id) or i.name == index_id]
-        if not matched:
-            return None
-        api_url = f"{matched[0].domain}?apikey={self.api_key}&t=search"
-        if keyword:
-            api_url += f"&q={quote(keyword)}"
-        if page > 0:
-            api_url += f"&offset={page * 20}&limit=20"
-        result_array: list = []
-        error_flag = False
-        try:
-            result_array = self._parse_torznabxml(api_url)
-        except Exception as e:
-            error_flag = True
-            log.warn(f"[Prowlarr]搜索失败: {e}")
-        seconds = round((datetime.datetime.now() - start_time).total_seconds(), 1)
-        if self.download_repo:
-            try:
-                self.download_repo.insert_indexer_statistics(
-                    indexer=str(index_id),
-                    itype=self.client_type or self.client_id,
-                    seconds=int(seconds),
-                    result="N" if error_flag else "Y",
-                )
-            except Exception as e:
-                log.warn(f"[Prowlarr]写入统计失败: {e!s}")
-        return result_array
+    def _search_items(self, indexer: Any, keyword: str) -> list[dict[str, Any]]:
+        api_url = f"{indexer.domain}?apikey={self.api_key}&t=search&q={quote(self._search_text(keyword))}"
+        return self._parse_torznabxml(api_url)
 
-    def search(self, order_seq, indexer, key_word, filter_args, match_media, in_from):
-        return super().search(order_seq, indexer, key_word, filter_args, match_media, in_from)
+    def _list_items(self, indexer: Any, keyword: str | None, offset: int, limit: int) -> list[dict[str, Any]]:
+        api_url = f"{indexer.domain}?apikey={self.api_key}&t=search&offset={offset}&limit={limit}"
+        if keyword:
+            api_url += f"&q={quote(self._search_text(keyword))}"
+        return self._parse_torznabxml(api_url)
