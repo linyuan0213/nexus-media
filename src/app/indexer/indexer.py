@@ -584,6 +584,7 @@ class Indexer:
             "_indexer_name": item.site or item.site_name,
             "_indexer_display_name": item.site_name or item.site,
             "_indexer_source": item.provider_id,
+            "_external_indexer": True,
             "_indexer_order": 0,
         }
 

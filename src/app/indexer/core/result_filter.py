@@ -412,6 +412,27 @@ class ResultFilter:
                 stats.index_error += 1
                 continue
 
+            # 外部 HTTP/索引器 provider 在无元数据匹配的手动搜索中直出，
+            # 避免成人番号等无法被本地解析器识别的标题被过滤掉。
+            if item.get("_external_indexer") and not match_media:
+                mi = meta_info(title=torrent_name, mtype=MediaType.MOVIE)
+                mi.set_torrent_info(
+                    site=item.get("_indexer_name", ""),
+                    site_order=item.get("_indexer_order", 0),
+                    enclosure=item.get("enclosure") or "",
+                    size=item.get("size"),
+                    seeders=item.get("seeders"),
+                    peers=item.get("peers"),
+                    description=description,
+                    page_url=item.get("page_url"),
+                    upload_volume_factor=item.get("uploadvolumefactor") or 1.0,
+                    download_volume_factor=item.get("downloadvolumefactor") or 1.0,
+                )
+                if mi not in direct_results:
+                    stats.index_sucess += 1
+                    direct_results.append(mi)
+                continue
+
             enclosure = item.get("enclosure")
             size = item.get("size")
             seeders = item.get("seeders")
