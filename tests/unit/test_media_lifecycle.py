@@ -476,3 +476,38 @@ def test_pause_download_calls_downloader():
     LifecycleActionService(repo, projector, downloader).pause("identity-pause")
     downloader.stop_torrents.assert_called_once_with("qbittorrent", ["hash-1"])
     projector.record.assert_called_once()
+
+
+def test_timeline_hides_failures_superseded_by_library():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    projector.record(
+        identity_id="identity-timeline",
+        stage=LifecycleStage.TRANSFERRED,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="transfer.completed",
+        run_id="success-run",
+        event_key="transfer-success",
+        occurred_at=now,
+    )
+    projector.record(
+        identity_id="identity-timeline",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="reconcile.library.present",
+        run_id="success-run",
+        event_key="library-success",
+        occurred_at=now + timedelta(seconds=1),
+    )
+    projector.record(
+        identity_id="identity-timeline",
+        stage=LifecycleStage.TRANSFERRING,
+        status=LifecycleStatus.FAILED,
+        event_type="transfer.failed",
+        run_id="stale-retry",
+        event_key="stale-failure",
+        occurred_at=now + timedelta(hours=1),
+    )
+    events = repo.list_events("identity-timeline")
+    assert all(event.EVENT_TYPE != "transfer.failed" for event in events)
