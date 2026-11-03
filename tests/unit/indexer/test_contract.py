@@ -241,3 +241,30 @@ def test_external_provider_item_converts_to_pipeline_raw():
     assert raw["enclosure"].startswith("magnet:")
     assert raw["_indexer_source"] == "crawler-a"
     assert raw["_indexer_name"] == "Site A"
+
+
+def test_global_registry_tracks_plugin_owner():
+    from app.indexer.contract import (
+        get_global_registry,
+        register_indexer_provider,
+        unregister_plugin_indexers,
+    )
+
+    provider = LegacyClientIndexerProvider(FakeClient(), provider_id="plugin-indexer")
+    register_indexer_provider(provider, "plugin-x")
+    assert get_global_registry().get("plugin-indexer") is provider
+    unregister_plugin_indexers("plugin-x")
+    assert get_global_registry().get("plugin-indexer") is None
+
+
+def test_plugin_manifest_parses_indexer_providers():
+    from app.schemas.plugin import PluginManifest
+
+    manifest = PluginManifest.from_dict(
+        {
+            "id": "indexer-plugin",
+            "name": "Indexer",
+            "backend": {"metadata": {"indexer_providers": [{"key": "my-indexer", "type": "http"}]}},
+        }
+    )
+    assert manifest.backend.metadata.keys("indexer_providers") == {"my-indexer"}

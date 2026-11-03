@@ -13,6 +13,7 @@ import log
 from app.core.settings import settings
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter, PluginLogRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
+from app.indexer.contract.global_registry import register_indexer_provider, unregister_plugin_indexers
 from app.media.category_contributions import (
     register_category_contribution,
     unregister_category_contribution,
@@ -322,6 +323,14 @@ class PluginContext:
         self._apply_required_permission(provider)
         metadata_registry.register_discovery_provider(provider, plugin_id=self._plugin_id, declared_key=key)
 
+    def register_indexer_provider(self, key: str, provider: Any) -> None:
+        """注册索引器 provider；key 必须与 manifest 的 indexer_providers 一致。"""
+        self._assert_metadata_declared("indexer_providers", key)
+        provider_id = getattr(provider, "provider_id", "") or key
+        if provider_id != key:
+            log.warn(f"[PluginContext]索引器 provider_id({provider_id}) 与声明 key({key}) 不一致，使用 key")
+        register_indexer_provider(provider, self._plugin_id)
+
     def unregister_metadata_provider(self, key: str) -> None:
         """注销本插件注册的元数据 provider."""
         metadata_registry.unregister_provider(key, plugin_id=self._plugin_id)
@@ -382,6 +391,7 @@ class PluginContext:
             with contextlib.suppress(Exception):
                 cleanup()
         metadata_registry.unregister_plugin(self._plugin_id)
+        unregister_plugin_indexers(self._plugin_id)
         unregister_plugin_contributions(self._plugin_id)
         self._category_contributions.clear()
 

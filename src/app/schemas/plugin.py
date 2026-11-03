@@ -64,6 +64,7 @@ class PluginMetadataConfig:
     required_permission: str = ""
     providers: list[dict] = field(default_factory=list)
     discovery_providers: list[dict] = field(default_factory=list)
+    indexer_providers: list[dict] = field(default_factory=list)
     content_profiles: list[dict] = field(default_factory=list)
     match_profiles: list[dict] = field(default_factory=list)
     parser_profiles: list[dict] = field(default_factory=list)
@@ -94,6 +95,7 @@ class PluginMetadataConfig:
             required_permission=data.get("required_permission", ""),
             providers=normalize(data.get("providers")),
             discovery_providers=normalize(data.get("discovery_providers")),
+            indexer_providers=normalize(data.get("indexer_providers")),
             content_profiles=normalize(data.get("content_profiles")),
             match_profiles=normalize(data.get("match_profiles")),
             parser_profiles=normalize(data.get("parser_profiles")),
@@ -114,6 +116,7 @@ class PluginMetadataConfig:
             "required_permission": self.required_permission,
             "providers": self.providers,
             "discovery_providers": self.discovery_providers,
+            "indexer_providers": self.indexer_providers,
             "content_profiles": self.content_profiles,
             "match_profiles": self.match_profiles,
             "parser_profiles": self.parser_profiles,

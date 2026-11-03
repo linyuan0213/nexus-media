@@ -28,6 +28,7 @@ from app.indexer.contract import (
     IndexerProviderRegistry,
     IndexerQuery,
     LegacyClientIndexerProvider,
+    get_global_registry,
     load_providers,
 )
 from app.indexer.core.pipeline import SearchPipeline
@@ -201,7 +202,6 @@ class Indexer:
         self._clients: dict[str, _IIndexClient] = {}
         self._clients_lock = threading.Lock()
         self._external_registry = IndexerProviderRegistry()
-        self._external_loaded = False
 
     def _ensure_client(self) -> None:
         """延迟加载 builtin 索引器客户端（兼容旧调用）"""
@@ -272,17 +272,20 @@ class Indexer:
         return self._client_type
 
     def _ensure_external_providers(self) -> None:
-        if self._external_loaded:
-            return
-        self._external_loaded = True
+        registry = IndexerProviderRegistry()
+        for provider in get_global_registry().list():
+            try:
+                registry.register(provider, replace=True)
+            except ValueError:
+                pass
         config = self._system_config.get(SystemConfigKey.IndexerConfig) or {}
         specs = config.get("providers") if isinstance(config, dict) else None
-        if not isinstance(specs, list):
-            return
-        try:
-            load_providers(self._external_registry, specs)
-        except Exception as exc:  # noqa: BLE001
-            log.warn(f"[Indexer]加载外部 provider 失败: {exc}")
+        if isinstance(specs, list):
+            try:
+                load_providers(registry, specs)
+            except Exception as exc:  # noqa: BLE001
+                log.warn(f"[Indexer]加载外部 provider 失败: {exc}")
+        self._external_registry = registry
 
     def build_provider_registry(self) -> IndexerProviderRegistry:
         """构建新 provider 契约的注册表；旧搜索链路保持原样，便于逐步迁移。"""
