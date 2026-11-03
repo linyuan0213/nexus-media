@@ -424,6 +424,10 @@ class PluginFrameworkService:
         entity = PluginConfigEntity(plugin_id=plugin_id, config=config)
         self._repo.save_config(entity)
         self._get_hook_system().emit("plugin.config_changed", {"plugin_id": plugin_id, "config": config})
+        manifest = self.get_manifest(plugin_id)
+        if manifest is not None and manifest.backend.metadata.indexer_providers:
+            # 索引器 provider 在启用时由 Sandbox 构造，配置变更后需要重新实例化。
+            self.reload_plugin(plugin_id)
 
     def install(self, zip_path: str, expected_sha256: str | None = None) -> PluginManifest:
         """安装插件包（多实例部署时通过分布式锁保证只有一个实例执行安装）"""

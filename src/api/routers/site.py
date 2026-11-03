@@ -697,7 +697,17 @@ def get_visible_sites(
             if perms:
                 sites.append({**item, "permissions": perms})
     for site in _external_indexer_sites():
-        perms = _permissions(site["name"], None if visible is None else visible.get(f"indexer:{site['name']}", set()))
+        if visible is None:
+            perms = _permissions(site["name"], None)
+        else:
+            grants: set[str] = set()
+            for key in (
+                f"{site['source']}:{site['name']}",
+                f"{site['source']}:*",
+                site["name"],
+            ):
+                grants |= visible.get(key, set())
+            perms = _permissions(site["name"], grants)
         if perms:
             sites.append({**site, "permissions": perms})
     custom_rss_service = getattr(app_context, "custom_rss_service", None)
