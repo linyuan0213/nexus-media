@@ -318,13 +318,7 @@ class Indexer:
         start_time = datetime.datetime.now()
 
         def set_progress(pct: float, text: str) -> None:
-            progress_range = filter_args.get("progress_range")
-            value = (
-                int(pct)
-                if not progress_range
-                else round(progress_range[0] + progress_range[1] * max(0, min(100, pct)) / 100)
-            )
-            self.progress.update_max(ptype=progress_key, value=value, text=text)
+            progress.update_max(ptype=progress_key, value=int(pct), text=text)
 
         site_statuses: list[dict] = []
 
@@ -381,7 +375,7 @@ class Indexer:
             f"原始结果 {len(raw_results)} 条，有效资源数：{len(pipeline_result.results)}，"
             f"总耗时 {(end_time - start_time).seconds} 秒{failed_summary}"
         )
-        self.progress.update(
+        progress.update(
             ptype=progress_key,
             text=(
                 f"搜索关键词 {key_word} 完成，有效资源数：{len(pipeline_result.results)}，"
