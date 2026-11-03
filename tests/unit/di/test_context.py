@@ -71,6 +71,8 @@ def test_app_context_fields():
         storage_backend_service=MagicMock(),
         search_result_service=MagicMock(),
         transfer_history_service=MagicMock(),
+        scrape_queue_service=MagicMock(),
+        transfer_queue_service=MagicMock(),
         subscribe_calendar_service=MagicMock(),
         subscribe_history_service=MagicMock(),
         words_service=MagicMock(),

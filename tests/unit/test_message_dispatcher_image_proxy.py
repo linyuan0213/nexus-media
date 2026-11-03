@@ -23,6 +23,7 @@ def test_external_channel_uses_nexus_image_proxy():
         "",
         "",
     )
+    assert client.image is not None
     assert client.image.startswith("https://nexus.example/img/douban/")
     assert "img3.doubanio.com" in client.image
 
