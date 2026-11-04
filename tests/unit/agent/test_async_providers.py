@@ -4,6 +4,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
+import app.agent.providers.openai as openai_module
 from app.agent.providers.base import ProviderConfig
 from app.agent.providers.gemini import GeminiProvider
 from app.agent.providers.ollama import OllamaProvider
@@ -27,7 +28,7 @@ def _config(model="test"):
     return ProviderConfig(name="test", api_key="k", api_url="http://provider/v1", model=model)
 
 
-def test_openai_native_async_stream_and_tool_calls():
+def test_openai_native_async_stream_and_tool_calls(monkeypatch):
     provider = OpenAIProvider.__new__(OpenAIProvider)
     provider._config = _config()
     provider._reasoning_unsupported = set()
@@ -43,8 +44,10 @@ def test_openai_native_async_stream_and_tool_calls():
         ],
     )
     stream = _AsyncStream([SimpleNamespace(choices=[SimpleNamespace(delta=delta)])])
-    provider._async_client = MagicMock()
-    provider._async_client.chat.completions.create = AsyncMock(return_value=stream)
+    client = MagicMock()
+    client.chat.completions.create = AsyncMock(return_value=stream)
+    client.close = AsyncMock()
+    monkeypatch.setattr(openai_module, "AsyncOpenAI", lambda **kwargs: client)
     tokens = []
 
     result = asyncio.run(provider.async_chat_with_tools_stream([], [], on_token=tokens.append))

@@ -46,11 +46,6 @@ class OpenAIProvider(BaseProvider):
             api_key=config.api_key,
             timeout=config.timeout,
         )
-        self._async_client = AsyncOpenAI(
-            base_url=config.api_url,
-            api_key=config.api_key,
-            timeout=config.timeout,
-        )
         # 已确认不支持推理参数的模型（剥离后重试成功时记录，避免每次请求双重往返）
         self._reasoning_unsupported: set[str] = set()
 
@@ -243,10 +238,17 @@ class OpenAIProvider(BaseProvider):
             "stream_options": {"include_usage": True},
         }
         self._apply_reasoning(kwargs, reasoning)
+        # pydantic-agent 每次对话通过 asyncio.run 使用新事件循环，AsyncOpenAI
+        # 不能跨 loop 复用；按请求创建并在结束后关闭。
+        client = AsyncOpenAI(
+            base_url=self._config.api_url,
+            api_key=self._config.api_key,
+            timeout=self._config.timeout,
+        )
 
         async def _create(kw: dict[str, Any]):
             try:
-                return await LLMThrottle.call_async(self._async_client.chat.completions.create, **kw)
+                return await LLMThrottle.call_async(client.chat.completions.create, **kw)
             except APIStatusError as e:
                 if (
                     e.status_code == 400
@@ -255,7 +257,7 @@ class OpenAIProvider(BaseProvider):
                 ):
                     stripped = {k: v for k, v in kw.items() if k not in ("reasoning_effort", "extra_body")}
                     self._reasoning_unsupported.add(self._config.model)
-                    return await LLMThrottle.call_async(self._async_client.chat.completions.create, **stripped)
+                    return await LLMThrottle.call_async(client.chat.completions.create, **stripped)
                 raise
 
         async def _consume() -> ChatToolResponse:
@@ -309,7 +311,10 @@ class OpenAIProvider(BaseProvider):
                 usage=usage,
             )
 
-        return await _consume()
+        try:
+            return await _consume()
+        finally:
+            await client.close()
 
     @staticmethod
     def _format_error(e: Exception) -> str:
