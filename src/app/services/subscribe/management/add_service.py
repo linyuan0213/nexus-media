@@ -376,6 +376,13 @@ class SubscribeAddService:
                 if media_info is not None:
                     media_info.tmdb_id = provider_ref[1] if provider_ref[0] == "tmdb" else ""
                     mtype = media_info.type
+                    # 插件详情源熔断/超时时，用内容画像聚合源补海报，避免订阅卡片空白。
+                    if not media_info.poster_path and content_profile:
+                        profile_ref = _split_provider_ref(mediaid)
+                        if profile_ref:
+                            poster, _ = _resolve_provider_poster(content_profile, profile_ref[1], mtype)
+                            if poster:
+                                media_info.poster_path = poster
                     # 元数据来源判定为动漫时同步切换内容画像，避免落库成默认电视剧。
                     if mtype == MediaType.ANIME and str(content_profile or "").strip() in ("", "default"):
                         content_profile = "anime"
