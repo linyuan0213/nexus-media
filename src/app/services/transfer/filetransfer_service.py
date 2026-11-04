@@ -1711,9 +1711,15 @@ class FileTransferService:
         ]
         for nfo in nfo_candidates if not force else []:
             try:
-                if not os.path.exists(nfo):
-                    continue
-                content = Path(nfo).read_text(encoding="utf-8", errors="ignore")
+                if dst_backend is not None:
+                    if not dst_backend.exists(nfo):
+                        continue
+                    with dst_backend.read_stream(nfo) as stream:
+                        content = stream.read().decode("utf-8", errors="ignore")
+                else:
+                    if not os.path.exists(nfo):
+                        continue
+                    content = Path(nfo).read_text(encoding="utf-8", errors="ignore")
                 plot = re.search(r"<plot>\s*(.*?)\s*</plot>", content, re.S)
                 actors = re.search(r"<actor>\s*<name>\s*(.*?)\s*</name>", content, re.S)
                 if (plot and plot.group(1).strip()) or (actors and actors.group(1).strip()):

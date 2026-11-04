@@ -238,6 +238,19 @@ class SubscribeFinishService:
             )
             delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
             self._finish_sibling_tvs(row, media, delete_subscribe_fn)
+            if self._download_repo and media.over_edition:
+                identity_id = str(getattr(row, "IDENTITY_ID", "") or "")
+                anchor_provider = str(getattr(row, "ANCHOR_PROVIDER", "") or "")
+                anchor_external = str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or "")
+                if identity_id or (anchor_provider and anchor_external):
+                    self._download_repo.delete_by_identity(
+                        identity_id=identity_id or None,
+                        anchor_provider=anchor_provider or None,
+                        anchor_external_id=anchor_external or None,
+                        season_prefix=media.get_season_string(),
+                    )
+                elif media.tmdb_id:
+                    self._download_repo.delete_by_tmdb(media.tmdb_id, media.get_season_string())
             self._event_bus.publish(
                 Event(
                     event_type=SUBSCRIBE_FINISHED,

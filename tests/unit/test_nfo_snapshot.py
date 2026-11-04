@@ -120,10 +120,10 @@ def test_scraper_snapshot_movie_path_writes_nfo(tmp_path):
     from app.media.scraper import Scraper
 
     downloader = _FakeDownloader()
-    scraper = Scraper.__new__(Scraper)
+    scraper = cast(Any, Scraper.__new__(Scraper))
     scraper._scraper_nfo = {"movie": {"basic": True, "credits": True}}
     scraper._scraper_pic = {}
-    scraper._dst_backend = None
+    scraper._local = SimpleNamespace(dst_backend=None)
     scraper._metadata_service = None
     scraper._downloader = cast(Any, downloader)
     scraper._nfo_gen = NfoGenerator(downloader)
@@ -150,9 +150,9 @@ def test_snapshot_image_download_falls_back_to_next_candidate(tmp_path):
             return url != "bad"
 
     downloader = _FallbackDownloader()
-    scraper = Scraper.__new__(Scraper)
+    scraper = cast(Any, Scraper.__new__(Scraper))
     scraper._downloader = cast(Any, downloader)
-    scraper._dst_backend = None
+    scraper._local = SimpleNamespace(dst_backend=None)
     scraper._images = ImageResolver()
     snapshot = _snapshot(
         images={

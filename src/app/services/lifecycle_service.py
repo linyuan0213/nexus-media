@@ -450,7 +450,8 @@ class LifecycleReconciler:
                 if target.is_file():
                     target = target.parent
                 nfo_time = _find_nfo_time(target)
-                if nfo_time is not None:
+                has_media = _has_media_file(target)
+                if nfo_time is not None and has_media:
                     for season, episode in episode_pairs:
                         if self._projector.record(
                             identity_id=identity_id,
@@ -481,7 +482,9 @@ class LifecycleReconciler:
                             count += 1
                 # 与 LibraryPresenceService 保持一致：转移历史命中即可视为库内存在。
                 # 这里再要求 NFO 已生成，确保至少完成元数据落盘。
-                if nfo_time is not None or identity_id in in_library_ids or _matches_library(target, in_library_tokens):
+                if has_media and (
+                    nfo_time is not None or identity_id in in_library_ids or _matches_library(target, in_library_tokens)
+                ):
                     library_occurred = (nfo_time or occurred or datetime.now()) + timedelta(seconds=1)
                     for season, episode in episode_pairs:
                         if self._projector.record(
@@ -716,6 +719,18 @@ def _matches_library(path: Path, tokens: set[str]) -> bool:
     if not name:
         return False
     return any(token and token in name for token in tokens)
+
+
+_MEDIA_SUFFIXES = {".mp4", ".mkv", ".avi", ".ts", ".m2ts", ".mov", ".wmv", ".flv", ".webm"}
+
+
+def _has_media_file(path: Path) -> bool:
+    try:
+        return path.is_dir() and any(
+            item.is_file() and item.suffix.lower() in _MEDIA_SUFFIXES for item in path.iterdir()
+        )
+    except OSError:
+        return False
 
 
 def _find_nfo_time(path: Path) -> datetime | None:

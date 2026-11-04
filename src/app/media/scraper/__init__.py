@@ -75,7 +75,6 @@ class Scraper:
         self._scraper_pic = {}
         self._local = threading.local()
         self._rmt_mode = None
-        self._dst_backend = None
         self._temp_path = temp_manager.create_subdir("scraper")
         self._init_config()
         self._downloader = ImageDownloader(self._temp_path)
@@ -422,7 +421,7 @@ class Scraper:
         if not self._scraper_nfo and not self._scraper_pic:
             log.warn("[Scraper]刮削配置为空，跳过快照刮削")
             return False
-        self._dst_backend = dst_backend
+        self._local.dst_backend = dst_backend
         self._downloader.set_dst_backend(dst_backend)
         if not getattr(snapshot, "content_profile", "") and getattr(media, "content_profile", ""):
             snapshot.content_profile = media.content_profile
@@ -458,7 +457,7 @@ class Scraper:
                     snapshot, scraper_movie_nfo, dir_path, file_name, fallback_title=fallback_title
                 )
         self._cleanup_stale_nfos(dir_path, file_name)
-        if self._dst_backend is None:
+        if getattr(self._local, "dst_backend", None) is None:
             self._apply_watermark(snapshot, dir_path)
         self._ensure_poster_thumb(dir_path, file_name)
 
@@ -548,7 +547,7 @@ class Scraper:
         )
 
     def _apply_watermark(self, snapshot, target_dir):
-        if self._dst_backend is not None:
+        if getattr(self._local, "dst_backend", None) is not None:
             return
         scraper_processor_registry.process_watermark(target_dir, snapshot)
 
@@ -630,7 +629,7 @@ class Scraper:
 
     def _normalize_snapshot_poster(self, snapshot, target_dir):
         """海报只保留竖版正面封面；横版整张封套/剧照转为 fanart 后删除 poster."""
-        if self._dst_backend is not None:
+        if getattr(self._local, "dst_backend", None) is not None:
             return
         poster_path = None
         for ext in (".jpg", ".jpeg", ".png", ".webp"):
@@ -1034,7 +1033,7 @@ class Scraper:
 
     def _download_snapshot_actors(self, snapshot, target_dir, force_pic):
         actors = self._images.actor_candidates(snapshot)
-        if not actors or self._dst_backend is not None:
+        if not actors or getattr(self._local, "dst_backend", None) is not None:
             return
         actors_dir = os.path.join(target_dir, "actors")
         os.makedirs(actors_dir, exist_ok=True)
@@ -1210,9 +1209,10 @@ class Scraper:
 
     def _exists(self, path: str) -> bool:
         """后端感知的存在性检查（远程目标用 dst_backend.exists）"""
-        if self._dst_backend is not None:
+        backend = getattr(self._local, "dst_backend", None)
+        if backend is not None:
             try:
-                return bool(self._dst_backend.exists(path))
+                return bool(backend.exists(path))
             except Exception:  # noqa: BLE001
                 return False
         return os.path.exists(path)
@@ -1231,7 +1231,7 @@ class Scraper:
             return False
         self._scraper_nfo = self._scraper_nfo or {}
         self._scraper_pic = self._scraper_pic or {}
-        self._dst_backend = dst_backend
+        self._local.dst_backend = dst_backend
         if not force_nfo and self._nfo_needs_rewrite(dir_path, file_name, media.type):
             log.info(f"[Scraper]{file_name} 现有 NFO 不完整，强制重写")
             force_nfo = True

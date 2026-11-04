@@ -302,6 +302,17 @@ class MediaServer:
             return None
         return self.server.get_movies(title, year)
 
+    def supports_person_tags(
+        self,
+        server_id: int | None = None,
+        content_profile: str | None = None,
+        target_path: str | None = None,
+    ) -> bool:
+        """目标实例是否支持人物标签读写。"""
+        resolved = self.resolve_server_id(server_id, content_profile, target_path)
+        client = self._get_client(resolved)
+        return bool(client and hasattr(client, "list_persons") and hasattr(client, "add_person_tags"))
+
     def list_persons(
         self,
         server_id: int | None = None,
