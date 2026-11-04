@@ -37,15 +37,24 @@ class MediaInfo(BaseModel):
             args = get_args(annotation)
             optional_str = str in args
             optional_int = int in args
+            nullable = type(None) in args
             if origin is None:
                 optional_str = annotation is str
                 optional_int = annotation is int
+                nullable = False
+            # int | str 是双形态字段，保留生产者给定的原始类型。
+            if optional_str and optional_int:
+                continue
             if optional_str and value is not None and not isinstance(value, str):
                 if isinstance(value, (bool, float, int)):
                     data[name] = str(value)
             elif optional_int:
-                if value is None or value == "":
+                if value == "":
                     data[name] = 0
+                elif value is None:
+                    # Optional[int] 的 None 是有效值，不能降级成 0。
+                    if not nullable:
+                        data[name] = 0
                 elif isinstance(value, str):
                     try:
                         data[name] = int(value)
