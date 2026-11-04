@@ -124,6 +124,7 @@ class FileTransferService:
         self._filesize_cover = False
         self._ignored_paths: re.Pattern[str] | None = None
         self._duplicate_scrape_at: dict[str, float] = {}
+        self._fail_notified_at: dict[str, float] = {}
         self._ignored_files: re.Pattern[str] | None = None
         self._sync_repo = sync_path_repo
 
@@ -481,7 +482,7 @@ class FileTransferService:
     ) -> tuple[bool, str]:
         """识别并转移一个文件、多个文件或者目录."""
         if not in_path or not (src_backend.exists(in_path) if src_backend is not None else os.path.exists(in_path)):
-            return self._finish_transfer(False, f"文件转移失败，目录或文件不存在：{in_path}")
+            return self._finish_transfer(False, f"文件转移失败，目录或文件不存在：{in_path}", in_path)
 
         # 分布式锁：多实例同时处理同一文件/目录时互斥
         lock_key = f"filetransfer:media:{hashlib.md5(in_path.encode(), usedforsecurity=False).hexdigest()}"
@@ -489,7 +490,7 @@ class FileTransferService:
         acquired = lock.acquire()
         if not acquired:
             log.info(f"[Rmt]{in_path} 正在其他实例转移中，跳过")
-            return self._finish_transfer(False, f"文件正在转移中：{in_path}")
+            return self._finish_transfer(False, f"文件正在转移中：{in_path}", in_path)
 
         self._start_lock_heartbeat(lock)
 
@@ -509,11 +510,16 @@ class FileTransferService:
             # ---------- 阶段 1：发现文件 ----------
             bluray_disk_dir, file_list = self._discover_files(in_path, files, episode, min_filesize, src_backend)
             if file_list is None:
-                return self._finish_transfer(False, "输入路径错误")
+                return self._finish_transfer(False, "输入路径错误", in_path)
             if not file_list:
-                return self._finish_transfer(
-                    bluray_disk_dir is not None, "目录下未找到媒体文件" if bluray_disk_dir is None else ""
-                )
+                if bluray_disk_dir is None:
+                    msg = "目录下未找到媒体文件"
+                    if self._history.is_need_insert_transfer_unknown(in_path):
+                        self._history.insert_transfer_unknown(
+                            in_path, target_dir, operation or self._default_operation
+                        )
+                    return self._finish_transfer(False, msg, in_path)
+                return self._finish_transfer(True, "", in_path)
 
             # ---------- 阶段 2：过滤 ----------
             file_list, msg = self.check_ignore(file_list=file_list)
@@ -588,7 +594,7 @@ class FileTransferService:
                 if identified:
                     medias.update(identified)
             if not medias:
-                return self._finish_transfer(False, "搜索媒体信息出错")
+                return self._finish_transfer(False, "搜索媒体信息出错", in_path)
 
             for _info in medias.values():
                 self._apply_download_record_hint(_info, download_record)
@@ -651,12 +657,27 @@ class FileTransferService:
 
     # ---------- 转移流水线私有方法 ----------
 
-    def _finish_transfer(self, status, message):
+    def _finish_transfer(self, status, message, in_path: str = ""):
         self.progress.update(
             ptype=ProgressKey.FileTransfer, value=100, text=f"转移{'成功' if status else '失败'}：{message}！"
         )
         self.progress.end(ProgressKey.FileTransfer)
+        if not status and in_path:
+            self._notify_failure(in_path, 1, message)
         return status, message
+
+    def _notify_failure(self, path: str, count: int, message: str) -> None:
+        """转移失败通知：同一路径 10 分钟内只提醒一次，避免重试刷屏。"""
+        if not path:
+            return
+        now = time.time()
+        if now - self._fail_notified_at.get(path, 0) < 600:
+            return
+        self._fail_notified_at[path] = now
+        try:
+            self.message.send_transfer_fail_message(path, count or 1, message)
+        except Exception as exc:  # noqa: BLE001
+            log.warn(f"[Rmt]发送转移失败通知失败: {exc}")
 
     def _get_bluray_dir(self, in_path: str, src_backend=None) -> str | None:
         """识别蓝光原盘根目录，支持本地与远程源（后端感知）"""
@@ -2032,7 +2053,9 @@ class FileTransferService:
                     payload=TransferFailPayload(path=in_path, count=alert_count, reason=reason),
                 )
             )
-            self.message.send_transfer_fail_message(in_path, alert_count, reason)
+            self._notify_failure(in_path, alert_count, reason)
+        elif failed_count > 0:
+            self._notify_failure(in_path, failed_count, error_message or "转移失败")
         elif failed_count == 0:
             if (
                 operation == "move"
@@ -2044,7 +2067,7 @@ class FileTransferService:
             ):
                 log.info(f"[Rmt]目录下已无媒体文件，移动模式下删除目录：{in_path}")
                 shutil.rmtree(in_path)
-        return self._finish_transfer(success_flag, error_message)
+        return self._finish_transfer(success_flag, error_message, in_path)
 
     def transfer_manually(self, s_path, t_path, operation):
         """全量转移，用于使用命令调用."""

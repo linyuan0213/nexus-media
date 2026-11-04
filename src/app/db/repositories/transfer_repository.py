@@ -548,8 +548,11 @@ class TransferRepository(BaseRepository):
         """
         if not path:
             return
+        norm = os.path.normpath(path)
         with self.session() as db:
-            db.query(TRANSFERUNKNOWN).filter(TRANSFERUNKNOWN.PATH == os.path.normpath(path)).update({"STATE": "Y"})
+            db.query(TRANSFERUNKNOWN).filter(
+                or_(TRANSFERUNKNOWN.PATH == norm, TRANSFERUNKNOWN.PATH.like(f"{norm}/%"))
+            ).update({"STATE": "Y"})
 
     def delete_transfer_unknowns(self, tids: list[int]) -> None:
         """
