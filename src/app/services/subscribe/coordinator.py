@@ -3,6 +3,7 @@
 使用分布式锁实现跨实例防重，基于 TMDB ID + 季生成唯一锁 key.
 """
 
+from app.domain.media_ref import media_identity_key
 from app.infrastructure.distributed_lock.base import DistributedLock
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 
@@ -23,6 +24,9 @@ class DownloadCoordinator:
 
     def _key(self, media_info) -> str:
         season = media_info.get_season_string() if hasattr(media_info, "get_season_string") else ""
+        identity = media_identity_key(media_info) or str(getattr(media_info, "identity_id", "") or "")
+        if identity:
+            return f"subscribe:download:identity:{identity}:{season}"
         tmdb_id = getattr(media_info, "tmdb_id", "") or ""
         if tmdb_id:
             return f"subscribe:download:{tmdb_id}:{season}"

@@ -29,7 +29,7 @@ class TestDownloadCoordinator:
         coord = DownloadCoordinator(lock_manager=lock_manager)
         media = self._make_media()
         assert coord.try_acquire(media) is True
-        lock_manager.create_lock.assert_called_once_with("subscribe:download:123:S01", ttl_seconds=300)
+        lock_manager.create_lock.assert_called_once_with("subscribe:download:identity:tmdb:123:S01", ttl_seconds=300)
 
     def test_try_acquire_already_held(self):
         lock_manager = MagicMock()

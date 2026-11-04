@@ -76,6 +76,20 @@ def _in_background(func):
 
 
 class BaseSearchStrategy:
+    _batch_cursors: dict[str, int] = {}
+
+    @classmethod
+    def _take_batch(cls, items: list, kind: str, limit: int) -> list:
+        """按轮转游标取一批，避免固定前 N 条长期饿死后续订阅。"""
+        if len(items) <= limit:
+            return items
+        start = cls._batch_cursors.get(kind, 0) % len(items)
+        batch = items[start : start + limit]
+        if len(batch) < limit:
+            batch += items[: limit - len(batch)]
+        cls._batch_cursors[kind] = (start + limit) % len(items)
+        return batch
+
     """搜索策略基类 — 封装 movie/tv 的公共搜索/下载逻辑."""
 
     _movie_repo: ISubscribeMovieRepository
@@ -372,7 +386,8 @@ class BaseSearchStrategy:
                 f"本轮流处理前 {batch_limit} 个，其余保持 PENDING 下一轮继续"
             )
         with ThreadPoolExecutor(max_workers=5) as executor:
-            list(executor.map(_in_background(_process_one), list(rss_movies.values())[:batch_limit]))
+            batch = self._take_batch(list(rss_movies.values()), "movie", batch_limit)
+            list(executor.map(_in_background(_process_one), batch))
 
     def _search_tvs(
         self, state: str = SubscribeState.PENDING.value, rssid: int | None = None, force: bool = False
@@ -601,7 +616,8 @@ class BaseSearchStrategy:
                 f"本轮流处理前 {batch_limit} 个，其余保持 PENDING 下一轮继续"
             )
         with ThreadPoolExecutor(max_workers=5) as executor:
-            list(executor.map(_in_background(_process_one), list(rss_tvs.values())[:batch_limit]))
+            batch = self._take_batch(list(rss_tvs.values()), "tv", batch_limit)
+            list(executor.map(_in_background(_process_one), batch))
 
     @staticmethod
     def _is_external_ref(value) -> bool:

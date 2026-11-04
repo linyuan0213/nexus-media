@@ -43,6 +43,7 @@ class TestScrapeQueueService:
         def capture(media, **kwargs):
             captured.append(media)
             done.set()
+            return True
 
         captured = []
         scraper.gen_scraper_files.side_effect = capture
