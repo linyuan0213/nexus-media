@@ -341,9 +341,11 @@ class PluginSandbox:
 
         except PluginError as e:
             log.error(f"[Sandbox] 插件加载失败 {plugin_id}: {e}")
+            self.unload(plugin_id, uninstalling=False)
             return False
         except Exception as e:  # noqa: BLE001
             log.error(f"[Sandbox] 插件加载失败 {plugin_id}: {e}")
+            self.unload(plugin_id, uninstalling=False)
             return False
 
     def _load_manifest_metadata(self, ctx, plugin_id: str, plugin_path: str, manifest) -> None:

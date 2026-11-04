@@ -13,6 +13,8 @@ import log
 from app.core.settings import settings
 from app.db.repositories.plugin_framework_repo_adapter import PluginConfigRepositoryAdapter, PluginLogRepositoryAdapter
 from app.domain.entities.plugin import PluginConfigEntity
+from app.domain.validators.media_title import register_title_filter as register_global_title_filter
+from app.domain.validators.media_title import unregister_title_filters
 from app.indexer.contract.global_registry import register_indexer_provider, unregister_plugin_indexers
 from app.media.category_contributions import (
     register_category_contribution,
@@ -393,6 +395,7 @@ class PluginContext:
         metadata_registry.unregister_plugin(self._plugin_id)
         unregister_plugin_indexers(self._plugin_id)
         unregister_plugin_contributions(self._plugin_id)
+        self.unregister_all_title_filters()
         self._category_contributions.clear()
 
     def _assert_metadata_declared(self, field: str, key: str) -> None:
@@ -434,6 +437,12 @@ class PluginContext:
         """插件配置改变后清空探索来源缓存."""
         if self._discovery_service is not None:
             self._discovery_service.clear_cache()
+
+    def register_title_filter(self, filter_fn: Callable[[str], bool]) -> None:
+        register_global_title_filter(filter_fn, self._plugin_id)
+
+    def unregister_all_title_filters(self) -> None:
+        unregister_title_filters(self._plugin_id)
 
     def register_message_image_transformer(self, transformer: Callable[[str, str], str]) -> None:
         """注册通知图片改写器；仅影响消息，不改变页面展示图片."""

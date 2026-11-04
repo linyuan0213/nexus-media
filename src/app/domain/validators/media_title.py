@@ -2,7 +2,6 @@
 
 import re
 from collections.abc import Callable
-from typing import Any
 
 # 常见垃圾词黑名单（仅当标题完全由这些词组成时过滤）
 _JUNK_WORDS = frozenset(
@@ -31,13 +30,18 @@ _GARBAGE_PATTERNS = re.compile(
 )
 
 
-_TITLE_FILTERS: list[Any] = []
+_TITLE_FILTERS: dict[str, list[Callable[[str], bool]]] = {}
 
 
-def register_title_filter(filter_fn: Callable[[str], bool]) -> None:
+def register_title_filter(filter_fn: Callable[[str], bool], plugin_id: str = "builtin") -> None:
     """注册插件级标题过滤器；返回 True 表示标题应被过滤。"""
-    if filter_fn not in _TITLE_FILTERS:
-        _TITLE_FILTERS.append(filter_fn)
+    filters = _TITLE_FILTERS.setdefault(plugin_id, [])
+    if filter_fn not in filters:
+        filters.append(filter_fn)
+
+
+def unregister_title_filters(plugin_id: str) -> None:
+    _TITLE_FILTERS.pop(plugin_id, None)
 
 
 def is_valid_media_title(name: str | None) -> bool:
@@ -61,8 +65,13 @@ def is_valid_media_title(name: str | None) -> bool:
         return False
     if cleaned in _JUNK_WORDS:
         return False
-    if any(filter_fn(name) for filter_fn in _TITLE_FILTERS):
-        return False
+    for filters in list(_TITLE_FILTERS.values()):
+        for filter_fn in list(filters):
+            try:
+                if filter_fn(name):
+                    return False
+            except Exception:  # noqa: BLE001 - 单插件过滤器失败不影响主流程
+                continue
     if _GARBAGE_PATTERNS.search(name):
         return False
     return True
