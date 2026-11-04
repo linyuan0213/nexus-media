@@ -98,3 +98,14 @@ class TestScrapeQueueService:
         import time
 
         time.sleep(0.5)
+
+    def test_duplicate_finalize_skips_notification_when_already_in_library(self):
+        lifecycle = MagicMock()
+        lifecycle.is_in_library.return_value = True
+        message = MagicMock()
+        svc = ScrapeQueueService(scraper=MagicMock(), max_workers=1, lifecycle=lifecycle, message=message)
+
+        media = MediaInfo(title="DEMO-001", type=MediaType.MOVIE)
+        svc.finalize_duplicate(media, {"in_from": "downloaders", "exist_filenum": 1})
+
+        message.send_transfer_movie_message.assert_not_called()

@@ -36,6 +36,28 @@ class LifecycleProjector:
         self._resolver = IdentityResolver()
         self._identity_repo = MediaIdentityRepository()
 
+    def is_in_library(self, media) -> bool:
+        """判断该媒体（季包则逐集）是否已经处于入库成功状态。"""
+        try:
+            resolved = self._resolver.resolve_media(media, allow_local=True)
+            identity_id = resolved.identity_id
+            season = 0
+            if hasattr(media, "get_season_seq"):
+                season = int(media.get_season_seq() or 0)
+            episodes = list(media.get_episode_list()) if hasattr(media, "get_episode_list") else []
+            for episode in episodes or [0]:
+                current = self._repo.get_current(identity_id, season=season, episode=int(episode or 0))
+                if current is None:
+                    return False
+                if (
+                    str(getattr(current, "STAGE", "") or "") != LifecycleStage.IN_LIBRARY.value
+                    or str(getattr(current, "STATUS", "") or "") != LifecycleStatus.SUCCEEDED.value
+                ):
+                    return False
+            return True
+        except Exception:  # noqa: BLE001 - 判断失败按未入库处理，保证正常通知
+            return False
+
     def record(
         self,
         *,

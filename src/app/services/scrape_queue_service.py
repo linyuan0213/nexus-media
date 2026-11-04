@@ -184,8 +184,10 @@ class ScrapeQueueService:
             backend,
         )
         finalize = payload.get("finalize") or {}
+        already_in_library = bool(self._lifecycle and self._lifecycle.is_in_library(media))
         if ok:
-            self._finalize(media, finalize, metadata_ok=True)
+            if not already_in_library:
+                self._finalize(media, finalize, metadata_ok=True)
             if task is not None:
                 self._record_media(
                     media, LifecycleStage.SCRAPED, LifecycleStatus.SUCCEEDED, "scrape.completed", task, progress=100
@@ -223,6 +225,8 @@ class ScrapeQueueService:
 
     def finalize_duplicate(self, media: MediaInfo, finalize: dict[str, Any]) -> None:
         """目标已存在且元数据完整：记录入库、发送消息并发布转移完成事件。"""
+        if self._lifecycle is not None and self._lifecycle.is_in_library(media):
+            return
         key = f"library:duplicate:{media.get_title_string()}:{media.get_season_string()}:{media.get_episode_string()}"
         self._record_media(
             media,
