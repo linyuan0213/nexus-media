@@ -63,7 +63,7 @@ class SiteIndexerProvider:
                 self._order_seq,
                 self._indexer,
                 query.keyword,
-                {"site": None, "user_id": None},
+                {"site": None, "user_id": None, "content_profile": query.content_profile},
                 None,
                 SearchType.WEB,
             )

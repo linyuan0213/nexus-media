@@ -32,6 +32,7 @@ class FakeClient:
         return self.indexers
 
     def search(self, order_seq, indexer, keyword, filter_args, match_media, in_from):
+        self.last_filter_args = filter_args
         return [
             {
                 "title": f"{indexer.name} {keyword}",
@@ -78,6 +79,12 @@ def test_site_provider_normalizes_search_and_dedup():
     assert page.items[0].download_url.startswith("magnet:")
     assert page.items[0].size_bytes == 1024
     assert page.items[0].item_id
+
+
+def test_site_provider_forwards_content_profile():
+    provider = make_provider()
+    provider.search(IndexerQuery(keyword="demo", content_profile="demo", limit=10))
+    assert provider._client.last_filter_args["content_profile"] == "demo"
 
 
 def test_site_provider_list_and_site_filter():
