@@ -102,7 +102,12 @@ class DownloadMonitor:
                         self._processed_ids.add(uid)
                         continue
                     try:
-                        if self._history_repo.get_by_source(task_path) is not None:
+                        history = self._history_repo.get_by_source(task_path)
+                        if history is None and task_path:
+                            dir_lookup = getattr(self._history_repo, "get_by_source_dir", None)
+                            if dir_lookup is not None:
+                                history = dir_lookup(task_path)
+                        if history is not None:
                             self._processed_ids.add(uid)
                             continue
                         # 路径暂时不存在不写入已处理集合，等待挂载恢复后重新触发。

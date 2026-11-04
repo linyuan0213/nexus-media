@@ -154,6 +154,7 @@ class DownloadService:
         page_url: str,
         size: str,
         seeders: str,
+        peers: str,
         uploadvolumefactor: str,
         downloadvolumefactor: str,
         dl_dir: str,
@@ -183,6 +184,7 @@ class DownloadService:
         media.upload_volume_factor = float(uploadvolumefactor if uploadvolumefactor is not None else 1.0)
         media.download_volume_factor = float(downloadvolumefactor if downloadvolumefactor is not None else 1.0)
         media.seeders = int(seeders or 0)
+        media.peers = int(peers or 0)
 
         _, ret, ret_msg = self._downloader.download(
             media_info=media,
@@ -217,6 +219,8 @@ class DownloadService:
             return DownloadResultDTO(success=False, message="没有种子文件或者种子链接")
 
         uploaded_files = []
+        success_count = 0
+        failures: list[str] = []
         try:
             # 处理上传的种子文件
             for file_item in files:
@@ -247,8 +251,10 @@ class DownloadService:
                     user_id=user_id,
                 )
                 if errmsg:
+                    failures.append(f"{file_name}: {errmsg}")
                     log.warn(f"[Download]推送下载器失败(文件): {errmsg}")
                 else:
+                    success_count += 1
                     log.info(f"[Download]已推送到下载器(文件): {file_name}")
 
             # 处理 URL 链接
@@ -311,8 +317,10 @@ class DownloadService:
                     user_id=user_id,
                 )
                 if errmsg:
+                    failures.append(f"{title or url}: {errmsg}")
                     log.warn(f"[Download]推送下载器失败: {errmsg}")
                 else:
+                    success_count += 1
                     log.info(f"[Download]已推送到下载器: {title or url}")
         finally:
             # 清理上传的临时文件
@@ -326,6 +334,10 @@ class DownloadService:
                 except Exception as e:
                     log.warn(f"[Web]删除上传的临时文件失败: {tmp_file}, {e!s}")
 
+        if failures and success_count == 0:
+            return DownloadResultDTO(success=False, message=f"添加下载失败：{failures[0]}")
+        if failures:
+            return DownloadResultDTO(success=True, message=f"部分添加成功，{len(failures)} 个失败：{failures[0]}")
         return DownloadResultDTO(success=True, message="添加下载完成！")
 
     # ---------- 正在下载任务（含媒体信息拼装） ----------

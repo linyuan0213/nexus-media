@@ -55,10 +55,10 @@ class DownloadQueueService:
             stacks = list(self._stacks.values())
             self._stacks.clear()
         for queue, worker, _ in stacks:
-            try:
-                worker.stop()
-            finally:
-                queue.close()
+            if not worker.stop():
+                log.warn("[DownloadQueue]仍有下载任务运行，保留队列等待任务结束")
+                continue
+            queue.close()
 
     def start(self) -> None:
         """启动所有已配置的 Nexus 队列下载器 worker，恢复重启前未完成任务."""

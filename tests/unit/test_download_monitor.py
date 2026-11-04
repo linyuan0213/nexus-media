@@ -63,6 +63,7 @@ class TestDownloadMonitor:
     def test_warmup_keeps_stale_path_for_retry(self, mock_factory, mock_bus):
         history = MagicMock()
         history.get_by_source.return_value = None
+        history.get_by_source_dir.return_value = None
         m = DownloadMonitor(
             client_factory=mock_factory,
             event_bus=mock_bus,
@@ -85,6 +86,7 @@ class TestDownloadMonitor:
         target.write_bytes(b"x")
         history = MagicMock()
         history.get_by_source.return_value = None
+        history.get_by_source_dir.return_value = None
         m = DownloadMonitor(
             client_factory=mock_factory,
             event_bus=mock_bus,

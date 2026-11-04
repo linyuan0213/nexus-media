@@ -2022,12 +2022,19 @@ class FileTransferService:
 
     def _record_fail(self, file_item, reg_path, target_dir, operation, udf_flag, alert_messages, msg):
         self.progress.update(ptype=ProgressKey.FileTransfer, text=msg)
-        insert = self._history.is_need_insert_transfer_unknown(reg_path)
+        unknowns = (
+            [item for item in self._history.transfer_unknown_repo.get_all() if item.path == reg_path]
+            if reg_path
+            else []
+        )
+        has_pending = any(str(getattr(item, "state", "") or "") == "N" for item in unknowns)
+        insert = bool(reg_path) and not has_pending and self._history.is_need_insert_transfer_unknown(reg_path)
         if insert:
             self._history.insert_transfer_unknown(reg_path, target_dir, operation)
         if msg not in alert_messages and insert:
             alert_messages = alert_messages + [msg]
-        return 1, 1 if insert else 0, alert_messages, 0, None, None, None
+        # 已存在待处理记录只保留一次失败计数/提醒，避免重试刷屏。
+        return (0 if has_pending else 1), (1 if insert else 0), alert_messages, 0, None, None, None
 
     def _transfer_post_process(self, result, in_from, in_path, operation, root_path) -> tuple[bool, str]:
         total_count = result["total_count"]

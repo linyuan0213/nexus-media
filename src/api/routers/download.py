@@ -97,6 +97,7 @@ class DownloadLinkRequest(BaseModel):
     page_url: str | None = None
     size: str | None = None
     seeders: str | None = None
+    peers: str | None = None
     uploadvolumefactor: str | None = None
     downloadvolumefactor: str | None = None
     dl_dir: str | None = None
@@ -329,6 +330,7 @@ def download_link(
                 page_url=req.page_url or "",
                 size=req.size or "",
                 seeders=req.seeders or "",
+                peers=req.peers or "",
                 uploadvolumefactor=req.uploadvolumefactor or "",
                 downloadvolumefactor=req.downloadvolumefactor or "",
                 dl_dir=req.dl_dir or "",

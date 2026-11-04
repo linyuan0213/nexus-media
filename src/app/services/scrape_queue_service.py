@@ -101,8 +101,12 @@ class ScrapeQueueService:
 
     def stop(self, shutdown_executor: bool = True) -> None:
         self._started = False
+        stopped = True
         for worker in self._workers:
-            worker.stop()
+            stopped = worker.stop() and stopped
+        if not stopped:
+            log.warn("[ScrapeQueue]仍有刮削任务运行，保留队列等待任务结束")
+            return
         for queue in self._queues.values():
             queue.close()
         self._workers.clear()

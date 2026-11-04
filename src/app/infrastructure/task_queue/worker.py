@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import time
 import uuid
 from collections.abc import Callable
 from typing import Any
@@ -57,13 +58,19 @@ class TaskWorker:
             f"concurrency={self._concurrency} durable={self._queue.durable}"
         )
 
-    def stop(self, timeout: float = 5.0) -> None:
+    def stop(self, timeout: float = 5.0) -> bool:
         self._stop.set()
+        deadline = time.monotonic() + max(0.0, timeout)
         for thread in self._threads:
-            thread.join(timeout=timeout)
-        self._threads.clear()
+            thread.join(timeout=max(0.0, deadline - time.monotonic()))
+        alive = [thread for thread in self._threads if thread.is_alive()]
+        self._threads = alive
+        if alive:
+            log.warn(f"[TaskQueue]worker 仍有 {len(alive)} 个任务在运行，暂不关闭队列 queue={self._queue.queue_name}")
+            return False
         self._started = False
         log.info(f"[TaskQueue]worker 已停止 queue={self._queue.queue_name}")
+        return True
 
     def _consume_loop(self, consumer: str) -> None:
         while not self._stop.is_set():

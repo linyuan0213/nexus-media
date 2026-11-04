@@ -64,7 +64,9 @@ class TransferQueueService:
     def stop(self) -> None:
         self._failed = False
         if self._worker is not None:
-            self._worker.stop()
+            if not self._worker.stop():
+                log.warn("[TransferQueue]仍有转移任务运行，保留队列等待任务结束")
+                return
             self._worker = None
         if self._queue is not None:
             self._queue.close()
