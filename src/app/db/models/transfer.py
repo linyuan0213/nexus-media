@@ -5,7 +5,7 @@
 
 from typing import Any
 
-from sqlalchemy import Index, Integer, Sequence, String, UniqueConstraint
+from sqlalchemy import Index, Integer, Sequence, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -24,13 +24,21 @@ class TRANSFERHISTORY(Base):
         Index("INDX_TRANSFER_HISTORY_SOURCE", "SOURCE_PATH", "SOURCE_FILENAME"),
         Index("INDX_TRANSFER_HISTORY_TMDBID", "TMDBID"),
         Index("INDX_TRANSFER_HISTORY_DEST", "DEST_PATH", "DEST_FILENAME"),
-        UniqueConstraint(
+        Index(
+            "uq_transfer_history_source_dest_backend",
             "SOURCE_PATH",
             "SOURCE_FILENAME",
             "DEST_PATH",
             "DEST_FILENAME",
             "DST_BACKEND",
-            name="uq_transfer_history_source_dest_backend",
+            unique=True,
+            mysql_length={
+                "SOURCE_PATH": 128,
+                "SOURCE_FILENAME": 128,
+                "DEST_PATH": 128,
+                "DEST_FILENAME": 128,
+                "DST_BACKEND": 64,
+            },
         ),
     )
 

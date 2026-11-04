@@ -16,13 +16,20 @@ depends_on = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("TRANSFER_HISTORY") as batch_op:
-        batch_op.create_unique_constraint(
-            "uq_transfer_history_source_dest_backend",
-            ["SOURCE_PATH", "SOURCE_FILENAME", "DEST_PATH", "DEST_FILENAME", "DST_BACKEND"],
-        )
+    op.create_index(
+        "uq_transfer_history_source_dest_backend",
+        "TRANSFER_HISTORY",
+        ["SOURCE_PATH", "SOURCE_FILENAME", "DEST_PATH", "DEST_FILENAME", "DST_BACKEND"],
+        unique=True,
+        mysql_length={
+            "SOURCE_PATH": 128,
+            "SOURCE_FILENAME": 128,
+            "DEST_PATH": 128,
+            "DEST_FILENAME": 128,
+            "DST_BACKEND": 64,
+        },
+    )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table("TRANSFER_HISTORY") as batch_op:
-        batch_op.drop_constraint("uq_transfer_history_source_dest_backend", type_="unique")
+    op.drop_index("uq_transfer_history_source_dest_backend", table_name="TRANSFER_HISTORY")
