@@ -62,3 +62,33 @@ def test_custom_profile_web_search_skips_tmdb_identification():
 
     assert captured["ident_flag"] is False
     assert captured["filter_args"]["rule"] == -1
+
+
+def test_default_sites_and_page_selection_are_merged():
+    config = MagicMock()
+    config.get.return_value = {"search_sites": ["M-Team"], "rule": ""}
+    args: dict = {}
+
+    _apply_default_sites(args, MediaType.TV, config, None, ["观众"])
+
+    assert args["site"] == ["M-Team", "观众"]
+
+
+def test_page_selection_used_when_default_sites_empty():
+    config = MagicMock()
+    config.get.return_value = {"search_sites": [], "rule": ""}
+    args: dict = {}
+
+    _apply_default_sites(args, MediaType.MOVIE, config, None, ["观众"])
+
+    assert args["site"] == ["观众"]
+
+
+def test_all_sites_used_when_default_and_selection_empty():
+    config = MagicMock()
+    config.get.return_value = {"search_sites": [], "rule": ""}
+    args: dict = {}
+
+    _apply_default_sites(args, MediaType.MOVIE, config, None, None)
+
+    assert args["site"] is None
