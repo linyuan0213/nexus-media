@@ -87,6 +87,7 @@ class AGENTWEBMESSAGE(Base):
     CONTENT: Mapped[str] = mapped_column(Text, default="")
     IMAGE: Mapped[str] = mapped_column(Text, default="")
     URL: Mapped[str] = mapped_column(Text, default="")
+    CONTENT_PROFILE: Mapped[str] = mapped_column(String(32), default="", server_default="")
     ITEMS: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     READ: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     READ_AT: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

@@ -205,6 +205,10 @@ class ScrapeQueueService:
             ExceptionUtils.exception_traceback(exc)
             raise RuntimeError(f"目录刮削失败 {path}: {exc}") from exc
 
+    def finalize_duplicate(self, media: MediaInfo, finalize: dict[str, Any]) -> None:
+        """目标已存在且元数据完整：补发入库消息与转移完成事件。"""
+        self._finalize(media, finalize, metadata_ok=True)
+
     def _finalize(self, media: MediaInfo, finalize: dict[str, Any], *, metadata_ok: bool) -> None:
         if not finalize or self._event_bus is None:
             return

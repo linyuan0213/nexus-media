@@ -66,6 +66,11 @@ class TestWebMessageStore:
     def test_singleton(self):
         assert WebMessageStore.instance() is WebMessageStore.instance()
 
+    def test_content_profile_roundtrip(self, store):
+        item = store.add(title="t1", image="/poster.jpg", content_profile="adult")
+        assert item["content_profile"] == "adult"
+        assert store.after(0)[0]["content_profile"] == "adult"
+
 
 @pytest.fixture
 def client():

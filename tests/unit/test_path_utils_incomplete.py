@@ -28,6 +28,15 @@ def test_completed_media_dir_is_not_incomplete(tmp_path):
     assert PathUtils.is_incomplete_media_dir(str(source)) is False
 
 
+def test_ad_marker_does_not_block_completed_media(tmp_path):
+    source = tmp_path / "Movie"
+    source.mkdir()
+    (source / "Movie.mp4").write_bytes(b"x")
+    (source / "ad.url.xltd").write_text("", encoding="utf-8")
+
+    assert PathUtils.is_incomplete_media_dir(str(source)) is False
+
+
 def test_incomplete_media_dir_by_xltd_directory(tmp_path):
     source = tmp_path / "Movie"
     source.mkdir()

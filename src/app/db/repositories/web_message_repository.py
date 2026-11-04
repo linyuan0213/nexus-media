@@ -26,6 +26,7 @@ class WebMessageRepository(BaseRepository):
         image: str = "",
         url: str = "",
         items: list | None = None,
+        content_profile: str = "",
     ) -> int:
         with self.session() as db:
             row = AGENTWEBMESSAGE(
@@ -35,6 +36,7 @@ class WebMessageRepository(BaseRepository):
                 CONTENT=content or "",
                 IMAGE=image or "",
                 URL=url or "",
+                CONTENT_PROFILE=content_profile or "",
                 ITEMS=items,
             )
             db.add(row)
@@ -120,6 +122,7 @@ class WebMessageRepository(BaseRepository):
             "content": row.CONTENT,
             "image": row.IMAGE,
             "url": row.URL,
+            "content_profile": row.CONTENT_PROFILE or "",
             "items": row.ITEMS or [],
             "user_id": row.USER_ID,
             "read": bool(row.READ),

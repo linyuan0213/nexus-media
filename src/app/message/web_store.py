@@ -87,6 +87,7 @@ class WebMessageStore:
         url: str = "",
         items: list[dict] | None = None,
         user_id: str = "",
+        content_profile: str = "",
     ) -> dict:
         """写入消息，返回条目（kind: notify 事件通知 / reply 交互回复 / list 列表）
 
@@ -106,6 +107,7 @@ class WebMessageStore:
                     image=proxied_image,
                     url=(url or "").strip(),
                     items=proxied_items,
+                    content_profile=content_profile,
                 )
             except Exception as e:
                 log.warn(f"[WebMessageStore]DB 写入失败，降级内存: {e}")
@@ -118,6 +120,7 @@ class WebMessageStore:
                 "image": proxied_image,
                 "items": proxied_items,
                 "url": (url or "").strip(),
+                "content_profile": content_profile or "",
                 "user_id": user_id,
                 "time": time.strftime("%H:%M:%S"),
                 "ts": time.time(),

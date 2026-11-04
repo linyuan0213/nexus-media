@@ -61,7 +61,7 @@ class MessageDispatcher:
         """注入消息治理层（去重/聚合），在 sendmsg 单点生效."""
         self._governor = governor
 
-    def _handle_queued_message(self, title, text, image, url, user_id, client_id, client_type):
+    def _handle_queued_message(self, title, text, image, url, user_id, client_id, client_type, content_profile=""):
         """队列消息处理器：通过 client_id 找到 client 并发送."""
         client = None
         for c in self._client_manager.active_clients:
@@ -69,11 +69,11 @@ class MessageDispatcher:
                 client = c
                 break
         if client:
-            self._do_sendmsg(client, title, text, image, url, user_id)
+            self._do_sendmsg(client, title, text, image, url, user_id, content_profile)
         else:
             log.warn(f"[Message]队列中找不到客户端: id={client_id}, type={client_type}")
 
-    def _do_sendmsg(self, client, title, text, image, url, user_id):
+    def _do_sendmsg(self, client, title, text, image, url, user_id, content_profile=""):
         """实际执行消息发送（由队列调用）."""
         if not client or not client.get("client"):
             log.warn("[Message]客户端对象为空，跳过发送")
@@ -102,9 +102,16 @@ class MessageDispatcher:
         for txt in texts:
             cur_title = title if title else txt
             cur_text = "" if not title else txt
-            state, ret_msg = client.get("client").send_msg(
-                title=cur_title, text=cur_text, image=image, url=url, user_id=user_id
-            )
+            send_kwargs = {
+                "title": cur_title,
+                "text": cur_text,
+                "image": image,
+                "url": url,
+                "user_id": user_id,
+            }
+            if client.get("type") == "web":
+                send_kwargs["content_profile"] = content_profile
+            state, ret_msg = client.get("client").send_msg(**send_kwargs)
             if not state:
                 log.error(f"[Message]{cname} 消息发送失败：%s" % ret_msg)
                 raise RuntimeError(ret_msg)
@@ -121,6 +128,7 @@ class MessageDispatcher:
         msg_type: str | None = None,
         variables: dict | None = None,
         template_engine=None,
+        content_profile: str = "",
     ):
         """通用消息发送（异步入队）."""
         if not client or not client.get("client"):
@@ -148,7 +156,9 @@ class MessageDispatcher:
                     return True
             except Exception as e:  # noqa: BLE001
                 log.warn(f"[Message]治理层异常，改为直接发送: {e!s}")
-        return self.submit_now(client, title, text, image=image, url=url, user_id=user_id)
+        return self.submit_now(
+            client, title, text, image=image, url=url, user_id=user_id, content_profile=content_profile
+        )
 
     def submit_now(
         self,
@@ -158,6 +168,7 @@ class MessageDispatcher:
         image: str | None = None,
         url: str | None = None,
         user_id: str = "",
+        content_profile: str = "",
     ) -> bool:
         """直接入队发送（不经过治理层），供治理层 flush 摘要时回调."""
         if not client or not client.get("client"):
@@ -166,7 +177,17 @@ class MessageDispatcher:
         log.info(f"[Message]消息入队 {cname}：title={title}")
         if not self._queue:
             return False
-        return self._queue.submit(self._do_sendmsg, client, title, text, image, url, user_id, name=f"sendmsg:{cname}")
+        return self._queue.submit(
+            self._do_sendmsg,
+            client,
+            title,
+            text,
+            image,
+            url,
+            user_id,
+            content_profile,
+            name=f"sendmsg:{cname}",
+        )
 
     def send_channel_msg(
         self,
@@ -176,6 +197,7 @@ class MessageDispatcher:
         image: str | None = None,
         url: str | None = None,
         user_id: str = "",
+        content_profile: str = "",
     ) -> bool:
         """按渠道发送消息，用于消息交互."""
         if channel == SearchType.WEB:
@@ -183,12 +205,26 @@ class MessageDispatcher:
             if not user_id and self._messagecenter:
                 self._messagecenter.insert_system_message(title=title, content=text)
             WebMessageStore.instance().add(
-                title=title, content=text, kind="reply", image=image or "", url=url or "", user_id=user_id
+                title=title,
+                content=text,
+                kind="reply",
+                image=image or "",
+                url=url or "",
+                user_id=user_id,
+                content_profile=content_profile,
             )
             return True
         client = self._client_manager.get_interactive_client(channel)
         if client:
-            return self.sendmsg(client=client, title=title, text=text, image=image, url=url, user_id=user_id)
+            return self.sendmsg(
+                client=client,
+                title=title,
+                text=text,
+                image=image,
+                url=url,
+                user_id=user_id,
+                content_profile=content_profile,
+            )
         return False
 
     def send_user_msg(
@@ -208,6 +244,7 @@ class MessageDispatcher:
         保证定向消息与全局广播使用同一套模板（不再退化为纯文本）。
         """
         delivered = False
+        content_profile = str((variables or {}).get("content_profile") or "")
         web_title, web_text = title, text
         if msg_type and variables and template_engine:
             tpl_title, tpl_text = template_engine.apply_client_template(
@@ -219,7 +256,13 @@ class MessageDispatcher:
             web_title = tpl_title if tpl_title is not None else title
             web_text = tpl_text if tpl_text else text
         self.send_channel_msg(
-            SearchType.WEB, web_title, web_text, image=image, url=url, user_id=str(system_user_id or "")
+            SearchType.WEB,
+            web_title,
+            web_text,
+            image=image,
+            url=url,
+            user_id=str(system_user_id or ""),
+            content_profile=content_profile,
         )
         delivered = True
         if system_user_id and self._channel_binding_service is not None:
@@ -241,6 +284,7 @@ class MessageDispatcher:
                             msg_type=msg_type,
                             variables=variables,
                             template_engine=template_engine,
+                            content_profile=content_profile,
                         )
                         delivered = True
                     except Exception:  # noqa: BLE001

@@ -1378,17 +1378,29 @@ class FileTransferService:
                     success_flag = False
                 if fc > 0 or exist_filenum > 0:
                     if exist_filenum > 0 and ret_file_path and ret_dir_path:
-                        # 目标文件已存在即已入库；补发转移完成事件，避免订阅
-                        # 因“重复转移未走刮削定稿”一直停留在待转移。
-                        self._publish_transfer_finished(
-                            in_path=in_path,
-                            file_item=file_item,
-                            out_path=ret_file_path,
-                            dist_path=dist_path,
-                            media=media,
-                        )
+                        # 目标文件已存在即已入库；补刮时携带 finalize，
+                        # 让刮削成功后照常发送入库消息并触发订阅定稿。
+                        duplicate_finalize = {
+                            "in_path": in_path,
+                            "file_item": file_item,
+                            "out_path": ret_file_path,
+                            "dist_path": dist_path,
+                            "media": JsonUtils.model_to_jsonable(media),
+                            "media_info": media.to_dict(),
+                            "in_from": getattr(in_from, "value", in_from),
+                            "exist_filenum": exist_filenum,
+                            "category_flag": self._path_resolver.movie_category_flag or False,
+                            "bluray": bool(bluray_disk_dir),
+                            "file_ext": os.path.splitext(file_item)[-1],
+                            "ret_file_path": ret_file_path,
+                        }
                         self._scrape_duplicate_if_incomplete(
-                            media, ret_dir_path, ret_file_path, resolved_backend, force_scrape
+                            media,
+                            ret_dir_path,
+                            ret_file_path,
+                            resolved_backend,
+                            force_scrape,
+                            finalize=duplicate_finalize,
                         )
                     continue
 
@@ -1685,7 +1697,13 @@ class FileTransferService:
         return os.path.join(str(row.dest_path), str(row.dest_filename))
 
     def _scrape_duplicate_if_incomplete(
-        self, media, dir_path: str, file_path: str, dst_backend=None, force: bool = False
+        self,
+        media,
+        dir_path: str,
+        file_path: str,
+        dst_backend=None,
+        force: bool = False,
+        finalize: dict | None = None,
     ) -> None:
         """目标已存在时，若 NFO 不完整则补刮，不重复搬运文件."""
         file_name = os.path.splitext(os.path.basename(file_path))[0]
@@ -1706,6 +1724,8 @@ class FileTransferService:
                 plot = re.search(r"<plot>\s*(.*?)\s*</plot>", content, re.S)
                 actors = re.search(r"<actor>\s*<name>\s*(.*?)\s*</name>", content, re.S)
                 if (plot and plot.group(1).strip()) or (actors and actors.group(1).strip()):
+                    if finalize:
+                        self._scrape_queue_service.finalize_duplicate(media, finalize)
                     return
             except Exception:
                 continue
@@ -1718,6 +1738,7 @@ class FileTransferService:
                 file_name=file_name,
                 file_ext=file_ext,
                 dst_backend=dst_backend,
+                finalize=finalize,
             )
         except Exception as e:  # noqa: BLE001 - 补刮失败不改变转移结果
             log.warn(f"[Rmt]补刮提交失败 {key}: {e}")

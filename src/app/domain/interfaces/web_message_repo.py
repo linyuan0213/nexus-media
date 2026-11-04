@@ -18,6 +18,7 @@ class IWebMessageRepository(Protocol):
         image: str = "",
         url: str = "",
         items: list | None = None,
+        content_profile: str = "",
     ) -> int:
         """写入一条消息，返回游标（自增 ID）"""
         ...

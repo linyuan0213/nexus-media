@@ -72,13 +72,14 @@ class RedisMessageQueue(MessageQueue):
             return False
 
         # 从 args 中提取参数（Message.__sendmsg 的调用方式）
-        # args = (client, title, text, image, url, user_id)
+        # args = (client, title, text, image, url, user_id, content_profile)
         client = args[0] if len(args) > 0 else {}
         title = args[1] if len(args) > 1 else ""
         text = args[2] if len(args) > 2 else ""
         image = args[3] if len(args) > 3 else ""
         url = args[4] if len(args) > 4 else ""
         user_id = args[5] if len(args) > 5 else ""
+        content_profile = args[6] if len(args) > 6 else ""
 
         msg_id = str(uuid.uuid4())
         payload = {
@@ -92,6 +93,7 @@ class RedisMessageQueue(MessageQueue):
             "image": str(image) if image is not None else "",
             "url": str(url) if url is not None else "",
             "user_id": str(user_id) if user_id is not None else "",
+            "content_profile": str(content_profile) if content_profile is not None else "",
         }
 
         # 幂等检查
@@ -146,9 +148,10 @@ class RedisMessageQueue(MessageQueue):
             image = fields.get("image", "")
             url = fields.get("url", "")
             user_id = fields.get("user_id", "")
+            content_profile = fields.get("content_profile", "")
 
             if self._handler:
-                self._handler(title, text, image, url, user_id, client_id, client_type)
+                self._handler(title, text, image, url, user_id, client_id, client_type, content_profile)
 
             self._redis.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
             log.info(f"[RedisMessageQueue]消息处理成功: {name}")
