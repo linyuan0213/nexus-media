@@ -130,7 +130,7 @@ class TestOrchestrateFinalText:
         ):
             orch.orchestrate(ctx)
 
-        calls = [str(c) for c in orch._progress.update.call_args_list]
+        calls = [str(c) for c in orch._progress.update_max.call_args_list]
         final = [c for c in calls if "搜索完成" in c]
         assert final, "应有搜索完成的 progress update"
         assert "站点B(超时)" in final[-1]
