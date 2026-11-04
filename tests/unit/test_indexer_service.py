@@ -1,6 +1,6 @@
 """Tests for app.services.indexer_service."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from app.domain.entities.indexer_config import IndexerConfigEntity
 from app.domain.entities.indexer_site_config import IndexerSiteConfigEntity
@@ -141,3 +141,52 @@ class TestIndexerServiceGetUserIndexerNames:
 
         indexer.get_all_search_indexers.assert_not_called()
         indexer.get_indexers.assert_not_called()
+
+
+class TestGetAllUserIndexersExternalDedup:
+    @patch(
+        "app.services.indexer_service.external_indexer_sites",
+        return_value=[{"source": "http-indexer", "name": "sehuatang"}],
+    )
+    def test_plugin_site_rows_are_not_duplicated(self, _mock_sites):
+        indexer = MagicMock()
+        indexer.get_indexers.return_value = []
+        site_config_repo = MagicMock()
+        site_config_repo.list_all.return_value = [
+            IndexerSiteConfigEntity(
+                id=72432,
+                site_name="sehuatang",
+                source="http-indexer",
+                enabled=True,
+            )
+        ]
+        idx_config_repo = MagicMock()
+
+        svc = _make_service(site_config_repo=site_config_repo, idx_config_repo=idx_config_repo)
+        svc._indexer = indexer
+
+        assert svc.get_all_user_indexers() == []
+
+    @patch("app.services.indexer_service.external_indexer_sites", return_value=[])
+    def test_third_party_site_rows_still_included(self, _mock_sites):
+        indexer = MagicMock()
+        indexer.get_indexers.return_value = []
+        site_config_repo = MagicMock()
+        site_config_repo.list_all.return_value = [
+            IndexerSiteConfigEntity(
+                id=1,
+                site_name="jackett-site",
+                source="jackett",
+                enabled=True,
+            )
+        ]
+        idx_config_repo = MagicMock()
+        idx_config_repo.get_by_client_id.return_value = IndexerConfigEntity(
+            client_id="jackett", enabled=True
+        )
+
+        svc = _make_service(site_config_repo=site_config_repo, idx_config_repo=idx_config_repo)
+        svc._indexer = indexer
+
+        result = svc.get_all_user_indexers()
+        assert [item.name for item in result] == ["jackett-site"]

@@ -18,6 +18,7 @@ from app.domain.enums import SystemConfigKey
 from app.indexer import Indexer
 from app.indexer.client import BuiltinIndexer
 from app.indexer.configuration import IndexerHelper
+from app.indexer.contract.site_catalog import external_indexer_sites
 from app.schemas.download import IndexerStatisticsDTO
 from app.schemas.indexer import (
     IndexerClientInfoDTO,
@@ -83,7 +84,12 @@ class IndexerService:
                 seen.add(key)
                 result.append(UserIndexerDTO(id=str(indexer.id), name=indexer.name))
         rows = self._site_config_repo.list_all(enabled=True, source_ne="builtin")
+        # 插件 provider 的站点由 external_indexer_sites() 统一暴露（带 display_name 与 provider 前缀），
+        # 这里只保留内置/第三方索引器，避免同一站点出现两张卡片。
+        external_sources = {str(site.get("source") or "") for site in external_indexer_sites()}
         for row in rows:
+            if row.source in external_sources:
+                continue
             key = row.site_name.lower()
             if key in seen:
                 continue
