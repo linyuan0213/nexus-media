@@ -125,7 +125,7 @@ class RssFeedStrategy:
             default_setting = self._system_config.get(
                 SystemConfigKey.DefaultSubscribeSettingTV
                 if mtype in (MediaType.TV, MediaType.ANIME)
-                else SystemConfigKey.DefaultSubscribeSettingMOV
+                else SystemConfigKey.DefaultSubscribeSettingMovie
             )
             if isinstance(default_setting, dict):
                 return default_setting.get("rss_sites") or []

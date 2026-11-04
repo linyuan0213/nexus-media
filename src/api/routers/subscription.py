@@ -546,7 +546,7 @@ def get_default_rss_setting(
         setting = svc.default_subscribe_setting_tv
     elif parsed == MediaType.MOVIE:
         if profile and profile != "default":
-            setting = SystemConfig().get(f"{SystemConfigKey.DefaultSubscribeSettingMOV.value}::{profile}") or {}
+            setting = SystemConfig().get(f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::{profile}") or {}
         else:
             setting = svc.default_subscribe_setting_mov
     else:
@@ -571,9 +571,9 @@ def save_default_rss_setting(
     if parsed in (MediaType.TV, MediaType.ANIME):
         cfg.set(key=SystemConfigKey.DefaultSubscribeSettingTV, value=data)
     elif parsed == MediaType.MOVIE and profile and profile != "default":
-        cfg.set(key=f"{SystemConfigKey.DefaultSubscribeSettingMOV.value}::{profile}", value=data)
+        cfg.set(key=f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::{profile}", value=data)
     elif parsed == MediaType.MOVIE:
-        cfg.set(key=SystemConfigKey.DefaultSubscribeSettingMOV, value=data)
+        cfg.set(key=SystemConfigKey.DefaultSubscribeSettingMovie, value=data)
     return success()
 
 

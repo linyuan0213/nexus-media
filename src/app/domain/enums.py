@@ -86,7 +86,7 @@ class SystemConfigKey(Enum):
     # 站点授权默认策略：open=全开放（默认，兼容单用户），closed=白名单（仅授权站点可见）
     SiteGrantDefaultPolicy = "SiteGrantDefaultPolicy"
     # 默认电影订阅设置
-    DefaultSubscribeSettingMOV = "DefaultSubscribeSettingMOV"
+    DefaultSubscribeSettingMovie = "DefaultSubscribeSettingMovie"
     # 默认电视剧订阅设置
     DefaultSubscribeSettingTV = "DefaultSubscribeSettingTV"
     # 用户已安装的插件

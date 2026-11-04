@@ -124,7 +124,7 @@ class SubscribeService:
 
     @property
     def default_subscribe_setting_mov(self) -> dict | None:
-        return self._system_config.get(SystemConfigKey.DefaultSubscribeSettingMOV) or {}
+        return self._system_config.get(SystemConfigKey.DefaultSubscribeSettingMovie) or {}
 
     def update_rss_subscribe(self, *args, **kwargs):
         return self._update_svc.update_rss_subscribe(*args, **kwargs)

@@ -140,7 +140,7 @@ class BaseSearchStrategy:
                 key = SystemConfigKey.DefaultSubscribeSettingTV.value
             else:
                 profile = str(rss_info.get("content_profile") or "").strip()
-                key = SystemConfigKey.DefaultSubscribeSettingMOV.value
+                key = SystemConfigKey.DefaultSubscribeSettingMovie.value
                 if profile and profile != "default":
                     key = f"{key}::{profile}"
             default_setting = self._system_config.get(key)

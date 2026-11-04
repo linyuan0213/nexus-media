@@ -66,9 +66,13 @@ class SystemConfig:
         self._repo.set(self._type, key, db_value)
 
     def get(self, key=None):
-        """获取系统设置"""
+        """获取系统设置（兼容旧 DefaultSubscribeSettingMOV 键名）"""
         if not key:
             return self.systemconfig
         if isinstance(key, SystemConfigKey):
             key = key.value
-        return self.systemconfig.get(key)
+        value = self.systemconfig.get(key)
+        if value is None and key.startswith("DefaultSubscribeSettingMovie"):
+            legacy = key.replace("DefaultSubscribeSettingMovie", "DefaultSubscribeSettingMOV", 1)
+            value = self.systemconfig.get(legacy)
+        return value

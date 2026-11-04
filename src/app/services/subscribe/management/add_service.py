@@ -125,7 +125,7 @@ class SubscribeAddService:
 
     @property
     def default_subscribe_setting_mov(self) -> dict | None:
-        return self._system_config.get(SystemConfigKey.DefaultSubscribeSettingMOV) or {}
+        return self._system_config.get(SystemConfigKey.DefaultSubscribeSettingMovie) or {}
 
     def _identity_fields(
         self,
@@ -230,7 +230,7 @@ class SubscribeAddService:
             return self.default_subscribe_setting_tv or {}
         profile = str(content_profile or "").strip()
         if profile and profile != "default":
-            key = f"{SystemConfigKey.DefaultSubscribeSettingMOV.value}::{profile}"
+            key = f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::{profile}"
             setting = self._system_config.get(key)
             if isinstance(setting, dict) and setting:
                 return setting

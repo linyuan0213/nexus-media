@@ -123,8 +123,8 @@ def test_default_subscribe_setting_is_profile_aware():
     from app.services.subscribe.management.add_service import SubscribeAddService
 
     keys = {
-        SystemConfigKey.DefaultSubscribeSettingMOV: {"pix": "1080p"},
-        f"{SystemConfigKey.DefaultSubscribeSettingMOV.value}::adult": {"pix": "4K"},
+        SystemConfigKey.DefaultSubscribeSettingMovie: {"pix": "1080p"},
+        f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::adult": {"pix": "4K"},
     }
 
     class _Config:
@@ -165,7 +165,7 @@ def test_web_search_uses_profile_default_sites():
     from app.services.search_web_entry import _apply_default_sites
 
     keys = {
-        f"{SystemConfigKey.DefaultSubscribeSettingMOV.value}::adult": {"search_sites": ["M-Team"]},
+        f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::adult": {"search_sites": ["M-Team"]},
     }
 
     class _Config:
