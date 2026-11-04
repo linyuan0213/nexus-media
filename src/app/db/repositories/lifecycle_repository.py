@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -10,7 +11,7 @@ from sqlalchemy import func
 import log
 from app.db.models.download import DOWNLOADHISTORY
 from app.db.models.lifecycle import MediaLifecycle, MediaLifecycleEvent
-from app.db.models.subscribe import SubscribeTvEpisodes, SubscribeTvs
+from app.db.models.subscribe import SubscribeMovies, SubscribeTvEpisodes, SubscribeTvs
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.data_scope import apply_owner_scope
@@ -284,6 +285,12 @@ class LifecycleRepository(BaseRepository):
         for item in grouped:
             item["ACTIVITY_AT"] = activity.get(str(item.get("IDENTITY_ID")), datetime.min)
         _apply_subscription_state(grouped, subscription_map)
+        existing = {str(item.get("IDENTITY_ID") or "") for item in grouped}
+        synthetic = _active_subscription_items(db, user, existing)
+        if keyword:
+            key = keyword.strip().lower()
+            synthetic = [item for item in synthetic if key in str(item.get("TITLE") or "").lower()]
+        grouped.extend(synthetic)
         grouped.sort(
             key=lambda item: (item.get("ACTIVITY_AT") or datetime.min, item.get("ID") or 0),
             reverse=True,
@@ -450,6 +457,8 @@ class LifecycleRepository(BaseRepository):
             identities = list({str(row.IDENTITY_ID) for row in rows})
             grouped = _group_lifecycle_rows(rows)
             _apply_subscription_state(grouped, _subscription_map(db, identities))
+            existing = {str(item.get("IDENTITY_ID") or "") for item in grouped}
+            grouped.extend(_active_subscription_items(db, user, existing))
         by_status: dict[str, int] = {}
         by_stage: dict[str, int] = {}
         for item in grouped:
@@ -460,6 +469,69 @@ class LifecycleRepository(BaseRepository):
     @staticmethod
     def event_payload(value: Any) -> str:
         return JsonUtils.dumps(JsonUtils.to_jsonable(value or {}))
+
+
+def _active_subscription_items(db, user, existing: set[str]) -> list[dict[str, Any]]:
+    """把当前活跃订阅补进读模型，避免没有生命周期事件时漏掉在途订阅."""
+    result: list[dict[str, Any]] = []
+    now = datetime.now()
+    specs = ((SubscribeTvs, "tv"), (SubscribeMovies, "movie"))
+    for model, default_type in specs:
+        query = db.query(model).filter(
+            model.STATE.in_(["D", "S", "R"]),
+            model.IDENTITY_ID.isnot(None),
+        )
+        if user is not None:
+            query = apply_owner_scope(query, model, user, include_shared=False)
+        for row in query.all():
+            identity_id = str(getattr(row, "IDENTITY_ID", "") or "")
+            if not identity_id or identity_id in existing:
+                continue
+            total = int(getattr(row, "TOTAL", 0) or getattr(row, "TOTAL_EP", 0) or 0)
+            current = int(getattr(row, "CURRENT_EP", 0) or 0)
+            lack = int(getattr(row, "LACK", 0) or 0)
+            if total and 0 < current <= total:
+                lack = max(0, total - current + 1)
+            completed = max(0, total - lack) if total else 0
+            profile = str(getattr(row, "CONTENT_PROFILE", "") or "default")
+            media_type = "anime" if profile == "anime" else default_type
+            season_match = re.search(r"\d+", str(getattr(row, "SEASON", "") or ""))
+            season = int(season_match.group()) if season_match else 0
+            state = str(getattr(row, "STATE", "") or "")
+            stage = LifecycleStage.SEARCHING.value if state == "S" else LifecycleStage.SUBSCRIBED.value
+            result.append(
+                {
+                    "ID": 0,
+                    "IDENTITY_ID": identity_id,
+                    "MEDIA_TYPE": media_type,
+                    "SEASON": season,
+                    "EPISODE": 0,
+                    "TITLE": getattr(row, "NAME", None),
+                    "YEAR": getattr(row, "YEAR", None),
+                    "POSTER": getattr(row, "POSTER", None) or getattr(row, "IMAGE", None),
+                    "STAGE": stage,
+                    "STATUS": "queued" if state == "D" else "running",
+                    "RUN_ID": None,
+                    "TRACE_ID": None,
+                    "PROGRESS": round(completed * 100 / total) if total else 0,
+                    "SOURCE_PROVIDER": getattr(row, "ANCHOR_PROVIDER", None)
+                    or getattr(row, "PROVIDER", None),
+                    "CONTENT_PROFILE": profile,
+                    "USER_ID": getattr(row, "USER_ID", None),
+                    "STAGE_STARTED_AT": now,
+                    "LAST_EVENT_AT": now,
+                    "NEXT_RETRY_AT": None,
+                    "RETRY_COUNT": 0,
+                    "LAST_ERROR": None,
+                    "EPISODE_COUNT": total or (1 if default_type == "movie" else 0),
+                    "COMPLETED_EPISODES": completed,
+                    "IN_LIBRARY_EPISODES": completed,
+                    "SUBSCRIBED_EPISODES": completed,
+                    "MISSING": False,
+                    "ACTIVITY_AT": now,
+                }
+            )
+    return result
 
 
 def _subscription_map(db, identities: list[str]) -> dict[str, tuple[int, str, int]]:

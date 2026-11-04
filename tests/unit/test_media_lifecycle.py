@@ -616,3 +616,29 @@ def test_find_by_ref_falls_back_to_other_scope():
     )
 
     assert repo.find_by_ref("tmdb", "999001", media_type="tv").IDENTITY_ID == identity.IDENTITY_ID
+
+
+def test_active_subscription_without_lifecycle_rows_is_visible():
+    from app.db.repositories.base_repository import BaseRepository
+
+    with BaseRepository().session() as db:
+        db.add(
+            SubscribeTvs(
+                NAME="Demo Subscription",
+                SEASON="S01",
+                STATE="R",
+                TOTAL=12,
+                CURRENT_EP=6,
+                LACK=7,
+                IDENTITY_ID="01SUBSCRIPTION00000000001",
+            )
+        )
+        db.commit()
+
+    rows, total = LifecycleRepository().list_grouped(pagenum=10)
+
+    assert total == 1
+    assert rows[0]["IDENTITY_ID"] == "01SUBSCRIPTION00000000001"
+    assert rows[0]["STAGE"] == LifecycleStage.SUBSCRIBED.value
+    assert rows[0]["STATUS"] == LifecycleStatus.RUNNING.value
+    assert rows[0]["EPISODE_COUNT"] == 12
