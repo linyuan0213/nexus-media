@@ -74,6 +74,9 @@ class TransferQueueService:
         self.start()
         if self._queue is None:
             return False
+        if self._is_library_done(payload):
+            log.info(f"[TransferQueue]跳过已入库的重复转移: {payload.get('downloader_id')}:{payload.get('task_id')}")
+            return True
         dedup = str(payload.get("dedup_key") or f"{payload.get('downloader_id')}:{payload.get('task_id')}")
         try:
             task = self._queue.enqueue("transfer.task", payload, dedup_key=dedup)
@@ -86,31 +89,35 @@ class TransferQueueService:
             log.warn(f"[TransferQueue]入队失败，回退直连: {exc}")
             return False
 
+    def _is_library_done(self, payload: dict[str, Any]) -> bool:
+        identity_id = str(payload.get("identity_id") or "")
+        if not identity_id:
+            return False
+        repo = LifecycleRepository()
+        current = repo.get_current(
+            identity_id,
+            season=int(payload.get("season") or 0),
+            episode=int(payload.get("episode") or 0),
+        )
+        if current is None:
+            current = repo.get_grouped_identity(identity_id)
+        stage = (
+            str(current.get("STAGE") or "")
+            if isinstance(current, dict)
+            else str(getattr(current, "STAGE", "") or "")
+        )
+        status = (
+            str(current.get("STATUS") or "")
+            if isinstance(current, dict)
+            else str(getattr(current, "STATUS", "") or "")
+        )
+        return stage == LifecycleStage.IN_LIBRARY.value and status == LifecycleStatus.SUCCEEDED.value
+
     def _handle_task(self, task: Task) -> dict[str, Any]:
         payload = task.payload
-        identity_id = str(payload.get("identity_id") or "")
-        if identity_id:
-            repo = LifecycleRepository()
-            current = repo.get_current(
-                identity_id,
-                season=int(payload.get("season") or 0),
-                episode=int(payload.get("episode") or 0),
-            )
-            if current is None:
-                current = repo.get_grouped_identity(identity_id)
-            stage = (
-                str(current.get("STAGE") or "")
-                if isinstance(current, dict)
-                else str(getattr(current, "STAGE", "") or "")
-            )
-            status = (
-                str(current.get("STATUS") or "")
-                if isinstance(current, dict)
-                else str(getattr(current, "STATUS", "") or "")
-            )
-            if stage == LifecycleStage.IN_LIBRARY.value and status == LifecycleStatus.SUCCEEDED.value:
-                log.info(f"[TransferQueue]跳过已入库的旧转移任务 {task.id} identity={identity_id}")
-                return {"success": True, "skipped": True}
+        if self._is_library_done(payload):
+            log.info(f"[TransferQueue]跳过已入库的旧转移任务 {task.id} identity={payload.get('identity_id')}")
+            return {"success": True, "skipped": True}
         downloader_id = str(payload.get("downloader_id") or "")
         task_id = str(payload.get("task_id") or "")
         source_type_value = str(payload.get("source_type") or SourceType.DOWNLOADER.value)
