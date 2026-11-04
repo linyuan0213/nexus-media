@@ -3,10 +3,13 @@
 import threading
 from unittest.mock import MagicMock
 
+from app.domain.lifecycle import LifecycleStage
 from app.domain.mediatypes import MediaType
+from app.infrastructure.task_queue import Task
 from app.infrastructure.thread import ThreadExecutor
 from app.media.models import MediaInfo
 from app.services.scrape_queue_service import ScrapeQueueService
+from app.utils.json_utils import JsonUtils
 
 
 class TestScrapeQueueService:
@@ -45,6 +48,28 @@ class TestScrapeQueueService:
         assert done.wait(timeout=5)
         assert len(captured) == 1
         assert captured[0] is not media  # 深拷贝隔离，避免与转移线程共享对象
+
+    def test_scrape_success_projects_in_library(self):
+        scraper = MagicMock()
+        scraper.gen_scraper_files.return_value = True
+        lifecycle = MagicMock()
+        svc = ScrapeQueueService(scraper=scraper, max_workers=1, lifecycle=lifecycle)
+
+        media = MediaInfo(title="Test", type=MediaType.MOVIE)
+        task = Task.create(
+            "scrape:file",
+            "scrape.file",
+            {"media": JsonUtils.model_to_jsonable(media)},
+        )
+        result = svc._run_file_payload(task.payload, task)
+
+        assert result == {"scraped": True}
+        stages = [call.kwargs["stage"] for call in lifecycle.record_media.call_args_list]
+        assert stages == [
+            LifecycleStage.SCRAPING,
+            LifecycleStage.SCRAPED,
+            LifecycleStage.IN_LIBRARY,
+        ]
 
     def test_submit_folder_scrape_executes_async(self):
         scraper = MagicMock()

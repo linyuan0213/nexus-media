@@ -173,6 +173,10 @@ class ScrapeQueueService:
                 self._record_media(
                     media, LifecycleStage.SCRAPED, LifecycleStatus.SUCCEEDED, "scrape.completed", task, progress=100
                 )
+                # 刮削只发生在最终媒体库路径，完成即代表文件已入库。
+                self._record_media(
+                    media, LifecycleStage.IN_LIBRARY, LifecycleStatus.SUCCEEDED, "library.present", task, progress=100
+                )
             return {"scraped": True}
         if task is not None:
             self._record_media(

@@ -234,7 +234,7 @@ def test_grouped_list_collapses_episodes_by_identity():
     assert rows[0]["STAGE"] == LifecycleStage.IN_LIBRARY.value
 
 
-def test_grouped_incomplete_subscription_is_not_completed():
+def test_grouped_incomplete_subscription_keeps_library_stage():
     repo = LifecycleRepository()
     projector = LifecycleProjector(repo)
     now = datetime(2026, 11, 2, 10, 0, 0)
@@ -270,8 +270,9 @@ def test_grouped_incomplete_subscription_is_not_completed():
     assert item["EPISODE_COUNT"] == 12
     assert item["COMPLETED_EPISODES"] == 4
     assert item["SUBSCRIBED_EPISODES"] == 5
-    assert item["STAGE"] == LifecycleStage.SUBSCRIBED.value
-    assert item["STATUS"] == LifecycleStatus.QUEUED.value
+    assert item["PROGRESS"] == 33
+    assert item["STAGE"] == LifecycleStage.IN_LIBRARY.value
+    assert item["STATUS"] == LifecycleStatus.SUCCEEDED.value
 
 
 def test_snapshot_does_not_regress_to_earlier_stage():
@@ -381,7 +382,7 @@ def test_grouped_ignores_series_level_placeholder_when_episodes_exist():
     assert rows[0]["STAGE"] == LifecycleStage.IN_LIBRARY.value
 
 
-def test_active_subscription_with_all_known_episodes_is_not_completed():
+def test_active_subscription_with_library_episodes_keeps_library_stage():
     repo = LifecycleRepository()
     projector = LifecycleProjector(repo)
     now = datetime(2026, 11, 2, 10, 0, 0)
@@ -411,8 +412,41 @@ def test_active_subscription_with_all_known_episodes_is_not_completed():
         db.commit()
     rows, total = repo.list_grouped(pagenum=10)
     assert total == 1
-    assert rows[0]["STAGE"] == LifecycleStage.SUBSCRIBED.value
-    assert rows[0]["STATUS"] == LifecycleStatus.RUNNING.value
+    assert rows[0]["STAGE"] == LifecycleStage.IN_LIBRARY.value
+    assert rows[0]["STATUS"] == LifecycleStatus.SUCCEEDED.value
+
+
+def test_active_subscription_with_scraped_episode_keeps_scraped_stage():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    projector.record(
+        identity_id="identity-scraped",
+        stage=LifecycleStage.SCRAPED,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="scrape.completed",
+        media_type="tv",
+        season=1,
+        episode=1,
+        event_key="scrape-active-1",
+        occurred_at=now,
+    )
+    with repo.session() as db:
+        db.add(
+            SubscribeTvs(
+                NAME="Scraped TV",
+                SEASON="S01",
+                TOTAL_EP=2,
+                CURRENT_EP=2,
+                STATE="R",
+                IDENTITY_ID="identity-scraped",
+            )
+        )
+        db.commit()
+    rows, total = repo.list_grouped(pagenum=10)
+    assert total == 1
+    assert rows[0]["STAGE"] == LifecycleStage.SCRAPED.value
+    assert rows[0]["STATUS"] == LifecycleStatus.SUCCEEDED.value
 
 
 def test_parse_season_episodes_expands_range():
@@ -598,8 +632,12 @@ def test_find_by_title_matches_anime_and_tv():
 
     repo = MediaIdentityRepository()
     identity = repo.ensure_identity(media_type="tv", title="Demo Anime", year="2026")
-    assert repo.find_by_title("Demo Anime", "2026", "anime").IDENTITY_ID == identity.IDENTITY_ID
-    assert repo.find_by_title("Demo Anime", "2026", "tv").IDENTITY_ID == identity.IDENTITY_ID
+    anime_identity = repo.find_by_title("Demo Anime", "2026", "anime")
+    tv_identity = repo.find_by_title("Demo Anime", "2026", "tv")
+    assert anime_identity is not None
+    assert tv_identity is not None
+    assert anime_identity.IDENTITY_ID == identity.IDENTITY_ID
+    assert tv_identity.IDENTITY_ID == identity.IDENTITY_ID
 
 
 def test_find_by_ref_falls_back_to_other_scope():
@@ -615,7 +653,9 @@ def test_find_by_ref_falls_back_to_other_scope():
         scope="season=1",
     )
 
-    assert repo.find_by_ref("tmdb", "999001", media_type="tv").IDENTITY_ID == identity.IDENTITY_ID
+    found = repo.find_by_ref("tmdb", "999001", media_type="tv")
+    assert found is not None
+    assert found.IDENTITY_ID == identity.IDENTITY_ID
 
 
 def test_active_subscription_without_lifecycle_rows_is_visible():

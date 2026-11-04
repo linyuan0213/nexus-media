@@ -618,10 +618,16 @@ def _apply_subscription_state(grouped: list[dict[str, Any]], subscription_map: d
             item["PROGRESS"] = round(completed * 100 / total_ep)
         if sub_state in {"D", "S", "R"}:
             # 活跃订阅只在存在真实队列任务时进入下载/转移/刮削阶段；
-            # 否则停留在订阅中，避免把“等待下一集”误报成下载中。
+            # 已刮削/已入库的分集保留终态，避免把“等待下一集”覆盖成订阅中。
             active_stage = str(item.get("ACTIVE_STAGE") or "")
-            item["STAGE"] = active_stage or LifecycleStage.SUBSCRIBED.value
-            item["STATUS"] = "queued" if sub_state == "D" else "running"
+            stage_value = str(item.get("STAGE") or "")
+            terminal = {LifecycleStage.SCRAPED.value, LifecycleStage.IN_LIBRARY.value}
+            if active_stage:
+                item["STAGE"] = active_stage
+                item["STATUS"] = "queued" if sub_state == "D" else "running"
+            elif stage_value not in terminal:
+                item["STAGE"] = LifecycleStage.SUBSCRIBED.value
+                item["STATUS"] = "queued" if sub_state == "D" else "running"
         elif sub_state == "E":
             item["STATUS"] = "failed"
         elif sub_state == "N":
