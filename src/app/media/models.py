@@ -2,7 +2,7 @@ from typing import Any
 
 import cn2an
 import regex as re
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 import log
 from app.core.constants import ANIME_GENREIDS
@@ -21,6 +21,23 @@ class MediaInfo(BaseModel):
     """统一的媒体信息模型 — 替代 MetaBase + MediaInfoModel"""
 
     model_config = {"extra": "allow"}
+
+    @field_validator("filter_rule", mode="before")
+    @classmethod
+    def _coerce_filter_rule(cls, value):
+        if value is None or isinstance(value, str):
+            return value
+        return str(value)
+
+    @field_validator("runtime", mode="before")
+    @classmethod
+    def _coerce_runtime(cls, value):
+        if value is None or value == "":
+            return 0
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
 
     # ---- 识别相关 ----
     fileflag: bool = False
