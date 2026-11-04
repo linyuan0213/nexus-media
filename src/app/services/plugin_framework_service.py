@@ -31,6 +31,17 @@ from app.schemas.plugin import PluginManifest
 from app.utils.json_utils import JsonUtils
 
 
+def _deep_merge(base: dict, patch: dict) -> dict:
+    """配置按字典深度合并，避免一个设置页用旧快照覆盖其他页保存的键。"""
+    merged = dict(base)
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
 class PluginFrameworkService:
     """插件框架业务服务"""
 
@@ -421,9 +432,11 @@ class PluginFrameworkService:
 
     def save_config(self, plugin_id: str, config: dict) -> None:
         """保存插件配置；插件重载不阻塞保存接口."""
-        entity = PluginConfigEntity(plugin_id=plugin_id, config=config)
+        current = self.get_config(plugin_id) or {}
+        effective = _deep_merge(current, config)
+        entity = PluginConfigEntity(plugin_id=plugin_id, config=effective)
         self._repo.save_config(entity)
-        self._get_hook_system().emit("plugin.config_changed", {"plugin_id": plugin_id, "config": config})
+        self._get_hook_system().emit("plugin.config_changed", {"plugin_id": plugin_id, "config": effective})
         manifest = self.get_manifest(plugin_id)
         if manifest is not None and manifest.backend.metadata.indexer_providers:
             # 索引器 provider 在启用时由 Sandbox 构造，配置变更后需要重新实例化。
