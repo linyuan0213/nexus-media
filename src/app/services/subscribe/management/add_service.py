@@ -468,7 +468,24 @@ class SubscribeAddService:
                     title = "%s %s".strip() % (name, year)
                 media_info = self._media.get_media_info(title=title, mtype=mtype, strict=bool(year), cache=False)
             if media_info is None:
-                return 1, "无法查询到媒体信息", None
+                # 外部详情源失败时，订阅已带锚点/海报就不应失败；用请求信息建立最小身份。
+                if name and (mediaid or source_ref or image):
+                    media_info = meta_info(title=name, mtype=mtype)
+                    media_info.title = name
+                    media_info.cn_name = name
+                    media_info.year = year or media_info.year
+                    media_info.type = mtype
+                    media_info.content_profile = content_profile or "default"
+                    media_info.provider = source_provider
+                    media_info.metadata_ref = source_ref
+                    anchor_ref = _split_provider_ref(mediaid or source_ref)
+                    if anchor_ref:
+                        media_info.anchor_provider = anchor_ref[0]
+                        media_info.anchor_external_id = anchor_ref[1]
+                    if image:
+                        media_info.poster_path = image
+                else:
+                    return 1, "无法查询到媒体信息", None
             if image:
                 media_info.poster_path = image
             has_source = bool(

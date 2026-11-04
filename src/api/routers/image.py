@@ -398,6 +398,10 @@ def _resolve_blur_source(url: str, depth: int = 0) -> tuple[str, str]:
         if inner.startswith(("http://", "https://")):
             return inner, ""
         return f"https://{SOURCE_DOMAINS['bgm']}/{inner.lstrip('/')}", ""
+    if decoded.startswith("/") and not decoded.startswith("/img/"):
+        # 插件本地海报路径：只允许媒体库内已知海报文件，禁止任意本地文件读取。
+        local = _safe_local_poster(decoded)
+        return ("", local) if local else ("", "")
     return decoded, ""
 
 
