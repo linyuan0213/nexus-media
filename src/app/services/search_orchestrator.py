@@ -21,7 +21,6 @@ from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import SEARCH_START
 from app.events.payloads import SearchStartPayload
-from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.progress import CompositeProgressGroup, ProgressTracker
 from app.media import meta_info
 from app.media.image_resolver import DEFAULT_TMDB_IMAGE
@@ -553,17 +552,9 @@ class SearchOrchestrator:
             executor.shutdown(wait=False, cancel_futures=True)
 
     def _persist_results(self, ctx: SearchContext, media_list: list):
-        lock = get_lock_manager().create_lock("search:persist_results", ttl_seconds=60)
-        if not lock.acquire():
-            log.warn("[Orchestrator]persist 正在执行，跳过")
-            return
-        try:
-            self._search_repo.delete_by_session(ctx.session_id)
-            self._search_repo.insert_search_results(
-                media_list, ctx.keyword, ctx.ident_flag, ctx.session_id, ctx.user_id
-            )
-        finally:
-            lock.release()
+        # session_id 已经是天然隔离键，不能再使用全局锁；并发会话各自写自己的 session。
+        self._search_repo.delete_by_session(ctx.session_id)
+        self._search_repo.insert_search_results(media_list, ctx.keyword, ctx.ident_flag, ctx.session_id, ctx.user_id)
 
     def _failed_sites_summary(self, progress_key: str) -> str:
         """从搜索进度中汇总失败站点（error/timeout），用于"搜索完成"文本"""

@@ -479,6 +479,12 @@ class RssFeedStrategy:
                 if self.sites.check_ratelimit(site_id):
                     continue
 
+                media_info.content_profile = str(match_info.get("content_profile") or media_info.content_profile or "")
+                media_info.anchor_provider = match_info.get("anchor_provider")
+                media_info.anchor_external_id = match_info.get("anchor_external_id")
+                media_info.identity_id = match_info.get("identity_id")
+                media_info.provider = match_info.get("provider")
+                media_info.metadata_ref = match_info.get("metadata_ref")
                 media_info.set_torrent_info(
                     res_order=match_info.get("res_order"),
                     filter_rule=match_info.get("filter_rule"),

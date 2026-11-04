@@ -1,5 +1,6 @@
 """基础搜索策略 — 提取 subscribe_search_engine 公共逻辑."""
 
+import copy
 import threading
 import traceback
 from concurrent.futures import ThreadPoolExecutor
@@ -45,7 +46,6 @@ from app.sites.torrent import Torrent
 
 # 订阅搜索每轮处理上限（subscribe.batch_limit 可覆盖）
 _SUBSCRIBE_BATCH_DEFAULT = 20
-
 
 
 def _record_search_lifecycle(media_info: Any, rssid: Any) -> None:
@@ -253,6 +253,8 @@ class BaseSearchStrategy:
                     media_info.anchor_provider = rss_info.get("anchor_provider")
                     media_info.anchor_external_id = rss_info.get("anchor_external_id")
                     media_info.identity_id = rss_info.get("identity_id")
+                    media_info.provider = rss_info.get("provider")
+                    media_info.metadata_ref = rss_info.get("metadata_ref")
                 if not media_info or (not media_info.provider_data and not is_external):
                     log.warn(f"[Subscribe]{MediaType.MOVIE.display_name} {name_val} TMDB 识别失败，标记为错误状态")
                     self._movie_repo.update_state(title=None, year=None, rssid=rid, state=SubscribeState.ERROR.value)
@@ -305,6 +307,7 @@ class BaseSearchStrategy:
                             "include": rss_info.get("filter_include"),
                             "exclude": rss_info.get("filter_exclude"),
                             "free": rss_info.get("filter_free"),
+                            "content_profile": rss_info.get("content_profile"),
                         }
                         search_result, _, _, downloaded_count = self._searcher.search_one_media(
                             media_info=media_info,
@@ -416,6 +419,13 @@ class BaseSearchStrategy:
                     return
 
                 self._seed_poster_from_subscription(media_info, rss_info)
+                if rss_info.get("content_profile"):
+                    media_info.content_profile = str(rss_info.get("content_profile"))
+                media_info.anchor_provider = rss_info.get("anchor_provider")
+                media_info.anchor_external_id = rss_info.get("anchor_external_id")
+                media_info.identity_id = rss_info.get("identity_id")
+                media_info.provider = rss_info.get("provider")
+                media_info.metadata_ref = rss_info.get("metadata_ref")
                 media_info.set_download_info(
                     download_setting=rss_info.get("download_setting"), save_path=rss_info.get("save_path")
                 )
@@ -526,6 +536,7 @@ class BaseSearchStrategy:
                         "include": rss_info.get("filter_include"),
                         "exclude": rss_info.get("filter_exclude"),
                         "free": rss_info.get("filter_free"),
+                        "content_profile": rss_info.get("content_profile"),
                     }
                     search_result, no_exists, _, _ = self._searcher.search_one_media(
                         media_info=media_info,
@@ -647,7 +658,8 @@ class BaseSearchStrategy:
         )
         cached = self._ident_cache.get(key)
         if cached is not None:
-            return cached
+            # 识别结果会被调用方原地写入 user/season/rssid，必须返回副本，避免并发串数据。
+            return copy.deepcopy(cached)
 
         if anchor_provider and anchor_provider != "tmdb" and anchor_external_id:
             media_info = meta_info(title=("%s %s" % (name, year)).strip(), mtype=mtype)

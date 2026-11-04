@@ -165,43 +165,52 @@ class LifecycleProjector:
         """从 MediaInfo 投影事件；没有稳定身份时跳过，不影响业务."""
         media_type = getattr(getattr(media, "type", None), "value", getattr(media, "type", "movie")) or "movie"
         season = 0
-        episode = 0
         if hasattr(media, "get_season_seq"):
             try:
                 season = int(media.get_season_seq() or 0)
             except (TypeError, ValueError):
                 season = 0
+        episodes = list(media.get_episode_list()) if hasattr(media, "get_episode_list") else []
+        if not episodes:
+            episodes = [0]
         resolved = self._resolver.resolve_media(media, allow_local=True)
         identity_id = resolved.identity_id
         if not identity_id or identity_id == "preview":
             return False
         provider = resolved.provider
         content_profile = resolved.content_profile
-        return self.record(
-            identity_id=identity_id,
-            stage=stage,
-            status=status,
-            event_type=event_type,
-            media_type=str(media_type),
-            season=season,
-            episode=episode,
-            run_id=run_id,
-            trace_id=trace_id,
-            title=str(getattr(media, "title", "") or "") or None,
-            year=str(getattr(media, "year", "") or "") or None,
-            poster=str(getattr(media, "poster_path", "") or "") or None,
-            progress=progress,
-            source_provider=provider or None,
-            content_profile=content_profile or None,
-            user_id=getattr(media, "user_id", None),
-            retry_count=retry_count,
-            next_retry_at=next_retry_at,
-            error=error,
-            message=message,
-            payload=payload,
-            occurred_at=occurred_at,
-            event_key=event_key,
-        )
+        created_any = False
+        for episode in episodes:
+            episode_key = f"{event_key}:{episode}" if event_key and len(episodes) > 1 else event_key
+            created_any = (
+                self.record(
+                    identity_id=identity_id,
+                    stage=stage,
+                    status=status,
+                    event_type=event_type,
+                    media_type=str(media_type),
+                    season=season,
+                    episode=int(episode or 0),
+                    run_id=run_id,
+                    trace_id=trace_id,
+                    title=str(getattr(media, "title", "") or "") or None,
+                    year=str(getattr(media, "year", "") or "") or None,
+                    poster=str(getattr(media, "poster_path", "") or "") or None,
+                    progress=progress,
+                    source_provider=provider or None,
+                    content_profile=content_profile or None,
+                    user_id=getattr(media, "user_id", None),
+                    retry_count=retry_count,
+                    next_retry_at=next_retry_at,
+                    error=error,
+                    message=message,
+                    payload=payload,
+                    occurred_at=occurred_at,
+                    event_key=episode_key,
+                )
+                or created_any
+            )
+        return created_any
 
     def record_task(
         self,
@@ -258,23 +267,10 @@ class LifecycleReconciler:
     def reconcile_recent(self, limit: int = 500) -> dict[str, int]:
         count = 0
         with BaseRepository().readonly() as db:
-            downloads = (
-                db.query(DOWNLOADHISTORY)
-                .order_by(DOWNLOADHISTORY.ID.desc())
-                .limit(max(1, int(limit)))
-                .all()
-            )
-            transfers = (
-                db.query(TRANSFERHISTORY)
-                .order_by(TRANSFERHISTORY.ID.desc())
-                .limit(max(1, int(limit)))
-                .all()
-            )
+            downloads = db.query(DOWNLOADHISTORY).order_by(DOWNLOADHISTORY.ID.desc()).limit(max(1, int(limit))).all()
+            transfers = db.query(TRANSFERHISTORY).order_by(TRANSFERHISTORY.ID.desc()).limit(max(1, int(limit))).all()
             subscriptions = (
-                db.query(SubscribeHistory)
-                .order_by(SubscribeHistory.ID.desc())
-                .limit(max(1, int(limit)))
-                .all()
+                db.query(SubscribeHistory).order_by(SubscribeHistory.ID.desc()).limit(max(1, int(limit))).all()
             )
             sync_rows = db.query(
                 MEDIASYNCITEMS.IDENTITY_ID,
@@ -323,11 +319,7 @@ class LifecycleReconciler:
                     }
                 ):
                     continue
-                media_type = (
-                    "tv"
-                    if str(item_type or "").lower() in {"episode", "series", "season", "tv"}
-                    else "movie"
-                )
+                media_type = "tv" if str(item_type or "").lower() in {"episode", "series", "season", "tv"} else "movie"
                 if self._projector.record(
                     identity_id=str(identity_id),
                     stage=LifecycleStage.IN_LIBRARY,
@@ -574,13 +566,10 @@ class LifecycleReconciler:
             LifecycleStage.DOWNLOADING.value,
         }
         lifecycle_repo = LifecycleRepository()
-        stale_rows = lifecycle_repo.list_stale_running(
-            datetime.now() - timedelta(hours=stale_hours or 24)
-        )
+        stale_rows = lifecycle_repo.list_stale_running(datetime.now() - timedelta(hours=stale_hours or 24))
         blocked_rows = lifecycle_repo.list_blocked_downloads()
         active_downloads = DownloadRepository().get_active_download_states(
-            {str(row.IDENTITY_ID) for row in stale_rows}
-            | {str(row.IDENTITY_ID) for row in blocked_rows}
+            {str(row.IDENTITY_ID) for row in stale_rows} | {str(row.IDENTITY_ID) for row in blocked_rows}
         )
         if stale_hours > 0:
             before = datetime.now() - timedelta(hours=stale_hours)

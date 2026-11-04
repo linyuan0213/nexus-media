@@ -100,12 +100,13 @@ class TransferQueueService:
         if not identity_id:
             return False
         repo = LifecycleRepository()
-        current = repo.get_current(
-            identity_id,
-            season=int(payload.get("season") or 0),
-            episode=int(payload.get("episode") or 0),
-        )
+        season = int(payload.get("season") or 0)
+        episode = int(payload.get("episode") or 0)
+        current = repo.get_current(identity_id, season=season, episode=episode)
         if current is None:
+            # 只有电影/无季集任务才允许用聚合状态；分集或季包不能被整部聚合状态跳过。
+            if season or episode:
+                return False
             current = repo.get_grouped_identity(identity_id)
         stage = (
             str(current.get("STAGE") or "") if isinstance(current, dict) else str(getattr(current, "STAGE", "") or "")

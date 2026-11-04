@@ -31,6 +31,7 @@ from app.events.payloads import (
     SubscribeFinishedPayload,
     TransferFailPayload,
 )
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.thread import ThreadExecutor
 from app.media import MediaInfo
 from app.media.parser import RegexParser
@@ -137,42 +138,53 @@ def handle_media_episode_transferred(event: Event, finalize_fn=None) -> None:
         # 在「当前缺失集」基础上减去本次转移的集。
         # 不能用「全集 - 本次转移集」重算，否则会把之前已入库的集误标回缺失，
         # 导致订阅进度倒退并重复下载。
-        current_missing = ep_repo.get(rssid)
-        if not current_missing:
-            # 缺失列表未初始化或为空：以订阅的 current_ep（首个待下载集）推导初始范围。
-            # 空列表不能直接视为“全部完成”，否则首集刚转移就会误写订阅历史。
-            total = int(payload.total_episodes or 0)
-            if total <= 0:
-                # 总集数未知时无法核定缺失，保持原状态，避免误判完成
-                log.info(f"[Subscribe]{payload.title} S{payload.season} 缺失未初始化且总集数未知，跳过更新")
-                return
-            subs = tv_repo.get_all(rssid=rssid)
-            start = int(subs[0].current_ep) if subs and subs[0].current_ep else 1
-            current_missing = list(range(start, total + 1))
+        lock = get_lock_manager().create_lock(f"subscribe:progress:{rssid}", ttl_seconds=60)
+        locked = lock.acquire()
+        if not locked and lock.last_error is None:
+            log.warn(f"[Subscribe]订阅 {rssid} 进度正在更新，跳过重复事件")
+            return
+        if not locked:
+            log.warn(f"[Subscribe]订阅 {rssid} 锁后端不可用，继续无锁更新：{lock.last_error}")
+        try:
+            current_missing = ep_repo.get(rssid)
+            if not current_missing:
+                # 缺失列表未初始化或为空：以订阅的 current_ep（首个待下载集）推导初始范围。
+                # 空列表不能直接视为“全部完成”，否则首集刚转移就会误写订阅历史。
+                total = int(payload.total_episodes or 0)
+                if total <= 0:
+                    # 总集数未知时无法核定缺失，保持原状态，避免误判完成
+                    log.info(f"[Subscribe]{payload.title} S{payload.season} 缺失未初始化且总集数未知，跳过更新")
+                    return
+                subs = tv_repo.get_all(rssid=rssid)
+                start = int(subs[0].current_ep) if subs and subs[0].current_ep else 1
+                current_missing = list(range(start, total + 1))
 
-        lack_episodes = sorted(set(int(e) for e in current_missing) - downloaded)
+            lack_episodes = sorted(set(int(e) for e in current_missing) - downloaded)
 
-        if lack_episodes:
-            log.info(f"[Subscribe]更新电视剧 {payload.title} S{payload.season} 缺失集数为 {len(lack_episodes)}")
-            subs = tv_repo.get_all(rssid=rssid)
-            pending = bool(subs) and subs[0].state == SubscribeState.COMPLETED.value
-            if not pending:
-                # 仅对仍在轮询的订阅保持 RUNNING；待转移(COMPLETED)订阅在分批转移期间保持完成态，
-                # 否则会被 RSS 重新匹配导致重复下载；缺失清空后再定稿。
-                tv_repo.update_state(
-                    title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value
-                )
-            tv_repo.update_lack(title=None, year=None, season=None, rssid=rssid, lack_episodes=lack_episodes)
-        else:
-            log.info(f"[Subscribe]电视剧 {payload.title} S{payload.season} 转移确认全部集数完成")
-            if finalize_fn:
-                # 转移落盘确认 → 定稿：写历史、删订阅、联动兄弟、发通知
-                finalize_fn(rssid, payload)
+            if lack_episodes:
+                log.info(f"[Subscribe]更新电视剧 {payload.title} S{payload.season} 缺失集数为 {len(lack_episodes)}")
+                subs = tv_repo.get_all(rssid=rssid)
+                pending = bool(subs) and subs[0].state == SubscribeState.COMPLETED.value
+                if not pending:
+                    # 仅对仍在轮询的订阅保持 RUNNING；待转移(COMPLETED)订阅在分批转移期间保持完成态，
+                    # 否则会被 RSS 重新匹配导致重复下载；缺失清空后再定稿。
+                    tv_repo.update_state(
+                        title=None, year=None, season=None, rssid=rssid, state=SubscribeState.RUNNING.value
+                    )
+                tv_repo.update_lack(title=None, year=None, season=None, rssid=rssid, lack_episodes=lack_episodes)
             else:
-                # 无定稿回调（如单测直调）：仅标记完成，不删订阅（避免空串写回）
-                tv_repo.update_state(
-                    title=None, year=None, season=None, rssid=rssid, state=SubscribeState.COMPLETED.value
-                )
+                log.info(f"[Subscribe]电视剧 {payload.title} S{payload.season} 转移确认全部集数完成")
+                if finalize_fn:
+                    # 转移落盘确认 → 定稿：写历史、删订阅、联动兄弟、发通知
+                    finalize_fn(rssid, payload)
+                else:
+                    # 无定稿回调（如单测直调）：仅标记完成，不删订阅（避免空串写回）
+                    tv_repo.update_state(
+                        title=None, year=None, season=None, rssid=rssid, state=SubscribeState.COMPLETED.value
+                    )
+        finally:
+            if locked:
+                lock.release()
     except Exception as e:
         log.error(f"[Event]更新订阅进度失败：{e!s}")
 

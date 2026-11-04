@@ -176,7 +176,8 @@ class TestBaseSearchStrategy:
         assert result is media
         # 第二次调用应走缓存，identify 只调用一次
         result2 = strategy._get_media_info(None, "Name", "2024", MediaType.MOVIE)
-        assert result2 is media
+        assert result2 is not media
+        assert result2.title == media.title
         strategy._media_service.identify.assert_called_once()
 
     def test_get_media_info_with_tmdbid_caches(self, strategy):

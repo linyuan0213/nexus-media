@@ -716,3 +716,30 @@ def test_active_subscription_without_lifecycle_rows_is_visible():
     assert rows[0]["STAGE"] == LifecycleStage.SUBSCRIBED.value
     assert rows[0]["STATUS"] == LifecycleStatus.RUNNING.value
     assert rows[0]["EPISODE_COUNT"] == 12
+
+
+def test_record_media_projects_each_episode():
+    from app.domain.mediatypes import MediaType
+    from app.media.models import MediaInfo
+
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    media = MediaInfo(
+        type=MediaType.TV,
+        title="DEMO-EPISODE",
+        begin_season=1,
+        begin_episode=3,
+        end_episode=4,
+    )
+    assert projector.record_media(
+        media,
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="library.present",
+        event_key="demo-episode",
+    )
+    identity_id = projector._resolver.resolve_media(media, allow_local=True).identity_id
+    for episode in (3, 4):
+        current = repo.get_current(identity_id, season=1, episode=episode)
+        assert current is not None
+        assert current.STAGE == LifecycleStage.IN_LIBRARY.value

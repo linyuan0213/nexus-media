@@ -93,6 +93,22 @@ def test_transfer_queue_failure_keeps_status_for_retry(monkeypatch):
     service.stop()
 
 
+def test_library_done_requires_exact_episode(monkeypatch):
+    import app.services.transfer_queue_service as module
+
+    repo = MagicMock()
+    repo.get_current.return_value = None
+    repo.get_grouped_identity.return_value = {
+        "STAGE": "in_library",
+        "STATUS": "succeeded",
+    }
+    monkeypatch.setattr(module, "LifecycleRepository", lambda: repo)
+    service = TransferQueueService(_FakePipeline(), _FakeFactory(_FakeClient()))
+
+    assert service._is_library_done({"identity_id": "x", "season": 1, "episode": 2}) is False
+    assert service._is_library_done({"identity_id": "x"}) is True
+
+
 def test_submit_skips_terminal_dedup_task():
     queue = MagicMock()
     task = Task.create("transfer", "transfer.task", {})

@@ -294,9 +294,11 @@ class _IDownloadClient(metaclass=_DownloadClientMeta):
     @staticmethod
     def get_replace_path(path: str, downloaddir: list | None) -> tuple[str, bool]:
         """对目录路径进行转换"""
-        if not path or not downloaddir:
+        if not path:
             return "", False
         path = os.path.normpath(path)
+        if not downloaddir:
+            return path, False
         for attr in downloaddir:
             save_path = attr.get("save_path")
             if not save_path:
