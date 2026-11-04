@@ -164,18 +164,34 @@ class MediaServer:
             if row.ENABLED
         ]
 
+    def list_routes(self, content_profile: str | None = None, target_path: str | None = None) -> list[Any]:
+        """列出已启用的媒体库路由，供插件统一走公共门面。"""
+        route_repo = getattr(self, "route_repo", None)
+        if route_repo is None:
+            return []
+        routes = [
+            route
+            for route in route_repo.list()
+            if route.enabled
+            and route.target_path
+            and (not content_profile or not route.content_profile or route.content_profile == content_profile)
+            and (not target_path or PathUtils.is_path_in_path(route.target_path, target_path))
+        ]
+        return routes
+
     def resolve_route(self, content_profile: str | None = None, target_path: str | None = None, routes=None):
         """解析目录/画像路由，保留 server_id 和 library_id 完整目标。"""
         route_repo = getattr(self, "route_repo", None)
         if target_path and route_repo:
-            candidates = []
-            for route in route_repo.list() if routes is None else routes:
-                if not route.enabled or not route.target_path:
-                    continue
-                if content_profile and route.content_profile and route.content_profile != content_profile:
-                    continue
-                if PathUtils.is_path_in_path(route.target_path, target_path):
-                    candidates.append(route)
+            candidates = self.list_routes(content_profile, target_path) if routes is None else []
+            if routes is not None:
+                for route in routes:
+                    if not route.enabled or not route.target_path:
+                        continue
+                    if content_profile and route.content_profile and route.content_profile != content_profile:
+                        continue
+                    if PathUtils.is_path_in_path(route.target_path, target_path):
+                        candidates.append(route)
             if candidates:
                 return max(candidates, key=lambda route: len(route.target_path.replace("\\", "/")))
         if content_profile and route_repo:

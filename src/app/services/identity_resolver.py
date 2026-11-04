@@ -10,17 +10,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
+from app.media.metadata.registry import registry as metadata_provider_registry
 from app.utils.identity import fallback_identity
-
-_REF_PREFIXES = {
-    "adult",
-    "bangumi",
-    "content_id",
-    "douban",
-    "javdb",
-    "javalibrary",
-    "tmdb",
-}
 
 
 @dataclass(frozen=True)
@@ -103,7 +94,7 @@ class IdentityResolver:
         explicit = str(identity_id or "").strip()
         if explicit:
             prefix, _, rest = explicit.partition(":")
-            if prefix in _REF_PREFIXES and rest:
+            if rest and (prefix == "content_id" or metadata_provider_registry.get_provider(prefix) is not None):
                 found = self._repo.find_by_ref(prefix, rest, scope=scope, media_type=ref_type)
                 if found is not None:
                     return self._result(found, provider_text or prefix, external_text or rest, profile)

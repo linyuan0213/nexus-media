@@ -990,16 +990,14 @@ def media_detail_by_ref(
     if not record:
         return fail(msg="无法获取媒体详情")
     if is_custom_profile:
-        content_id = str((record.get("extra") or {}).get("adult.content_id") or "")
-        if not content_id:
-            content_id = next(
-                (
-                    str(ref.get("external_id") or "")
-                    for ref in record.get("refs") or []
-                    if ref.get("provider") == "content_id"
-                ),
-                "",
-            )
+        content_id = next(
+            (
+                str(ref.get("external_id") or "")
+                for ref in record.get("refs") or []
+                if ref.get("provider") == "content_id"
+            ),
+            "",
+        )
         if content_id and req.provider != content_profile:
             try:
                 aggregate = svc.lookup(

@@ -267,23 +267,24 @@ def test_prune_missing_image_assets_removes_dangling_nfo_references(tmp_path):
     assert "fanart" not in snapshot.images
 
 
-def test_adult_snapshot_nfo_forces_basic_and_credits(tmp_path):
+def test_snapshot_nfo_honors_force_flags(tmp_path):
     snapshot = MediaMetadata(
         identity_id="x",
-        content_profile="adult",
+        content_profile="demo",
+        extra={"nfo.force_basic": True, "nfo.force_credits": True},
         fields={
-            "title": FieldValue(value="IPX-247 标题", provider="adult", external_id="IPX-247"),
-            "overview": FieldValue(value="剧情", provider="adult", external_id="IPX-247"),
+            "title": FieldValue(value="DEMO-247 标题", provider="demo", external_id="DEMO-247"),
+            "overview": FieldValue(value="剧情", provider="demo", external_id="DEMO-247"),
         },
-        credits=[Credit(name="岬ななみ", role="actor")],
+        credits=[Credit(name="演示演员", role="actor")],
     )
     downloader = MagicMock()
     NfoGenerator(downloader).gen_movie_nfo_from_snapshot(
-        snapshot, {"basic": False, "credits": False}, str(tmp_path), "IPX-247"
+        snapshot, {"basic": False, "credits": False}, str(tmp_path), "DEMO-247"
     )
 
     doc = downloader.save_nfo.call_args.args[0]
     xml = doc.toxml()
-    assert "<title>IPX-247 标题</title>" in xml
+    assert "<title>DEMO-247 标题</title>" in xml
     assert "<plot>" in xml and "剧情" in xml
-    assert "<name>岬ななみ</name>" in xml
+    assert "<name>演示演员</name>" in xml

@@ -177,9 +177,14 @@ class NfoGenerator:
 
     def gen_movie_nfo_from_snapshot(self, snapshot, scraper_nfo, out_path, file_name, fallback_title: str = ""):
         """从 MediaMetadata 快照生成电影 NFO."""
-        if getattr(snapshot, "content_profile", "") == "adult":
-            # 成人自定义画像必须写标题/简介/演员，不能因用户旧配置只在 NFO 留番号。
-            scraper_nfo = {**scraper_nfo, "basic": True, "credits": True}
+        extra = getattr(snapshot, "extra", {}) or {}
+        if extra.get("nfo.force_basic") or extra.get("nfo.force_credits"):
+            # 插件通过通用 NFO 约定要求强制写入标题/简介/演职员。
+            scraper_nfo = {
+                **scraper_nfo,
+                "basic": bool(scraper_nfo.get("basic") or extra.get("nfo.force_basic")),
+                "credits": bool(scraper_nfo.get("credits") or extra.get("nfo.force_credits")),
+            }
         doc = _create_document()
         root = DomUtils.add_node(doc, doc, "movie")
         self._gen_snapshot_common(snapshot, doc, root, scraper_nfo)
