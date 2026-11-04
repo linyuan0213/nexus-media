@@ -68,8 +68,6 @@ class NfoGenerator:
             DomUtils.add_node(
                 doc, root, "year", tmdbinfo.get("first_air_date")[:4] if tmdbinfo.get("first_air_date") else ""
             )
-            DomUtils.add_node(doc, root, "season", "-1")
-            DomUtils.add_node(doc, root, "episode", "-1")
         self._downloader.save_nfo(doc, os.path.join(out_path, "tvshow.nfo"))
 
     def gen_season_nfo(self, seasoninfo, season, out_path):
