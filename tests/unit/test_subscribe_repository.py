@@ -71,6 +71,17 @@ class TestSubscribeRepositoryUpdateDefaults:
         assert "LACK" not in update_fields
         assert update_fields["NAME"] == "Test"
 
+    @patch("app.db.repositories.subscribe_repository.JsonUtils.dumps", return_value='"[]"')
+    def test_update_rss_tv_normalizes_season(self, _mock_dumps):
+        repo = SubscribeRepository()
+        mock_session = MagicMock()
+        mock_query = MagicMock()
+        mock_session.__enter__.return_value.query.return_value = mock_query
+        with patch.object(repo, "session", return_value=mock_session):
+            repo.update_rss_tv(rssid=1, season="1")
+        update_fields = mock_query.filter.return_value.update.call_args[0][0]
+        assert update_fields["SEASON"] == "S01"
+
 
 class TestUpdateRssTvLackAdvancesCurrentEp:
     """update_rss_tv_lack 同步推进 current_ep（首个待下载 = 缺失集最小值）"""

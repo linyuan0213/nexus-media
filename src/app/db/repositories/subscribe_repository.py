@@ -24,6 +24,18 @@ from app.schemas.auth import UserContext
 from app.services.identity_resolver import IdentityResolver
 from app.utils.json_utils import JsonUtils
 
+_SEASON_PATTERN = re.compile(r"^S?(\d+)$", re.IGNORECASE)
+
+
+def _normalize_tv_season(value: object) -> str:
+    """订阅季号统一为 Sxx；范围/自定义值保持原样。"""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    match = _SEASON_PATTERN.fullmatch(text)
+    return f"S{int(match.group(1)):02d}" if match else text
+
+
 if TYPE_CHECKING:
     from app.media.models import MediaInfo
 
@@ -587,6 +599,8 @@ class SubscribeRepository(BaseRepository):
                 update_fields[col] = None if v is None else (1 if v else 0)
             elif col == "DESC":
                 update_fields[col] = _trim_desc(v if isinstance(v, str) else str(v))
+            elif k == "season":
+                update_fields[col] = _normalize_tv_season(v)
             else:
                 update_fields[col] = v
         if not update_fields:
@@ -903,7 +917,7 @@ class SubscribeRepository(BaseRepository):
         if fuzzy_match and media_info.begin_season is None:
             season_str = ""
         else:
-            season_str = media_info.get_season_string()
+            season_str = _normalize_tv_season(media_info.get_season_string())
 
         with self.session() as db:
             if not rssid:
@@ -1031,6 +1045,8 @@ class SubscribeRepository(BaseRepository):
                 update_fields[col] = None if v is None else (1 if v else 0)
             elif col == "DESC":
                 update_fields[col] = _trim_desc(v if isinstance(v, str) else str(v))
+            elif k == "season":
+                update_fields[col] = _normalize_tv_season(v)
             else:
                 update_fields[col] = v
         if not update_fields:
