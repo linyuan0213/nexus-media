@@ -21,6 +21,7 @@ class IndexerSiteConfigRepositoryAdapter(IIndexerSiteConfigRepository):
         public: bool | None = None,
         enabled: bool | None = None,
         download_setting: int | None = None,
+        priority: int | None = None,
         default_settings: dict | None = None,
     ) -> None:
         self._repo.upsert_site(
@@ -29,6 +30,7 @@ class IndexerSiteConfigRepositoryAdapter(IIndexerSiteConfigRepository):
             public=public,
             enabled=enabled,
             download_setting=download_setting,
+            priority=priority,
             default_settings=default_settings,
         )
 
@@ -64,6 +66,12 @@ class IndexerSiteConfigRepositoryAdapter(IIndexerSiteConfigRepository):
 
     def update_default_settings(self, site_name: str, default_settings: dict | None) -> None:
         self._repo.update_default_settings(site_name=site_name, default_settings=default_settings)
+
+    def set_priority(self, site_name: str, source: str, priority: int) -> None:
+        self._repo.set_priority(site_name=site_name, source=source, priority=priority)
+
+    def get_priority_map(self) -> dict[str, int]:
+        return self._repo.get_priority_map()
 
     def get_download_setting(self, site_name: str) -> str | None:
         entity = self.get_by_name(site_name)

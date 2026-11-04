@@ -24,10 +24,12 @@ from app.indexer.contract import (
     IndexerItem,
     IndexerProviderRegistry,
     IndexerQuery,
+    PriorityProvider,
     SiteIndexerProvider,
     get_global_registry,
     load_providers,
 )
+from app.indexer.contract.site_catalog import external_indexer_sites
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
 from app.infrastructure.progress import ProgressTracker
@@ -166,13 +168,34 @@ class Indexer:
         """构建站点级 provider 注册表；旧客户端只作为 provider 内部实现。"""
         self._ensure_clients()
         registry = IndexerProviderRegistry()
+        priority_map = self._site_config_repo.get_priority_map()
         for client in self._clients.values():
+            source = client.get_client_id()
             for indexer in self._filter_indexers(client, check=True, filter_args=filter_args):
-                order_seq = 100 - int(getattr(indexer, "pri", 0))
-                registry.register(SiteIndexerProvider(client, indexer, order_seq), replace=True)
+                configured = priority_map.get(f"{source}:{indexer.name}")
+                pri = (
+                    configured
+                    if configured is not None
+                    else int(getattr(indexer, "pri", 0 if source == "builtin" else 100) or 0)
+                )
+                provider = SiteIndexerProvider(client, indexer, 100 - int(pri))
+                registry.register(
+                    PriorityProvider(provider, {indexer.name: pri}, default=pri),
+                    replace=True,
+                )
         self._ensure_external_providers()
+        site_filter = (filter_args or {}).get("site")
+        external_sites: dict[str, set[str]] = {}
+        if site_filter is not None:
+            for site in external_indexer_sites():
+                external_sites.setdefault(str(site.get("source") or ""), set()).add(str(site.get("name") or ""))
+            site_filter = set(site_filter)
         for provider in self._external_registry.list():
-            registry.register(provider, replace=True)
+            if site_filter is not None and not (external_sites.get(provider.provider_id, set()) & site_filter):
+                continue
+            prefix = f"{provider.provider_id}:"
+            priorities = {key[len(prefix) :]: value for key, value in priority_map.items() if key.startswith(prefix)}
+            registry.register(PriorityProvider(provider, priorities), replace=True)
         return registry
 
     def get_indexers(self, check=False):
@@ -343,7 +366,9 @@ class Indexer:
                     detail["sites"] = list(site_statuses)
 
         set_progress(2, f"准备索引器，站点/提供方 {len(registry.list())} 个 ...")
-        page = IndexerGateway(registry, max_workers=15, on_progress=on_provider_progress).search(
+        page = IndexerGateway(
+            registry, max_workers=min(24, max(1, len(registry.list()))), on_progress=on_provider_progress
+        ).search(
             IndexerQuery(
                 keyword=key_word,
                 sites=tuple(sites),
@@ -386,6 +411,7 @@ class Indexer:
 
     @staticmethod
     def _provider_to_raw(item: IndexerItem) -> dict:
+        extra = item.extra
         return {
             "title": item.title,
             "enclosure": item.download_url or item.magnet or item.ed2k or "",
@@ -396,9 +422,14 @@ class Indexer:
             "description": item.description,
             "_indexer_name": item.site or item.site_name,
             "_indexer_display_name": item.site_name or item.site,
-            "_indexer_source": item.provider_id,
-            "_external_indexer": bool(item.extra.get("external")),
-            "_indexer_order": 0,
+            "_indexer_source": str(extra.get("source") or item.provider_id.split(":", 1)[0]),
+            "_indexer_public": bool(extra.get("public", False)),
+            "_external_indexer": bool(extra.get("external")),
+            "_indexer_order": 100 - int(item.priority),
+            "uploadvolumefactor": extra.get("uploadvolumefactor"),
+            "downloadvolumefactor": extra.get("downloadvolumefactor"),
+            "labels": extra.get("labels"),
+            "imdbid": extra.get("imdbid"),
         }
 
     @staticmethod
@@ -406,7 +437,10 @@ class Indexer:
         """按 (title, size) 去重；builtin 来源优先，同来源 order_seq 大者（pri 小=主站）优先"""
         ordered = sorted(
             results,
-            key=lambda r: (0 if r.get("_indexer_source") == "builtin" else 1, -r.get("_indexer_order", 0)),
+            key=lambda r: (
+                -int(r.get("_indexer_order", 0) or 0),
+                0 if str(r.get("_indexer_source") or "") == "builtin" else 1,
+            ),
         )
         seen: set[tuple] = set()
         deduped: list[dict] = []

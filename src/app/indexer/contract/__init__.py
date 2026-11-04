@@ -10,6 +10,7 @@ from .global_registry import (
 )
 from .http import HttpIndexerProvider
 from .models import IndexerHealth, IndexerInfo, IndexerItem, IndexerPage, IndexerQuery, IndexerSite
+from .priority import DEFAULT_PRIORITY, PriorityProvider
 from .provider import IndexerProvider
 from .registry import IndexerProviderRegistry
 
@@ -27,6 +28,8 @@ __all__ = [
     "IndexerItem",
     "IndexerPage",
     "IndexerProvider",
+    "DEFAULT_PRIORITY",
+    "PriorityProvider",
     "IndexerProviderRegistry",
     "IndexerQuery",
     "IndexerSite",

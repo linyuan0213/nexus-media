@@ -136,6 +136,10 @@ class IndexerService:
         """更新站点默认设置"""
         self._site_config_repo.update_default_settings(site_name=site_name, default_settings=default_settings)
 
+    def update_site_priority(self, site_name: str, priority: int, source: str | None = None) -> None:
+        """更新站点搜索优先级；数值越小越优先。"""
+        self._site_config_repo.set_priority(site_name=site_name, source=source or "builtin", priority=priority)
+
     def sync_third_party_sites(self, client_id: str) -> bool:
         """手动同步指定第三方索引器的站点列表"""
         try:

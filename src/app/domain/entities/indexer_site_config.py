@@ -19,6 +19,7 @@ class IndexerSiteConfigEntity:
     public: bool = False
     download_setting: int | None = None
     enabled: bool = True
+    priority: int | None = None
     default_settings: dict | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -36,6 +37,7 @@ class IndexerSiteConfigEntity:
             public=bool(getattr(orm_obj, "PUBLIC", 0) or 0),
             download_setting=getattr(orm_obj, "DOWNLOAD_SETTING", None),
             enabled=bool(getattr(orm_obj, "ENABLED", 1) or 0),
+            priority=getattr(orm_obj, "PRIORITY", None),
             default_settings=JsonUtils.loads(default_settings_raw) if default_settings_raw else None,
             created_at=getattr(orm_obj, "CREATED_AT", None),
             updated_at=getattr(orm_obj, "UPDATED_AT", None),

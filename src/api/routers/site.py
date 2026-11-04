@@ -137,6 +137,7 @@ class IndexerSiteConfigUpdateRequest(BaseModel):
     source: str | None = None
     enabled: bool | None = None
     download_setting: int | None = None
+    priority: int | None = None
     default_settings: dict | None = None
 
 
@@ -420,6 +421,19 @@ def get_sites(
             external["enabled"] = current.get("enabled", external["enabled"])
             external["download_setting"] = current.get("download_setting", external.get("download_setting"))
         sites.append(external)
+    # 统一优先级：显式配置优先，内置回退站点自身 pri，第三方/插件默认 100
+    priority_map = IndexerSiteConfigRepository().get_priority_map()
+    for site in sites:
+        source = str(site.get("source") or "builtin")
+        name = str(site.get("name") or "")
+        configured = priority_map.get(f"{source}:{name}")
+        site["priority"] = (
+            configured
+            if configured is not None
+            else int(site.get("pri") or 0)
+            if source == "builtin"
+            else 100
+        )
     # 无站点管理权限的用户按站点授权过滤（ADR-021 4.3）
     grant_service = getattr(app_context, "site_grant_service", None)
     can_manage = user.is_superadmin or "site:manage" in user.permissions or "*" in user.permissions
@@ -584,6 +598,8 @@ def update_indexer_site_config(
         idx_svc.update_site_enabled(req.site_name, req.enabled, source=req.source)
     if req.download_setting is not None:
         idx_svc.update_site_download_setting(req.site_name, req.download_setting, source=req.source)
+    if req.priority is not None:
+        idx_svc.update_site_priority(req.site_name, req.priority, source=req.source)
     if req.default_settings is not None:
         idx_svc.update_site_default_settings(req.site_name, req.default_settings)
     return success()
@@ -616,6 +632,8 @@ def batch_update_indexer_site_config(
             idx_svc.update_site_enabled(site_name, bool(item.get("enabled")), source=source)
         if "download_setting" in item:
             idx_svc.update_site_download_setting(site_name, item.get("download_setting"), source=source)
+        if "priority" in item:
+            idx_svc.update_site_priority(site_name, int(item.get("priority") or 0), source=source)
         if "default_settings" in item:
             idx_svc.update_site_default_settings(site_name, item.get("default_settings"))
     return success()

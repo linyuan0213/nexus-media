@@ -25,6 +25,7 @@ class IndexerSiteConfigRepository(BaseRepository):
         public: bool | None = None,
         enabled: bool | None = None,
         download_setting: int | None = None,
+        priority: int | None = None,
         default_settings: dict | None = None,
     ) -> None:
         """插入或更新站点配置；首次写入后不再覆盖 source。"""
@@ -40,6 +41,8 @@ class IndexerSiteConfigRepository(BaseRepository):
             values["ENABLED"] = 1 if enabled else 0
         if download_setting is not None:
             values["DOWNLOAD_SETTING"] = download_setting
+        if priority is not None:
+            values["PRIORITY"] = int(priority)
         if default_settings is not None:
             values["DEFAULT_SETTINGS"] = JsonUtils.dumps(default_settings)
 
@@ -68,6 +71,8 @@ class IndexerSiteConfigRepository(BaseRepository):
             set_["ENABLED"] = stmt.excluded.ENABLED
         if "DOWNLOAD_SETTING" in values:
             set_["DOWNLOAD_SETTING"] = stmt.excluded.DOWNLOAD_SETTING
+        if "PRIORITY" in values:
+            set_["PRIORITY"] = stmt.excluded.PRIORITY
         if "DEFAULT_SETTINGS" in values:
             set_["DEFAULT_SETTINGS"] = stmt.excluded.DEFAULT_SETTINGS
         stmt = stmt.on_conflict_do_update(
@@ -88,6 +93,8 @@ class IndexerSiteConfigRepository(BaseRepository):
             set_["ENABLED"] = stmt.excluded.ENABLED
         if "DOWNLOAD_SETTING" in values:
             set_["DOWNLOAD_SETTING"] = stmt.excluded.DOWNLOAD_SETTING
+        if "PRIORITY" in values:
+            set_["PRIORITY"] = stmt.excluded.PRIORITY
         if "DEFAULT_SETTINGS" in values:
             set_["DEFAULT_SETTINGS"] = stmt.excluded.DEFAULT_SETTINGS
         stmt = stmt.on_conflict_do_update(
@@ -109,6 +116,8 @@ class IndexerSiteConfigRepository(BaseRepository):
             update["ENABLED"] = stmt.inserted.ENABLED
         if "DOWNLOAD_SETTING" in values:
             update["DOWNLOAD_SETTING"] = stmt.inserted.DOWNLOAD_SETTING
+        if "PRIORITY" in values:
+            update["PRIORITY"] = stmt.inserted.PRIORITY
         if "DEFAULT_SETTINGS" in values:
             update["DEFAULT_SETTINGS"] = stmt.inserted.DEFAULT_SETTINGS
         stmt = stmt.on_duplicate_key_update(**update)
@@ -136,6 +145,19 @@ class IndexerSiteConfigRepository(BaseRepository):
             return db.execute(
                 select(INDEXERSITECONFIG).where(INDEXERSITECONFIG.SITE_NAME == site_name)
             ).scalar_one_or_none()
+
+    def set_priority(self, site_name: str, source: str, priority: int) -> None:
+        """保存站点搜索优先级（数值越小越优先）."""
+        self.upsert_site(site_name=site_name, source=source, priority=int(priority))
+
+    def get_priority_map(self) -> dict[str, int]:
+        """返回 {source:site_name: priority}，供索引器统一排序."""
+        result: dict[str, int] = {}
+        for row in self.list_all():
+            priority = getattr(row, "PRIORITY", None)
+            if priority is not None:
+                result[f"{row.SOURCE}:{row.SITE_NAME}"] = int(priority)
+        return result
 
     def get_by_id(self, id: int | str):
         with self.session() as db:

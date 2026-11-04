@@ -18,6 +18,7 @@ class IIndexerSiteConfigRepository(Protocol):
         public: bool | None = None,
         enabled: bool | None = None,
         download_setting: int | None = None,
+        priority: int | None = None,
         default_settings: dict | None = None,
     ) -> None:
         """插入或更新站点配置；不覆盖 source 字段。"""
@@ -51,6 +52,14 @@ class IIndexerSiteConfigRepository(Protocol):
 
     def update_default_settings(self, site_name: str, default_settings: dict | None) -> None:
         """更新站点默认设置"""
+        ...
+
+    def set_priority(self, site_name: str, source: str, priority: int) -> None:
+        """设置站点搜索优先级（数值越小越优先）"""
+        ...
+
+    def get_priority_map(self) -> dict[str, int]:
+        """返回 {source:site_name: priority}"""
         ...
 
     def get_download_setting(self, site_name: str) -> str | None:

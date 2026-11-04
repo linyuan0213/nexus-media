@@ -51,6 +51,7 @@ class INDEXERSITECONFIG(Base):
     PUBLIC: Mapped[int] = mapped_column(Integer, default=0)
     DOWNLOAD_SETTING: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ENABLED: Mapped[int] = mapped_column(Integer, default=1)
+    PRIORITY: Mapped[int | None] = mapped_column(Integer, nullable=True)
     DEFAULT_SETTINGS: Mapped[str | None] = mapped_column(Text, nullable=True)
     CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
     UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)

@@ -51,6 +51,7 @@ class IndexerItem:
     description: str = ""
     seeders: int | None = None
     peers: int | None = None
+    priority: int = 100
     extra: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -74,6 +75,7 @@ class IndexerSite:
     id: str
     name: str
     public: bool = True
+    priority: int = 100
 
 
 @dataclass(frozen=True)
