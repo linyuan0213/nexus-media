@@ -16,7 +16,7 @@ import log
 from app.core.settings import settings
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.mediatypes import MediaType
-from app.infrastructure.task_queue import Task, TaskQueue, TaskWorker, create_task_queue
+from app.infrastructure.task_queue import Task, TaskQueue, TaskStatus, TaskWorker, create_task_queue
 from app.media.models import MediaInfo
 from app.services.lifecycle_service import LifecycleProjector
 from app.utils.json_utils import JsonUtils
@@ -156,16 +156,28 @@ class DownloadQueueService:
             self._history_repo.delete_download_history_by_id(history_id)
             raise
         if task.id != task_id:
-            # 幂等命中已有任务，删除本次占位历史
-            self._history_repo.delete_download_history_by_id(history_id)
-        else:
-            self._record_media(
-                media_info,
-                LifecycleStage.DOWNLOAD_QUEUED,
-                LifecycleStatus.QUEUED,
-                "download.queued",
-                task,
-            )
+            if task.status != TaskStatus.SUCCEEDED:
+                if task.status in {TaskStatus.FAILED, TaskStatus.DEAD, TaskStatus.CANCELLED}:
+                    # 终态失败不吞新请求：换 dedup key，复用本次 task_id 重新入队。
+                    task = queue.enqueue(
+                        "download.add",
+                        payload,
+                        dedup_key=f"{dedup_key}:retry:{task.id}",
+                        task_id=task_id,
+                    )
+                if task.id != task_id:
+                    self._history_repo.delete_download_history_by_id(history_id)
+                    return task
+            else:
+                self._history_repo.delete_download_history_by_id(history_id)
+                return task
+        self._record_media(
+            media_info,
+            LifecycleStage.DOWNLOAD_QUEUED,
+            LifecycleStatus.QUEUED,
+            "download.queued",
+            task,
+        )
         return task
 
     def _ensure_stack(self, downloader_id: str, max_active: int) -> tuple[TaskQueue, TaskWorker, int]:
