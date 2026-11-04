@@ -114,18 +114,25 @@ def _move(db, source_id: str, target_id: str) -> dict[str, int]:
     return counts
 
 
-_CODE_RE = re.compile(r"^[A-Za-z]{2,12}[-_ ]?\d{2,6}$")
-
-
 def _normalize_code(value: str) -> str:
     return re.sub(r"[-_ ]", "", str(value or "")).upper()
+
+
+def _is_code(value: str) -> bool:
+    normalized = _normalize_code(value)
+    return (
+        4 <= len(normalized) <= 20
+        and normalized.isalnum()
+        and any(char.isalpha() for char in normalized)
+        and any(char.isdigit() for char in normalized)
+    )
 
 
 def _merge_code_groups(db, apply: bool, counts: dict[str, int]) -> None:
     refs = db.query(MediaExternalRef.EXTERNAL_ID, MediaExternalRef.IDENTITY_ID).all()
     groups: dict[str, set[str]] = defaultdict(set)
     for external_id, identity_id in refs:
-        if external_id and _CODE_RE.match(str(external_id)):
+        if external_id and _is_code(str(external_id)):
             groups[_normalize_code(external_id)].add(str(identity_id))
     for code, identity_ids in sorted(groups.items()):
         if len(identity_ids) < 2:

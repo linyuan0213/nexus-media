@@ -67,6 +67,18 @@ class LifecycleProjector:
         stage_value = LifecycleStage(stage).value
         status_value = LifecycleStatus(status).value
         key = event_key or self._event_key(identity_id, season, episode, stage_value, event_type, trace_id, occurred)
+        terminal_progress_stages = {
+            LifecycleStage.DOWNLOADED.value,
+            LifecycleStage.TRANSFERRED.value,
+            LifecycleStage.SCRAPED.value,
+            LifecycleStage.IN_LIBRARY.value,
+        }
+        if (
+            progress is None
+            and stage_value in terminal_progress_stages
+            and status_value == LifecycleStatus.SUCCEEDED.value
+        ):
+            progress = 100
         event = MediaLifecycleEvent(
             EVENT_KEY=key,
             IDENTITY_ID=identity_id,

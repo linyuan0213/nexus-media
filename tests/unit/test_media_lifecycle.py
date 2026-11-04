@@ -97,7 +97,7 @@ def test_projector_is_idempotent_and_keeps_latest_state():
     assert current.STAGE == LifecycleStage.DOWNLOADED.value
     assert current.STATUS == LifecycleStatus.SUCCEEDED.value
     assert current.STAGE_STARTED_AT == now + timedelta(minutes=2)
-    assert current.PROGRESS == 10
+    assert current.PROGRESS == 100
 
 
 def test_list_and_owner_filter():

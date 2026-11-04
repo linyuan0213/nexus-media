@@ -54,7 +54,7 @@ def _record_search_lifecycle(media_info: Any, rssid: Any) -> None:
         event_key = f"search:{identity or getattr(media_info, 'title', '')}:{rssid}"
         LifecycleProjector().record_media(
             media_info,
-            stage=LifecycleStage.SEARCHING,
+            stage=LifecycleStage.SUBSCRIBED,
             status=LifecycleStatus.RUNNING,
             event_type="search.started",
             payload={"rssid": rssid, "source": "SUBSCRIBE"},
