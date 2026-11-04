@@ -118,6 +118,8 @@ class DownloadService:
                 size=res.SIZE,
                 site=res.SITE,
                 page_url=res.PAGEURL,
+                seeders=int(res.SEEDERS or 0),
+                peers=int(getattr(res, "PEERS", 0) or 0),
                 upload_volume_factor=float(res.UPLOAD_VOLUME_FACTOR if res.UPLOAD_VOLUME_FACTOR is not None else 1.0),
                 download_volume_factor=float(
                     res.DOWNLOAD_VOLUME_FACTOR if res.DOWNLOAD_VOLUME_FACTOR is not None else 1.0
