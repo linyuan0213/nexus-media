@@ -33,6 +33,7 @@
           "pageSize": 100
         },
         "mode_mapping": {
+          "ADULT": "adult",
           "MOVIE": "movie",
           "TV": "tvshow",
           "ANIME": {
