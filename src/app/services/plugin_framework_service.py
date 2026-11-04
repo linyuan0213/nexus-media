@@ -601,7 +601,7 @@ class PluginFrameworkService:
 
         # 第三方插件硬卸载：先让运行时清理，再删除代码和数据
         sandbox = self._plugin_sandbox
-        sandbox.unload(plugin_id, purge_data=purge_data)
+        sandbox.unload(plugin_id, purge_data=purge_data, uninstalling=True)
         if target_dir and os.path.exists(str(target_dir)):
             shutil.rmtree(str(target_dir))
         self._get_hook_system().unregister_all(plugin_id)

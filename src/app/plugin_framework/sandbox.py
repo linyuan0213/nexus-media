@@ -412,8 +412,8 @@ class PluginSandbox:
             getattr(metadata, "image_referers", None),
         )
 
-    def unload(self, plugin_id: str, purge_data: bool = False) -> None:
-        """卸载插件；purge_data 仅传给插件的清理钩子."""
+    def unload(self, plugin_id: str, purge_data: bool = False, *, uninstalling: bool = False) -> None:
+        """卸载插件；只有真正卸载时才调用 on_uninstall."""
         ctx = self._contexts.pop(plugin_id, None)
         if ctx is not None:
             with contextlib.suppress(Exception):
@@ -421,7 +421,7 @@ class PluginSandbox:
 
         instance = self._instances.get(plugin_id)
         if instance:
-            if hasattr(instance, "on_uninstall"):
+            if uninstalling and hasattr(instance, "on_uninstall"):
                 try:
                     instance.on_uninstall(purge_data)
                 except Exception as exc:  # noqa: BLE001 - 清理失败不阻断卸载
@@ -429,7 +429,7 @@ class PluginSandbox:
             try:
                 if hasattr(instance, "on_disable"):
                     instance.on_disable()
-            except PluginError as e:
+            except Exception as e:  # noqa: BLE001 - 单个钩子失败不能阻断资源清理
                 log.error(f"[Sandbox] 插件禁用失败 {plugin_id}: {e}")
 
             self._instances.pop(plugin_id, None)

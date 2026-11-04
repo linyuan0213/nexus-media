@@ -267,8 +267,23 @@ def _plugin_api_response(result):
     return success(data=result)
 
 
+_PLUGIN_WRITE_ACTIONS = {
+    "apply",
+    "create",
+    "delete",
+    "import",
+    "merge",
+    "remove",
+    "save",
+    "sync_tags",
+    "update",
+}
+
+
 async def _dispatch_plugin_api(plugin_id: str, api_path: str, params: dict, method: str):
     """在线程池中执行同步 handler；async handler 直接 await."""
+    if method == "GET" and str(params.get("action") or "").strip().lower() in _PLUGIN_WRITE_ACTIONS:
+        return fail(code=ErrorCode.PERMISSION_DENIED, msg="写操作只允许 POST")
     handler = api_registry.get_api_handler(plugin_id, api_path, method)
     if not handler:
         return fail(msg=f"插件接口不存在: {api_path}")
@@ -338,6 +353,7 @@ def get_plugin_logs(
     svc: PluginFrameworkService = Depends(get_plugin_framework_service),
 ):
     """获取插件日志"""
+    _assert_private_plugin_access(svc, plugin_id, user)
     result = svc.get_logs(plugin_id, page, page_size)
     return success(data=result)
 
@@ -360,6 +376,7 @@ def get_plugin_readme(
     svc: PluginFrameworkService = Depends(get_plugin_framework_service),
 ):
     """获取插件 README"""
+    _assert_private_plugin_access(svc, plugin_id, user)
     content = svc.get_readme(plugin_id)
     return success(data=content)
 
@@ -447,6 +464,7 @@ def delete_plugin_data(
 def get_plugin_asset(
     plugin_id: str,
     file_path: str,
+    user=Depends(require_permission("plugin:view")),
     svc: PluginFrameworkService = Depends(get_plugin_framework_service),
 ):
     """获取插件前端资源文件（ESM 组件等）.
@@ -454,6 +472,7 @@ def get_plugin_asset(
     URL 中的 /assets/ 前缀映射到插件根目录；
     若插件未提供前端资源，返回空 JS 占位，避免前端 loader 报 404.
     """
+    _assert_private_plugin_access(svc, plugin_id, user)
     plugin_path = svc.get_plugin_path(plugin_id)
     if not plugin_path:
         return fail(code=ErrorCode.PLUGIN_NOT_FOUND, msg="插件未找到")
