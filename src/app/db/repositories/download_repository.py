@@ -46,6 +46,13 @@ class DownloadRepository(BaseRepository):
                     return resolved
             except Exception as exc:  # noqa: BLE001
                 log.debug(f"[DownloadRepository]解析身份失败: {exc}")
+        existing = MediaIdentityRepository().find_by_title(
+            getattr(media_info, "title", None),
+            str(getattr(media_info, "year", "") or "") or None,
+            str(media_type),
+        )
+        if existing is not None:
+            return existing.IDENTITY_ID
         season = 0
         if hasattr(media_info, "get_season_seq"):
             try:

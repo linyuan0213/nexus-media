@@ -18,6 +18,7 @@ from app.db.models.subscribe import SubscribeHistory
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
+from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_download_state, map_task_status
 from app.utils.identity import fallback_identity
 
@@ -30,6 +31,7 @@ class LifecycleProjector:
 
     def __init__(self, repository: LifecycleRepository | None = None):
         self._repo = repository or LifecycleRepository()
+        self._identity_repo = MediaIdentityRepository()
 
     def record(
         self,
@@ -151,6 +153,23 @@ class LifecycleProjector:
         if not identity_id:
             identity_id = self._repo.resolve_identity_by_anchor(provider, external_id) or ""
         if not identity_id:
+            existing = self._identity_repo.find_by_title(
+                getattr(media, "title", "") or None,
+                str(getattr(media, "year", "") or "") or None,
+                str(media_type),
+            )
+            if existing is not None:
+                identity_id = existing.IDENTITY_ID
+        content_profile = str(getattr(media, "content_profile", "") or "default")
+        if identity_id and (not provider or content_profile == "default"):
+            identity = self._identity_repo.get_identity(identity_id)
+            ref = self._identity_repo.get_primary_ref(identity_id)
+            if not provider and ref is not None:
+                provider = str(ref.PROVIDER or "")
+                external_id = external_id or str(ref.EXTERNAL_ID or "")
+            if content_profile == "default" and identity is not None and identity.CONTENT_PROFILE:
+                content_profile = str(identity.CONTENT_PROFILE)
+        if not identity_id:
             identity_id = fallback_identity(
                 getattr(media, "title", "") or "",
                 str(media_type),
@@ -172,8 +191,8 @@ class LifecycleProjector:
             year=str(getattr(media, "year", "") or "") or None,
             poster=str(getattr(media, "poster_path", "") or "") or None,
             progress=progress,
-            source_provider=str(getattr(media, "anchor_provider", "") or "") or None,
-            content_profile=str(getattr(media, "content_profile", "") or "") or None,
+            source_provider=provider or None,
+            content_profile=content_profile or None,
             user_id=getattr(media, "user_id", None),
             retry_count=retry_count,
             next_retry_at=next_retry_at,

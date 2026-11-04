@@ -49,6 +49,13 @@ class TransferRepository(BaseRepository):
                     return resolved
             except Exception as exc:  # noqa: BLE001
                 log.debug(f"[TransferRepository]解析身份失败: {exc}")
+        existing = MediaIdentityRepository().find_by_title(
+            title or getattr(media_info, "title", None),
+            str(getattr(media_info, "year", "") or "") or None,
+            media_type,
+        )
+        if existing is not None:
+            return existing.IDENTITY_ID
         return fallback_identity(
             title or getattr(media_info, "title", None),
             media_type,

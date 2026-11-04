@@ -591,3 +591,12 @@ def test_ensure_identity_for_ref_is_idempotent():
     found = repo.find_by_ref("tmdb", "12345", media_type="tv")
     assert found is not None
     assert found.IDENTITY_ID == first
+
+
+def test_find_by_title_matches_anime_and_tv():
+    from app.db.repositories.media_identity_repository import MediaIdentityRepository
+
+    repo = MediaIdentityRepository()
+    identity = repo.ensure_identity(media_type="tv", title="Demo Anime", year="2026")
+    assert repo.find_by_title("Demo Anime", "2026", "anime").IDENTITY_ID == identity.IDENTITY_ID
+    assert repo.find_by_title("Demo Anime", "2026", "tv").IDENTITY_ID == identity.IDENTITY_ID

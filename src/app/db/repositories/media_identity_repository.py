@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 from app.db.models.download import DOWNLOADHISTORY
@@ -131,6 +132,53 @@ class MediaIdentityRepository(BaseRepository):
             found = self.find_by_ref(provider, external_id, scope=scope, media_type=normalized_type)
             return found.IDENTITY_ID if found is not None else ""
         return identity.IDENTITY_ID
+
+    def get_primary_ref(self, identity_id: str) -> MediaExternalRef | None:
+        """返回身份的 primary ref（没有 primary 时取最早一条）."""
+        if not identity_id:
+            return None
+        with self.readonly() as db:
+            return (
+                db.query(MediaExternalRef)
+                .filter(MediaExternalRef.IDENTITY_ID == identity_id)
+                .order_by(MediaExternalRef.IS_PRIMARY.desc(), MediaExternalRef.ID.asc())
+                .first()
+            )
+
+    def find_by_title(
+        self,
+        title: str | None,
+        year: str | None = None,
+        media_type: str | None = None,
+    ) -> MediaIdentity | None:
+        """按标题/年份/类型查找已有身份，用于无 anchor 的下载/转移归并."""
+        text = str(title or "").strip()
+        if not text:
+            return None
+        # 动漫在部分历史数据中落为 tv，标题匹配时按同一类型族处理
+        normalized_type = str(media_type or "")
+        if normalized_type in {"anime", "tv"}:
+            types: tuple[str, ...] = ("anime", "tv")
+        elif normalized_type:
+            types = (normalized_type,)
+        else:
+            types = ()
+        with self.readonly() as db:
+            query = db.query(MediaIdentity).filter(MediaIdentity.CANONICAL_TITLE == text)
+            if year:
+                query = query.filter(MediaIdentity.YEAR == str(year))
+            if types:
+                query = query.filter(MediaIdentity.MEDIA_TYPE.in_(types))
+            found = query.first()
+            if found is not None:
+                return found
+            # 标题可能有空白/大小写差异，退回不区分大小写匹配
+            query = db.query(MediaIdentity).filter(func.lower(MediaIdentity.CANONICAL_TITLE) == text.lower())
+            if year:
+                query = query.filter(MediaIdentity.YEAR == str(year))
+            if types:
+                query = query.filter(MediaIdentity.MEDIA_TYPE.in_(types))
+            return query.first()
 
     def find_by_ref(
         self,
