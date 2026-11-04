@@ -4,6 +4,7 @@ Handles download history, settings and indexer statistics related database opera
 """
 
 import os.path
+import re
 import time
 from datetime import datetime, timedelta
 from typing import Any
@@ -543,8 +544,9 @@ class DownloadRepository(BaseRepository):
         identity_id: str | None = None,
         anchor_provider: str | None = None,
         anchor_external_id: str | None = None,
+        season_episode: str | None = None,
     ) -> bool:
-        """订阅再次搜索前检查同一媒体是否已有在途下载."""
+        """订阅再次搜索前检查同一媒体/分集是否已有在途下载."""
         states = (
             "pending",
             "queued",
@@ -567,15 +569,43 @@ class DownloadRepository(BaseRepository):
         if not conditions:
             return False
         with self.readonly() as db:
-            return (
-                db.query(DOWNLOADHISTORY.ID)
+            rows = (
+                db.query(DOWNLOADHISTORY.SE)
                 .filter(
                     DOWNLOADHISTORY.STATE.in_(states),
                     or_(*conditions),
                 )
-                .first()
-                is not None
+                .all()
             )
+        if not rows:
+            return False
+        target = str(season_episode or "").strip()
+        if not target:
+            return True
+
+        def pairs(value: str) -> tuple[set[tuple[int, int]], set[int]]:
+            result: set[tuple[int, int]] = set()
+            seasons: set[int] = set()
+            for match in re.finditer(r"S(\d+)(?:\s*E(\d+)(?:\s*[-~]\s*E?(\d+))?)?", value, re.IGNORECASE):
+                season = int(match.group(1))
+                seasons.add(season)
+                if match.group(2):
+                    start = int(match.group(2))
+                    end = int(match.group(3) or start)
+                    result.update((season, episode) for episode in range(start, min(end, start + 200) + 1))
+            return result, seasons
+
+        target_pairs, target_seasons = pairs(target)
+        for (active_se,) in rows:
+            active_text = str(active_se or "").strip()
+            if not active_text:
+                return True
+            active_pairs, active_seasons = pairs(active_text)
+            if active_pairs and target_pairs and active_pairs & target_pairs:
+                return True
+            if target_seasons and active_seasons & target_seasons and (not target_pairs or not active_pairs):
+                return True
+        return False
 
     def get_active_download_states(self, identity_ids: set[str]) -> dict[str, str]:
         """返回指定身份最新的活跃下载状态，用于生命周期心跳/防误判停滞."""

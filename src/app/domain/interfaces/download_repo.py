@@ -27,6 +27,17 @@ class IDownloadHistoryRepository(Protocol):
         """根据TMDB ID和季集信息查询是否已有已完成的下载历史"""
         ...
 
+    def has_active_download_for_media(
+        self,
+        *,
+        identity_id: str | None = None,
+        anchor_provider: str | None = None,
+        anchor_external_id: str | None = None,
+        season_episode: str | None = None,
+    ) -> bool:
+        """同一媒体/分集是否已有在途下载"""
+        ...
+
     def insert(self, media_info, downloader: str, download_id: str, save_dir: str) -> None:
         """新增下载历史"""
         ...

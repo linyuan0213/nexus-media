@@ -32,6 +32,7 @@ from app.message import Message
 from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
+from app.services.subscription_download_guard import SubscriptionDownloadGuard
 from app.utils.string_utils import StringUtils
 
 
@@ -259,8 +260,12 @@ class SearchResultProcessor:
 
         return sorted(media_list, key=_sort_key, reverse=True)
 
-    def filter_downloaded(self, media_list: list, force: bool = False) -> list:
-        """过滤已完成下载历史；手动刷新仅在无活动任务时允许重新下载."""
+    def filter_downloaded(
+        self, media_list: list, force: bool = False, over_edition: bool = False
+    ) -> list:
+        """过滤已完成/在途下载；电影按整部，剧集动漫按分集，洗版模式放行."""
+        if over_edition:
+            return list(media_list)
         if force and media_list:
             media_item = media_list[0]
             ref = media_item.get_media_ref()
@@ -349,6 +354,7 @@ class Searcher:
         self.indexer_service = indexer_service
         self._event_bus = event_bus
         self._search_auto = settings.get("pt").get("search_auto", True)
+        self._subscription_guard = SubscriptionDownloadGuard(self._download_repo)
 
     @property
     def download_repo(self):
@@ -474,8 +480,16 @@ class Searcher:
             if in_from != SearchType.SUBSCRIBE and not self._search_auto:
                 return None, no_exists, len(media_list), 0
 
-        # 4. 过滤已下载
-        filtered_media_list = processor.filter_downloaded(media_list, force=force_download)
+        # 4. 订阅侧去重：电影按整部、剧集/动漫按分集，洗版放行
+        if in_from == SearchType.SUBSCRIBE:
+            media_list = self._subscription_guard.filter_candidates(
+                media_list,
+                over_edition=bool(getattr(media_info, "over_edition", False)),
+            )
+        # 过滤已完成下载
+        filtered_media_list = processor.filter_downloaded(
+            media_list, force=force_download, over_edition=bool(getattr(media_info, "over_edition", False))
+        )
         if not filtered_media_list:
             log.info("[Searcher]所有搜索结果已在下载历史中存在，跳过下载")
             return None, no_exists, len(media_list), 0
