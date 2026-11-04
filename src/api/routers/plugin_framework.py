@@ -479,7 +479,13 @@ def get_plugin_asset(
     relative_path = file_path
     if relative_path.startswith("assets/"):
         relative_path = relative_path[len("assets/") :]
-    if not relative_path.startswith("frontend/"):
+    relative_posix = relative_path.replace("\\", "/")
+    safe_suffixes = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".ico"}
+    is_frontend = relative_posix.startswith("frontend/")
+    is_public_image = (
+        not relative_posix.startswith("backend/") and os.path.splitext(relative_posix)[1].lower() in safe_suffixes
+    )
+    if not (is_frontend or is_public_image):
         return fail(code=ErrorCode.RESOURCE_NOT_FOUND, msg="资源不存在")
 
     target = os.path.join(plugin_path, relative_path)
