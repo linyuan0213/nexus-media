@@ -9,8 +9,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import or_
-
 import log
 from app.core.settings import settings
 from app.db.models.download import DOWNLOADHISTORY
@@ -21,6 +19,38 @@ from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_download_state, map_task_status
+
+_IDENTITY_CODE_RE = re.compile(r"([A-Za-z]{2,12})[-_ ]?(\d{2,6})")
+
+
+def fallback_identity(
+    title: Any,
+    media_type: str = "movie",
+    season: int = 0,
+    anchor_provider: str = "",
+    anchor_external_id: str = "",
+) -> str:
+    """为缺失 anchor 的历史/下载记录生成稳定身份，保证生命周期可投影."""
+    def fit(value: str) -> str:
+        # IDENTITY_ID 列为 varchar(26)；超长时退化为稳定哈希。
+        if len(value) <= 26:
+            return value
+        return "local:" + hashlib.sha1(value.encode("utf-8")).hexdigest()[:20]
+
+    provider = str(anchor_provider or "").strip()
+    external_id = str(anchor_external_id or "").strip()
+    if provider and external_id:
+        return fit(f"{provider}:{external_id}")
+    text = str(title or "").strip()
+    match = _IDENTITY_CODE_RE.search(text)
+    if match:
+        code = f"{match.group(1).upper()}-{match.group(2)}"
+        suffix = ""
+        if media_type != "movie" or season:
+            suffix = f":{media_type}:{int(season or 0)}"
+        return fit(f"local:{code}{suffix}")
+    digest = hashlib.sha1(f"{text}|{media_type}|{int(season or 0)}".encode("utf-8")).hexdigest()[:20]
+    return f"local:{digest}"
 
 
 class LifecycleProjector:
@@ -141,12 +171,6 @@ class LifecycleProjector:
         identity_id = str(getattr(media, "identity_id", "") or "")
         provider = str(getattr(media, "anchor_provider", "") or "")
         external_id = str(getattr(media, "anchor_external_id", "") or "")
-        if not identity_id:
-            identity_id = self._repo.resolve_identity_by_anchor(provider, external_id) or ""
-        if not identity_id and provider and external_id:
-            identity_id = f"{provider}:{external_id}"
-        if not identity_id:
-            return False
         media_type = getattr(getattr(media, "type", None), "value", getattr(media, "type", "movie")) or "movie"
         season = 0
         episode = 0
@@ -155,6 +179,16 @@ class LifecycleProjector:
                 season = int(media.get_season_seq() or 0)
             except (TypeError, ValueError):
                 season = 0
+        if not identity_id:
+            identity_id = self._repo.resolve_identity_by_anchor(provider, external_id) or ""
+        if not identity_id:
+            identity_id = fallback_identity(
+                getattr(media, "title", "") or "",
+                str(media_type),
+                season,
+                provider,
+                external_id,
+            )
         return self.record(
             identity_id=identity_id,
             stage=stage,
@@ -237,26 +271,18 @@ class LifecycleReconciler:
         with BaseRepository().readonly() as db:
             downloads = (
                 db.query(DOWNLOADHISTORY)
-                .filter(DOWNLOADHISTORY.IDENTITY_ID.isnot(None))
                 .order_by(DOWNLOADHISTORY.ID.desc())
                 .limit(max(1, int(limit)))
                 .all()
             )
             transfers = (
                 db.query(TRANSFERHISTORY)
-                .filter(
-                    or_(
-                        TRANSFERHISTORY.IDENTITY_ID.isnot(None),
-                        TRANSFERHISTORY.ANCHOR_EXTERNAL_ID.isnot(None),
-                    )
-                )
                 .order_by(TRANSFERHISTORY.ID.desc())
                 .limit(max(1, int(limit)))
                 .all()
             )
             subscriptions = (
                 db.query(SubscribeHistory)
-                .filter(SubscribeHistory.IDENTITY_ID.isnot(None))
                 .order_by(SubscribeHistory.ID.desc())
                 .limit(max(1, int(limit)))
                 .all()
@@ -543,7 +569,16 @@ def _canonical_identity(row: Any, by_external: dict[str, str], by_title: dict[tu
         str(getattr(row, "YEAR", "") or ""),
         str(getattr(row, "SE", None) or getattr(row, "SEASON_EPISODE", "") or ""),
     )
-    return by_title.get(key, "")
+    matched = by_title.get(key, "")
+    if matched:
+        return matched
+    return fallback_identity(
+        getattr(row, "TITLE", "") or getattr(row, "NAME", "") or "",
+        _row_media_type(getattr(row, "TYPE", None)),
+        0,
+        str(getattr(row, "ANCHOR_PROVIDER", "") or ""),
+        str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or ""),
+    )
 
 
 def _scoped_event_key(base: str, row_identity: Any, canonical_identity: str) -> str:

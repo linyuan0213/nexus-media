@@ -312,6 +312,19 @@ class DownloadRepository(BaseRepository):
             )
             return row.ID if row is not None else None
 
+    def get_download_history_by_download_id(self, downloader: str, download_id: str):
+        """按下载器任务 ID 查询下载历史（生命周期 completed 事件回落用）."""
+        with self.session() as db:
+            return (
+                db.query(DOWNLOADHISTORY)
+                .filter(
+                    DOWNLOADHISTORY.DOWNLOADER == downloader,
+                    DOWNLOADHISTORY.DOWNLOAD_ID == download_id,
+                )
+                .order_by(DOWNLOADHISTORY.ID.desc())
+                .first()
+            )
+
     def get_download_history(
         self,
         date: str | None = None,

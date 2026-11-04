@@ -29,6 +29,7 @@ from app.domain.interfaces.rss_repo import (
     ISubscribeTvEpisodeRepository,
     ISubscribeTvRepository,
 )
+from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.media_ref import media_identity_key
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import get_cache_manager
@@ -36,12 +37,31 @@ from app.media import MediaCache, MediaService, meta_info
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
+from app.services.lifecycle_service import LifecycleProjector
 from app.services.search_service import Searcher
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.sites.torrent import Torrent
 
 # 订阅搜索每轮处理上限（subscribe.batch_limit 可覆盖）
 _SUBSCRIBE_BATCH_DEFAULT = 20
+
+
+
+def _record_search_lifecycle(media_info: Any, rssid: Any) -> None:
+    """把订阅搜索阶段实时投影到媒体流转。"""
+    try:
+        identity = str(getattr(media_info, "identity_id", "") or "")
+        event_key = f"search:{identity or getattr(media_info, 'title', '')}:{rssid}"
+        LifecycleProjector().record_media(
+            media_info,
+            stage=LifecycleStage.SEARCHING,
+            status=LifecycleStatus.RUNNING,
+            event_type="search.started",
+            payload={"rssid": rssid, "source": "SUBSCRIBE"},
+            event_key=event_key,
+        )
+    except Exception as exc:  # noqa: BLE001
+        log.warn(f"[Lifecycle]记录订阅搜索阶段失败: {exc}")
 
 
 class BaseSearchStrategy:
@@ -263,6 +283,7 @@ class BaseSearchStrategy:
                     self._movie_repo.update_state(
                         title=None, year=None, rssid=rid, state=SubscribeState.SEARCHING.value
                     )
+                    _record_search_lifecycle(media_info, rid)
 
                     try:
                         filters = {
@@ -482,6 +503,7 @@ class BaseSearchStrategy:
                     self._tv_repo.update_state(
                         title=None, year=None, season=None, rssid=rid, state=SubscribeState.SEARCHING.value
                     )
+                    _record_search_lifecycle(media_info, rid)
                     # 搜索站点：订阅未配置时回退到默认订阅设置的 search_sites（与手动搜索一致）。
                     # 不能直接用 rss_info.get("search_sites")，否则空列表会覆盖 effective sites → 0 站点搜索
                     sites = self._get_effective_search_sites(rss_info, MediaType.TV)

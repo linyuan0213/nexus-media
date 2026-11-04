@@ -245,14 +245,8 @@ class DownloadQueueService:
                     error=error or "下载器添加任务失败",
                 )
                 raise RuntimeError(error or "下载器添加任务失败")
-            self._record_media(
-                media_info,
-                LifecycleStage.DOWNLOADED,
-                LifecycleStatus.SUCCEEDED,
-                "download.completed",
-                task,
-                progress=100,
-            )
+            # 下载器只完成了“添加任务”；真正的完成由 download.completed 事件投影，
+            # 这里不能提前标记为 downloaded。
             return {"download_id": download_id}
         finally:
             if torrent_path:

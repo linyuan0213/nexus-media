@@ -56,8 +56,27 @@ class LifecycleRepository(BaseRepository):
             return
         current_rank = stage_rank(current.STAGE)
         event_rank = stage_rank(event.STAGE)
-        advanced = event_rank > current_rank
-        regressed = event_rank < current_rank
+        # 已入库/已刮削/已转移后再次出现下载/搜索/转移排队事件，视为新一轮流转；
+        # 否则阶段单调会永久掩盖重下/洗版活动。
+        restart_events = {
+            "download.queued",
+            "download.started",
+            "search.started",
+            "transfer.queued",
+            "transfer.started",
+            "scrape.queued",
+            "scrape.started",
+            "reconcile.download.queued",
+            "reconcile.download.downloading",
+        }
+        terminal_stages = {"in_library", "scraped", "transferred", "downloaded"}
+        restart = (
+            str(current.STAGE or "") in terminal_stages
+            and str(event.EVENT_TYPE or "") in restart_events
+            and event.OCCURRED_AT > (current.STAGE_STARTED_AT or event.OCCURRED_AT)
+        )
+        advanced = restart or event_rank > current_rank
+        regressed = event_rank < current_rank and not restart
         if not advanced and event.OCCURRED_AT < (current.LAST_EVENT_AT or event.OCCURRED_AT):
             # 旧事件不回退状态，但可以用更具体的元数据来源修复 content_id 兜底。
             provider = str(snapshot.get("SOURCE_PROVIDER") or "")
@@ -91,7 +110,7 @@ class LifecycleRepository(BaseRepository):
                 and current.SOURCE_PROVIDER not in {None, "", "content_id"}
             ):
                 continue
-            if key == "LAST_EVENT_AT" and advanced:
+            if key == "LAST_EVENT_AT" and advanced and not restart:
                 value = max(value, current.LAST_EVENT_AT or value)
             setattr(current, key, value)
         if advanced:

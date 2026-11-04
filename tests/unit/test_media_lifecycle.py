@@ -516,3 +516,64 @@ def test_timeline_is_chronological():
         "reconcile.library.present",
         "transfer.failed",
     ]
+
+
+class TestFallbackIdentity:
+    def test_prefers_anchor(self):
+        from app.services.lifecycle_service import fallback_identity
+
+        assert (
+            fallback_identity("ignored", "movie", 0, "javdb", "JJDA-083")
+            == "javdb:JJDA-083"
+        )
+
+    def test_uses_title_code(self):
+        from app.services.lifecycle_service import fallback_identity
+
+        assert fallback_identity("JJDA-083 Some Title", "movie") == "local:JJDA-083"
+
+    def test_hashes_unknown_title(self):
+        from app.services.lifecycle_service import fallback_identity
+
+        first = fallback_identity("没有番号的标题", "movie")
+        second = fallback_identity("没有番号的标题", "movie")
+        assert first == second
+        assert first.startswith("local:")
+
+    def test_identity_fits_column_length(self):
+        from app.services.lifecycle_service import fallback_identity
+
+        for value in (
+            fallback_identity("A" * 100, "movie"),
+            fallback_identity("title", "movie", 0, "p" * 30, "e" * 30),
+            fallback_identity("JJDA-083 title", "anime", 12),
+        ):
+            assert len(value) <= 26
+
+
+def test_new_cycle_can_reset_terminal_stage():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    started = datetime(2026, 11, 2, 10, 0, 0)
+
+    projector.record(
+        identity_id="identity-cycle",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="reconcile.library.present",
+        event_key="cycle-library",
+        occurred_at=started,
+    )
+    projector.record(
+        identity_id="identity-cycle",
+        stage=LifecycleStage.DOWNLOAD_QUEUED,
+        status=LifecycleStatus.QUEUED,
+        event_type="download.queued",
+        event_key="cycle-download-queued",
+        occurred_at=started + timedelta(hours=1),
+    )
+
+    current = repo.get_current("identity-cycle")
+    assert current is not None
+    assert current.STAGE == LifecycleStage.DOWNLOAD_QUEUED.value
+    assert current.STATUS == LifecycleStatus.QUEUED.value
