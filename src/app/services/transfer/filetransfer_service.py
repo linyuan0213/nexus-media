@@ -1394,6 +1394,15 @@ class FileTransferService:
                             "file_ext": os.path.splitext(file_item)[-1],
                             "ret_file_path": ret_file_path,
                         }
+                        self._record_transfer_history(
+                            media,
+                            in_from,
+                            operation,
+                            reg_path,
+                            ret_file_path,
+                            dist_path,
+                            resolved_backend,
+                        )
                         self._scrape_duplicate_if_incomplete(
                             media,
                             ret_dir_path,
@@ -1404,50 +1413,15 @@ class FileTransferService:
                         )
                     continue
 
-                file_ext = os.path.splitext(file_item)[-1]
-                raw_tmdb_id = str(media.tmdb_id or "").strip()
-                if raw_tmdb_id.isdigit():
-                    media.set_provider_data(
-                        self.media.get_tmdb_info(
-                            mtype=media.type,
-                            tmdbid=raw_tmdb_id,
-                            append_to_response="all",
-                        )
-                    )
-                snapshot = (
-                    self._metadata_service.latest_snapshot_for_media(media)
-                    if self._metadata_service is not None
-                    else None
+                self._record_transfer_history(
+                    media,
+                    in_from,
+                    operation,
+                    reg_path,
+                    new_file if not bluray_disk_dir else ret_dir_path,
+                    dist_path,
+                    resolved_backend,
                 )
-                out_path = new_file if not bluray_disk_dir else ret_dir_path
-                season_episode = media.get_season_episode_string() if out_path else media.get_season_string()
-                media_dto = TransferMediaDTO(
-                    title=media.title or "",
-                    type_value=media.type.value if media.type else "",
-                    category=media.category or "",
-                    tmdb_id=int(raw_tmdb_id) if raw_tmdb_id.isdigit() else 0,
-                    year=media.year or "",
-                    season_episode=season_episode,
-                    poster=media.get_poster_image() or "",
-                    identity_id=getattr(snapshot, "identity_id", None)
-                    or getattr(media, "identity_id", None),
-                    anchor_provider=getattr(media, "anchor_provider", None),
-                    anchor_external_id=getattr(media, "anchor_external_id", None),
-                    content_profile=getattr(media, "content_profile", None),
-                )
-
-                self._history.insert_transfer_history(
-                    in_from=in_from,
-                    rmt_mode=operation,
-                    in_path=reg_path,
-                    out_path=out_path or "",
-                    dest=dist_path,
-                    media_info=media_dto,
-                    dst_backend=getattr(resolved_backend, "id", None) or "local",
-                )
-
-                # 转移成功：若该文件曾进入未识别列表，标记为已识别（不再依赖手动指定季集标志）
-                self._history.update_transfer_unknown_state(reg_path)
 
                 if media.type == MediaType.MOVIE:
                     media.user_id = self._resolve_owner_user_id(reg_path, media)
@@ -1463,6 +1437,8 @@ class FileTransferService:
 
                 # 文件已到达最终路径；刮削任务完成后才发布 transfer_finished，
                 # 避免媒体服务器先扫描到无 NFO/图片的目录。
+                file_ext = os.path.splitext(file_item)[-1]
+                out_path = new_file if not bluray_disk_dir else ret_dir_path
                 finalize = {
                     "in_path": in_path,
                     "file_item": file_item,
@@ -1910,6 +1886,49 @@ class FileTransferService:
         # 多后端镜像：复制到其他已启用且缺失该文件的后端
         self._replicate_to_enabled_backends(media, new_file, dst_backend)
         return 0, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
+
+    def _record_transfer_history(
+        self, media, in_from, operation, reg_path, out_path, dist_path, resolved_backend
+    ) -> None:
+        """记录转移结果。新转移与目标已存在（重复转移）都必须落历史。"""
+        raw_tmdb_id = str(media.tmdb_id or "").strip()
+        if raw_tmdb_id.isdigit():
+            media.set_provider_data(
+                self.media.get_tmdb_info(
+                    mtype=media.type,
+                    tmdbid=raw_tmdb_id,
+                    append_to_response="all",
+                )
+            )
+        snapshot = (
+            self._metadata_service.latest_snapshot_for_media(media)
+            if self._metadata_service is not None
+            else None
+        )
+        season_episode = media.get_season_episode_string() if out_path else media.get_season_string()
+        media_dto = TransferMediaDTO(
+            title=media.title or "",
+            type_value=media.type.value if media.type else "",
+            category=media.category or "",
+            tmdb_id=int(raw_tmdb_id) if raw_tmdb_id.isdigit() else 0,
+            year=media.year or "",
+            season_episode=season_episode,
+            poster=media.get_poster_image() or "",
+            identity_id=getattr(snapshot, "identity_id", None) or getattr(media, "identity_id", None),
+            anchor_provider=getattr(media, "anchor_provider", None),
+            anchor_external_id=getattr(media, "anchor_external_id", None),
+            content_profile=getattr(media, "content_profile", None),
+        )
+        self._history.insert_transfer_history(
+            in_from=in_from,
+            rmt_mode=operation,
+            in_path=reg_path,
+            out_path=out_path or "",
+            dest=dist_path,
+            media_info=media_dto,
+            dst_backend=getattr(resolved_backend, "id", None) or "local",
+        )
+        self._history.update_transfer_unknown_state(reg_path)
 
     def _replicate_to_enabled_backends(self, media, transferred_path, primary_backend) -> None:
         """转移成功后，将该媒体镜像到其他已启用且缺失该文件的后端。
