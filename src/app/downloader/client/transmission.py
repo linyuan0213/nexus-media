@@ -279,7 +279,7 @@ class Transmission(_IDownloadClient):
             if not isinstance(tags, list):
                 tags = [tags, "已整理"]
             else:
-                tags.append("已整理")
+                tags = [*tags, "已整理"]
         else:
             tags = ["已整理"]
         # 打标签

@@ -200,8 +200,7 @@ class ScrapeQueueService:
                 task,
                 error="刮削失败",
             )
-        if task is None or task.attempts + 1 >= task.max_attempts:
-            self._finalize(media, finalize, metadata_ok=False)
+        # 元数据失败不能触发入库/订阅完成事件；文件是否已落盘由生命周期单独表达。
         raise RuntimeError(f"刮削失败: {payload.get('dir_path')}/{payload.get('file_name')}")
 
     def _run_folder_task(self, task: Task) -> dict[str, Any]:
@@ -236,14 +235,22 @@ class ScrapeQueueService:
         if not finalize or self._event_bus is None:
             return
         in_from = finalize.get("in_from")
-        if metadata_ok and media.type == MediaType.MOVIE and self._message is not None:
+        if metadata_ok and self._message is not None:
             try:
-                self._message.send_transfer_movie_message(
-                    in_from,
-                    media,
-                    int(finalize.get("exist_filenum") or 0),
-                    bool(finalize.get("category_flag")),
-                )
+                if media.type == MediaType.MOVIE:
+                    self._message.send_transfer_movie_message(
+                        in_from,
+                        media,
+                        int(finalize.get("exist_filenum") or 0),
+                        bool(finalize.get("category_flag")),
+                    )
+                elif media.type in (MediaType.TV, MediaType.ANIME):
+                    self._message.send_transfer_tv_message(
+                        [media],
+                        in_from,
+                        int(finalize.get("exist_filenum") or 0),
+                        bool(finalize.get("category_flag")),
+                    )
             except Exception as exc:  # noqa: BLE001
                 log.warn(f"[ScrapeQueue]发送入库消息失败: {exc}")
 

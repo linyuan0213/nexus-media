@@ -675,17 +675,6 @@ class MessageBuilder:
             msg_type="transfer_fail",
             variables=variables,
         )
-        for client in self._client_manager.active_clients:
-            if "transfer_fail" in (client.get("switches") or ""):
-                self._dispatcher.sendmsg(
-                    client=client,
-                    title=title,
-                    text=text,
-                    url="unidentification",
-                    msg_type="transfer_fail",
-                    variables=variables,
-                    template_engine=self._template_engine,
-                )
 
     def send_auto_remove_torrents_message(self, title: str, text: str) -> None:
         if not title or not text:

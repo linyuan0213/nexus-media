@@ -1475,7 +1475,7 @@ class FileTransferService:
                     dir_path=ret_dir_path,
                     file_name=self._scrape_file_base_name(ret_file_path, ret_dir_path),
                     file_ext=file_ext,
-                    dst_backend=dst_backend,
+                    dst_backend=resolved_backend,
                     finalize=finalize,
                 )
 
@@ -2030,14 +2030,6 @@ class FileTransferService:
         return 1, 1 if insert else 0, alert_messages, 0, None, None, None
 
     def _transfer_post_process(self, result, in_from, in_path, operation, root_path) -> tuple[bool, str]:
-        if result["message_medias"]:
-            self.message.send_transfer_tv_message(
-                result["message_medias"],
-                in_from,
-                result.get("exist_filenum", 0),
-                self._path_resolver.tv_category_flag or False,
-            )
-
         total_count = result["total_count"]
         failed_count = result["failed_count"]
         alert_count = result["alert_count"]

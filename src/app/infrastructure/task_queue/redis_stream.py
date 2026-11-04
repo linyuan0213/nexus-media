@@ -264,15 +264,18 @@ class RedisStreamTaskQueue(TaskQueue):
     def _reserve_dedup(self, dedup_key: str, task_id: str) -> Task | None:
         key = self._dedup_key(dedup_key)
         kwargs = {"ex": self.dedup_ttl_seconds} if self.dedup_ttl_seconds else {}
-        if self._client.set(key, task_id, nx=True, **kwargs):
-            return None
-        existing_id = self._client.get(key)
-        if existing_id:
+        for _ in range(5):
+            if self._client.set(key, task_id, nx=True, **kwargs):
+                return None
+            existing_id = self._client.get(key)
+            if not existing_id:
+                continue
             existing = self.get(str(existing_id))
             if existing is not None:
                 return existing
+            # 占位存在但任务 hash 尚未写入：删除后重新竞争，不能无占位直接入队。
             self._client.delete(key)
-        return None
+        raise QueueUnavailableError("dedup key 初始化竞争，拒绝无去重入队")
 
     def _release_dedup(self, dedup_key: str, task_id: str) -> None:
         if not dedup_key:
