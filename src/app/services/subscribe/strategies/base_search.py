@@ -16,6 +16,7 @@ from app.core.exceptions import (
     ServiceError,
 )
 from app.core.settings import settings
+from app.db.engine import background_engine_context
 from app.db.repositories.subscribe_repo_adapter import (
     SubscribeMovieRepositoryAdapter,
     SubscribeTvEpisodeRepositoryAdapter,
@@ -62,6 +63,16 @@ def _record_search_lifecycle(media_info: Any, rssid: Any) -> None:
         )
     except Exception as exc:  # noqa: BLE001
         log.warn(f"[Lifecycle]记录订阅搜索阶段失败: {exc}")
+
+
+def _in_background(func):
+    """线程池任务使用后台连接池，避免订阅搜索占满 API 主池。"""
+
+    def _run(item):
+        with background_engine_context():
+            return func(item)
+
+    return _run
 
 
 class BaseSearchStrategy:
@@ -358,7 +369,7 @@ class BaseSearchStrategy:
                 f"本轮流处理前 {batch_limit} 个，其余保持 PENDING 下一轮继续"
             )
         with ThreadPoolExecutor(max_workers=5) as executor:
-            list(executor.map(_process_one, list(rss_movies.values())[:batch_limit]))
+            list(executor.map(_in_background(_process_one), list(rss_movies.values())[:batch_limit]))
 
     def _search_tvs(
         self, state: str = SubscribeState.PENDING.value, rssid: int | None = None, force: bool = False
@@ -579,7 +590,7 @@ class BaseSearchStrategy:
                 f"本轮流处理前 {batch_limit} 个，其余保持 PENDING 下一轮继续"
             )
         with ThreadPoolExecutor(max_workers=5) as executor:
-            list(executor.map(_process_one, list(rss_tvs.values())[:batch_limit]))
+            list(executor.map(_in_background(_process_one), list(rss_tvs.values())[:batch_limit]))
 
     @staticmethod
     def _is_external_ref(value) -> bool:

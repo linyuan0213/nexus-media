@@ -154,7 +154,8 @@ class PathUtils:
                     # 广告/说明文件的 .url.xltd 等不能代表媒体未完成；
                     # 只认同名媒体文件的临时标记，或临时目录本身。
                     base = lower[: -len(suffix)]
-                    if os.path.isdir(os.path.join(root, name)) or os.path.splitext(base)[1] in media_exts:
+                    base_ext = os.path.splitext(base)[1]
+                    if os.path.isdir(os.path.join(root, name)) or not base_ext or base_ext in media_exts:
                         return True
             if root.count(os.sep) - base_depth >= depth:
                 dirs[:] = []

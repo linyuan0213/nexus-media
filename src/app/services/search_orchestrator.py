@@ -11,6 +11,7 @@ from typing import Any
 
 import log
 from app.core.settings import settings
+from app.db.engine import background_engine_context
 from app.domain.enums import SearchType, channel_name
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.intent import IntentResolver
@@ -437,7 +438,7 @@ class SearchOrchestrator:
                 tasks.append(
                     (
                         index,
-                        executor.submit(self._search_one, SearchType.WEB, name, task_args, ctx.match_media),
+                        executor.submit(self._search_one_background, SearchType.WEB, name, task_args, ctx.match_media),
                     )
                 )
 
@@ -451,6 +452,11 @@ class SearchOrchestrator:
                         media_list.append(result)
 
         return media_list
+
+    def _search_one_background(self, in_from: SearchType, key_word: str, filter_args: dict, match_media: Any) -> list:
+        """搜索线程使用后台连接池，避免占满 API 主池。"""
+        with background_engine_context():
+            return self._search_one(in_from, key_word, filter_args, match_media)
 
     def _search_one(self, in_from: SearchType, key_word: str, filter_args: dict, match_media: Any) -> list:
         if not key_word or not self._searcher.indexer_service:
@@ -531,7 +537,12 @@ class SearchOrchestrator:
         if service is None:
             return
         executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="search_hydrate")
-        future = executor.submit(service.hydrate_media, match_media)
+
+        def _hydrate():
+            with background_engine_context():
+                service.hydrate_media(match_media)
+
+        future = executor.submit(_hydrate)
         try:
             future.result(timeout=timeout)
         except TimeoutError:
