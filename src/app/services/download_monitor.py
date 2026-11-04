@@ -107,9 +107,7 @@ class DownloadMonitor:
                         # 转移必然失败，不能让它重放并产生“无法识别”误通知。
                         if task_path and os.path.isabs(task_path) and not os.path.exists(task_path):
                             self._processed_ids.add(uid)
-                            log.warn(
-                                f"[DownloadMonitor]跳过启动期残留任务（路径不存在）: {task_id} @ {task_path}"
-                            )
+                            log.warn(f"[DownloadMonitor]跳过启动期残留任务（路径不存在）: {task_id} @ {task_path}")
                     except Exception as e:  # noqa: BLE001 - 历史查询失败不应阻断启动
                         log.debug(f"[DownloadMonitor]查询转移历史失败 {task_id}: {e}")
         except Exception as e:
@@ -176,6 +174,10 @@ class DownloadMonitor:
             task_id = str(task.get("id")) if task.get("id") else ""
             task_path = task.get("path") or ""
             if not task_id or not task_path:
+                continue
+            if not os.path.exists(task_path):
+                # 下载器残留任务/路径映射失效，不再触发转移和失败通知。
+                log.debug(f"[DownloadMonitor]跳过不存在的下载路径: {task_path}")
                 continue
 
             uid = self._make_id(did, task_id)
