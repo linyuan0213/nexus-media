@@ -634,6 +634,10 @@ def _apply_subscription_state(grouped: list[dict[str, Any]], subscription_map: d
             elif stage_value not in terminal:
                 item["STAGE"] = LifecycleStage.SUBSCRIBED.value
                 item["STATUS"] = "queued" if sub_state == "D" else "running"
+            elif item.get("STATUS") == LifecycleStatus.SUCCEEDED.value:
+                # 订阅仍活跃，只是最新一集已入库；保留已入库阶段，
+                # 但状态回到进行中，避免整部剧从“进行中”列表消失。
+                item["STATUS"] = "queued" if sub_state == "D" else "running"
         elif sub_state == "E":
             item["STATUS"] = "failed"
         elif sub_state == "N":

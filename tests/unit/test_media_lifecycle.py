@@ -272,7 +272,7 @@ def test_grouped_incomplete_subscription_keeps_library_stage():
     assert item["SUBSCRIBED_EPISODES"] == 5
     assert item["PROGRESS"] == 33
     assert item["STAGE"] == LifecycleStage.IN_LIBRARY.value
-    assert item["STATUS"] == LifecycleStatus.SUCCEEDED.value
+    assert item["STATUS"] == LifecycleStatus.QUEUED.value
 
 
 def test_snapshot_does_not_regress_to_earlier_stage():
@@ -450,7 +450,7 @@ def test_active_subscription_with_library_episodes_keeps_library_stage():
     rows, total = repo.list_grouped(pagenum=10)
     assert total == 1
     assert rows[0]["STAGE"] == LifecycleStage.IN_LIBRARY.value
-    assert rows[0]["STATUS"] == LifecycleStatus.SUCCEEDED.value
+    assert rows[0]["STATUS"] == LifecycleStatus.RUNNING.value
 
 
 def test_active_subscription_with_scraped_episode_keeps_scraped_stage():
@@ -483,7 +483,7 @@ def test_active_subscription_with_scraped_episode_keeps_scraped_stage():
     rows, total = repo.list_grouped(pagenum=10)
     assert total == 1
     assert rows[0]["STAGE"] == LifecycleStage.SCRAPED.value
-    assert rows[0]["STATUS"] == LifecycleStatus.SUCCEEDED.value
+    assert rows[0]["STATUS"] == LifecycleStatus.RUNNING.value
 
 
 def test_parse_season_episodes_expands_range():
