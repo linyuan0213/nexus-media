@@ -19,6 +19,7 @@ from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.download_repository import DownloadRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
+from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_download_state, map_task_status
 from app.services.identity_resolver import IdentityResolver
 
@@ -32,6 +33,7 @@ class LifecycleProjector:
     def __init__(self, repository: LifecycleRepository | None = None):
         self._repo = repository or LifecycleRepository()
         self._resolver = IdentityResolver()
+        self._identity_repo = MediaIdentityRepository()
 
     def record(
         self,
@@ -67,6 +69,14 @@ class LifecycleProjector:
         stage_value = LifecycleStage(stage).value
         status_value = LifecycleStatus(status).value
         key = event_key or self._event_key(identity_id, season, episode, stage_value, event_type, trace_id, occurred)
+        if str(identity_id or "") and str(identity_id) != "preview" and not source_provider:
+            ref = self._identity_repo.get_display_ref(str(identity_id))
+            if ref is not None:
+                source_provider = str(ref.PROVIDER or "")
+        if str(identity_id or "") and str(identity_id) != "preview" and not content_profile:
+            identity = self._identity_repo.get_identity(str(identity_id))
+            if identity is not None and identity.CONTENT_PROFILE:
+                content_profile = str(identity.CONTENT_PROFILE)
         terminal_progress_stages = {
             LifecycleStage.DOWNLOADED.value,
             LifecycleStage.TRANSFERRED.value,
