@@ -464,7 +464,6 @@ def delete_plugin_data(
 def get_plugin_asset(
     plugin_id: str,
     file_path: str,
-    user=Depends(require_permission("plugin:view")),
     svc: PluginFrameworkService = Depends(get_plugin_framework_service),
 ):
     """获取插件前端资源文件（ESM 组件等）.
@@ -472,15 +471,16 @@ def get_plugin_asset(
     URL 中的 /assets/ 前缀映射到插件根目录；
     若插件未提供前端资源，返回空 JS 占位，避免前端 loader 报 404.
     """
-    _assert_private_plugin_access(svc, plugin_id, user)
     plugin_path = svc.get_plugin_path(plugin_id)
     if not plugin_path:
         return fail(code=ErrorCode.PLUGIN_NOT_FOUND, msg="插件未找到")
 
-    # /assets/ 是虚拟前缀，实际文件位于插件根目录下
+    # /assets/ 是虚拟前缀；仅暴露 frontend/ 前端构建产物，禁止读取后端源码。
     relative_path = file_path
     if relative_path.startswith("assets/"):
         relative_path = relative_path[len("assets/") :]
+    if not relative_path.startswith("frontend/"):
+        return fail(code=ErrorCode.RESOURCE_NOT_FOUND, msg="资源不存在")
 
     target = os.path.join(plugin_path, relative_path)
     real_plugin_path = os.path.realpath(plugin_path)
