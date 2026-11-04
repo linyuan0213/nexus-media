@@ -192,8 +192,8 @@ class DownloaderCore:
                         tags=task.get("tags"),
                     ):
                         if not success:
+                            # 失败保持原标签，保留兜底扫描和重启后的重试机会。
                             log.warn(f"[Downloader]任务 {tid} 转移失败：{msg}")
-                            client.set_torrents_status(ids=tid, tags=tags)
                             return
                         if op == "move":
                             log.warn(f"[Downloader]移动模式下删除种子文件：{tid}")

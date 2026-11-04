@@ -60,7 +60,7 @@ class TestDownloadMonitor:
         assert "qb1:task1" in m._processed_ids
         assert "tr1:task1" in m._processed_ids
 
-    def test_warmup_skips_stale_path_without_history(self, mock_factory, mock_bus):
+    def test_warmup_keeps_stale_path_for_retry(self, mock_factory, mock_bus):
         history = MagicMock()
         history.get_by_source.return_value = None
         m = DownloadMonitor(
@@ -77,8 +77,8 @@ class TestDownloadMonitor:
 
         m._warmup()
 
-        assert "qb1:stale" in m._processed_ids
-        assert "tr1:stale" in m._processed_ids
+        assert "qb1:stale" not in m._processed_ids
+        assert "tr1:stale" not in m._processed_ids
 
     def test_warmup_keeps_existing_untransferred_path(self, tmp_path, mock_factory, mock_bus):
         target = tmp_path / "movie.mkv"

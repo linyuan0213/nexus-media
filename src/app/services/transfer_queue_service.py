@@ -10,7 +10,7 @@ from app.core.settings import settings
 from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
-from app.infrastructure.task_queue import Task, TaskQueue, TaskWorker, create_task_queue
+from app.infrastructure.task_queue import Task, TaskQueue, TaskStatus, TaskWorker, create_task_queue
 from app.services.identity_resolver import IdentityResolver
 from app.services.lifecycle_service import LifecycleProjector
 
@@ -81,8 +81,14 @@ class TransferQueueService:
         try:
             task = self._queue.enqueue("transfer.task", payload, dedup_key=dedup)
             if task.status.terminal:
-                log.info(f"[TransferQueue]跳过已结束的重复转移任务 {task.id} status={task.status.value}")
-                return True
+                if task.status == TaskStatus.SUCCEEDED:
+                    log.info(f"[TransferQueue]跳过已成功的重复转移任务 {task.id}")
+                    return True
+                # 失败/死信/取消不视为幂等成功，允许创建一次新的重试任务。
+                task = self._queue.enqueue("transfer.task", payload, dedup_key=f"{dedup}:retry:{task.id}")
+                if task.status.terminal:
+                    log.warn(f"[TransferQueue]重试任务仍处于终态 {task.id} status={task.status.value}")
+                    return False
             self._record(payload, LifecycleStage.TRANSFER_QUEUED, LifecycleStatus.QUEUED, "transfer.queued", task)
             return True
         except Exception as exc:  # noqa: BLE001
@@ -102,14 +108,10 @@ class TransferQueueService:
         if current is None:
             current = repo.get_grouped_identity(identity_id)
         stage = (
-            str(current.get("STAGE") or "")
-            if isinstance(current, dict)
-            else str(getattr(current, "STAGE", "") or "")
+            str(current.get("STAGE") or "") if isinstance(current, dict) else str(getattr(current, "STAGE", "") or "")
         )
         status = (
-            str(current.get("STATUS") or "")
-            if isinstance(current, dict)
-            else str(getattr(current, "STATUS", "") or "")
+            str(current.get("STATUS") or "") if isinstance(current, dict) else str(getattr(current, "STATUS", "") or "")
         )
         return stage == LifecycleStage.IN_LIBRARY.value and status == LifecycleStatus.SUCCEEDED.value
 
@@ -129,9 +131,8 @@ class TransferQueueService:
 
             def _post_process(_task: TransferTask, success: bool, msg: str) -> None:
                 if not success:
+                    # 失败保持原标签，保留 30 分钟兜底扫描和重启后的重试机会。
                     log.warn(f"[TransferQueue]任务 {task_id} 转移失败: {msg}")
-                    if client:
-                        client.set_torrents_status(ids=task_id, tags=tags)
                     return
                 if payload.get("operation") == "move":
                     log.info(f"[TransferQueue]移动模式删除种子: {task_id}")

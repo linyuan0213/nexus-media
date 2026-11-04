@@ -73,7 +73,7 @@ def test_transfer_queue_executes_and_post_processes(monkeypatch):
     service.stop()
 
 
-def test_transfer_queue_failure_retries_and_sets_failure_status(monkeypatch):
+def test_transfer_queue_failure_keeps_status_for_retry(monkeypatch):
     monkeypatch.setattr(module, "create_task_queue", lambda name: MemoryTaskQueue(name))
     client = _FakeClient()
     pipeline = _FakePipeline(success=False)
@@ -89,7 +89,7 @@ def test_transfer_queue_failure_retries_and_sets_failure_status(monkeypatch):
         }
     )
     _wait_until(lambda: len(pipeline.tasks) >= 1)
-    _wait_until(lambda: bool(client.status_calls))
+    assert client.status_calls == []
     service.stop()
 
 

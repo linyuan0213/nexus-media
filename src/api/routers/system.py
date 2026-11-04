@@ -68,6 +68,7 @@ from app.services.config_reloader import ConfigReloader
 from app.services.indexer_service import IndexerService
 from app.services.log_search_service import LogSearchService
 from app.services.log_streaming_service import LogStreamingService
+from app.services.metadata_permissions import can_use_private_metadata
 from app.services.site_config_updater import SiteConfigUpdater
 from app.services.system.config import IndexerConfigService
 from app.services.system.lifecycle import SystemLifecycleService
@@ -599,6 +600,14 @@ def search(
     """
     WEB资源搜索（后台执行，前端轮询进度和结果）
     """
+    filters = req.filters or {}
+    if not can_use_private_metadata(
+        current_user,
+        provider=req.anchor_provider or filters.get("metadata_source"),
+        metadata_ref=req.metadata_ref,
+        content_profile=req.content_profile or filters.get("content_profile"),
+    ):
+        return fail(code=ErrorCode.PERMISSION_DENIED, msg="无权使用该内容画像或元数据来源")
     session_id = str(uuid.uuid4())
     TokenCache.delete("search")
     TokenCache.set(f"search_session:{current_user.user_id}", session_id, ttl=1800)

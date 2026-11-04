@@ -515,9 +515,7 @@ class FileTransferService:
                 if bluray_disk_dir is None:
                     msg = "目录下未找到媒体文件"
                     if self._history.is_need_insert_transfer_unknown(in_path):
-                        self._history.insert_transfer_unknown(
-                            in_path, target_dir, operation or self._default_operation
-                        )
+                        self._history.insert_transfer_unknown(in_path, target_dir, operation or self._default_operation)
                     return self._finish_transfer(False, msg, in_path)
                 return self._finish_transfer(True, "", in_path)
 
@@ -851,10 +849,7 @@ class FileTransferService:
                 "providers": [str(getattr(snapshot, "primary_provider", "") or "")]
                 + [str(getattr(ref, "provider", "") or "") for ref in getattr(snapshot, "refs", []) or []],
             }
-            return str(
-                get_category(rule_map.get(key), info, str(media_type_value or key))
-                or ""
-            )
+            return str(get_category(rule_map.get(key), info, str(media_type_value or key)) or "")
         except Exception as exc:  # noqa: BLE001 - 分类失败不阻断转移
             log.debug(f"[Rmt]快照分类匹配失败: {exc}")
             return ""
@@ -1661,7 +1656,7 @@ class FileTransferService:
         self,
         backend_id: Any,
         target_dir: str | None,
-        action: Callable[[], None],
+        action: Callable[[], Any],
     ) -> bool:
         """与批量重命名共享目标目录锁；竞争时跳过本次写入."""
         if not target_dir:
@@ -1891,20 +1886,35 @@ class FileTransferService:
         else:
             ret_file_path = f"{ret_file_path}{file_ext}"
             new_file = ret_file_path
-            acquired = self._with_library_target_lock(
-                getattr(dst_backend, "id", None) or "local",
-                ret_dir_path,
-                lambda: self._engine.transfer(
+            transfer_result = {"ok": False}
+
+            def _transfer() -> None:
+                transfer_result["ok"] = self._engine.transfer(
                     file_item,
                     ret_file_path,
                     operation,
                     over_flag=False,
                     src_backend=src_backend,
                     dst_backend=dst_backend,
-                ),
+                )
+
+            acquired = self._with_library_target_lock(
+                getattr(dst_backend, "id", None) or "local",
+                ret_dir_path,
+                _transfer,
             )
             if not acquired:
                 return 0, 0, alert_messages, 1, new_file, ret_file_path, ret_dir_path
+            if not transfer_result["ok"]:
+                return self._record_fail(
+                    file_item,
+                    reg_path,
+                    target_dir,
+                    operation,
+                    udf_flag,
+                    alert_messages,
+                    "目标文件在转移过程中已存在，未执行转移",
+                )
         # 多后端镜像：复制到其他已启用且缺失该文件的后端
         self._replicate_to_enabled_backends(media, new_file, dst_backend)
         return 0, 0, alert_messages, exist_filenum, new_file, ret_file_path, ret_dir_path
@@ -1923,9 +1933,7 @@ class FileTransferService:
                 )
             )
         snapshot = (
-            self._metadata_service.latest_snapshot_for_media(media)
-            if self._metadata_service is not None
-            else None
+            self._metadata_service.latest_snapshot_for_media(media) if self._metadata_service is not None else None
         )
         season_episode = media.get_season_episode_string() if out_path else media.get_season_string()
         media_dto = TransferMediaDTO(

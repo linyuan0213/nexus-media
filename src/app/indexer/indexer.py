@@ -189,12 +189,27 @@ class Indexer:
         self._ensure_external_providers()
         site_filter = (filter_args or {}).get("site")
         external_sites: dict[str, set[str]] = {}
-        if site_filter is not None:
-            for site in external_indexer_sites():
-                external_sites.setdefault(str(site.get("source") or ""), set()).add(str(site.get("name") or ""))
-            site_filter = set(site_filter)
+        for site in external_indexer_sites():
+            external_sites.setdefault(str(site.get("source") or ""), set()).add(str(site.get("name") or ""))
+        site_filter_set = set(site_filter) if site_filter is not None else None
+        user_id = filter_args.get("user_id") if filter_args else None
+        visible = None
+        grant_service = self.site_grant_service
+        if user_id and grant_service is not None:
+            visible = grant_service.get_visible_sites_by_id(user_id)
         for provider in self._external_registry.list():
-            if site_filter is not None and not (external_sites.get(provider.provider_id, set()) & site_filter):
+            provider_sites = external_sites.get(provider.provider_id, set())
+            allowed_sites = provider_sites
+            if visible is not None and grant_service is not None:
+                allowed_sites = set()
+                for site in provider_sites:
+                    if grant_service.is_site_allowed(visible, site, provider.provider_id, usage="search"):
+                        allowed_sites.add(site)
+                # 外部 provider 一次搜索会覆盖其全部站点；部分授权时整体跳过，避免越权站点。
+                if not allowed_sites or allowed_sites != provider_sites:
+                    continue
+            requested = site_filter_set if site_filter_set is not None else allowed_sites
+            if not (requested & allowed_sites):
                 continue
             prefix = f"{provider.provider_id}:"
             priorities = {key[len(prefix) :]: value for key, value in priority_map.items() if key.startswith(prefix)}

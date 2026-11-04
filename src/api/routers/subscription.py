@@ -25,10 +25,10 @@ from app.domain.enums import SystemConfigKey
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType, normalize_media_type_input
 from app.media import meta_info
-from app.media.metadata.registry import registry as metadata_registry
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
 from app.services.apikey_service import APIKeyService
+from app.services.metadata_permissions import can_use_private_metadata
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
 from app.services.subscribe.management.history_service import SubscribeHistoryService
 from app.services.subscribe.management.service import SubscribeService
@@ -342,16 +342,12 @@ def add_rss_media(
     kwargs["user_id"] = user.user_id
     permissions = set(getattr(user, "permissions", []) or [])
     allow_private = bool(getattr(user, "is_superadmin", False)) or "metadata:private:view" in permissions
-    profile = str(kwargs.get("content_profile") or "").strip()
-    # core 画像（default/anime）是公共能力；其余画像与 private provider 需要显式授权。
-    provider_key = str(req.provider or "").strip().lower()
-    if not provider_key:
-        metadata_ref = str(req.metadata_ref or "")
-        if ":" in metadata_ref:
-            provider_key = metadata_ref.split(":", 1)[0].strip().lower()
-    descriptor = getattr(metadata_registry.get_provider(provider_key), "descriptor", None) if provider_key else None
-    private_provider = getattr(descriptor, "visibility", "public") == "private"
-    if not allow_private and (private_provider or profile not in ("", "default", "anime")):
+    if not can_use_private_metadata(
+        user,
+        provider=req.provider,
+        metadata_ref=req.metadata_ref,
+        content_profile=kwargs.get("content_profile"),
+    ):
         return fail(msg="无权创建该内容画像的订阅")
     kwargs["allow_private"] = allow_private
     kwargs["permissions"] = None if getattr(user, "is_superadmin", False) else permissions
@@ -407,6 +403,13 @@ def update_rss_media(
     kwargs["user"] = user
     if not req.rssid:
         return fail(code=ErrorCode.PARAM_VALIDATION_FAILED, msg="缺少订阅ID", page=req.page, name=req.name, rssid=None)
+    if not can_use_private_metadata(
+        user,
+        provider=req.provider,
+        metadata_ref=req.metadata_ref,
+        content_profile=kwargs.get("content_profile"),
+    ):
+        return fail(code=ErrorCode.PARAM_VALIDATION_FAILED, msg="无权使用该内容画像", rssid=req.rssid)
 
     denied = _check_site_grants(app_context, user, kwargs)
     if denied:
@@ -463,8 +466,15 @@ def refresh_rss(
     req: RefreshRssRequest,
     user: UserContext = Depends(require_permission("subscription:manage")),
     monitor: SubscriptionMonitor = Depends(get_subscription_monitor),
+    svc: SubscribeService = Depends(get_subscribe_service),
 ):
     mtype, _profile = _resolve_type_and_profile(req.type, req.content_profile)
+    if mtype == MediaType.MOVIE:
+        owned = svc.get_subscribe_movies(rid=req.rssid, user=user)
+    else:
+        owned = svc.get_subscribe_tvs(rid=req.rssid, user=user)
+    if not owned:
+        return fail(code=ErrorCode.PARAM_VALIDATION_FAILED, msg="订阅不存在或无权访问", rssid=req.rssid)
     monitor.refresh_subscription(mtype=mtype.value, rssid=req.rssid)
     return success(data=req.page)
 

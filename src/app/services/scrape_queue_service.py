@@ -14,7 +14,14 @@ from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD
 from app.events.payloads import MediaEpisodeTransferredPayload, MediaTransferFinishedPayload, SubtitleDownloadPayload
-from app.infrastructure.task_queue import QueueUnavailableError, Task, TaskQueue, TaskWorker, create_task_queue
+from app.infrastructure.task_queue import (
+    QueueUnavailableError,
+    Task,
+    TaskQueue,
+    TaskStatus,
+    TaskWorker,
+    create_task_queue,
+)
 from app.infrastructure.thread import ThreadExecutor
 from app.media.models import MediaInfo
 from app.media.scraper import Scraper
@@ -146,7 +153,13 @@ class ScrapeQueueService:
         if queue is None:
             return None
         try:
-            return queue.enqueue(task_type, payload, dedup_key=dedup_key)
+            task = queue.enqueue(task_type, payload, dedup_key=dedup_key)
+            if task.status.terminal and task.status != TaskStatus.SUCCEEDED:
+                # 失败/死信/取消不吞新请求，换 dedup key 再排一次。
+                task = queue.enqueue(task_type, payload, dedup_key=f"{dedup_key}:retry:{task.id}")
+                if task.status.terminal:
+                    return None
+            return task
         except Exception as exc:  # noqa: BLE001
             log.warn(f"[ScrapeQueue]入队失败，回退线程池: {exc}")
             return None
@@ -207,10 +220,7 @@ class ScrapeQueueService:
 
     def finalize_duplicate(self, media: MediaInfo, finalize: dict[str, Any]) -> None:
         """目标已存在且元数据完整：记录入库、发送消息并发布转移完成事件。"""
-        key = (
-            f"library:duplicate:{media.get_title_string()}:"
-            f"{media.get_season_string()}:{media.get_episode_string()}"
-        )
+        key = f"library:duplicate:{media.get_title_string()}:{media.get_season_string()}:{media.get_episode_string()}"
         self._record_media(
             media,
             LifecycleStage.IN_LIBRARY,

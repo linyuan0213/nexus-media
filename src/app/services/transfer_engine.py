@@ -261,11 +261,11 @@ class TransferEngine:
         old_file: str | None = None,
         src_backend: StorageBackend | None = None,
         dst_backend: StorageBackend | None = None,
-    ) -> None:
+    ) -> bool:
         dst_b = dst_backend or self._local
         if not over_flag and dst_b.exists(dst):
             log.warn(f"[Rmt]文件已存在：{dst}")
-            return
+            return False
         if over_flag and old_file:
             old_backend = dst_b
             if old_backend.exists(old_file):
@@ -280,6 +280,7 @@ class TransferEngine:
 
         self.transfer_subtitles(src, dst, operation, src_backend, dst_backend)
         self.transfer_audio_tracks(src, dst, operation, over_flag, src_backend, dst_backend)
+        return True
 
     @staticmethod
     def _subtitle_match(file_name: str, sub_name: str, meta, sub_meta) -> bool:
