@@ -3,6 +3,7 @@
 import re
 import threading
 import time
+import uuid
 
 from lxml import etree
 
@@ -66,7 +67,8 @@ class BrowserSigninHandler(SiteSigninHandler):
                 cleanup_auto_tabs=True,
                 slot_timeout=180.0,
             ) as session:
-                result = session.navigate(home_url, cookie=ctx.cookie)
+                tab_name = f"auto_login_{uuid.uuid4().hex[:8]}"
+                result = session.navigate(home_url, tab_name=tab_name, cookie=ctx.cookie)
                 html_text = result.get("html", "") or ""
                 if not html_text:
                     return SigninResult.fail(site, "无法打开网站")
@@ -95,10 +97,11 @@ class BrowserSigninHandler(SiteSigninHandler):
                 cleanup_auto_tabs=True,
                 slot_timeout=180.0,
             ) as session:
+                tab_name = f"auto_signin_{uuid.uuid4().hex[:8]}"
                 # 优先直接访问签到页：GET attendance 即完成签到，无需首页查找+点击，
                 # 且等待签到页自身的 WAF/雷池挑战清除后再判定，避免误报失败
                 attendance_url = self._resolve_attendance_url(home_url)
-                result = session.navigate(attendance_url, cookie=ctx.cookie)
+                result = session.navigate(attendance_url, tab_name=tab_name, cookie=ctx.cookie)
                 html_text = result.get("html", "") or ""
                 if not html_text:
                     return SigninResult.fail(site, "无法打开网站")
@@ -120,7 +123,7 @@ class BrowserSigninHandler(SiteSigninHandler):
 
                 # 直接访问未生效（可能需要表单/按钮提交），回退首页查找签到按钮
                 self._plugin_ctx.info(f"{site} 直接访问签到页未生效，回退首页查找签到按钮")
-                result = session.navigate(home_url, cookie=ctx.cookie)
+                result = session.navigate(home_url, tab_name=tab_name, cookie=ctx.cookie)
                 html_text = result.get("html", "") or ""
                 if not html_text:
                     return SigninResult.fail(site, "无法打开网站")
