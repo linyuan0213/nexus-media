@@ -643,11 +643,11 @@ class RssFeedStrategy:
                 return (
                     collection_priority,
                     episode_count,
-                    x.res_order,
                     x.seeders,
                     x.site_order,
+                    x.res_order,
                 )
-            return (collection_priority, episode_count, x.res_order, x.site_order, x.seeders)
+            return (collection_priority, episode_count, x.site_order, x.res_order, x.seeders)
 
         rss_download_torrents.sort(key=_rss_sort_key, reverse=True)
 

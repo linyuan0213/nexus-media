@@ -88,6 +88,24 @@ class TestTorrentGetDownloadList:
         result = Torrent.get_download_list([low, high], download_order="site")
         assert result[0].title == "Low"
 
+    def test_site_mode_site_priority_beats_rule_order(self):
+        high_site = _MediaInfo(
+            title="HighSite",
+            type=MediaType.MOVIE,
+            res_order=0,
+            site_order=99,
+            seeders=1,
+        )
+        high_rule = _MediaInfo(
+            title="HighRule",
+            type=MediaType.MOVIE,
+            res_order=99,
+            site_order=-21,
+            seeders=999,
+        )
+        result = Torrent.get_download_list([high_rule, high_site], download_order="site")
+        assert result[0].title == "HighSite"
+
     def test_seeder_mode_tie_prefers_lower_pri_site(self):
         """seeder 模式种子数相同时，主站（pri 小、site_order 大）胜出"""
         low = _MediaInfo(

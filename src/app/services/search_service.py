@@ -234,25 +234,26 @@ class SearchResultProcessor:
             season = max(seasons) if seasons else (getattr(x, "begin_season", 0) or 0)
             episode = getattr(x, "begin_episode", 0) or 0
             if download_order == "seeder":
-                # 做种数优先：做种数在站点顺序前
+                # 做种数优先：做种数 > 站点顺序 > 规则顺序
                 order_key = "{}{}{}{}{}{}{}{}".format(
                     str(season).rjust(3, "0"),
                     str(collection_priority).rjust(1, "0"),
                     str(episode).rjust(3, "0"),
                     str(episode_count).rjust(3, "0"),
-                    str(x.res_order).rjust(3, "0"),
                     str(x.seeders).rjust(10, "0"),
                     str(x.site_order).rjust(3, "0"),
+                    str(x.res_order).rjust(3, "0"),
                     str(x.title).ljust(100, " "),
                 )
             else:
+                # 站点优先：站点顺序 > 规则顺序 > 做种数
                 order_key = "{}{}{}{}{}{}{}{}".format(
                     str(season).rjust(3, "0"),
                     str(collection_priority).rjust(1, "0"),
                     str(episode).rjust(3, "0"),
                     str(episode_count).rjust(3, "0"),
-                    str(x.res_order).rjust(3, "0"),
                     str(x.site_order).rjust(3, "0"),
+                    str(x.res_order).rjust(3, "0"),
                     str(x.seeders).rjust(10, "0"),
                     str(x.title).ljust(100, " "),
                 )
