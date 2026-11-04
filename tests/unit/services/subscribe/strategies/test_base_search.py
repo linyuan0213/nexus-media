@@ -325,7 +325,7 @@ class TestProviderRefSearch:
 
 
 def test_plugin_anchor_never_queries_tmdb(strategy):
-    """JavDB 等插件来源只用自己的锚点，不借用 TMDB 识别."""
+    """DemoMeta 等插件来源只用自己的锚点，不借用 TMDB 识别."""
     strategy._media_cache.get_tmdb_info = MagicMock()
 
     result = strategy._get_media_info(
@@ -333,13 +333,13 @@ def test_plugin_anchor_never_queries_tmdb(strategy):
         "JUR-897",
         "2026",
         MediaType.MOVIE,
-        anchor_provider="javdb",
+        anchor_provider="demo_meta",
         anchor_external_id="JUR-897",
-        content_profile="adult",
+        content_profile="demo",
     )
 
     assert result is not None
-    assert result.anchor_provider == "javdb"
+    assert result.anchor_provider == "demo_meta"
     assert result.anchor_external_id == "JUR-897"
     assert result.tmdb_id == ""
     assert not result.provider_data
@@ -373,9 +373,9 @@ def test_external_movie_anchor_without_provider_data_is_not_error(strategy):
             "id": 1,
             "name": "JUR-897",
             "tmdbid": "",
-            "anchor_provider": "javdb",
+            "anchor_provider": "demo_meta",
             "anchor_external_id": "JUR-897",
-            "content_profile": "adult",
+            "content_profile": "demo",
         }
     }
     strategy._movie_repo = MagicMock()

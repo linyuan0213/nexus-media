@@ -42,7 +42,7 @@ class TestChallengeDetection:
     def test_cloudflare_script_on_normal_page_is_not_challenge(self):
         """Cloudflare 会在已放行页面注入 challenge-platform 脚本，不能误判."""
         html = (
-            "<html><head><title>SNOS-363 正常内容 - JAVLibrary</title>"
+            "<html><head><title>DEMO-363 正常内容 - DemoAlt</title>"
             '<script src="/cdn-cgi/challenge-platform/scripts/jsd/main.js"></script>'
             '</head><body><div class="video"></div></body></html>'
         )

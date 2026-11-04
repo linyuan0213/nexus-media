@@ -593,10 +593,7 @@ class TestFallbackIdentity:
     def test_prefers_anchor(self):
         from app.utils.identity import fallback_identity
 
-        assert (
-            fallback_identity("ignored", "movie", 0, "javdb", "JJDA-083")
-            == "javdb:JJDA-083"
-        )
+        assert fallback_identity("ignored", "movie", 0, "demo_meta", "JJDA-083") == "demo_meta:JJDA-083"
 
     def test_uses_title_code(self):
         from app.utils.identity import fallback_identity

@@ -11,20 +11,20 @@ from app.media.metadata.registry import registry
 from app.schemas.auth import UserContext
 
 
-class _AdultProvider:
+class _DemoProvider:
     descriptor = ProviderDescriptor(
-        provider_key="javdb",
-        display_name="JavDB",
-        content_profiles=frozenset({"adult"}),
-        search_mode="ADULT",
+        provider_key="demo_meta",
+        display_name="DemoMeta",
+        content_profiles=frozenset({"demo"}),
+        search_mode="DEMO",
     )
 
 
 @pytest.fixture(autouse=True)
-def _register_adult_provider():
-    registry.register_provider(_AdultProvider(), plugin_id="test")
+def _register_demo_provider():
+    registry.register_provider(_DemoProvider(), plugin_id="test")
     yield
-    registry.unregister_provider("javdb", plugin_id="test")
+    registry.unregister_provider("demo_meta", plugin_id="test")
 
 
 class _AggregateProvider:
@@ -68,24 +68,24 @@ class _FakeContext:
         return self._user
 
 
-def test_agent_subscribe_javdb_uses_adult_profile_and_provider_anchor():
+def test_agent_subscribe_demo_meta_uses_demo_profile_and_provider_anchor():
     service = _FakeSubscribeService()
     ctx = _FakeContext(service, ["metadata:private:view"])
 
     result = subscribe_add(
         cast(ToolContext, ctx),
         "SSIS-001",
-        provider="javdb",
+        provider="demo_meta",
         external_id="AbCdEf",
         content_id="SSIS-001",
     )
 
     assert result.success
-    assert service.kwargs["content_profile"] == "adult"
-    assert service.kwargs["metadata_ref"] == "javdb:AbCdEf"
-    assert service.kwargs["mediaid"] == "javdb:AbCdEf"
+    assert service.kwargs["content_profile"] == "demo"
+    assert service.kwargs["metadata_ref"] == "demo_meta:AbCdEf"
+    assert service.kwargs["mediaid"] == "demo_meta:AbCdEf"
     assert service.kwargs["keyword"] == "SSIS-001"
-    assert service.kwargs["metadata_policy"] == "provider_only:adult"
+    assert service.kwargs["metadata_policy"] == "provider_only:demo"
 
 
 def test_agent_subscribe_tmdb_uses_legacy_mediaid():
@@ -106,11 +106,11 @@ def test_agent_subscribe_tmdb_uses_legacy_mediaid():
     assert service.kwargs["metadata_ref"] is None
 
 
-def test_agent_subscribe_adult_requires_private_permission():
+def test_agent_subscribe_demo_requires_private_permission():
     service = _FakeSubscribeService()
     ctx = _FakeContext(service)
 
-    result = subscribe_add(cast(ToolContext, ctx), "SSIS-001", provider="javdb", external_id="AbCdEf")
+    result = subscribe_add(cast(ToolContext, ctx), "SSIS-001", provider="demo_meta", external_id="AbCdEf")
 
     assert not result.success
     assert "metadata:private:view" in result.error
@@ -124,7 +124,7 @@ def test_default_subscribe_setting_is_profile_aware():
 
     keys = {
         SystemConfigKey.DefaultSubscribeSettingMovie: {"pix": "1080p"},
-        f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::adult": {"pix": "4K"},
+        f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::demo": {"pix": "4K"},
     }
 
     class _Config:
@@ -134,7 +134,7 @@ def test_default_subscribe_setting_is_profile_aware():
     service = SubscribeAddService.__new__(SubscribeAddService)
     service._system_config = _Config()
 
-    assert service._default_setting_for(MediaType.MOVIE, "adult") == {"pix": "4K"}
+    assert service._default_setting_for(MediaType.MOVIE, "demo") == {"pix": "4K"}
     assert service._default_setting_for(MediaType.MOVIE, "default") == {"pix": "1080p"}
 
 
@@ -143,20 +143,20 @@ def test_agent_subscribe_resolves_provider_when_external_id_missing():
 
     class _Metadata:
         def search(self, **kwargs):
-            return [{"ref": {"provider": "javdb", "external_id": "AbCdEf"}}]
+            return [{"ref": {"provider": "demo_meta", "external_id": "AbCdEf"}}]
 
     ctx = _FakeContext(service, ["metadata:private:view"], _Metadata())
 
     result = subscribe_add(
         cast(ToolContext, ctx),
         "SSIS-001",
-        provider="javdb",
+        provider="demo_meta",
         content_id="SSIS-001",
     )
 
     assert result.success
-    assert service.kwargs["metadata_ref"] == "javdb:AbCdEf"
-    assert service.kwargs["mediaid"] == "javdb:AbCdEf"
+    assert service.kwargs["metadata_ref"] == "demo_meta:AbCdEf"
+    assert service.kwargs["mediaid"] == "demo_meta:AbCdEf"
 
 
 def test_web_search_uses_profile_default_sites():
@@ -165,7 +165,7 @@ def test_web_search_uses_profile_default_sites():
     from app.services.search_web_entry import _apply_default_sites
 
     keys = {
-        f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::adult": {"search_sites": ["M-Team"]},
+        f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::demo": {"search_sites": ["M-Team"]},
     }
 
     class _Config:
@@ -173,7 +173,7 @@ def test_web_search_uses_profile_default_sites():
             return keys.get(key, {})
 
     filter_args = {}
-    _apply_default_sites(filter_args, MediaType.MOVIE, _Config(), "adult")
+    _apply_default_sites(filter_args, MediaType.MOVIE, _Config(), "demo")
 
     assert filter_args["site"] == ["M-Team"]
 
@@ -185,10 +185,10 @@ def test_agent_subscribe_aggregate_resolves_real_provider_and_poster(aggregate_p
         def search(self, **kwargs):
             return [
                 {
-                    "provider": "javdb",
+                    "provider": "demo_meta",
                     "title": "ABC-123 测试标题",
                     "poster": "https://img.example/abc123.jpg",
-                    "ref": {"provider": "javdb", "external_id": "AbCdEf"},
+                    "ref": {"provider": "demo_meta", "external_id": "AbCdEf"},
                 }
             ]
 
@@ -203,10 +203,10 @@ def test_agent_subscribe_aggregate_resolves_real_provider_and_poster(aggregate_p
     )
 
     assert result.success
-    assert service.kwargs["metadata_ref"] == "javdb:AbCdEf"
+    assert service.kwargs["metadata_ref"] == "demo_meta:AbCdEf"
     assert service.kwargs["image"] == "https://img.example/abc123.jpg"
     data = cast(dict, result.data)
-    assert data["provider"] == "javdb"
+    assert data["provider"] == "demo_meta"
 
 
 def test_agent_subscribe_aggregate_without_exact_match_is_rejected(aggregate_provider):
@@ -216,10 +216,10 @@ def test_agent_subscribe_aggregate_without_exact_match_is_rejected(aggregate_pro
         def search(self, **kwargs):
             return [
                 {
-                    "provider": "javdb",
+                    "provider": "demo_meta",
                     "title": "ABC-124 其他内容",
                     "poster": "https://img.example/abc124.jpg",
-                    "ref": {"provider": "javdb", "external_id": "XyZ789"},
+                    "ref": {"provider": "demo_meta", "external_id": "XyZ789"},
                 }
             ]
 

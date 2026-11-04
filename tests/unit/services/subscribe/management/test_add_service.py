@@ -214,23 +214,23 @@ def test_douban_only_tv_subscription_without_tmdb():
     svc._media.get_tmdb_season_episodes_num.assert_not_called()
 
 
-def test_provider_ref_subscribes_adult_movie():
-    """成人卡片用 content_id 作锚点、javdb ref 取详情，按单片订阅."""
+def test_provider_ref_subscribes_demo_movie():
+    """演示卡片用 content_id 作锚点、demo_meta ref 取详情，按单片订阅."""
     svc = _build_service()
     svc._metadata_service = MagicMock()
     svc._metadata_service.lookup.return_value = {
         "title": "START-649",
         "year": "2026",
         "poster": "https://example.com/start-649.jpg",
-        "overview": "adult",
-        "content_profile": "adult",
+        "overview": "demo",
+        "content_profile": "demo",
     }
     svc._metadata_service.link_subscription.return_value.as_kwargs.return_value = {
         "identity_id": "01J00000000000000000000002",
         "anchor_provider": "content_id",
         "anchor_external_id": "START-649",
-        "content_profile": "adult",
-        "metadata_policy": "provider_only:adult",
+        "content_profile": "demo",
+        "metadata_policy": "provider_only:demo",
         "naming_profile": None,
     }
     svc._movie_repo.insert.return_value = 999
@@ -240,25 +240,25 @@ def test_provider_ref_subscribes_adult_movie():
         year="",
         mtype=MediaType.MOVIE,
         mediaid="content_id:START-649",
-        metadata_ref="javdb:qAZBWN",
-        content_profile="adult",
-        metadata_policy="provider_only:adult",
+        metadata_ref="demo_meta:qAZBWN",
+        content_profile="demo",
+        metadata_policy="provider_only:demo",
         allow_private=True,
     )
 
     assert code == 0
     svc._metadata_service.lookup.assert_called_once_with(
-        "javdb",
+        "demo_meta",
         "qAZBWN",
         media_type=MediaType.MOVIE,
-        content_profile="adult",
+        content_profile="demo",
         allow_private=True,
         permissions=None,
     )
     inserted_kw = svc._movie_repo.insert.call_args.kwargs
     assert inserted_kw["anchor_provider"] == "content_id"
     assert inserted_kw["anchor_external_id"] == "START-649"
-    assert inserted_kw["content_profile"] == "adult"
+    assert inserted_kw["content_profile"] == "demo"
     assert inserted_kw["media_info"].tmdb_id == ""
     assert inserted_kw["media_info"].anchor_provider == "content_id"
     assert inserted_kw["media_info"].anchor_external_id == "START-649"

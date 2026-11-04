@@ -23,7 +23,7 @@ def _media():
     media.tmdb_id = None
     media.title = "ACHJ-097"
     media.identity_id = "id"
-    media.get_media_ref.return_value = MagicMock(provider="javdb", external_id="ACHJ-097")
+    media.get_media_ref.return_value = MagicMock(provider="demo_meta", external_id="ACHJ-097")
     media.get_season_episode_string.return_value = ""
     return media
 

@@ -8,14 +8,14 @@ from app.services.transfer.library_rename_models import RenameScope
 
 def test_metadata_prepare_reads_selected_instance():
     media_server = MagicMock()
-    media_server.get_libraries.return_value = [{"id": "lib-adult"}]
+    media_server.get_libraries.return_value = [{"id": "lib-demo"}]
     media_server.get_items.return_value = []
     resolver = LibraryMetadataResolver(MagicMock(), media_server, MagicMock(), MagicMock())
 
     resolver.prepare(True, server_id=2)
 
     media_server.get_libraries.assert_called_once_with(2)
-    media_server.get_items.assert_called_once_with("lib-adult", 2)
+    media_server.get_items.assert_called_once_with("lib-demo", 2)
 
 
 def test_rename_scope_persists_server_id():

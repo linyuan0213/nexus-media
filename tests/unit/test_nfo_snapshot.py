@@ -189,24 +189,24 @@ def test_movie_nfo_writes_nested_ratings_and_votes(tmp_path):
     from app.media.metadata.registry import registry
 
     class _Provider:
-        descriptor = ProviderDescriptor(provider_key="javdb", display_name="JavDB", rating_max=5)
+        descriptor = ProviderDescriptor(provider_key="demo_meta", display_name="DemoMeta", rating_max=5)
 
     registry.register_provider(_Provider(), plugin_id="test")
     try:
         _run_movie_nfo_ratings_test(tmp_path)
     finally:
-        registry.unregister_provider("javdb", plugin_id="test")
+        registry.unregister_provider("demo_meta", plugin_id="test")
 
 
 def _run_movie_nfo_ratings_test(tmp_path):
     downloader = _FakeDownloader()
     generator = NfoGenerator(downloader)
     snapshot = _snapshot(
-        primary_provider="javdb",
-        ratings={"javdb": 4.6, "douban": 8.8},
+        primary_provider="demo_meta",
+        ratings={"demo_meta": 4.6, "douban": 8.8},
         fields={
             **_snapshot().fields,
-            "votes": FieldValue(value="1234", provider="javdb", external_id="x"),
+            "votes": FieldValue(value="1234", provider="demo_meta", external_id="x"),
         },
     )
 
@@ -220,7 +220,7 @@ def _run_movie_nfo_ratings_test(tmp_path):
     xml, _ = downloader.saved[0]
     assert "<votes>1234</votes>" in xml
     assert "<ratings>" in xml
-    assert '<rating name="javdb" max="5" default="true">' in xml
+    assert '<rating name="demo_meta" max="5" default="true">' in xml
     assert "<value>4.6</value>" in xml
     assert '<rating name="douban" max="10"' in xml
 

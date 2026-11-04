@@ -30,12 +30,12 @@ def test_emby_refresh_uses_path_when_title_does_not_match():
                 "title": "TC-268 アダルト動画サイト MGS動画",
                 "year": "",
                 "type": "movie",
-                "file_path": "/Media/adult/日本有码/TC/TC-268/TC-268.mp4",
+                "file_path": "/Media/demo/日本有码/TC/TC-268/TC-268.mp4",
             }
         ]
     )
 
-    client.get_item_id_by_path.assert_called_once_with("/Media/adult/日本有码/TC/TC-268/TC-268.mp4")
+    client.get_item_id_by_path.assert_called_once_with("/Media/demo/日本有码/TC/TC-268/TC-268.mp4")
     refresh_item.assert_called_once_with("129531", replace_images=False)
 
 

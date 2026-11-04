@@ -250,7 +250,7 @@ class TestSubscriptionRouter:
 
     def test_movie_list_excludes_custom_profiles(self, client, mock_subscribe_service):
         mock_subscribe_service.get_subscribe_movies.return_value = {
-            "1": {"id": 1, "content_profile": "adult"},
+            "1": {"id": 1, "content_profile": "demo"},
             "2": {"id": 2, "content_profile": "default"},
             "3": {"id": 3},
         }
@@ -262,11 +262,11 @@ class TestSubscriptionRouter:
 
     def test_movie_list_filters_custom_profile(self, client, mock_subscribe_service):
         mock_subscribe_service.get_subscribe_movies.return_value = {
-            "1": {"id": 1, "content_profile": "adult"},
+            "1": {"id": 1, "content_profile": "demo"},
             "2": {"id": 2, "content_profile": "default"},
         }
 
-        resp = client.post("/api/v1/subscription/movie/list", json={"content_profile": "adult"})
+        resp = client.post("/api/v1/subscription/movie/list", json={"content_profile": "demo"})
 
         assert resp.status_code == 200
         assert [item["id"] for item in resp.json()["data"]] == [1]

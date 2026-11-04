@@ -104,7 +104,7 @@ def test_finish_rss_subscribe_captures_poster_before_delete():
         DESC="d",
         OVER_EDITION=0,
         USER_ID=3,
-        CONTENT_PROFILE="adult",
+        CONTENT_PROFILE="demo",
     )
     movie_repo = MagicMock()
     movie_repo.get_all.return_value = [row]
@@ -122,7 +122,7 @@ def test_finish_rss_subscribe_captures_poster_before_delete():
     assert captured == {"poster": "http://poster", "owner": 3}
     message.send_rss_finished_message.assert_called_once()
     assert message.send_rss_finished_message.call_args.kwargs["owner_user_id"] == 3
-    assert message.send_rss_finished_message.call_args.kwargs["media_info"].content_profile == "adult"
+    assert message.send_rss_finished_message.call_args.kwargs["media_info"].content_profile == "demo"
 
 
 def test_episode_transferred_finalizes_only_when_lack_empty():
@@ -628,7 +628,7 @@ def test_reconcile_finalizes_running_movie_when_transfer_history_exists():
         tmdb_id="",
         state="R",
         identity_id="id-21",
-        anchor_provider="javdb",
+        anchor_provider="demo_meta",
         anchor_external_id="PRWF-017",
         content_profile="custom",
         keyword="PRWF-017",
@@ -636,7 +636,7 @@ def test_reconcile_finalizes_running_movie_when_transfer_history_exists():
     svc._tv_repo.get_all.return_value = []
     svc._movie_repo.get_all.return_value = [movie]
     transfer_repo = MagicMock()
-    transfer_repo.return_value.get_existing_anchors.return_value = {("javdb", "PRWF-017")}
+    transfer_repo.return_value.get_existing_anchors.return_value = {("demo_meta", "PRWF-017")}
 
     with patch("app.services.subscribe.management.service.TransferRepository", transfer_repo):
         svc.reconcile_pending_transfers(now=datetime.datetime(2026, 1, 1))

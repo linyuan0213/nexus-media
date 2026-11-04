@@ -213,7 +213,7 @@ def test_douban_primary_prefers_all_douban_fields_when_available():
 def test_provider_only_keeps_fused_images_and_credits():
     """provider_only 聚合记录应完整保留标题/海报/演员，不因字段过滤丢失."""
     fused = _record(
-        "adult",
+        "demo",
         title="PRWF-017 示例标题",
         overview="简介",
         images={
@@ -226,10 +226,10 @@ def test_provider_only_keeps_fused_images_and_credits():
     snapshot = MetadataComposer().compose(
         "id-1",
         [fused],
-        get_preset("provider_only:adult"),
-        content_profile="adult",
+        get_preset("provider_only:demo"),
+        content_profile="demo",
         capabilities={
-            "adult": {
+            "demo": {
                 ProviderCapability.DETAIL,
                 ProviderCapability.IMAGES,
                 ProviderCapability.CREDITS,
@@ -238,7 +238,7 @@ def test_provider_only_keeps_fused_images_and_credits():
     )
 
     assert snapshot.fields["title"].value == "PRWF-017 示例标题"
-    assert snapshot.primary_provider == "adult"
+    assert snapshot.primary_provider == "demo"
     assert snapshot.images["poster"][0].url == "https://img/poster.jpg"
     assert snapshot.images["fanart"][0].url == "https://img/fanart.jpg"
     assert snapshot.credits[0].name == "小松空"

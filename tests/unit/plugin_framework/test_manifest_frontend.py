@@ -10,7 +10,7 @@ def test_frontend_content_profiles_round_trip():
             "name": "Demo",
             "frontend": {
                 "content_profiles": [
-                    {"key": "adult", "label": "AV", "media_type": "movie"},
+                    {"key": "demo", "label": "AV", "media_type": "movie"},
                     {"label": "缺少 key"},
                 ],
                 "routes": [],
@@ -19,10 +19,8 @@ def test_frontend_content_profiles_round_trip():
         }
     )
 
-    assert manifest.frontend.content_profiles == [{"key": "adult", "label": "AV", "media_type": "movie"}]
-    assert manifest.to_dict()["frontend"]["content_profiles"] == [
-        {"key": "adult", "label": "AV", "media_type": "movie"}
-    ]
+    assert manifest.frontend.content_profiles == [{"key": "demo", "label": "AV", "media_type": "movie"}]
+    assert manifest.to_dict()["frontend"]["content_profiles"] == [{"key": "demo", "label": "AV", "media_type": "movie"}]
 
 
 def test_manifest_accepts_message_template_pack():
@@ -34,9 +32,9 @@ def test_manifest_accepts_message_template_pack():
             "version": "1.0.0",
             "backend": {
                 "metadata": {
-                    "message_labels": {"adult": "AV"},
+                    "message_labels": {"demo": "AV"},
                     "message_templates": {
-                        "adult": {
+                        "demo": {
                             "rss_added": {
                                 "title": "{{ media_info.get_title_string() }} AV",
                                 "text": "画像：{{ profile_label }}",
@@ -48,6 +46,6 @@ def test_manifest_accepts_message_template_pack():
         }
     )
 
-    assert manifest.backend.metadata.message_labels == {"adult": "AV"}
-    assert "rss_added" in manifest.backend.metadata.message_templates["adult"]
+    assert manifest.backend.metadata.message_labels == {"demo": "AV"}
+    assert "rss_added" in manifest.backend.metadata.message_templates["demo"]
     assert "message_templates" in manifest.to_dict()["backend"]["metadata"]

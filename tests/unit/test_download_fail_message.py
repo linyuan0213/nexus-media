@@ -131,7 +131,7 @@ def test_fail_message_inherits_anime_profile(builder, monkeypatch):
         org_string="魔法少女 S01E01",
         enclosure="http://site/1",
         user_id=1,
-        content_profile="adult",
+        content_profile="demo",
     )
 
     builder.send_download_fail_message(item, "下载设置无效")
@@ -147,7 +147,7 @@ def test_subscription_note_backfills_poster_and_source(builder, monkeypatch):
         anchor_provider="content_id",
         provider="aggregate",
         metadata_ref="aggregate:ABC-123",
-        desc='{"poster": "https://img/abc123.jpg", "source_provider": "javdb"}',
+        desc='{"poster": "https://img/abc123.jpg", "source_provider": "demo_meta"}',
         id=9,
     )
     monkeypatch.setattr(builder, "_subscription_context", lambda item: subscription)
@@ -156,5 +156,5 @@ def test_subscription_note_backfills_poster_and_source(builder, monkeypatch):
     builder._enrich_from_subscription(item)
 
     assert item.poster_path == "https://img/abc123.jpg"
-    assert item.provider_data["source_provider"] == "javdb"
-    assert _source_provider(item) == "javdb"
+    assert item.provider_data["source_provider"] == "demo_meta"
+    assert _source_provider(item) == "demo_meta"

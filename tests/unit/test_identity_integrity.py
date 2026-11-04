@@ -43,9 +43,7 @@ def test_same_work_resolves_to_one_identity_across_refs_and_title():
 
 
 def test_search_resolution_does_not_fallback_to_local_identity():
-    resolved = IdentityResolver().resolve_values(
-        title="Unknown No Anchor", media_type="movie", allow_local=False
-    )
+    resolved = IdentityResolver().resolve_values(title="Unknown No Anchor", media_type="movie", allow_local=False)
 
     assert resolved.identity_id == ""
 
@@ -68,7 +66,7 @@ def test_preview_identity_is_resolved_to_real_identity():
 def test_cross_provider_external_code_resolves_to_one_identity():
     repo = MediaIdentityRepository()
     identity = repo.ensure_identity(media_type="movie", title="MIDA-853 Full Title", year="")
-    repo.upsert_ref(identity.IDENTITY_ID, provider="javdb", external_id="MIDA-853", media_type="movie")
+    repo.upsert_ref(identity.IDENTITY_ID, provider="demo_meta", external_id="MIDA-853", media_type="movie")
 
     resolved = IdentityResolver().resolve_values(
         provider="content_id",

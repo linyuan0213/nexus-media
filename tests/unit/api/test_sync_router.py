@@ -145,16 +145,16 @@ class TestSyncRouter:
             json={
                 "logid": 1,
                 "syncmod": "link",
-                "content_profile": "adult",
-                "provider": "javdb",
+                "content_profile": "demo",
+                "provider": "demo_meta",
                 "external_id": "ABC-001",
             },
         )
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         kwargs = mock_sync_service.manual_transfer.call_args.kwargs
-        assert kwargs["content_profile"] == "adult"
-        assert kwargs["provider"] == "javdb"
+        assert kwargs["content_profile"] == "demo"
+        assert kwargs["provider"] == "demo_meta"
         assert kwargs["external_id"] == "ABC-001"
 
     def test_rename_file(self, client, mock_sync_service):

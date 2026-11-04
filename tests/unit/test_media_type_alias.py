@@ -6,7 +6,7 @@ from app.domain.mediatypes import MediaType, normalize_media_type_input
 from app.services.system.info import WebSearchService
 
 
-def test_unknown_type_is_not_rewritten_to_adult_profile():
+def test_unknown_type_is_not_rewritten_to_demo_profile():
     media_type, profile = normalize_media_type_input("av", "default")
 
     assert media_type == "av"
@@ -14,10 +14,10 @@ def test_unknown_type_is_not_rewritten_to_adult_profile():
 
 
 def test_legacy_type_keeps_explicit_profile():
-    media_type, profile = normalize_media_type_input("AV", "adult")
+    media_type, profile = normalize_media_type_input("AV", "demo")
 
     assert media_type == "AV"
-    assert profile == "adult"
+    assert profile == "demo"
 
 
 def test_regular_media_type_is_unchanged():

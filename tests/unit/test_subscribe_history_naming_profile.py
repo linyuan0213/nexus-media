@@ -15,10 +15,10 @@ def test_history_upsert_accepts_naming_profile():
         tmdbid="content_id:ABC-123",
         image="poster.jpg",
         desc="desc",
-        naming_profile="adult.default",
+        naming_profile="demo.default",
     )
 
-    assert repo.upsert_rss_history.call_args.kwargs["naming_profile"] == "adult.default"
+    assert repo.upsert_rss_history.call_args.kwargs["naming_profile"] == "demo.default"
 
 
 def test_history_insert_accepts_naming_profile():
@@ -33,7 +33,7 @@ def test_history_insert_accepts_naming_profile():
         tmdbid="content_id:ABC-123",
         image="poster.jpg",
         desc="desc",
-        naming_profile="adult.default",
+        naming_profile="demo.default",
     )
 
-    assert repo.insert_rss_history.call_args.kwargs["naming_profile"] == "adult.default"
+    assert repo.insert_rss_history.call_args.kwargs["naming_profile"] == "demo.default"

@@ -19,9 +19,9 @@ from app.media.models import MediaInfo
 
 def test_display_transformer_applies_by_profile():
     clear_display_image_transformers()
-    register_display_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "adult" and url else url)
+    register_display_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "demo" and url else url)
     try:
-        assert transform_display_image("adult", "http://a.jpg") == "/img/blur?url=x"
+        assert transform_display_image("demo", "http://a.jpg") == "/img/blur?url=x"
         assert transform_display_image("default", "http://a.jpg") == "http://a.jpg"
     finally:
         clear_display_image_transformers()
@@ -35,7 +35,7 @@ def test_display_transformer_unregister_stops_rewrite():
 
     register_display_image_transformer(transformer)
     unregister_display_image_transformer(transformer)
-    assert transform_display_image("adult", "http://a.jpg") == "http://a.jpg"
+    assert transform_display_image("demo", "http://a.jpg") == "http://a.jpg"
 
 
 def test_display_transformer_ignores_plugin_errors():
@@ -46,7 +46,7 @@ def test_display_transformer_ignores_plugin_errors():
 
     register_display_image_transformer(broken)
     try:
-        assert transform_display_image("adult", "http://a.jpg") == "http://a.jpg"
+        assert transform_display_image("demo", "http://a.jpg") == "http://a.jpg"
     finally:
         clear_display_image_transformers()
 
@@ -54,10 +54,10 @@ def test_display_transformer_ignores_plugin_errors():
 def test_media_info_message_image_uses_display_transformer():
     clear_display_image_transformers()
     clear_message_image_transformers()
-    register_display_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "adult" and url else url)
+    register_display_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "demo" and url else url)
     try:
         media = MediaInfo(title="T", type=MediaType.MOVIE)
-        media.content_profile = "adult"
+        media.content_profile = "demo"
         media.poster_path = "http://a.jpg"
         assert media.get_message_image() == "/img/blur?url=x"
     finally:
@@ -69,7 +69,7 @@ def test_media_info_message_image_uses_snapshot_fanart_without_tmdb_placeholder(
     clear_display_image_transformers()
     clear_message_image_transformers()
     media = MediaInfo(title="TC-268", type=MediaType.MOVIE)
-    media.content_profile = "adult"
+    media.content_profile = "demo"
     setattr(
         media,
         "snapshot",
@@ -86,10 +86,10 @@ def test_message_image_can_be_blurred_while_page_image_is_clear():
     clear_display_image_transformers()
     clear_message_image_transformers()
     register_display_image_transformer(lambda profile, url: url)
-    register_message_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "adult" and url else url)
+    register_message_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "demo" and url else url)
     try:
         media = MediaInfo(title="T", type=MediaType.MOVIE)
-        media.content_profile = "adult"
+        media.content_profile = "demo"
         media.poster_path = "http://a.jpg"
         assert media.get_message_image() == "/img/blur?url=x"
     finally:
@@ -100,11 +100,11 @@ def test_message_image_can_be_blurred_while_page_image_is_clear():
 def test_message_image_does_not_fall_back_to_display_blur_when_message_rule_exists():
     clear_display_image_transformers()
     clear_message_image_transformers()
-    register_display_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "adult" and url else url)
+    register_display_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "demo" and url else url)
     register_message_image_transformer(lambda profile, url: url)
     try:
         media = MediaInfo(title="T", type=MediaType.MOVIE)
-        media.content_profile = "adult"
+        media.content_profile = "demo"
         media.poster_path = "http://a.jpg"
         assert media.get_message_image() == "http://a.jpg"
     finally:
@@ -119,7 +119,7 @@ def test_message_poster_uses_message_policy_but_page_poster_stays_clear():
     register_message_image_transformer(lambda profile, url: "/message" if url else url)
     try:
         media = MediaInfo(title="T", type=MediaType.MOVIE)
-        media.content_profile = "adult"
+        media.content_profile = "demo"
         media.poster_path = "http://a.jpg"
         assert media.get_poster_image() == "http://a.jpg"
         assert media.get_message_image() == "/message"

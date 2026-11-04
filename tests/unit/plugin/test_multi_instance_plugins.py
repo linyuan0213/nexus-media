@@ -16,9 +16,9 @@ def test_libraryrefresh_root_refresh_uses_directory_target():
     plugin._mediaserver.resolve_route.return_value = SimpleNamespace(server_id=2, library_id="4")
     plugin._mediaserver.get_type.return_value = "emby"
 
-    plugin._refresh_library({"dest": "/media/adult/movie", "media_info": {}})
+    plugin._refresh_library({"dest": "/media/demo/movie", "media_info": {}})
 
-    plugin._mediaserver.resolve_route.assert_called_once_with(None, "/media/adult/movie")
+    plugin._mediaserver.resolve_route.assert_called_once_with(None, "/media/demo/movie")
     plugin._mediaserver.refresh_root_library.assert_called_once_with(server_id=2, library_id="4")
 
 
@@ -51,7 +51,7 @@ def test_movielike_uses_directory_routed_server_type():
         plugin._fav_transfer(
             {
                 "Event": "item.rate",
-                "Item": {"Type": "Movie", "Path": "/media/adult/movie/file.mkv"},
+                "Item": {"Type": "Movie", "Path": "/media/demo/movie/file.mkv"},
             }
         )
 

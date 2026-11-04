@@ -102,9 +102,9 @@ def test_ensure_snapshot_images_fills_missing_poster_and_keeps_fanart():
     snapshot = MediaMetadata(
         identity_id="x",
         media_type=MediaType.MOVIE,
-        content_profile="adult",
+        content_profile="demo",
         refs=[ProviderRef(provider="mgstage", external_id="TC-268")],
-        fields={"title": FieldValue(value="TC-268", provider="adult", external_id="TC-268")},
+        fields={"title": FieldValue(value="TC-268", provider="demo", external_id="TC-268")},
         images={"fanart": [ImageAsset(type="fanart", url="https://example.com/f.jpg")]},
     )
 
@@ -119,11 +119,11 @@ def test_ensure_snapshot_images_builds_credits_from_actor_fallback():
     snapshot = MediaMetadata(
         identity_id="x",
         media_type=MediaType.MOVIE,
-        content_profile="adult",
-        fields={"title": FieldValue(value="SHKD-724", provider="adult", external_id="SHKD-724")},
+        content_profile="demo",
+        fields={"title": FieldValue(value="SHKD-724", provider="demo", external_id="SHKD-724")},
         images={"poster": [ImageAsset(type="poster", url="https://example.com/p.jpg")]},
         extra={
-            "adult.actresses": ["桜木凛"],
+            "demo.actresses": ["桜木凛"],
             "actor_fallback": ["桜木凛"],
             "actor_images": {"桜木凛": "https://example.com/a.jpg"},
         },
@@ -190,7 +190,7 @@ def test_download_candidates_preserves_existing_portrait_poster(tmp_path):
 def test_white_placeholder_poster_is_removed(tmp_path):
     poster = tmp_path / "poster.jpg"
     Image.new("RGB", (800, 539), "white").save(poster)
-    snapshot = MediaMetadata(identity_id="x", content_profile="adult")
+    snapshot = MediaMetadata(identity_id="x", content_profile="demo")
     scraper = _build_scraper()
 
     scraper._normalize_snapshot_poster(snapshot, str(tmp_path))
@@ -208,7 +208,7 @@ def test_placeholder_poster_is_detected(tmp_path):
 def test_landscape_custom_cover_is_cropped_to_front_panel(tmp_path):
     poster = tmp_path / "poster.jpg"
     Image.new("RGB", (800, 539), (200, 30, 30)).save(poster)
-    snapshot = MediaMetadata(identity_id="x", content_profile="adult")
+    snapshot = MediaMetadata(identity_id="x", content_profile="demo")
     scraper = _build_scraper()
 
     scraper._normalize_snapshot_poster(snapshot, str(tmp_path))
@@ -253,7 +253,7 @@ def test_prune_missing_image_assets_removes_dangling_nfo_references(tmp_path):
     Image.new("RGB", (600, 800), (200, 30, 30)).save(tmp_path / "poster.jpg")
     snapshot = MediaMetadata(
         identity_id="x",
-        content_profile="adult",
+        content_profile="demo",
         images={
             "poster": [ImageAsset(type="poster", url="https://example.com/p.jpg")],
             "fanart": [ImageAsset(type="fanart", url="https://example.com/f.jpg")],

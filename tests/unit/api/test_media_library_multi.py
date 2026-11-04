@@ -19,7 +19,7 @@ class _Service:
     def get_servers(self):
         return [
             {"id": 1, "name": "普通 Emby", "type": "emby", "is_default": True},
-            {"id": 2, "name": "成人 Emby", "type": "emby", "is_default": False},
+            {"id": 2, "name": "演示 Emby", "type": "emby", "is_default": False},
         ]
 
     def get_media_count(self, server_id):
@@ -79,7 +79,7 @@ def test_home_returns_independent_sections_and_legacy_aggregates():
     assert len(data["sections"]) == 2
     assert data["media_counts"]["Movie"] == 8
     assert data["media_counts"]["Series"] == 4
-    assert data["sections"][1]["server_name"] == "成人 Emby"
+    assert data["sections"][1]["server_name"] == "演示 Emby"
     assert data["sections"][1]["librarys"][0]["server_id"] == 2
     assert data["sections"][1]["sync_state"].startswith("电影")
     assert data["activitys"][0]["id"] == "activity-2"
@@ -104,8 +104,8 @@ def test_refresh_and_sync_accept_target_instance():
     svc.refresh_library.assert_called_once_with(server_id=2, items=None)
 
     start_mediasync(
-        StartMediasyncRequest(server_id=2, librarys=["lib-adult"]),
+        StartMediasyncRequest(server_id=2, librarys=["lib-demo"]),
         current_user=MagicMock(),
         svc=svc,
     )
-    svc.start_sync.assert_called_once_with(librarys=["lib-adult"], server_id=2)
+    svc.start_sync.assert_called_once_with(librarys=["lib-demo"], server_id=2)

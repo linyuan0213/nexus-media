@@ -70,7 +70,7 @@ class TestCustomProfileSearchNames:
             year="2026",
             tmdb_id="content_id:START-660",
             keyword="START-660",
-            content_profile="adult",
+            content_profile="demo",
         )
 
         names, workers = SearchQueryBuilder.build_search_names(media, MagicMock())

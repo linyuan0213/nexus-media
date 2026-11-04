@@ -36,32 +36,32 @@ class TestRouterMediaType:
         assert _build_update_kwargs(req)["mtype"] == MediaType.ANIME
 
     def test_non_default_profile_uses_movie_carrier(self):
-        mtype, profile = _resolve_type_and_profile("legacy-plugin-type", "adult")
+        mtype, profile = _resolve_type_and_profile("legacy-plugin-type", "demo")
         assert mtype == MediaType.MOVIE
-        assert profile == "adult"
+        assert profile == "demo"
 
     def test_plugin_profile_defaults_to_movie_carrier(self):
-        mtype, profile = _resolve_type_and_profile("adult", "adult")
+        mtype, profile = _resolve_type_and_profile("demo", "demo")
         assert mtype == MediaType.MOVIE
-        assert profile == "adult"
+        assert profile == "demo"
 
     def test_build_kwargs_carry_provider_and_profile(self):
         req = AddRssMediaRequest(
             name="SSIS-001",
             type="legacy-plugin-type",
-            content_profile="adult",
-            provider="javdb",
-            metadata_ref="javdb:AbCdEf",
+            content_profile="demo",
+            provider="demo_meta",
+            metadata_ref="demo_meta:AbCdEf",
             mediaid="content_id:SSIS-001",
         )
         add = _build_add_kwargs(req)
         assert add["mtype"] == MediaType.MOVIE
-        assert add["content_profile"] == "adult"
-        assert add["provider"] == "javdb"
-        assert add["metadata_ref"] == "javdb:AbCdEf"
+        assert add["content_profile"] == "demo"
+        assert add["provider"] == "demo_meta"
+        assert add["metadata_ref"] == "demo_meta:AbCdEf"
         update = _build_update_kwargs(AddRssMediaRequest(rssid=1, **req.model_dump(exclude={"rssid"})))
-        assert update["content_profile"] == "adult"
-        assert update["provider"] == "javdb"
+        assert update["content_profile"] == "demo"
+        assert update["provider"] == "demo_meta"
 
 
 class TestGenericAnimeClassification:
@@ -87,7 +87,7 @@ class TestGenericAnimeClassification:
 
 class TestSourceLabel:
     def test_content_id_anchor_falls_back_to_metadata_provider(self):
-        assert _source_label("content_id", None, "javdb:AbCdEf").lower() == "javdb"
+        assert _source_label("content_id", None, "demo_meta:AbCdEf").lower() == "demo_meta"
 
     def test_missing_provider_uses_plugin_label(self):
         assert _source_label("content_id") == "插件"

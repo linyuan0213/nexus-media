@@ -58,7 +58,7 @@ def test_custom_profile_web_search_skips_tmdb_identification():
     config.get.return_value = {"search_sites": [], "rule": 10000}
     fn = make_web_search_fn(cast(Any, _Orchestrator()), config)
 
-    fn("ACHJ-097", filters={"site": [], "content_profile": "adult"}, media_type=None)
+    fn("ACHJ-097", filters={"site": [], "content_profile": "demo"}, media_type=None)
 
     assert captured["ident_flag"] is False
     assert captured["filter_args"]["rule"] == -1

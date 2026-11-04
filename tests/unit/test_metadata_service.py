@@ -520,23 +520,23 @@ def test_compose_for_media_uses_content_profile_aggregate_provider():
     class _AggregateProvider(_FakeProvider):
         def detail(self, ref, ctx):
             return ProviderRecord(
-                provider="adult",
+                provider="demo",
                 external_id=ref.external_id,
-                refs=[ProviderRef(provider="adult", external_id=ref.external_id, scope="adult")],
+                refs=[ProviderRef(provider="demo", external_id=ref.external_id, scope="demo")],
                 media_type=MediaType.MOVIE,
-                content_profile="adult",
+                content_profile="demo",
                 title="聚合标题",
             )
 
     registry = MetadataRegistry()
-    registry.register_provider(_AggregateProvider("adult", "聚合标题"))
+    registry.register_provider(_AggregateProvider("demo", "聚合标题"))
     svc = MetadataService(registry=registry, identity_repo=_FakeSnapshotRepo(), register_builtins=False)
 
     class _MediaInfo:
         type = MediaType.MOVIE
         tmdb_id = None
         douban_id = None
-        content_profile = "adult"
+        content_profile = "demo"
         anchor_external_id = "ABC-123"
         title = "文件标题"
         year = "2024"
@@ -545,7 +545,7 @@ def test_compose_for_media_uses_content_profile_aggregate_provider():
 
     assert snapshot is not None
     assert snapshot.fields["title"].value == "聚合标题"
-    assert snapshot.content_profile == "adult"
+    assert snapshot.content_profile == "demo"
 
 
 def test_compose_for_media_adds_anchor_ref_for_douban_primary():

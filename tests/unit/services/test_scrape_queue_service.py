@@ -19,7 +19,12 @@ class TestScrapeQueueService:
     def test_submit_file_scrape_executes_async(self):
         scraper = MagicMock()
         done = threading.Event()
-        scraper.gen_scraper_files.side_effect = lambda **kwargs: done.set()
+
+        def _scrape(**kwargs):
+            done.set()
+            return True
+
+        scraper.gen_scraper_files.side_effect = _scrape
         svc = ScrapeQueueService(scraper=scraper, max_workers=1)
 
         media = MediaInfo(title="Test", type=MediaType.MOVIE)

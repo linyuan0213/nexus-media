@@ -146,7 +146,7 @@ class TestIndexerServiceGetUserIndexerNames:
 class TestGetAllUserIndexersExternalDedup:
     @patch(
         "app.services.indexer_service.external_indexer_sites",
-        return_value=[{"source": "http-indexer", "name": "sehuatang"}],
+        return_value=[{"source": "http-indexer", "name": "demo_site"}],
     )
     def test_plugin_site_rows_are_not_duplicated(self, _mock_sites):
         indexer = MagicMock()
@@ -155,7 +155,7 @@ class TestGetAllUserIndexersExternalDedup:
         site_config_repo.list_all.return_value = [
             IndexerSiteConfigEntity(
                 id=72432,
-                site_name="sehuatang",
+                site_name="demo_site",
                 source="http-indexer",
                 enabled=True,
             )
@@ -181,9 +181,7 @@ class TestGetAllUserIndexersExternalDedup:
             )
         ]
         idx_config_repo = MagicMock()
-        idx_config_repo.get_by_client_id.return_value = IndexerConfigEntity(
-            client_id="jackett", enabled=True
-        )
+        idx_config_repo.get_by_client_id.return_value = IndexerConfigEntity(client_id="jackett", enabled=True)
 
         svc = _make_service(site_config_repo=site_config_repo, idx_config_repo=idx_config_repo)
         svc._indexer = indexer

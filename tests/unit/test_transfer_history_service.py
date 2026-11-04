@@ -159,7 +159,7 @@ class TestTransferHistoryService:
         subscribe_repo = MagicMock()
         subscribe_repo.get_movie_subscription_hint.return_value = {
             "image": "https://img.example/poster.jpg",
-            "content_profile": "adult",
+            "content_profile": "demo",
         }
         metadata_service = MagicMock()
         service = TransferHistoryService(
@@ -188,7 +188,7 @@ class TestTransferHistoryService:
 
         rows = result.result or []
         assert rows[0]["image"] == "https://img.example/poster.jpg"
-        assert rows[0]["CONTENT_PROFILE"] == "adult"
+        assert rows[0]["CONTENT_PROFILE"] == "demo"
         subscribe_repo.get_movie_subscription_hint.assert_called_once_with(
             "content_id", "ABC-123", "ABC-123", identity_id=""
         )

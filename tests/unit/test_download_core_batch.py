@@ -501,10 +501,10 @@ class TestGetDownloadDirInfo:
         from app.downloader.client_factory import DownloadClientFactory
 
         media = self._media(MediaType.MOVIE)
-        media.content_profile = "adult"
+        media.content_profile = "demo"
         dirs = [
             {"type": "movie", "save_path": "/data/movies"},
-            {"type": "adult", "save_path": "/data/av"},
+            {"type": "demo", "save_path": "/data/av"},
         ]
         info = DownloadClientFactory.get_download_dir_info(media, dirs)
         assert info["path"] == "/data/av"

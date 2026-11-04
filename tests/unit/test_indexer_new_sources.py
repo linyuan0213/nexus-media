@@ -1,4 +1,4 @@
-"""Sukebei 与 M-Team adult 模式配置回归."""
+"""Sukebei 与 M-Team demo 模式配置回归."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ def test_sukebei_mirrors_nyaa_layout():
 
 def test_mteam_uses_generic_mode_fallback():
     config = json.loads(Path("config/sites/api/mteam.json").read_text(encoding="utf-8"))
-    assert "ADULT" not in config["api"]["endpoints"]["search"].get("mode_mapping", {})
+    assert "DEMO" not in config["api"]["endpoints"]["search"].get("mode_mapping", {})
 
 
 def test_profile_search_mode_falls_back_to_lowercase():
@@ -41,7 +41,7 @@ def test_profile_search_mode_falls_back_to_lowercase():
     from app.media.metadata import ProviderDescriptor
     from app.media.metadata.registry import registry
 
-    class _AdultProvider:
+    class _DemoProvider:
         descriptor = ProviderDescriptor(
             provider_key="test_demo",
             display_name="Demo",
@@ -49,7 +49,7 @@ def test_profile_search_mode_falls_back_to_lowercase():
             search_mode="DEMO",
         )
 
-    registry.register_provider(_AdultProvider(), plugin_id="test")
+    registry.register_provider(_DemoProvider(), plugin_id="test")
     try:
         searcher = object.__new__(ApiSiteSearcher)
         setattr(searcher, "_site", site)

@@ -52,13 +52,13 @@ def test_save_two_same_type_instances():
     service = MediaServerConfigService(MagicMock(), config_repo=repo)
 
     assert service.save_config({"name": "普通 Emby", "type": "emby", "enabled": 1, "is_default": 1}).success
-    assert service.save_config({"name": "成人 Emby", "type": "emby", "enabled": 1}).success
+    assert service.save_config({"name": "演示 Emby", "type": "emby", "enabled": 1}).success
 
     info = service.get_media_servers_info()["servers"]
     assert len(info) == 2
     assert info["普通 Emby"]["type"] == "emby"
-    assert info["成人 Emby"]["type"] == "emby"
-    assert info["普通 Emby"]["id"] != info["成人 Emby"]["id"]
+    assert info["演示 Emby"]["type"] == "emby"
+    assert info["普通 Emby"]["id"] != info["演示 Emby"]["id"]
 
 
 def test_legacy_type_update_reuses_existing_instance():
@@ -78,12 +78,12 @@ def test_apply_config_targets_alias_instance():
     repo = _Repo()
     service = MediaServerConfigService(MagicMock(), config_repo=repo)
     service.save_config({"name": "普通 Emby", "type": "emby", "enabled": 1, "host": "normal"})
-    service.save_config({"name": "成人 Emby", "type": "emby", "enabled": 1, "host": "adult"})
+    service.save_config({"name": "演示 Emby", "type": "emby", "enabled": 1, "host": "demo"})
 
-    service.apply_config("成人 Emby", {"host": "adult-new"})
+    service.apply_config("演示 Emby", {"host": "demo-new"})
 
     servers = service.get_media_servers_info()["servers"]
-    assert servers["成人 Emby"]["config"]["host"] == "adult-new"
+    assert servers["演示 Emby"]["config"]["host"] == "demo-new"
     assert servers["普通 Emby"]["config"]["host"] == "normal"
 
 
@@ -91,7 +91,7 @@ def test_default_and_delete_guards():
     repo = _Repo()
     service = MediaServerConfigService(MagicMock(), config_repo=repo)
     service.save_config({"name": "普通 Emby", "type": "emby", "enabled": 1, "is_default": 1})
-    service.save_config({"name": "成人 Emby", "type": "emby", "enabled": 1})
+    service.save_config({"name": "演示 Emby", "type": "emby", "enabled": 1})
 
     assert not service.delete_config(1).success
     assert service.set_default(2).success

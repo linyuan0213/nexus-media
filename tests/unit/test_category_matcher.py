@@ -49,21 +49,21 @@ def test_rule_dsl_supports_operators_and_source():
         {
             "genres": [{"id": 16, "name": "Animation"}],
             "original_language": "ja",
-            "content_profile": "adult",
+            "content_profile": "demo",
         },
         media_type="tv",
         source="tmdb",
     )
     rules = {
-        "anime_ja_adult": [
+        "anime_ja_demo": [
             {"field": "genre", "operator": "contains", "value": "animation"},
             {"field": "original_language", "operator": "in", "value": ["ja", "ko"]},
-            {"field": "content_profile", "operator": "eq", "value": "adult"},
+            {"field": "content_profile", "operator": "eq", "value": "demo"},
             {"source": "tmdb", "field": "genre", "operator": "contains", "value": "animation"},
         ],
         "fallback": [],
     }
-    assert match_category(rules, context) == "anime_ja_adult"
+    assert match_category(rules, context) == "anime_ja_demo"
 
 
 def test_rule_dsl_source_mismatch_does_not_match():

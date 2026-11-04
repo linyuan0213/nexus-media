@@ -37,7 +37,7 @@ def _server(rows):
 
 
 def test_clients_are_cached_per_instance():
-    rows = [_row(1, "普通 Emby", default=True), _row(2, "成人 Emby")]
+    rows = [_row(1, "普通 Emby", default=True), _row(2, "演示 Emby")]
     server, _ = _server(rows)
     clients = {1: MagicMock(), 2: MagicMock()}
 
@@ -60,7 +60,7 @@ def test_disabled_default_instance_is_not_used():
 
 
 def test_profile_refresh_uses_routed_instance():
-    rows = [_row(1, "普通 Emby", default=True), _row(2, "成人 Emby")]
+    rows = [_row(1, "普通 Emby", default=True), _row(2, "演示 Emby")]
     server, route_repo = _server(rows)
     route_repo.get_profile.return_value = SimpleNamespace(server_id=2, library_id=None)
     clients = {1: MagicMock(), 2: MagicMock()}
@@ -76,18 +76,18 @@ def test_profile_refresh_uses_routed_instance():
         patch("app.mediaserver.media_server.get_lock_manager") as lock_manager,
     ):
         lock_manager.return_value.create_lock.return_value = lock
-        server.refresh_library_by_items([{"title": "A", "content_profile": "adult"}])
+        server.refresh_library_by_items([{"title": "A", "content_profile": "demo"}])
 
     clients[2].refresh_library_by_items.assert_called_once()
     clients[1].refresh_library_by_items.assert_not_called()
 
 
 def test_directory_refresh_uses_longest_path_and_groups():
-    rows = [_row(1, "普通 Emby", default=True), _row(2, "成人 Emby")]
+    rows = [_row(1, "普通 Emby", default=True), _row(2, "演示 Emby")]
     server, route_repo = _server(rows)
     route_repo.list.return_value = [
         SimpleNamespace(enabled=True, target_path="/media", content_profile="", server_id=1, library_id=None),
-        SimpleNamespace(enabled=True, target_path="/media/adult", content_profile="", server_id=2, library_id="4"),
+        SimpleNamespace(enabled=True, target_path="/media/demo", content_profile="", server_id=2, library_id="4"),
     ]
     clients = {1: MagicMock(), 2: MagicMock()}
     lock = MagicMock()
@@ -105,19 +105,19 @@ def test_directory_refresh_uses_longest_path_and_groups():
         server.refresh_library_by_items(
             [
                 {"title": "普通", "target_path": "/media/normal/movie"},
-                {"title": "成人", "target_path": "/media/adult/movie"},
+                {"title": "演示", "target_path": "/media/demo/movie"},
             ]
         )
 
     normal_items = clients[1].refresh_library_by_items.call_args.args[0]
-    adult_items = clients[2].refresh_library_by_items.call_args.args[0]
+    demo_items = clients[2].refresh_library_by_items.call_args.args[0]
     assert [item["title"] for item in normal_items] == ["普通"]
-    assert [item["title"] for item in adult_items] == ["成人"]
-    assert adult_items[0]["library_id"] == "4"
+    assert [item["title"] for item in demo_items] == ["演示"]
+    assert demo_items[0]["library_id"] == "4"
 
 
 def test_directory_refresh_matches_route_without_content_profile():
-    rows = [_row(1, "普通 Emby", default=True), _row(2, "成人 Emby")]
+    rows = [_row(1, "普通 Emby", default=True), _row(2, "演示 Emby")]
     server, route_repo = _server(rows)
     route_repo.list.return_value = [
         SimpleNamespace(
@@ -148,7 +148,7 @@ def test_directory_refresh_matches_route_without_content_profile():
 
 
 def test_refresh_with_scan_refreshes_item_and_library():
-    rows = [_row(1, "普通 Emby", default=True), _row(2, "成人 Emby")]
+    rows = [_row(1, "普通 Emby", default=True), _row(2, "演示 Emby")]
     server, route_repo = _server(rows)
     route_repo.list.return_value = [
         SimpleNamespace(
@@ -184,17 +184,15 @@ def test_sync_only_clears_target_instance(lock_manager):
     lock = MagicMock()
     lock.acquire.return_value = True
     lock_manager.return_value.create_lock.return_value = lock
-    rows = [_row(1, "普通 Emby", default=True), _row(2, "成人 Emby")]
+    rows = [_row(1, "普通 Emby", default=True), _row(2, "演示 Emby")]
     server, _ = _server(rows)
     server._server = MagicMock()
     server._get_client = MagicMock(return_value=server._server)
     server.get_medias_count = MagicMock(return_value={"MovieCount": 1, "SeriesCount": 0})
-    server.get_libraries = MagicMock(return_value=[{"id": "lib-adult", "name": "成人"}])
-    server.get_items = MagicMock(
-        return_value=[{"id": "movie-1", "library": "lib-adult", "type": "Movie", "title": "A"}]
-    )
+    server.get_libraries = MagicMock(return_value=[{"id": "lib-demo", "name": "演示"}])
+    server.get_items = MagicMock(return_value=[{"id": "movie-1", "library": "lib-demo", "type": "Movie", "title": "A"}])
 
-    server.sync_mediaserver(server_id=2, library_ids=["lib-adult"])
+    server.sync_mediaserver(server_id=2, library_ids=["lib-demo"])
 
     repo = cast(Any, server.mediadb)
     repo.empty.assert_called_once_with(server_type="emby", server_id=2)
@@ -202,4 +200,4 @@ def test_sync_only_clears_target_instance(lock_manager):
     assert kwargs["server_id"] == 2
     assert kwargs["total_count"] == 1
     server.get_libraries.assert_called_once_with(2)
-    server.get_items.assert_called_once_with("lib-adult", 2)
+    server.get_items.assert_called_once_with("lib-demo", 2)
