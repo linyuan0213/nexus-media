@@ -1170,9 +1170,9 @@ class MetadataService:
         hits: list[dict[str, Any]] = []
         executor = ThreadPoolExecutor(max_workers=min(8, len(selected)), thread_name_prefix="metadata_search")
         futures = {executor.submit(search_one, item): item.descriptor.provider_key for item in selected}
-        # 单 provider 搜索可能包含 Cloudflare 挑战（实测 40~60s），必须等完；
-        # 只有多 provider 聚合才使用短超时，避免慢源拖垮整体。
-        wait_timeout = 120.0 if len(selected) == 1 else 10.0
+        # 单个 provider 也不能无限等：JavDB 等源遇到 Cloudflare/SSL 抖动时
+        # 会重试到 120s，详情页会被拖死。超时后返回部分结果，由调用方回退。
+        wait_timeout = 20.0 if len(selected) == 1 else 10.0
         done, not_done = wait(futures, timeout=wait_timeout)
         for future in done:
             try:
