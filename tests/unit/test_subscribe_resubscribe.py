@@ -64,6 +64,7 @@ def _transfer_row(
     anchor_provider: str | None = None,
     anchor_external_id: str | None = None,
 ):
+    filename = f"{se.replace(' ', '_')}.mkv"
     return TRANSFERHISTORY(
         MODE="link",
         TYPE=media_type,
@@ -76,10 +77,10 @@ def _transfer_row(
         SEASON_EPISODE=se,
         SOURCE="",
         SOURCE_PATH="/s",
-        SOURCE_FILENAME="f.mkv",
+        SOURCE_FILENAME=filename,
         DEST="/tv",
         DEST_PATH="/tv",
-        DEST_FILENAME="f.mkv",
+        DEST_FILENAME=filename,
         DST_BACKEND="",
         DATE="",
     )

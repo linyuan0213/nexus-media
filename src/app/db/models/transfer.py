@@ -5,7 +5,7 @@
 
 from typing import Any
 
-from sqlalchemy import Index, Integer, Sequence, String
+from sqlalchemy import Index, Integer, Sequence, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -24,6 +24,14 @@ class TRANSFERHISTORY(Base):
         Index("INDX_TRANSFER_HISTORY_SOURCE", "SOURCE_PATH", "SOURCE_FILENAME"),
         Index("INDX_TRANSFER_HISTORY_TMDBID", "TMDBID"),
         Index("INDX_TRANSFER_HISTORY_DEST", "DEST_PATH", "DEST_FILENAME"),
+        UniqueConstraint(
+            "SOURCE_PATH",
+            "SOURCE_FILENAME",
+            "DEST_PATH",
+            "DEST_FILENAME",
+            "DST_BACKEND",
+            name="uq_transfer_history_source_dest_backend",
+        ),
     )
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
