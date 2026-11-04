@@ -411,6 +411,26 @@ class LifecycleRepository(BaseRepository):
                 .all()
             )
 
+    def list_blocked_downloads(self, limit: int = 500) -> list[MediaLifecycle]:
+        """下载阶段被标记 blocked 的快照，供活跃下载心跳恢复."""
+        with self.readonly() as db:
+            return (
+                db.query(MediaLifecycle)
+                .filter(
+                    MediaLifecycle.IDENTITY_ID != "preview",
+                    MediaLifecycle.STATUS == LifecycleStatus.BLOCKED.value,
+                    MediaLifecycle.STAGE.in_(
+                        [
+                            LifecycleStage.DOWNLOAD_QUEUED.value,
+                            LifecycleStage.DOWNLOADING.value,
+                        ]
+                    ),
+                )
+                .order_by(MediaLifecycle.LAST_EVENT_AT.asc())
+                .limit(max(1, int(limit)))
+                .all()
+            )
+
     def list_subscription_summaries(self, identity_id: str, *, user=None) -> list[dict[str, Any]]:
         """读取订阅侧总集数，用于补齐尚未进入生命周期记录的分集。"""
         with self.readonly() as db:
@@ -444,6 +464,11 @@ class LifecycleRepository(BaseRepository):
                         "missing_episodes": missing_by_rss.get(str(row.ID), []),
                         "state": row.STATE,
                         "name": row.NAME,
+                        "year": getattr(row, "YEAR", None),
+                        "anchor_provider": getattr(row, "ANCHOR_PROVIDER", None)
+                        or getattr(row, "PROVIDER", None),
+                        "content_profile": getattr(row, "CONTENT_PROFILE", None),
+                        "user_id": getattr(row, "USER_ID", None),
                     }
                 )
             return result

@@ -537,6 +537,35 @@ class DownloadRepository(BaseRepository):
             db.commit()
             return True
 
+    def get_active_download_states(self, identity_ids: set[str]) -> dict[str, str]:
+        """返回指定身份最新的活跃下载状态，用于生命周期心跳/防误判停滞."""
+        ids = {str(item) for item in identity_ids if item and str(item) != "preview"}
+        if not ids:
+            return {}
+        active_states = (
+            "downloading",
+            "stalledUP",
+            "checkingUP",
+            "forcedDL",
+            "metaDL",
+            "queued",
+            "queuedDL",
+        )
+        result: dict[str, str] = {}
+        with self.readonly() as db:
+            rows = (
+                db.query(DOWNLOADHISTORY.IDENTITY_ID, DOWNLOADHISTORY.STATE)
+                .filter(
+                    DOWNLOADHISTORY.IDENTITY_ID.in_(ids),
+                    DOWNLOADHISTORY.STATE.in_(active_states),
+                )
+                .order_by(DOWNLOADHISTORY.ID.desc())
+                .all()
+            )
+            for identity_id, state in rows:
+                result.setdefault(str(identity_id), str(state or ""))
+        return result
+
     def get_download_history_by_downloader(self, downloader: str, download_id: str) -> DOWNLOADHISTORY | None:
         """
         根据下载器查找下载历史

@@ -234,29 +234,34 @@ def list_lifecycle_episodes(
         total_ep = int(summary.get("total_ep") or 0)
         if total_ep <= 0:
             continue
+        completed_ep = max(0, min(total_ep, int(summary.get("completed_ep") or 0)))
+        missing_episodes = {int(item) for item in summary.get("missing_episodes") or []}
+        profile = str(summary.get("content_profile") or first.get("content_profile") or "default")
+        media_type = "anime" if profile == "anime" else (first.get("media_type") or "tv")
         for episode in range(1, total_ep + 1):
             if (season, episode) in existing:
                 continue
+            missing = episode in missing_episodes if missing_episodes else episode > completed_ep
             payloads.append(
                 _row_payload(
                     {
                         "IDENTITY_ID": identity_id,
-                        "MEDIA_TYPE": first.get("media_type") or "tv",
+                        "MEDIA_TYPE": media_type,
                         "SEASON": season,
                         "EPISODE": episode,
                         "TITLE": first.get("title") or summary.get("name"),
-                        "YEAR": first.get("year"),
+                        "YEAR": first.get("year") or summary.get("year"),
                         "POSTER": first.get("poster"),
-                        "STAGE": "subscribed",
-                        "STATUS": "queued",
-                        "PROGRESS": 0,
-                        "SOURCE_PROVIDER": first.get("source_provider"),
-                        "CONTENT_PROFILE": first.get("content_profile"),
-                        "USER_ID": first.get("user_id"),
+                        "STAGE": "subscribed" if missing else "in_library",
+                        "STATUS": "queued" if missing else "succeeded",
+                        "PROGRESS": 0 if missing else 100,
+                        "SOURCE_PROVIDER": first.get("source_provider") or summary.get("anchor_provider"),
+                        "CONTENT_PROFILE": profile,
+                        "USER_ID": first.get("user_id") or summary.get("user_id"),
                         "EPISODE_COUNT": 1,
-                        "COMPLETED_EPISODES": 0,
-                        "IN_LIBRARY_EPISODES": 0,
-                        "MISSING": True,
+                        "COMPLETED_EPISODES": 0 if missing else 1,
+                        "IN_LIBRARY_EPISODES": 0 if missing else 1,
+                        "MISSING": missing,
                     }
                 )
             )

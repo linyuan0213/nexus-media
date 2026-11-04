@@ -48,3 +48,18 @@ def test_search_resolution_does_not_fallback_to_local_identity():
     )
 
     assert resolved.identity_id == ""
+
+
+def test_preview_identity_is_resolved_to_real_identity():
+    repo = MediaIdentityRepository()
+    identity = repo.ensure_identity(media_type="movie", title="MIDA-853", year="2026")
+    repo.upsert_ref(identity.IDENTITY_ID, provider="content_id", external_id="MIDA-853", media_type="movie")
+
+    resolved = IdentityResolver().resolve_values(
+        identity_id="preview",
+        title="MIDA-853",
+        year="2026",
+        media_type="movie",
+    )
+
+    assert resolved.identity_id == identity.IDENTITY_ID

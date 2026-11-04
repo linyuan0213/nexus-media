@@ -17,6 +17,7 @@ from app.db.models.media_sync import MEDIASYNCITEMS
 from app.db.models.subscribe import SubscribeHistory
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
+from app.db.repositories.download_repository import DownloadRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_download_state, map_task_status
 from app.services.identity_resolver import IdentityResolver
@@ -148,7 +149,7 @@ class LifecycleProjector:
                 season = 0
         resolved = self._resolver.resolve_media(media, allow_local=True)
         identity_id = resolved.identity_id
-        if not identity_id:
+        if not identity_id or identity_id == "preview":
             return False
         provider = resolved.provider
         content_profile = resolved.content_profile
@@ -488,9 +489,48 @@ class LifecycleReconciler:
                     ):
                         count += 1
         stale_hours = int((settings.get("queue") or {}).get("lifecycle_stale_hours", 24) or 0)
+        download_stages = {
+            LifecycleStage.DOWNLOAD_QUEUED.value,
+            LifecycleStage.DOWNLOADING.value,
+        }
+        lifecycle_repo = LifecycleRepository()
+        stale_rows = lifecycle_repo.list_stale_running(
+            datetime.now() - timedelta(hours=stale_hours or 24)
+        )
+        blocked_rows = lifecycle_repo.list_blocked_downloads()
+        active_downloads = DownloadRepository().get_active_download_states(
+            {str(row.IDENTITY_ID) for row in stale_rows}
+            | {str(row.IDENTITY_ID) for row in blocked_rows}
+        )
         if stale_hours > 0:
             before = datetime.now() - timedelta(hours=stale_hours)
             for row in LifecycleRepository().list_stale_running(before):
+                active_state = active_downloads.get(str(row.IDENTITY_ID))
+                if active_state and str(row.STAGE) in download_stages:
+                    stage, status = map_download_state(active_state)
+                    if self._projector.record(
+                        identity_id=str(row.IDENTITY_ID),
+                        stage=stage.value,
+                        status=status.value,
+                        event_type="download.progress",
+                        media_type=str(row.MEDIA_TYPE or "movie"),
+                        season=int(row.SEASON or 0),
+                        episode=int(row.EPISODE or 0),
+                        run_id=str(row.RUN_ID or ""),
+                        trace_id=str(row.TRACE_ID or ""),
+                        title=row.TITLE,
+                        year=row.YEAR,
+                        poster=row.POSTER,
+                        progress=int(row.PROGRESS or 0),
+                        source_provider=row.SOURCE_PROVIDER,
+                        content_profile=row.CONTENT_PROFILE,
+                        user_id=row.USER_ID,
+                        message="下载器任务仍活跃",
+                        occurred_at=datetime.now(),
+                        event_key=f"heartbeat:{row.IDENTITY_ID}:{row.SEASON}:{row.EPISODE}:{datetime.now():%Y%m%d%H%M}",
+                    ):
+                        count += 1
+                    continue
                 if self._projector.record(
                     identity_id=str(row.IDENTITY_ID),
                     stage=str(row.STAGE),
@@ -512,6 +552,39 @@ class LifecycleReconciler:
                     event_key=f"stale:{row.IDENTITY_ID}:{row.SEASON}:{row.EPISODE}:{row.LAST_EVENT_AT.isoformat()}",
                 ):
                     count += 1
+        # 已 blocked 但下载器任务仍活跃：心跳恢复为 downloading，避免误判停滞
+        if active_downloads:
+            for identity_id, active_state in active_downloads.items():
+                snapshots = LifecycleRepository().list_identity_rows(identity_id)
+                for snapshot in snapshots:
+                    if (
+                        str(snapshot.STAGE) not in download_stages
+                        or str(snapshot.STATUS) != LifecycleStatus.BLOCKED.value
+                    ):
+                        continue
+                    stage, status = map_download_state(active_state)
+                    if self._projector.record(
+                        identity_id=identity_id,
+                        stage=stage.value,
+                        status=status.value,
+                        event_type="download.progress",
+                        media_type=str(snapshot.MEDIA_TYPE or "movie"),
+                        season=int(snapshot.SEASON or 0),
+                        episode=int(snapshot.EPISODE or 0),
+                        run_id=str(snapshot.RUN_ID or ""),
+                        trace_id=str(snapshot.TRACE_ID or ""),
+                        title=snapshot.TITLE,
+                        year=snapshot.YEAR,
+                        poster=snapshot.POSTER,
+                        progress=int(snapshot.PROGRESS or 0),
+                        source_provider=snapshot.SOURCE_PROVIDER,
+                        content_profile=snapshot.CONTENT_PROFILE,
+                        user_id=snapshot.USER_ID,
+                        message="下载器任务仍活跃",
+                        occurred_at=datetime.now(),
+                        event_key=f"heartbeat:{identity_id}:{snapshot.SEASON}:{snapshot.EPISODE}:{datetime.now():%Y%m%d%H%M}",
+                    ):
+                        count += 1
         return {"imported": count}
 
 

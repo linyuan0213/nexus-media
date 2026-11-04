@@ -107,7 +107,7 @@ class IdentityResolver:
                 found = self._repo.find_by_ref(prefix, rest, scope=scope, media_type=ref_type)
                 if found is not None:
                     return self._result(found, provider_text or prefix, external_text or rest, profile)
-            elif explicit.startswith("local:"):
+            elif explicit.startswith("local:") or explicit == "preview":
                 explicit = ""
             else:
                 getter: Any = getattr(self._repo, "get_identity", None)
