@@ -155,6 +155,13 @@ class SystemLifecycleService:
     def subscription_monitor(self) -> SubscriptionMonitor | None:
         return self._subscription_monitor
 
+    def start_scheduler(self) -> bool:
+        """提前启动调度器，供插件加载阶段注册定时任务。
+
+        系统默认任务仍由 start_service() 在插件加载完成后统一加载。
+        """
+        return self._scheduler.start_service(load_defaults=False)
+
     def start_service(self) -> None:
         """启动所有后台服务（调度器优先启动，确保后续模块注册任务时调度器已就绪）"""
         # 0. 执行初始化（配置检查、RBAC、消息 webhook key 等）

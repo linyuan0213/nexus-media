@@ -99,6 +99,10 @@ class SchedulerCore:
             media_server, sync_engine, subscribe_service
         """
         if self._scheduler and self._running:
+            # 插件在后台服务启动前注册 cron，调度器可能已被提前拉起；
+            # 此时仍需补加载系统默认任务。
+            if load_defaults:
+                load_default_jobs(self, **deps)
             log.warn("调度器服务已经在运行中")
             return True
 

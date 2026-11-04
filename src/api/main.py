@@ -97,6 +97,13 @@ def _startup(app: FastAPI) -> None:
         except Exception as e:
             log.error(f"[FastAPI]{name}注册失败: {e}")
 
+    system_lifecycle: SystemLifecycleService = app_context.system_lifecycle
+    try:
+        system_lifecycle.start_scheduler()
+        log.info("[FastAPI]调度器已启动，插件可注册定时任务")
+    except Exception as e:
+        log.error(f"[FastAPI]调度器提前启动失败: {e}")
+
     # 插件必须在后台服务（下载监控/转移）之前加载：转移依赖插件提供的
     # parser_profiles 识别内容编号，否则启动窗口内完成的下载会误走 TMDB。
     try:
@@ -115,7 +122,6 @@ def _startup(app: FastAPI) -> None:
 
     try:
         log.info("[FastAPI]启动后台服务...")
-        system_lifecycle: SystemLifecycleService = app_context.system_lifecycle
         system_lifecycle.start_service()
         app.state.system_lifecycle = system_lifecycle
     except Exception as e:

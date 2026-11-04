@@ -179,6 +179,23 @@ class TestSchedulerCoreLifecycle:
         assert result is True  # Already running returns True
         core.stop_service()
 
+    def test_start_service_already_running_still_loads_defaults(self):
+        core = SchedulerCore()
+        core.start_service()
+        deps = {
+            "thread_executor": MagicMock(),
+            "site_userinfo": MagicMock(),
+            "subscription_monitor": MagicMock(),
+            "media_server": MagicMock(),
+            "sync_engine": MagicMock(),
+            "subscribe_service": MagicMock(),
+        }
+        with patch("app.services.scheduler.core.load_default_jobs") as mock_load:
+            result = core.start_service(load_defaults=True, **deps)
+            mock_load.assert_called_once_with(core, **deps)
+        assert result is True
+        core.stop_service()
+
     def test_stop_service_not_running(self):
         core = SchedulerCore()
         assert core.stop_service() is True
