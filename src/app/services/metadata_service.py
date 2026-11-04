@@ -1191,7 +1191,20 @@ class MetadataService:
             log.warn(f"[Metadata]搜索超时，忽略 provider: {futures[future]}")
         executor.shutdown(wait=False, cancel_futures=True)
         hits.sort(key=lambda item: float(item.get("score") or 0), reverse=True)
-        return hits[:limit]
+        deduped: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, str]] = set()
+        for hit in hits:
+            ref = hit.get("ref") or {}
+            provider = str(ref.get("provider") or hit.get("provider") or "")
+            external_id = str(ref.get("external_id") or hit.get("external_id") or "")
+            media_type_key = str(hit.get("media_type") or "")
+            key = (provider, external_id, media_type_key)
+            if provider and external_id:
+                if key in seen:
+                    continue
+                seen.add(key)
+            deduped.append(hit)
+        return deduped[:limit]
 
     def compose_for_ref(
         self,
