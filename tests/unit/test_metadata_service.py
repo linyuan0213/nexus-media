@@ -70,6 +70,9 @@ class _FakeSnapshotRepo:
         return []
 
     def get_identity(self, identity_id) -> Any:
+        for identity, _kwargs in self.identities:
+            if identity.IDENTITY_ID == identity_id:
+                return identity
         return None
 
     def list_refs(self, identity_id):

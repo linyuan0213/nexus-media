@@ -29,12 +29,13 @@ class ResolvedIdentity:
     provider: str = ""
     external_id: str = ""
     content_profile: str = "default"
+    identity: Any = None
 
 
 class IdentityResolver:
     """身份解析唯一入口：显式身份 → 外部引用 → 标题/年份/类型 → 新建 → 兜底."""
 
-    def __init__(self, repository: MediaIdentityRepository | None = None):
+    def __init__(self, repository: Any | None = None):
         self._repo = repository or MediaIdentityRepository()
 
     @staticmethod
@@ -88,6 +89,7 @@ class IdentityResolver:
         media_type: Any = "movie",
         content_profile: Any = None,
         season: int = 0,
+        scope: str = "default",
         allow_local: bool = True,
         create: bool = True,
     ) -> ResolvedIdentity:
@@ -102,13 +104,14 @@ class IdentityResolver:
         if explicit:
             prefix, _, rest = explicit.partition(":")
             if prefix in _REF_PREFIXES and rest:
-                found = self._repo.find_by_ref(prefix, rest, media_type=ref_type)
+                found = self._repo.find_by_ref(prefix, rest, scope=scope, media_type=ref_type)
                 if found is not None:
                     return self._result(found, provider_text or prefix, external_text or rest, profile)
             elif explicit.startswith("local:"):
                 explicit = ""
             else:
-                found = self._repo.get_identity(explicit)
+                getter: Any = getattr(self._repo, "get_identity", None)
+                found: Any = getter(explicit) if callable(getter) else None
                 if found is None:
                     found = self._repo.ensure_identity(
                         identity_id=explicit,
@@ -121,14 +124,15 @@ class IdentityResolver:
 
         # 2. 外部引用
         if provider_text and external_text:
-            found = self._repo.find_by_ref(provider_text, external_text, media_type=ref_type)
+            found = self._repo.find_by_ref(provider_text, external_text, scope=scope, media_type=ref_type)
             if found is not None:
                 return self._result(found, provider_text, external_text, profile)
 
         # 3. 标题/年份/类型族（动漫与剧集同族）
         title_text = str(title or "").strip()
         if title_text and (allow_local or (provider_text and external_text)):
-            found = self._repo.find_by_title(title_text, str(year or "") or None, ref_type)
+            finder = getattr(self._repo, "find_by_title", None)
+            found = finder(title_text, str(year or "") or None, ref_type) if callable(finder) else None
             if found is not None:
                 if provider_text and external_text:
                     try:
@@ -145,16 +149,27 @@ class IdentityResolver:
 
         # 4. 有 anchor 时创建规范身份（content_id 也作为 provider ref）
         if create and provider_text and external_text:
-            created = self._repo.ensure_identity_for_ref(
+            creator = getattr(self._repo, "ensure_identity_for_ref", None)
+            if not callable(creator):
+                identity = self._repo.ensure_identity(
+                    media_type=raw_type,
+                    content_profile=profile,
+                    title=title_text or None,
+                    year=str(year or "") or None,
+                )
+                return self._result(identity, provider_text, external_text, profile)
+            created = creator(
                 provider_text,
                 external_text,
-                media_type=ref_type,
+                media_type=raw_type,
+                scope=scope,
                 content_profile=profile,
                 title=title_text or None,
                 year=str(year or "") or None,
             )
             if created:
-                found = self._repo.get_identity(created)
+                getter: Any = getattr(self._repo, "get_identity", None)
+                found: Any = getter(created) if callable(getter) else None
                 if found is not None:
                     return self._result(found, provider_text, external_text, profile)
 
@@ -186,7 +201,8 @@ class IdentityResolver:
         resolved_provider = provider
         resolved_external = external_id
         if not resolved_provider:
-            ref = self._repo.get_primary_ref(identity.IDENTITY_ID)
+            getter: Any = getattr(self._repo, "get_primary_ref", None)
+            ref: Any = getter(identity.IDENTITY_ID) if callable(getter) else None
             if ref is not None:
                 resolved_provider = str(ref.PROVIDER or "")
                 resolved_external = resolved_external or str(ref.EXTERNAL_ID or "")
@@ -196,4 +212,5 @@ class IdentityResolver:
             provider=resolved_provider,
             external_id=resolved_external,
             content_profile=profile,
+            identity=identity,
         )

@@ -21,6 +21,7 @@ from app.domain.mediatypes import MediaType
 from app.media.metadata.legacy import parse_legacy_ref
 from app.media.metadata.policy import ANCHOR_POLICY
 from app.schemas.auth import UserContext
+from app.services.identity_resolver import IdentityResolver
 from app.utils.json_utils import JsonUtils
 
 if TYPE_CHECKING:
@@ -96,6 +97,32 @@ def _history_scope(
         "METADATA_POLICY": metadata_policy or ANCHOR_POLICY.get(provider),
         "NAMING_PROFILE": naming_profile,
     }
+
+
+def _require_subscription_identity(
+    *,
+    identity_id: str | None,
+    anchor_provider: str | None,
+    anchor_external_id: str | None,
+    media_info: MediaInfo,
+    media_type: str,
+    content_profile: str | None,
+) -> str | None:
+    resolved = IdentityResolver().resolve_values(
+        identity_id=identity_id,
+        provider=anchor_provider,
+        external_id=anchor_external_id,
+        title=getattr(media_info, "title", None),
+        year=getattr(media_info, "year", None),
+        media_type=media_type,
+        content_profile=content_profile,
+        allow_local=False,
+    )
+    if resolved.identity_id:
+        return resolved.identity_id
+    if anchor_provider and anchor_external_id:
+        raise ValueError("可识别的订阅缺少规范 IDENTITY_ID")
+    return identity_id
 
 
 class SubscribeRepository(BaseRepository):
@@ -441,6 +468,14 @@ class SubscribeRepository(BaseRepository):
             return -1
         if not media_info.title:
             return -1
+        identity_id = _require_subscription_identity(
+            identity_id=identity_id,
+            anchor_provider=anchor_provider,
+            anchor_external_id=anchor_external_id,
+            media_info=media_info,
+            media_type=MediaType.MOVIE.value,
+            content_profile=content_profile,
+        )
 
         with self.session() as db:
             # 重复判定按归属用户维度；有 provider 锚点时按锚点去重，避免同名不同来源互相覆盖
@@ -857,6 +892,14 @@ class SubscribeRepository(BaseRepository):
             return -1
         if not media_info.title:
             return -1
+        identity_id = _require_subscription_identity(
+            identity_id=identity_id,
+            anchor_provider=anchor_provider,
+            anchor_external_id=anchor_external_id,
+            media_info=media_info,
+            media_type=getattr(getattr(media_info, "type", None), "value", "tv") or "tv",
+            content_profile=content_profile,
+        )
         if fuzzy_match and media_info.begin_season is None:
             season_str = ""
         else:

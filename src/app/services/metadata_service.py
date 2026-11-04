@@ -42,6 +42,7 @@ from app.media.metadata.metrics import snapshot as metrics_snapshot
 from app.media.metadata.providers import register_builtin_providers
 from app.media.metadata.registry import MetadataRegistry
 from app.media.metadata.registry import registry as global_registry
+from app.services.identity_resolver import IdentityResolver
 
 
 class IdentityRepositoryProtocol(Protocol):
@@ -184,6 +185,7 @@ class MetadataService:
         self._registry = registry or global_registry
         self._orchestrator = MetadataOrchestrator(self._registry)
         self._identity_repo = identity_repo or MediaIdentityRepository()
+        self._resolver = IdentityResolver(repository=self._identity_repo)
         self._person_repo = person_repo or PersonIdentityRepository()
         self._media_service = media_service
         self._system_default_policy = system_default_policy
@@ -793,19 +795,20 @@ class MetadataService:
         persist: bool,
     ):
         anchor = refs[0]
-        identity = self._identity_repo.find_by_ref(
-            anchor.provider,
-            anchor.external_id,
-            scope=anchor.scope,
-            media_type=anchor.media_type.value if anchor.media_type else None,
+        resolved = self._resolver.resolve_values(
+            provider=anchor.provider,
+            external_id=anchor.external_id,
+            title=getattr(media_info, "title", None),
+            year=getattr(media_info, "year", None),
+            media_type=media_type.value,
+            content_profile=profile,
+            scope=anchor.scope or "default",
+            allow_local=False,
+            create=persist,
         )
-        if identity is None and persist:
-            identity = self._identity_repo.ensure_identity(
-                media_type=media_type.value,
-                content_profile=profile,
-                title=getattr(media_info, "title", None),
-                year=getattr(media_info, "year", None),
-            )
+        if not resolved.identity_id:
+            return None
+        identity = resolved.identity or self._identity_repo.get_identity(resolved.identity_id)
         if identity is None:
             return None
         for ref in refs:
