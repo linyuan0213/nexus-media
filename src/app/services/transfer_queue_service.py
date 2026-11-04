@@ -77,6 +77,9 @@ class TransferQueueService:
         dedup = str(payload.get("dedup_key") or f"{payload.get('downloader_id')}:{payload.get('task_id')}")
         try:
             task = self._queue.enqueue("transfer.task", payload, dedup_key=dedup)
+            if task.status.terminal:
+                log.info(f"[TransferQueue]跳过已结束的重复转移任务 {task.id} status={task.status.value}")
+                return True
             self._record(payload, LifecycleStage.TRANSFER_QUEUED, LifecycleStatus.QUEUED, "transfer.queued", task)
             return True
         except Exception as exc:  # noqa: BLE001

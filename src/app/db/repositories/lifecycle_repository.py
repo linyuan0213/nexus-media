@@ -27,10 +27,16 @@ class LifecycleRepository(BaseRepository):
     ) -> bool:
         """幂等写入事件并更新当前快照；EVENT_KEY 已存在时返回 False."""
         with self.session() as db:
-            exists = db.query(MediaLifecycleEvent.ID).filter(MediaLifecycleEvent.EVENT_KEY == event.EVENT_KEY).first()
+            exists = (
+                db.query(MediaLifecycleEvent).filter(MediaLifecycleEvent.EVENT_KEY == event.EVENT_KEY).first()
+            )
             if exists is not None:
                 if update_snapshot:
-                    self._apply_snapshot(db, event, snapshot)
+                    # 重复事件必须按首次发生时间修复快照；否则重启后的旧事件
+                    # 会被误判为新一轮流转，把已入库状态打回转移排队。
+                    repair_snapshot = dict(snapshot)
+                    repair_snapshot["LAST_EVENT_AT"] = exists.OCCURRED_AT
+                    self._apply_snapshot(db, exists, repair_snapshot)
                 db.commit()
                 return False
             db.add(event)

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import time
 from typing import Any
+from unittest.mock import MagicMock
 
+from app.infrastructure.task_queue import Task, TaskStatus
 from app.infrastructure.task_queue.memory_queue import MemoryTaskQueue
 from app.services import transfer_queue_service as module
 from app.services.transfer_queue_service import TransferQueueService
@@ -89,6 +91,19 @@ def test_transfer_queue_failure_retries_and_sets_failure_status(monkeypatch):
     _wait_until(lambda: len(pipeline.tasks) >= 1)
     _wait_until(lambda: bool(client.status_calls))
     service.stop()
+
+
+def test_submit_skips_terminal_dedup_task():
+    queue = MagicMock()
+    task = Task.create("transfer", "transfer.task", {})
+    task.status = TaskStatus.SUCCEEDED
+    queue.enqueue.return_value = task
+    lifecycle = MagicMock()
+    service = TransferQueueService(_FakePipeline(), _FakeFactory(_FakeClient()), lifecycle=lifecycle)
+    service._queue = queue
+
+    assert service.submit({"downloader_id": "4", "task_id": "task-done"})
+    lifecycle.record.assert_not_called()
 
 
 def _wait_until(predicate, timeout: float = 3.0) -> None:

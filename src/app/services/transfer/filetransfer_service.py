@@ -1378,6 +1378,15 @@ class FileTransferService:
                     success_flag = False
                 if fc > 0 or exist_filenum > 0:
                     if exist_filenum > 0 and ret_file_path and ret_dir_path:
+                        # 目标文件已存在即已入库；补发转移完成事件，避免订阅
+                        # 因“重复转移未走刮削定稿”一直停留在待转移。
+                        self._publish_transfer_finished(
+                            in_path=in_path,
+                            file_item=file_item,
+                            out_path=ret_file_path,
+                            dist_path=dist_path,
+                            media=media,
+                        )
                         self._scrape_duplicate_if_incomplete(
                             media, ret_dir_path, ret_file_path, resolved_backend, force_scrape
                         )

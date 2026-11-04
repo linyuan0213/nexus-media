@@ -330,6 +330,43 @@ def test_existing_event_repairs_regressed_snapshot():
     assert current.STAGE == LifecycleStage.IN_LIBRARY.value
 
 
+def test_duplicate_background_event_does_not_restart_library_stage():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    queued_at = datetime(2026, 11, 2, 9, 0, 0)
+    library_at = queued_at + timedelta(hours=1)
+    projector.record(
+        identity_id="identity-duplicate",
+        stage=LifecycleStage.TRANSFER_QUEUED,
+        status=LifecycleStatus.QUEUED,
+        event_type="transfer.queued",
+        event_key="duplicate-transfer-queued",
+        occurred_at=queued_at,
+    )
+    projector.record(
+        identity_id="identity-duplicate",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="library.present",
+        event_key="duplicate-library",
+        occurred_at=library_at,
+    )
+    # 重启后旧事件被重新投递，但 EVENT_KEY 相同，不能按新时间开启新一轮流转。
+    projector.record(
+        identity_id="identity-duplicate",
+        stage=LifecycleStage.TRANSFER_QUEUED,
+        status=LifecycleStatus.QUEUED,
+        event_type="transfer.queued",
+        event_key="duplicate-transfer-queued",
+        occurred_at=library_at + timedelta(hours=2),
+    )
+    current = repo.get_current("identity-duplicate")
+    assert current is not None
+    assert current.STAGE == LifecycleStage.IN_LIBRARY.value
+    assert current.STATUS == LifecycleStatus.SUCCEEDED.value
+    assert current.LAST_EVENT_AT == library_at
+
+
 def test_grouped_stage_uses_furthest_episode():
     repo = LifecycleRepository()
     projector = LifecycleProjector(repo)
