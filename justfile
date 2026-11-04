@@ -61,3 +61,7 @@ docs:
 # 构建文档站点
 docs-build:
     uv run mkdocs build
+
+# 检查身份完整性（生产/本地数据库）
+identity-check:
+    PYTHONPATH=src uv run python scripts/check_identity_integrity.py
