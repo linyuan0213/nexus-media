@@ -174,11 +174,13 @@ class Indexer:
             source = client.get_client_id()
             for indexer in self._filter_indexers(client, check=True, filter_args=filter_args):
                 configured = priority_map.get(f"{source}:{indexer.name}")
-                pri = (
-                    configured
-                    if configured is not None
-                    else int(getattr(indexer, "pri", 0 if source == "builtin" else 100) or 0)
-                )
+                if configured is not None:
+                    pri = int(configured)
+                elif getattr(indexer, "public", False):
+                    # 公共索引器默认作为兜底，不能因 pri 缺省为 0 抢在私有站点前。
+                    pri = 100
+                else:
+                    pri = int(getattr(indexer, "pri", 100) or 0)
                 provider = SiteIndexerProvider(client, indexer, site_priority_order(pri))
                 registry.register(
                     PriorityProvider(provider, {indexer.name: pri}, default=pri),
