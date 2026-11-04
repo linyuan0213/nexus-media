@@ -150,6 +150,14 @@ class LifecycleProjector:
                 season = int(media.get_season_seq() or 0)
             except (TypeError, ValueError):
                 season = 0
+        if not identity_id and provider and external_id:
+            canonical = self._identity_repo.find_by_ref(
+                provider,
+                external_id,
+                media_type=str(media_type),
+            )
+            if canonical is not None:
+                identity_id = canonical.IDENTITY_ID
         if not identity_id:
             identity_id = self._repo.resolve_identity_by_anchor(provider, external_id) or ""
         if not identity_id:
