@@ -1,7 +1,10 @@
 """Subscribe add service - 添加订阅."""
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from typing import Any, cast
+
+import httpx
 
 import log
 from app.domain.entities.rss import SubscribeState
@@ -10,6 +13,7 @@ from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
 from app.events.payloads import SubscribeAddPayload
+from app.infrastructure.image_proxy.referer_registry import image_referer_registry
 from app.media import meta_info
 from app.media.display_image_policy import unwrap_display_image_url
 from app.media.metadata import ProviderRef
@@ -100,6 +104,43 @@ def _season_number(value, default: int = 0) -> int:
         return int(text)
     except (TypeError, ValueError):
         return default
+
+
+def _preferred_profile_poster(
+    image: str,
+    content_profile: str | None,
+    mediaid: str | int | None,
+    media_type: Any,
+) -> str:
+    """自定义画像优先使用插件元数据海报，并验证外部图片可访问性。"""
+    if not image or not content_profile or content_profile == "default":
+        return image
+    ref = _split_provider_ref(mediaid)
+    if ref:
+        executor = ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(_resolve_provider_poster, content_profile, ref[1], media_type)
+        try:
+            poster, _source = future.result(timeout=3)
+        except Exception:  # noqa: BLE001 - 超时/失败回退原图
+            poster = ""
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
+        if poster:
+            return poster
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        }
+        referer = image_referer_registry.resolve(image)
+        if referer:
+            headers["Referer"] = referer
+        with httpx.Client(timeout=2.5, follow_redirects=True) as client:
+            response = client.get(image, headers=headers)
+            if response.status_code < 400:
+                return image
+    except Exception as exc:  # noqa: BLE001
+        log.debug(f"[Subscribe]海报可访问性检查失败，使用空海报: {exc}")
+    return ""
 
 
 class SubscribeAddService:
@@ -290,6 +331,7 @@ class SubscribeAddService:
             return -1, "标题或类型有误", None
         if image:
             image = unwrap_display_image_url(image)
+            image = _preferred_profile_poster(image, content_profile, mediaid, mtype)
         year = int(year) if str(year).isdigit() else ""
 
         # 新增订阅且未显式传值时，应用默认订阅设置

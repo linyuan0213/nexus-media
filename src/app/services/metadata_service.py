@@ -1120,7 +1120,13 @@ class MetadataService:
             return []
         providers = self._registry.list_providers(capability=ProviderCapability.SEARCH)
         if provider:
-            providers = [item for item in providers if item.descriptor.provider_key == provider]
+            primary = [item for item in providers if item.descriptor.provider_key == provider]
+            # 单一来源失败时并行查询画像聚合源，避免 JavDB 等慢源把整次搜索拖死。
+            profile_fallback = str(content_profile or "").strip()
+            fallback = []
+            if profile_fallback not in ("", "default", "anime") and profile_fallback != provider:
+                fallback = [item for item in providers if item.descriptor.provider_key == profile_fallback]
+            providers = [*primary, *fallback]
         selected = []
         for item in providers:
             descriptor = item.descriptor
@@ -1173,7 +1179,7 @@ class MetadataService:
         futures = {executor.submit(search_one, item): item.descriptor.provider_key for item in selected}
         # 单个 provider 也不能无限等：外部元数据源遇到 Cloudflare/SSL 抖动时
         # 会重试到 120s，详情页会被拖死。超时后返回部分结果，由调用方回退。
-        effective_timeout = wait_timeout or (20.0 if len(selected) == 1 else 10.0)
+        effective_timeout = wait_timeout or (20.0 if len(selected) == 1 else 8.0)
         done, not_done = wait(futures, timeout=effective_timeout)
         for future in done:
             try:
