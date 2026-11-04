@@ -30,12 +30,14 @@ class DownloadMonitor:
         interval: int = 30,
         max_workers: int = 4,
         history_repo: Any | None = None,
+        path_exists: Any | None = None,
     ):
         self._client_factory = client_factory
         self._interval = interval
         self._max_workers = max_workers
         self._event_bus = event_bus
         self._history_repo = history_repo
+        self._path_exists = path_exists or os.path.exists
         self._processed_ids: set[str] = set()
         self._executor: ThreadExecutor | None = None
         self._running = False
@@ -105,7 +107,7 @@ class DownloadMonitor:
                             continue
                         # 启动期残留任务：下载器里仍标记完成，但路径已不存在时
                         # 转移必然失败，不能让它重放并产生“无法识别”误通知。
-                        if task_path and os.path.isabs(task_path) and not os.path.exists(task_path):
+                        if task_path and os.path.isabs(task_path) and not self._path_exists(task_path):
                             self._processed_ids.add(uid)
                             log.warn(f"[DownloadMonitor]跳过启动期残留任务（路径不存在）: {task_id} @ {task_path}")
                     except Exception as e:  # noqa: BLE001 - 历史查询失败不应阻断启动
@@ -175,7 +177,7 @@ class DownloadMonitor:
             task_path = task.get("path") or ""
             if not task_id or not task_path:
                 continue
-            if not os.path.exists(task_path):
+            if not self._path_exists(task_path):
                 # 下载器残留任务/路径映射失效，不再触发转移和失败通知。
                 log.debug(f"[DownloadMonitor]跳过不存在的下载路径: {task_path}")
                 continue

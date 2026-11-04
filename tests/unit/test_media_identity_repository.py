@@ -13,12 +13,16 @@ from app.db.session import SessionManager
 def repo():
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
+    original = MediaIdentityRepository._session_manager
     manager = SessionManager()
     manager._engine = engine
     manager._factory = sessionmaker(bind=engine, expire_on_commit=False)
     MediaIdentityRepository._session_manager = manager
-    yield MediaIdentityRepository()
-    engine.dispose()
+    try:
+        yield MediaIdentityRepository()
+    finally:
+        MediaIdentityRepository._session_manager = original
+        engine.dispose()
 
 
 def test_identity_idempotent_and_lookup_by_ref(repo):

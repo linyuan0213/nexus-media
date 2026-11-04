@@ -7,7 +7,7 @@ class _Client:
     def __init__(self):
         self.image = None
 
-    def send_msg(self, title, text="", image="", url="", user_id=""):
+    def send_msg(self, title, text="", image="", url="", user_id="", content_profile=""):
         self.image = image
         return True, ""
 

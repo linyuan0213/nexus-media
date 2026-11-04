@@ -29,6 +29,7 @@ class TestDownloadMonitor:
             event_bus=mock_bus,
             interval=1,
             max_workers=2,
+            path_exists=lambda _path: True,
         )
         return m, mock_factory, mock_bus
 
@@ -90,9 +91,7 @@ class TestDownloadMonitor:
             history_repo=history,
         )
         mock_client = MagicMock()
-        mock_client.get_transfer_task.return_value = [
-            {"id": "ready", "path": str(target), "tags": [], "name": "movie"}
-        ]
+        mock_client.get_transfer_task.return_value = [{"id": "ready", "path": str(target), "tags": [], "name": "movie"}]
         mock_factory.get_client.return_value = mock_client
         mock_factory.get_downloader_conf.return_value = {"only_nexus_media": False, "match_path": False}
 
