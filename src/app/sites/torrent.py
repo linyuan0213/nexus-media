@@ -419,7 +419,7 @@ class Torrent:
                 return "{}{}{}{}{}{}".format(
                     str(collection_priority).rjust(1, "0"),
                     str(x.seeders).rjust(10, "0"),
-                    str(x.site_order).rjust(3, "0"),
+                    str(x.site_order).rjust(4, "0"),
                     str(x.res_order).rjust(3, "0"),
                     f"{season_len}{episode_len}",
                     str(x.title).ljust(100, " "),
@@ -427,7 +427,7 @@ class Torrent:
             else:
                 return "{}{}{}{}{}{}".format(
                     str(collection_priority).rjust(1, "0"),
-                    str(x.site_order).rjust(3, "0"),
+                    str(x.site_order).rjust(4, "0"),
                     str(x.res_order).rjust(3, "0"),
                     str(x.seeders).rjust(10, "0"),
                     f"{season_len}{episode_len}",

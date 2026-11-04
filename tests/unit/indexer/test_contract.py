@@ -438,7 +438,7 @@ def test_provider_to_raw_keeps_indexer_order_and_source():
     raw = Indexer._provider_to_raw(item)
 
     assert raw["_indexer_source"] == "builtin"
-    assert raw["_indexer_order"] == 97
+    assert raw["_indexer_order"] == 9996
 
 
 def test_dedup_prefers_configured_priority_then_builtin_tie():

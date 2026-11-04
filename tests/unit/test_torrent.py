@@ -4,9 +4,16 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from app.core.constants import site_priority_order
 from app.domain.mediatypes import MediaType
 from app.media.models import MediaInfo
 from app.sites.torrent import Torrent
+
+
+def test_site_priority_order_supports_values_above_100():
+    assert site_priority_order(1) > site_priority_order(100) > site_priority_order(101)
+    assert site_priority_order(9999) == 0
+    assert site_priority_order(10000) == 0
 
 
 class _MediaInfo(MediaInfo):
@@ -75,14 +82,14 @@ class TestTorrentGetDownloadList:
             title="Low",
             type=MediaType.MOVIE,
             res_order=0,
-            site_order=99,
+            site_order=9999,
             seeders=5,
         )
         high = _MediaInfo(
             title="High",
             type=MediaType.MOVIE,
             res_order=0,
-            site_order=-21,
+            site_order=0,
             seeders=500,
         )
         result = Torrent.get_download_list([low, high], download_order="site")
@@ -93,14 +100,14 @@ class TestTorrentGetDownloadList:
             title="HighSite",
             type=MediaType.MOVIE,
             res_order=0,
-            site_order=99,
+            site_order=9999,
             seeders=1,
         )
         high_rule = _MediaInfo(
             title="HighRule",
             type=MediaType.MOVIE,
             res_order=99,
-            site_order=-21,
+            site_order=0,
             seeders=999,
         )
         result = Torrent.get_download_list([high_rule, high_site], download_order="site")
@@ -112,14 +119,14 @@ class TestTorrentGetDownloadList:
             title="Low",
             type=MediaType.MOVIE,
             res_order=0,
-            site_order=99,
+            site_order=9999,
             seeders=5,
         )
         high = _MediaInfo(
             title="High",
             type=MediaType.MOVIE,
             res_order=0,
-            site_order=-21,
+            site_order=0,
             seeders=5,
         )
         result = Torrent.get_download_list([low, high], download_order="seeder")
@@ -134,7 +141,7 @@ class TestTorrentGetDownloadList:
             begin_episode=1,
             end_episode=1,
             res_order=1,
-            site_order=99,
+            site_order=9999,
             seeders=10,
         )
         second = _MediaInfo(
@@ -145,7 +152,7 @@ class TestTorrentGetDownloadList:
             begin_episode=1,
             end_episode=1,
             res_order=1,
-            site_order=-21,
+            site_order=0,
             seeders=10,
         )
         result = Torrent.get_download_list([first, second], download_order="site")
@@ -161,7 +168,7 @@ class TestTorrentGetDownloadList:
             begin_episode=1,
             end_episode=1,
             res_order=1,
-            site_order=99,
+            site_order=9999,
             seeders=10,
         )
         second = _MediaInfo(
@@ -172,7 +179,7 @@ class TestTorrentGetDownloadList:
             begin_episode=1,
             end_episode=1,
             res_order=1,
-            site_order=-21,
+            site_order=0,
             seeders=10,
         )
         result = Torrent.get_download_list([first, second], download_order="site", collapse=False)

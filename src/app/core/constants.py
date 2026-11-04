@@ -151,3 +151,16 @@ EPISODE_MAPPER_SEASON_GAP_DAYS = 90
 EPISODE_MAPPER_SEASON_GAP_FORCE_DAYS = 180
 EPISODE_MAPPER_MIN_BLOCK_LENGTH = 20
 EPISODE_MAPPER_MIN_TOTAL_EPISODES = 30
+
+# 站点优先级：数值越小越优先，允许 0~9999。
+MAX_SITE_PRIORITY = 9999
+
+
+def site_priority_order(priority: int | str | None) -> int:
+    """把 priority 转成非负、可直接降序比较的站点顺序值。"""
+    try:
+        value = int(priority or 0)
+    except (TypeError, ValueError):
+        value = MAX_SITE_PRIORITY
+    value = max(0, min(value, MAX_SITE_PRIORITY))
+    return MAX_SITE_PRIORITY - value

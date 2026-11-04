@@ -3,6 +3,7 @@
 import re
 
 import log
+from app.core.constants import site_priority_order
 from app.core.exceptions import (
     DownloadError,
     IndexerError,
@@ -211,7 +212,7 @@ class RssFeedStrategy:
                 log.info(f"[RssFeedStrategy] {site_name} 未配置 rssurl，跳过...")
                 continue
             site_id = site_info.get("id")
-            site_order = 100 - int(site_info.get("pri") or 0)
+            site_order = site_priority_order(site_info.get("pri"))
 
             log.info(f"[RssFeedStrategy] 正在处理：{site_info.get('display_name') or site_name}")
             if custom_rss and self._custom_rss is not None:

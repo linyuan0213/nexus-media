@@ -12,6 +12,7 @@ import threading
 from typing import TYPE_CHECKING
 
 import log
+from app.core.constants import site_priority_order
 from app.core.system_config import SystemConfig
 from app.db.repositories.download_repository import DownloadRepository
 from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
@@ -178,7 +179,7 @@ class Indexer:
                     if configured is not None
                     else int(getattr(indexer, "pri", 0 if source == "builtin" else 100) or 0)
                 )
-                provider = SiteIndexerProvider(client, indexer, 100 - int(pri))
+                provider = SiteIndexerProvider(client, indexer, site_priority_order(pri))
                 registry.register(
                     PriorityProvider(provider, {indexer.name: pri}, default=pri),
                     replace=True,
@@ -425,7 +426,7 @@ class Indexer:
             "_indexer_source": str(extra.get("source") or item.provider_id.split(":", 1)[0]),
             "_indexer_public": bool(extra.get("public", False)),
             "_external_indexer": bool(extra.get("external")),
-            "_indexer_order": 100 - int(item.priority),
+            "_indexer_order": site_priority_order(item.priority),
             "uploadvolumefactor": extra.get("uploadvolumefactor"),
             "downloadvolumefactor": extra.get("downloadvolumefactor"),
             "labels": extra.get("labels"),
