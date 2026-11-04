@@ -102,6 +102,7 @@ class MetadataSearchRequest(BaseModel):
     media_type: str | None = None
     content_profile: str = "default"
     limit: int = 20
+    timeout_seconds: float | None = None
 
 
 class IdentityMergeRequest(BaseModel):
@@ -1248,6 +1249,7 @@ def metadata_search(
             limit=req.limit,
             allow_private=allow_private,
             permissions=permissions,
+            wait_timeout=req.timeout_seconds,
         )
     )
 

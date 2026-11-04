@@ -1113,6 +1113,7 @@ class MetadataService:
         limit: int = 20,
         allow_private: bool = False,
         permissions: set[str] | None = None,
+        wait_timeout: float | None = None,
     ) -> list[dict[str, Any]]:
         self._ensure_builtin()
         if not query.strip():
@@ -1172,8 +1173,8 @@ class MetadataService:
         futures = {executor.submit(search_one, item): item.descriptor.provider_key for item in selected}
         # 单个 provider 也不能无限等：外部元数据源遇到 Cloudflare/SSL 抖动时
         # 会重试到 120s，详情页会被拖死。超时后返回部分结果，由调用方回退。
-        wait_timeout = 20.0 if len(selected) == 1 else 10.0
-        done, not_done = wait(futures, timeout=wait_timeout)
+        effective_timeout = wait_timeout or (20.0 if len(selected) == 1 else 10.0)
+        done, not_done = wait(futures, timeout=effective_timeout)
         for future in done:
             try:
                 hits.extend(future.result() or [])

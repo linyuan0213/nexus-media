@@ -13,8 +13,9 @@ from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.domain.enums import SearchType
 from app.infrastructure.temp import temp_manager
 from app.media import MediaService
-from app.media.display_image_policy import transform_display_image
+from app.media.display_image_policy import transform_display_image, unwrap_display_image_url
 from app.media.models import MediaInfo
+from app.media.poster_resolver import preferred_profile_poster
 from app.schemas.download import (
     DownloadResultDTO,
     IndexerStatisticsDTO,
@@ -111,6 +112,14 @@ class DownloadService:
                     media.tmdb_id = res.TMDBID
                 if res.POSTER and not media.poster_path:
                     media.poster_path = res.POSTER
+            poster = unwrap_display_image_url(media.poster_path or "")
+            media.poster_path = preferred_profile_poster(
+                poster,
+                media.content_profile,
+                media.anchor_provider,
+                media.anchor_external_id,
+                media.type,
+            )
             # 保存站点原始种子名，用于下载历史记录和后续识别
             media.org_string = res.TORRENT_NAME
             media.set_torrent_info(
