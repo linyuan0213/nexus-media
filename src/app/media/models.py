@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, get_args, get_origin
 
 import cn2an
 import regex as re
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 import log
 from app.core.constants import ANIME_GENREIDS
@@ -22,22 +22,36 @@ class MediaInfo(BaseModel):
 
     model_config = {"extra": "allow"}
 
-    @field_validator("filter_rule", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def _coerce_filter_rule(cls, value):
-        if value is None or isinstance(value, str):
-            return value
-        return str(value)
-
-    @field_validator("runtime", mode="before")
-    @classmethod
-    def _coerce_runtime(cls, value):
-        if value is None or value == "":
-            return 0
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return 0
+    def _normalize_scalar_fields(cls, data):
+        """统一在模型边界归一标量类型，避免不同生产者/历史队列 payload 类型漂移."""
+        if not isinstance(data, dict):
+            return data
+        for name, field in cls.model_fields.items():
+            if name not in data:
+                continue
+            value = data[name]
+            annotation = field.annotation
+            origin = get_origin(annotation)
+            args = get_args(annotation)
+            optional_str = str in args
+            optional_int = int in args
+            if origin is None:
+                optional_str = annotation is str
+                optional_int = annotation is int
+            if optional_str and value is not None and not isinstance(value, str):
+                if isinstance(value, (bool, float, int)):
+                    data[name] = str(value)
+            elif optional_int:
+                if value is None or value == "":
+                    data[name] = 0
+                elif isinstance(value, str):
+                    try:
+                        data[name] = int(value)
+                    except ValueError:
+                        data[name] = 0
+        return data
 
     # ---- 识别相关 ----
     fileflag: bool = False
