@@ -1410,6 +1410,19 @@ class FileTransferService:
                             "file_ext": os.path.splitext(file_item)[-1],
                             "ret_file_path": ret_file_path,
                         }
+                        try:
+                            src_size = src_backend.stat(reg_path).size if src_backend else os.path.getsize(reg_path)
+                            dst_size = (
+                                dst_backend.stat(ret_file_path).size if dst_backend else os.path.getsize(ret_file_path)
+                            )
+                            if src_size and dst_size and int(src_size) != int(dst_size):
+                                failed_count += 1
+                                alert_count += 1
+                                alert_messages.append("目标同名文件大小不一致，未执行覆盖")
+                                self._notify_failure(reg_path, 1, "目标同名文件大小不一致")
+                                continue
+                        except Exception as exc:  # noqa: BLE001
+                            log.debug(f"[Rmt]目标大小校验失败: {exc}")
                         media.user_id = self._resolve_owner_user_id(reg_path, media)
                         self._record_transfer_history(
                             media,
