@@ -20,7 +20,16 @@ from collections.abc import Callable, Iterator
 from concurrent.futures import Future, ThreadPoolExecutor
 
 import log
+from app.db.engine import background_engine_context, get_session_factory_override
 from app.utils.exception_utils import ExceptionUtils
+
+
+def _run_in_background(func: Callable, *args, **kwargs):
+    """后台线程统一使用后台 DB 连接池，避免占用 API 主池。"""
+    if get_session_factory_override() is not None:
+        return func(*args, **kwargs)
+    with background_engine_context():
+        return func(*args, **kwargs)
 
 
 class ThreadExecutor:
@@ -87,7 +96,7 @@ class ThreadExecutor:
 
         def _wrapper(*w_args, **w_kwargs):
             try:
-                return func(*w_args, **w_kwargs)
+                return _run_in_background(func, *w_args, **w_kwargs)
             except Exception as e:
                 log.warn(f"[ThreadExecutor:{self._name}] 任务异常: {func.__name__}")
                 ExceptionUtils.exception_traceback(e)
@@ -115,7 +124,7 @@ class ThreadExecutor:
 
         def _wrapper(item):
             try:
-                return func(item)
+                return _run_in_background(func, item)
             except Exception as e:
                 log.warn(f"[ThreadExecutor:{self._name}] map 任务异常: {func.__name__}")
                 ExceptionUtils.exception_traceback(e)

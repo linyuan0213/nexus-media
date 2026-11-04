@@ -55,15 +55,12 @@ class DatabaseFactory:
     POSTGRESQL = "postgresql"
 
     # 连接池默认值（MySQL/PostgreSQL）。
-    # 进程连接上限 = 主池(pool_size + max_overflow) + 调度池(scheduler_*)，默认合计 30 条。
-    # 取值依据：PostgreSQL 官方默认 max_connections=100（另保留 superuser_reserved_connections=3），
-    # 但数据库实例常被多个服务共用（同机的 odoo、备份工具等），且不少部署会把它收紧到 40~60。
-    # 应用默认只占 30%（主池 20 + 调度池 10），给同实例的其他客户端留出空间，避免 nexus 的
-    # overflow 新建连接被服务端 FATAL 拒绝（remaining connection slots are reserved）。
-    # 注意 pool_size 只决定常驻连接数、max_overflow 提供峰值弹性，因此「常驻 10 + 溢出 10」
-    # 比原来「常驻 20」在同等峰值下少占一半空闲槽位。
-    # 实例容量更大时可用 DATABASE__POOL_SIZE / DATABASE__MAX_OVERFLOW 等环境变量放大，
-    # 但必须保证「主池 + 调度池 + 其他客户端」不超过 max_connections。
+    # 进程连接上限 = API 主池(pool_size + max_overflow) + 后台池(scheduler_*)。
+    # API 主池只服务请求链路；调度任务、插件任务、队列 worker、同步/站点刷新等
+    # 后台线程统一走后台池，避免后台并发把 API 连接池占满后前端直接超时。
+    # 后台池按站点刷新 10、同步 8、下载监控 4、队列 worker 及订阅并发预留，
+    # 默认 20 + 20；实例容量更大时可用 DATABASE__POOL_SIZE / DATABASE__MAX_OVERFLOW
+    # 等环境变量放大，但必须保证「主池 + 后台池 + 其他客户端」不超过 max_connections。
     DEFAULT_POOL_SIZE = 10
     DEFAULT_MAX_OVERFLOW = 10
     DEFAULT_POOL_TIMEOUT = 15

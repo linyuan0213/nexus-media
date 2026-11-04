@@ -27,8 +27,8 @@ _ENV_MAP = {
 _DEFAULTS = {
     "pool_size": 10,
     "max_overflow": 10,
-    "scheduler_pool_size": 5,
-    "scheduler_max_overflow": 5,
+    "scheduler_pool_size": 20,
+    "scheduler_max_overflow": 20,
     "sync_workers": 4,
     "sync_workers_max": 8,
     "max_connections": 100,

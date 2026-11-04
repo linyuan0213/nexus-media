@@ -164,7 +164,7 @@ def test_connection_budget_clamps_to_low_server_capacity(monkeypatch):
 def test_connection_budget_keeps_defaults_when_server_has_room():
     budget = load_connection_budget("postgresql", server_max_connections=100)
     assert budget.main_capacity == 20
-    assert budget.scheduler_capacity == 10
+    assert budget.scheduler_capacity == 40
     assert budget.sync_workers == 4
     assert budget.is_valid is True
 

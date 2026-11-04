@@ -124,6 +124,17 @@ def scheduler_engine_context() -> Iterator[None]:
         _db_override.reset(token)
 
 
+@contextmanager
+def background_engine_context() -> Iterator[None]:
+    """后台任务 DB 上下文：与调度任务共用后台连接池，和 API 主池隔离。
+
+    适用于 ThreadExecutor、队列 worker 等非请求线程；已在后台上下文内时
+    由调用方直接复用，不重复设置。
+    """
+    with scheduler_engine_context():
+        yield
+
+
 def new_session():
     """创建一个全新的 Session（调用方必须负责 close/remove）"""
     return get_session_factory()()

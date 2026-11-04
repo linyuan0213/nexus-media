@@ -8,6 +8,7 @@ from collections.abc import Callable
 from typing import Any
 
 import log
+from app.db.engine import background_engine_context
 from app.infrastructure.task_queue.base import TaskQueue
 from app.infrastructure.task_queue.models import QueueUnavailableError, Task
 
@@ -95,7 +96,8 @@ class TaskWorker:
             )
             heartbeat_thread.start()
         try:
-            result = handler(task)
+            with background_engine_context():
+                result = handler(task)
         except Exception as exc:  # noqa: BLE001
             log.warn(f"[TaskQueue]任务失败 {task.id} ({task.task_type}): {exc}")
             self._queue.fail(task, str(exc), retryable=True)
