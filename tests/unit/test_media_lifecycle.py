@@ -600,3 +600,19 @@ def test_find_by_title_matches_anime_and_tv():
     identity = repo.ensure_identity(media_type="tv", title="Demo Anime", year="2026")
     assert repo.find_by_title("Demo Anime", "2026", "anime").IDENTITY_ID == identity.IDENTITY_ID
     assert repo.find_by_title("Demo Anime", "2026", "tv").IDENTITY_ID == identity.IDENTITY_ID
+
+
+def test_find_by_ref_falls_back_to_other_scope():
+    from app.db.repositories.media_identity_repository import MediaIdentityRepository
+
+    repo = MediaIdentityRepository()
+    identity = repo.ensure_identity(media_type="tv", title="Scoped Show", year="2026")
+    repo.upsert_ref(
+        identity.IDENTITY_ID,
+        provider="tmdb",
+        external_id="999001",
+        media_type="anime",
+        scope="season=1",
+    )
+
+    assert repo.find_by_ref("tmdb", "999001", media_type="tv").IDENTITY_ID == identity.IDENTITY_ID
