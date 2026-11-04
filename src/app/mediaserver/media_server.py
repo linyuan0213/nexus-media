@@ -357,15 +357,26 @@ class MediaServer:
         if not items:
             return
         if server_id is not None:
-            self._refresh_items_for_instance(items, server_id)
-            self.refresh_root_library(server_id=server_id)
+            self._scan_instance(items, server_id, None)
             return
         for (target_id, library_id), group_items in self._group_items_by_route(items, content_profile).items():
             if library_id:
                 for item in group_items:
                     item.setdefault("library_id", library_id)
-            self._refresh_items_for_instance(group_items, target_id)
-            self.refresh_root_library(server_id=target_id, library_id=library_id)
+            self._scan_instance(group_items, target_id, library_id)
+
+    def _scan_instance(self, items, server_id: int | None, library_id: str | None) -> None:
+        """同一实例/媒体库的扫描串行执行，避免并发扫描把 Emby 写成重复剧集。"""
+        key = f"mediaserver:scan:{server_id or 0}:{library_id or ''}"
+        lock = get_lock_manager().create_lock(key, ttl_seconds=900)
+        if not lock.acquire():
+            log.info("[MediaServer]媒体库扫描正在执行，跳过重复触发")
+            return
+        try:
+            self._refresh_items_for_instance(items, server_id)
+            self.refresh_root_library(server_id=server_id, library_id=library_id)
+        finally:
+            lock.release()
 
     def _refresh_items_for_instance(self, items, server_id: int | None):
         client = self._get_client(server_id)
