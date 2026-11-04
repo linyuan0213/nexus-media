@@ -31,6 +31,7 @@ class _BaseBrowserSession:
         proxy_url: str | None = None,
         fp_profile_id: str | None = None,
         timeout: float = 60.0,
+        slot_timeout: float = 30.0,
         api_key: str | None = None,
         persist: bool = True,
         cleanup_auto_tabs: bool = False,
@@ -42,6 +43,7 @@ class _BaseBrowserSession:
         self.proxy_url = proxy_url
         self.fp_profile_id = fp_profile_id
         self.timeout = timeout
+        self.slot_timeout = slot_timeout
         self.session_id = site_key
         self._slot: Any = None
         # persist=True 时关闭不删除会话，保留过盾 Cookie 供后续请求复用
@@ -80,7 +82,7 @@ class BrowserSession(_BaseBrowserSession):
 
     def __enter__(self) -> BrowserSession:
         # 浏览器并发闸门：占满时阻塞等待，避免 chrome 实例/标签页被挤爆
-        self._slot = browser_slot()
+        self._slot = browser_slot(timeout=getattr(self, "slot_timeout", 30.0))
         self._slot.__enter__()
         try:
             self._ensure_session()
@@ -269,7 +271,7 @@ class AsyncBrowserSession(_BaseBrowserSession):
         self._client = httpx2.AsyncClient(timeout=self.timeout, follow_redirects=True, headers=self._auth_headers())
 
     async def __aenter__(self) -> AsyncBrowserSession:
-        self._slot = browser_slot()
+        self._slot = browser_slot(timeout=getattr(self, "slot_timeout", 30.0))
         await asyncio.to_thread(self._slot.__enter__)
         try:
             await self._ensure_session()

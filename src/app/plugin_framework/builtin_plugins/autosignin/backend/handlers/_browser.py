@@ -64,6 +64,7 @@ class BrowserSigninHandler(SiteSigninHandler):
                 server_url=server_url,
                 fp_profile_id=fp_profile_id,
                 cleanup_auto_tabs=True,
+                slot_timeout=180.0,
             ) as session:
                 result = session.navigate(home_url, cookie=ctx.cookie)
                 html_text = result.get("html", "") or ""
@@ -92,6 +93,7 @@ class BrowserSigninHandler(SiteSigninHandler):
                 server_url=server_url,
                 fp_profile_id=fp_profile_id,
                 cleanup_auto_tabs=True,
+                slot_timeout=180.0,
             ) as session:
                 # 优先直接访问签到页：GET attendance 即完成签到，无需首页查找+点击，
                 # 且等待签到页自身的 WAF/雷池挑战清除后再判定，避免误报失败

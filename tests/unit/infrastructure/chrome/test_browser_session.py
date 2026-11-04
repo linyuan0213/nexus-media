@@ -10,7 +10,7 @@ from app.infrastructure.chrome.session import BrowserSession
 
 def test_enter_releases_slot_when_ensure_session_fails(monkeypatch):
     slot = MagicMock()
-    monkeypatch.setattr(session_mod, "browser_slot", lambda: slot)
+    monkeypatch.setattr(session_mod, "browser_slot", lambda **kwargs: slot)
 
     session = BrowserSession.__new__(BrowserSession)
     session._slot = None
