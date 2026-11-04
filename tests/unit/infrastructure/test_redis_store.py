@@ -3,7 +3,15 @@
 import time
 from unittest.mock import MagicMock
 
+import pytest
+
+from app.infrastructure.redis import store as store_module
 from app.infrastructure.redis.store import RedisStore
+
+
+@pytest.fixture(autouse=True)
+def _enable_redis(monkeypatch):
+    monkeypatch.setattr(store_module.redis_cfg, "enabled", True)
 
 
 def _store_with_client() -> tuple[RedisStore, MagicMock]:

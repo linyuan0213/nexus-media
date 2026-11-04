@@ -14,6 +14,8 @@ try:
 except FileNotFoundError:
     pass
 os.environ["DATABASE__SQLITE_PATH"] = _test_db
+# 测试默认关闭 Redis，避免每个缓存实例 4s 连接超时；Redis 专项测试自行启用。
+os.environ.setdefault("REDIS__ENABLED", "false")
 
 import pytest  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402
