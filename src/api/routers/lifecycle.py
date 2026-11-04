@@ -15,6 +15,7 @@ from app.db.repositories.lifecycle_repository import (
     lifecycle_event_to_dict,
     lifecycle_row_to_dict,
 )
+from app.domain.lifecycle import stage_rank
 from app.schemas.auth import UserContext
 from app.services.lifecycle_action_service import LifecycleActionError, LifecycleActionService
 from app.services.lifecycle_service import LifecycleReconciler
@@ -60,6 +61,19 @@ def _row_payload(row) -> dict[str, Any]:
         "missing": bool(data.get("MISSING")),
         "elapsed_seconds": max(0, elapsed),
     }
+
+
+def _collapse_timeline(rows: list[Any]) -> list[Any]:
+    """同一阶段保留最后一次事件，并按阶段顺序展示，避免回填事件重复/乱序."""
+    latest: dict[str, Any] = {}
+    for row in rows:
+        current = latest.get(str(row.STAGE))
+        if current is None or (row.OCCURRED_AT, row.ID) >= (current.OCCURRED_AT, current.ID):
+            latest[str(row.STAGE)] = row
+    return sorted(
+        latest.values(),
+        key=lambda event: (stage_rank(str(event.STAGE)), event.OCCURRED_AT, event.ID),
+    )
 
 
 def _event_payload(row) -> dict[str, Any]:
@@ -287,4 +301,4 @@ def list_lifecycle_events(
         user=current_user,
         until=snapshot.LAST_EVENT_AT if snapshot is not None else None,
     )
-    return success(data=[_event_payload(row) for row in rows])
+    return success(data=[_event_payload(row) for row in _collapse_timeline(rows)])
