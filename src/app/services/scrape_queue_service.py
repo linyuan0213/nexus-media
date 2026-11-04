@@ -206,7 +206,20 @@ class ScrapeQueueService:
             raise RuntimeError(f"目录刮削失败 {path}: {exc}") from exc
 
     def finalize_duplicate(self, media: MediaInfo, finalize: dict[str, Any]) -> None:
-        """目标已存在且元数据完整：补发入库消息与转移完成事件。"""
+        """目标已存在且元数据完整：记录入库、发送消息并发布转移完成事件。"""
+        key = (
+            f"library:duplicate:{media.get_title_string()}:"
+            f"{media.get_season_string()}:{media.get_episode_string()}"
+        )
+        self._record_media(
+            media,
+            LifecycleStage.IN_LIBRARY,
+            LifecycleStatus.SUCCEEDED,
+            "library.present",
+            None,
+            progress=100,
+            event_key=key,
+        )
         self._finalize(media, finalize, metadata_ok=True)
 
     def _finalize(self, media: MediaInfo, finalize: dict[str, Any], *, metadata_ok: bool) -> None:
@@ -296,6 +309,7 @@ class ScrapeQueueService:
         *,
         progress: int | None = None,
         error: str | None = None,
+        event_key: str | None = None,
     ) -> None:
         if self._lifecycle is None:
             return
@@ -311,7 +325,7 @@ class ScrapeQueueService:
                 retry_count=task.attempts if task else 0,
                 error=error,
                 payload={"queue": task.queue_name, "task_id": task.id} if task else {},
-                event_key=f"scrape:{task.id}:{event_type}:{task.attempts}" if task else None,
+                event_key=event_key or (f"scrape:{task.id}:{event_type}:{task.attempts}" if task else None),
             )
         except Exception as exc:  # noqa: BLE001
             log.warn(f"[Lifecycle]记录刮削生命周期失败: {exc}")

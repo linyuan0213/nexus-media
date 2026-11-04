@@ -1394,6 +1394,7 @@ class FileTransferService:
                             "file_ext": os.path.splitext(file_item)[-1],
                             "ret_file_path": ret_file_path,
                         }
+                        media.user_id = self._resolve_owner_user_id(reg_path, media)
                         self._record_transfer_history(
                             media,
                             in_from,
