@@ -530,7 +530,7 @@ class DownloadRepository(BaseRepository):
                 row.ENCLOSURE = media_info.enclosure or ""
                 row.DESC = media_info.description or ""
                 row.SE = media_info.get_season_episode_string() or ""
-                row.IDENTITY_ID = getattr(media_info, "identity_id", None)
+                row.IDENTITY_ID = self._identity_for_media(media_info)
                 row.ANCHOR_PROVIDER = getattr(media_info, "anchor_provider", None)
                 row.ANCHOR_EXTERNAL_ID = getattr(media_info, "anchor_external_id", None)
                 row.CONTENT_PROFILE = getattr(media_info, "content_profile", None)

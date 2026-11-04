@@ -12,6 +12,7 @@ from app.db.models import (
 )
 from app.db.repositories.base_repository import BaseRepository
 from app.media.metadata.policy import ANCHOR_POLICY
+from app.services.identity_resolver import IdentityResolver
 from app.utils.json_utils import JsonUtils
 
 
@@ -247,6 +248,16 @@ class LibraryRenameRepository(BaseRepository):
         user_id: int | None = None,
     ) -> None:
         now = now_str()
+        resolved = IdentityResolver().resolve_values(
+            identity_id=data.get("identity_id"),
+            provider=data.get("anchor_provider"),
+            external_id=data.get("anchor_external_id"),
+            title=data.get("title"),
+            year=data.get("year"),
+            media_type=data.get("type") or "movie",
+            content_profile=data.get("content_profile"),
+            allow_local=False,
+        )
         values = {
             "BACKEND_ID": str(backend_id or "local"),
             "PATH": path,
@@ -255,7 +266,7 @@ class LibraryRenameRepository(BaseRepository):
             "TITLE": str(data.get("title") or ""),
             "YEAR": str(data.get("year") or ""),
             "TMDBID": str(data.get("tmdbid") or ""),
-            "IDENTITY_ID": data.get("identity_id"),
+            "IDENTITY_ID": resolved.identity_id or None,
             "ANCHOR_PROVIDER": data.get("anchor_provider"),
             "ANCHOR_EXTERNAL_ID": data.get("anchor_external_id"),
             "CONTENT_PROFILE": data.get("content_profile") or "default",

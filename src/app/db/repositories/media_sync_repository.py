@@ -3,12 +3,14 @@
 处理媒体库同步相关的数据库操作
 """
 
+import re
 import time
 
 from sqlalchemy import and_, or_
 
 from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
 from app.db.repositories.base_repository import BaseRepository
+from app.services.identity_resolver import IdentityResolver
 from app.utils.json_utils import JsonUtils
 
 
@@ -34,11 +36,30 @@ class MediaSyncRepository(BaseRepository):
         year = str(iteminfo.get("year") or "") if iteminfo.get("year") is not None else ""
         anchor_provider = str(iteminfo.get("anchor_provider") or "").strip()
         anchor_external_id = str(iteminfo.get("anchor_external_id") or "").strip()
+        display_title = iteminfo.get("seriesName") or iteminfo.get("title") or ""
         if not anchor_provider:
             if tmdb_id:
                 anchor_provider, anchor_external_id = "tmdb", tmdb_id
             elif imdb_id:
                 anchor_provider, anchor_external_id = "imdb", imdb_id
+            else:
+                match = re.search(r"([A-Za-z]{2,12})[-_ ]?(\d{2,6})", str(display_title))
+                if match:
+                    anchor_provider = "content_id"
+                    anchor_external_id = f"{match.group(1).upper()}-{match.group(2)}"
+
+        item_type = str(iteminfo.get("type") or "").lower()
+        media_type = "movie" if item_type == "movie" else "tv"
+        resolved = IdentityResolver().resolve_values(
+            identity_id=iteminfo.get("identity_id"),
+            provider=anchor_provider,
+            external_id=anchor_external_id,
+            title=display_title,
+            year=year,
+            media_type=media_type,
+            content_profile=iteminfo.get("content_profile"),
+            allow_local=False,
+        )
 
         with self.session() as db:
             query = db.query(MEDIASYNCITEMS).filter(
@@ -63,7 +84,7 @@ class MediaSyncRepository(BaseRepository):
                 PATH=iteminfo.get("path") or "",
                 NOTE=iteminfo.get("note") or "",
                 JSON=JsonUtils.dumps(seasoninfo) if seasoninfo is not None else "",
-                IDENTITY_ID=iteminfo.get("identity_id") or None,
+                IDENTITY_ID=resolved.identity_id or None,
                 ANCHOR_PROVIDER=anchor_provider or None,
                 ANCHOR_EXTERNAL_ID=anchor_external_id or None,
                 CONTENT_PROFILE=iteminfo.get("content_profile") or "default",

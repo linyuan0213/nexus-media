@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db.models import Base
+from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.db.repositories.media_sync_repository import MediaSyncRepository
 from app.db.session import SessionManager
 
@@ -20,9 +21,16 @@ def repo():
     manager = SessionManager()
     manager._engine = engine
     manager._factory = sessionmaker(bind=engine, expire_on_commit=False)
+    original_sync = MediaSyncRepository._session_manager
+    original_identity = MediaIdentityRepository._session_manager
     MediaSyncRepository._session_manager = manager
-    yield MediaSyncRepository()
-    engine.dispose()
+    MediaIdentityRepository._session_manager = manager
+    try:
+        yield MediaSyncRepository()
+    finally:
+        MediaSyncRepository._session_manager = original_sync
+        MediaIdentityRepository._session_manager = original_identity
+        engine.dispose()
 
 
 class TestMediaSyncTypeCoercion:
