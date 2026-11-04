@@ -9,6 +9,7 @@ from sqlalchemy import func, inspect
 
 from app.db.models import DOWNLOADHISTORY, SEARCHRESULTINFO, TRANSFERHISTORY
 from app.db.models.lifecycle import MediaLifecycle
+from app.db.models.media_identity import MediaExternalRef, MediaIdentity
 from app.db.models.subscribe import SubscribeMovies, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
 
@@ -75,13 +76,48 @@ def audit() -> dict:
                 .scalar()
                 or 0
             )
+    subscription_orphans = 0
+    missing_ref_identities = 0
+    lifecycle_unknown = 0
+    if SubscribeMovies.__tablename__ in tables and MediaIdentity.__tablename__ in tables:
+        for model in (SubscribeMovies, SubscribeTvs):
+            rows = db.query(model.IDENTITY_ID).all()
+            for (identity_id,) in rows:
+                if not identity_id or identity_id == "preview":
+                    subscription_orphans += 1
+                    continue
+                exists = db.query(MediaIdentity.IDENTITY_ID).filter(MediaIdentity.IDENTITY_ID == identity_id).first()
+                ref_exists = db.query(MediaExternalRef.ID).filter(MediaExternalRef.IDENTITY_ID == identity_id).first()
+                if exists is None:
+                    subscription_orphans += 1
+                elif ref_exists is None:
+                    missing_ref_identities += 1
+    if MediaLifecycle.__tablename__ in tables and MediaIdentity.__tablename__ in tables:
+        lifecycle_ids = {
+            str(row[0])
+            for row in db.query(MediaLifecycle.IDENTITY_ID)
+            .filter(MediaLifecycle.IDENTITY_ID != "preview")
+            .distinct()
+            .all()
+        }
+        known_ids = {str(row[0]) for row in db.query(MediaIdentity.IDENTITY_ID).all()}
+        lifecycle_unknown = len(lifecycle_ids - known_ids)
     result["lifecycle_shadow_identities"] = shadow
     result["duplicate_title_identity_groups"] = duplicate_groups
+    result["subscription_orphan_identities"] = subscription_orphans
+    result["subscription_missing_ref_identities"] = missing_ref_identities
+    result["lifecycle_unknown_identities"] = lifecycle_unknown
     failures = []
     if shadow:
         failures.append("shadow_identities")
     if duplicate_groups:
         failures.append("duplicate_title_identity_groups")
+    if subscription_orphans:
+        failures.append("subscription_orphan_identities")
+    if missing_ref_identities:
+        failures.append("subscription_missing_ref_identities")
+    if lifecycle_unknown:
+        failures.append("lifecycle_unknown_identities")
     for label, data in result["tables"].items():
         if data["empty_identity"] and not data["allowed_empty"]:
             failures.append(f"empty_identity:{label}")

@@ -156,6 +156,29 @@ class MediaIdentityRepository(BaseRepository):
                 .first()
             )
 
+    def find_by_external_id(
+        self,
+        external_id: str,
+        *,
+        media_type: str | None = None,
+    ) -> MediaIdentity | None:
+        """跨 provider 按外部编号查找身份（如 MIDA-853 同时有 javdb/content_id 引用）."""
+        value = str(external_id or "").strip()
+        if not value:
+            return None
+        normalized_type = _normalize_ref_media_type(media_type)
+        with self.readonly() as db:
+            query = db.query(MediaExternalRef).filter(MediaExternalRef.EXTERNAL_ID == value)
+            if normalized_type:
+                if normalized_type == "tv":
+                    query = query.filter(MediaExternalRef.MEDIA_TYPE.in_(("tv", "anime")))
+                else:
+                    query = query.filter(MediaExternalRef.MEDIA_TYPE == normalized_type)
+            ref = query.order_by(MediaExternalRef.IS_PRIMARY.desc(), MediaExternalRef.ID.asc()).first()
+            if ref is None:
+                return None
+            return db.query(MediaIdentity).filter(MediaIdentity.IDENTITY_ID == ref.IDENTITY_ID).first()
+
     def find_by_title(
         self,
         title: str | None,

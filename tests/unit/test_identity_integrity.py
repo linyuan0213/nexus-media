@@ -63,3 +63,24 @@ def test_preview_identity_is_resolved_to_real_identity():
     )
 
     assert resolved.identity_id == identity.IDENTITY_ID
+
+
+def test_cross_provider_external_code_resolves_to_one_identity():
+    repo = MediaIdentityRepository()
+    identity = repo.ensure_identity(media_type="movie", title="MIDA-853 Full Title", year="")
+    repo.upsert_ref(identity.IDENTITY_ID, provider="javdb", external_id="MIDA-853", media_type="movie")
+
+    resolved = IdentityResolver().resolve_values(
+        provider="content_id",
+        external_id="MIDA-853",
+        title="MIDA-853",
+        media_type="movie",
+    )
+
+    assert resolved.identity_id == identity.IDENTITY_ID
+    assert repo.find_by_ref("content_id", "MIDA-853", media_type="movie") is not None
+
+
+def test_anonymous_record_does_not_create_local_identity():
+    resolved = IdentityResolver().resolve_values(title="", media_type="movie", allow_local=True)
+    assert resolved.identity_id == ""

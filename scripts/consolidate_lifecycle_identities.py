@@ -7,12 +7,14 @@
 from __future__ import annotations
 
 import argparse
+import re
 from collections import defaultdict
 from datetime import datetime
 
 from app.db.models import DOWNLOADHISTORY, SEARCHRESULTINFO, TRANSFERHISTORY
 from app.db.models.lifecycle import MediaLifecycle, MediaLifecycleEvent
 from app.db.models.media_identity import MediaExternalRef, MediaIdentity
+from app.db.models.subscribe import SubscribeHistory, SubscribeMovies, SubscribeTvEpisodes, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
 from app.domain.lifecycle import stage_rank
 
@@ -65,7 +67,14 @@ def _merge_snapshots(db, source_id: str, target_id: str) -> tuple[int, int]:
 
 def _move(db, source_id: str, target_id: str) -> dict[str, int]:
     counts = {"histories": 0, "search": 0, "events": 0, "snapshots": 0}
-    for model in (DOWNLOADHISTORY, TRANSFERHISTORY):
+    for model in (
+        DOWNLOADHISTORY,
+        TRANSFERHISTORY,
+        SubscribeMovies,
+        SubscribeTvs,
+        SubscribeTvEpisodes,
+        SubscribeHistory,
+    ):
         counts["histories"] += (
             db.query(model)
             .filter(model.IDENTITY_ID == source_id)
@@ -105,8 +114,43 @@ def _move(db, source_id: str, target_id: str) -> dict[str, int]:
     return counts
 
 
+_CODE_RE = re.compile(r"^[A-Za-z]{2,12}[-_ ]?\d{2,6}$")
+
+
+def _normalize_code(value: str) -> str:
+    return re.sub(r"[-_ ]", "", str(value or "")).upper()
+
+
+def _merge_code_groups(db, apply: bool, counts: dict[str, int]) -> None:
+    refs = db.query(MediaExternalRef.EXTERNAL_ID, MediaExternalRef.IDENTITY_ID).all()
+    groups: dict[str, set[str]] = defaultdict(set)
+    for external_id, identity_id in refs:
+        if external_id and _CODE_RE.match(str(external_id)):
+            groups[_normalize_code(external_id)].add(str(identity_id))
+    for code, identity_ids in sorted(groups.items()):
+        if len(identity_ids) < 2:
+            continue
+        scored = []
+        for identity_id in identity_ids:
+            rows = db.query(MediaLifecycle).filter(MediaLifecycle.IDENTITY_ID == identity_id).count()
+            ref_count = db.query(MediaExternalRef).filter(MediaExternalRef.IDENTITY_ID == identity_id).count()
+            identity = db.query(MediaIdentity).filter(MediaIdentity.IDENTITY_ID == identity_id).first()
+            scored.append((rows, ref_count, 1 if identity is not None else 0, identity_id))
+        scored.sort(reverse=True)
+        target_id = scored[0][3]
+        counts["code_groups"] += 1
+        if not apply:
+            print("would merge code", code, "->", target_id, "from", [item[3] for item in scored[1:]])
+            continue
+        for _, _, _, source_id in scored[1:]:
+            result = _move(db, source_id, target_id)
+            for name, value in result.items():
+                counts[name] = counts.get(name, 0) + value
+            counts["merged"] += 1
+
+
 def consolidate(apply: bool) -> dict[str, int]:
-    counts = {"groups": 0, "merged": 0, "identities_before": 0, "identities_after": 0}
+    counts = {"groups": 0, "code_groups": 0, "merged": 0, "identities_before": 0, "identities_after": 0}
     with BaseRepository().session() as db:
         rows = (
             db.query(
@@ -145,6 +189,7 @@ def consolidate(apply: bool) -> dict[str, int]:
                 for name, value in result.items():
                     counts[name] = counts.get(name, 0) + value
                 counts["merged"] += 1
+        _merge_code_groups(db, apply, counts)
         if apply:
             db.commit()
             counts["identities_after"] = (

@@ -128,6 +128,25 @@ class IdentityResolver:
             if found is not None:
                 return self._result(found, provider_text, external_text, profile)
 
+        # 2.5 跨 provider 同编号：MIDA-853 的 content_id / javdb 引用必须归到同一身份
+        if provider_text and external_text:
+            finder = getattr(self._repo, "find_by_external_id", None)
+            found = finder(external_text, media_type=ref_type) if callable(finder) else None
+            if found is not None:
+                if create:
+                    try:
+                        self._repo.upsert_ref(
+                            found.IDENTITY_ID,
+                            provider=provider_text,
+                            external_id=external_text,
+                            media_type=ref_type,
+                            scope=scope,
+                            link_method="identity_resolver",
+                        )
+                    except ValueError:
+                        pass
+                return self._result(found, provider_text, external_text, profile)
+
         # 3. 标题/年份/类型族（动漫与剧集同族）
         title_text = str(title or "").strip()
         if title_text and (allow_local or (provider_text and external_text)):
@@ -174,7 +193,7 @@ class IdentityResolver:
                     return self._result(found, provider_text, external_text, profile)
 
         # 5. 仅历史/任务类记录允许本地兜底；搜索结果不创建 local
-        if allow_local:
+        if allow_local and (title_text or provider_text or external_text):
             local_id = fallback_identity(
                 title_text,
                 raw_type,
