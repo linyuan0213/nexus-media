@@ -79,7 +79,7 @@ def message_history(
 ):
     """最近通知历史（刷新后恢复显示；全局通知 + 本人消息）"""
     store = WebMessageStore.instance()
-    items = store.history(str(user.user_id), limit=max(1, min(limit, 200)))
+    items = store.history(str(user.user_id), limit=max(1, min(limit, 100)))
     return success(data={"messages": items})
 
 
@@ -94,13 +94,13 @@ def message_unread_count(
 
 @router.get("/message/unread")
 def message_unread_list(
-    limit: int = 100,
+    limit: int = 20,
     user: Any = Depends(get_current_user),
 ):
     """当前用户未读消息列表 + 未读数（通知栏下拉，轻量接口）"""
     store = WebMessageStore.instance()
     uid = str(user.user_id)
-    items = store.unread_list(uid, max(1, min(limit, 200)))
+    items = store.unread_list(uid, max(1, min(limit, 100)))
     return success(data={"messages": items, "unread": store.unread_count(uid)})
 
 

@@ -169,7 +169,7 @@ class WebMessageStore:
             items = [i for i in self._items if is_visible(i.get("user_id"), user_id)]
             return items[-limit:]
 
-    def unread_list(self, user_id: str, limit: int = 50) -> list[dict]:
+    def unread_list(self, user_id: str, limit: int = 20) -> list[dict]:
         """当前用户未读消息列表（通知栏下拉，轻量）"""
         if self._repo is not None:
             try:
