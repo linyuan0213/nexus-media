@@ -1,6 +1,8 @@
 """媒体标题领域校验器 — 过滤无效/垃圾标题，避免无意义的 TMDB 查询."""
 
 import re
+from collections.abc import Callable
+from typing import Any
 
 # 常见垃圾词黑名单（仅当标题完全由这些词组成时过滤）
 _JUNK_WORDS = frozenset(
@@ -15,29 +17,7 @@ _JUNK_WORDS = frozenset(
         "magnet",
         "ddl",
         "free",
-        "xxx",
-        "porn",
-        "adult",
-        "sex",
-        "hentai",
-        "r18",
     ]
-)
-
-# 成人内容关键词（标题中包含任一即过滤）
-_ADULT_PATTERNS = re.compile(
-    r"\b(?:"
-    r"sex|porn|adult|xxx|hentai|jav|無码|r18|erito|brazzers|realitykings|naughtyamerica|"
-    r"bangbros|digitalplayground|teamskeet|mofos|fakehub|blacked|tushy|vixen|danejones|"
-    r"bangbus|castingcouch|publicagent|massagerooms|lesbea|momxxx|femaleagent|"
-    r"private\.com|privatecasting|legalporno|kink\.com|devianthardcore|"
-    r"boundgangbangs|sexandsubmission|hogtied|whippedass|devicebondage|"
-    r"obedient|collared|slut|whore|bitch|cumshot|blowjob|anal|threesome|gangbang|"
-    r"interracial|milf|teen|mature|stepmom|stepsis|stepbro|stepdad|"
-    r"alison tyler|ava addams|lisa ann|riley reid|mia khalifa|kimmy granger|"
-    r"lena paul|abella danger|kendra lust|brandi love|jordi|johnny sins"
-    r")\b",
-    re.IGNORECASE,
 )
 
 # 垃圾模式：纯网址类、无意义组合
@@ -51,6 +31,15 @@ _GARBAGE_PATTERNS = re.compile(
 )
 
 
+_TITLE_FILTERS: list[Any] = []
+
+
+def register_title_filter(filter_fn: Callable[[str], bool]) -> None:
+    """注册插件级标题过滤器；返回 True 表示标题应被过滤。"""
+    if filter_fn not in _TITLE_FILTERS:
+        _TITLE_FILTERS.append(filter_fn)
+
+
 def is_valid_media_title(name: str | None) -> bool:
     """
     校验解析后的媒体标题是否有效。
@@ -59,7 +48,7 @@ def is_valid_media_title(name: str | None) -> bool:
     1. 不能为空
     2. 有效字符长度 >= 2
     3. 不能全部是垃圾词
-    4. 不能包含成人内容关键词
+    4. 通过插件注册的标题过滤器
     5. 不能是网址类垃圾组合
 
     :param name: 解析出的标题（en_name 或 cn_name）
@@ -72,7 +61,7 @@ def is_valid_media_title(name: str | None) -> bool:
         return False
     if cleaned in _JUNK_WORDS:
         return False
-    if _ADULT_PATTERNS.search(name):
+    if any(filter_fn(name) for filter_fn in _TITLE_FILTERS):
         return False
     if _GARBAGE_PATTERNS.search(name):
         return False

@@ -178,7 +178,7 @@ class MediaIdentityRepository(BaseRepository):
         *,
         media_type: str | None = None,
     ) -> MediaIdentity | None:
-        """跨 provider 按外部编号查找身份（如 MIDA-853 同时有 javdb/content_id 引用）."""
+        """跨 provider 按外部编号查找身份（同一编号可能同时有内容锚点和真实 provider 引用）."""
         value = str(external_id or "").strip()
         if not value:
             return None

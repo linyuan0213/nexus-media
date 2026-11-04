@@ -342,7 +342,7 @@ class SubscribeAddService:
                 descriptor = getattr(metadata_registry.get_provider(provider_ref[0]), "descriptor", None)
                 if name and getattr(descriptor, "visibility", "public") == "private":
                     # 私有插件来源已有标题时先落库，详情和海报由插件列表异步补全，
-                    # 避免被 JavLibrary/Cloudflare 等详情请求阻塞。
+                    # 避免被外部详情源/Cloudflare 请求阻塞。
                     media_info = meta_info(title=name, mtype=mtype)
                     media_info.title = name
                     media_info.cn_name = name

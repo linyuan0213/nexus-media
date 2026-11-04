@@ -1170,7 +1170,7 @@ class MetadataService:
         hits: list[dict[str, Any]] = []
         executor = ThreadPoolExecutor(max_workers=min(8, len(selected)), thread_name_prefix="metadata_search")
         futures = {executor.submit(search_one, item): item.descriptor.provider_key for item in selected}
-        # 单个 provider 也不能无限等：JavDB 等源遇到 Cloudflare/SSL 抖动时
+        # 单个 provider 也不能无限等：外部元数据源遇到 Cloudflare/SSL 抖动时
         # 会重试到 120s，详情页会被拖死。超时后返回部分结果，由调用方回退。
         wait_timeout = 20.0 if len(selected) == 1 else 10.0
         done, not_done = wait(futures, timeout=wait_timeout)
@@ -1476,9 +1476,7 @@ class MetadataService:
                     continue
             visible.append(provider)
         # 内置 provider 置顶，插件保持注册顺序；来源由注册表动态判定
-        visible.sort(
-            key=lambda item: 0 if self._registry.is_builtin_provider(item.descriptor.provider_key) else 1
-        )
+        visible.sort(key=lambda item: 0 if self._registry.is_builtin_provider(item.descriptor.provider_key) else 1)
 
         def probe(provider):
             try:

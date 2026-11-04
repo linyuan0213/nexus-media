@@ -74,6 +74,9 @@ class ApiSiteSearcher:
                     mtype_override = mapped
                 else:
                     mtype_override = {"mode": str(mapped)}
+            elif mode_key not in {"MOVIE", "TV"}:
+                # 插件声明的通用 search_mode 未在站点映射中时，直接使用小写模式名。
+                mtype_override = {"mode": mode_key.lower()}
         template_vars = {"keyword": keyword, "page": str(page), "page_1": str(int(page) + 1)}
         body = self._render_template(body_template, **template_vars)
         body.update({k: (v.format(**template_vars) if isinstance(v, str) else v) for k, v in mtype_override.items()})

@@ -162,7 +162,7 @@ class MediaFileService:
             )
             if item:
                 library_paths.append(item)
-        # 内容画像媒体库路由（如 adult → /Media/adult）同样应出现在文件管理。
+        # 内容画像媒体库路由同样应出现在文件管理。
         try:
             for route in self._route_repo.list():
                 if not route.enabled or not route.target_path:
