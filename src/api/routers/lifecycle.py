@@ -277,7 +277,14 @@ def list_lifecycle_events(
     limit: int = Query(default=200, ge=1, le=1000),
     current_user: UserContext = Depends(require_any_permission("library:view", "library:manage")),
 ):
-    rows = LifecycleRepository().list_events(
-        identity_id, season=season, episode=episode, limit=limit, user=current_user
+    repo = LifecycleRepository()
+    snapshot = repo.get_current(identity_id, season=season, episode=episode, user=current_user)
+    rows = repo.list_events(
+        identity_id,
+        season=season,
+        episode=episode,
+        limit=limit,
+        user=current_user,
+        until=snapshot.LAST_EVENT_AT if snapshot is not None else None,
     )
     return success(data=[_event_payload(row) for row in rows])

@@ -99,6 +99,7 @@ class LifecycleRepository(BaseRepository):
                 "LAST_ERROR",
                 "NEXT_RETRY_AT",
                 "RETRY_COUNT",
+                "LAST_EVENT_AT",
             }
         for key, value in snapshot.items():
             if key in skip_keys:
@@ -189,7 +190,14 @@ class LifecycleRepository(BaseRepository):
             }
 
     def list_events(
-        self, identity_id: str, season: int = 0, episode: int = 0, limit: int = 200, *, user=None
+        self,
+        identity_id: str,
+        season: int = 0,
+        episode: int = 0,
+        limit: int = 200,
+        *,
+        user=None,
+        until: datetime | None = None,
     ) -> list[MediaLifecycleEvent]:
         with self.readonly() as db:
             query = db.query(MediaLifecycleEvent).filter(
@@ -199,6 +207,9 @@ class LifecycleRepository(BaseRepository):
             )
             if user is not None:
                 query = apply_owner_scope(query, MediaLifecycleEvent, user, include_shared=False)
+            if until is not None:
+                # 只展示快照已采纳的事件；新一轮中被旧规则忽略的事件不混入当前时间线
+                query = query.filter(MediaLifecycleEvent.OCCURRED_AT <= until)
             rows = (
                 query.order_by(MediaLifecycleEvent.OCCURRED_AT.asc(), MediaLifecycleEvent.ID.asc())
                 .limit(max(1, min(1000, int(limit))))

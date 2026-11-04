@@ -269,14 +269,70 @@ class LifecycleReconciler:
                 MEDIASYNCITEMS.TITLE,
                 MEDIASYNCITEMS.ORGIN_TITLE,
                 MEDIASYNCITEMS.PATH,
+                MEDIASYNCITEMS.ITEM_TYPE,
+                MEDIASYNCITEMS.YEAR,
+                MEDIASYNCITEMS.ANCHOR_PROVIDER,
+                MEDIASYNCITEMS.CONTENT_PROFILE,
             ).all()
             in_library_ids = {str(item[0]) for item in sync_rows if item[0]}
             in_library_tokens: set[str] = set()
-            for _identity, title, origin_title, path in sync_rows:
-                for text in (title, origin_title, path):
+            for row in sync_rows:
+                for text in (row[1], row[2], row[3]):
                     token = _library_token(text)
                     if token:
                         in_library_tokens.add(token)
+            lifecycle_repo = LifecycleRepository()
+            sync_active = DownloadRepository().get_active_download_states(in_library_ids)
+            for identity_id, title, origin_title, _path, item_type, year, provider, profile in sync_rows:
+                if not identity_id or str(identity_id) in sync_active:
+                    continue
+                current = lifecycle_repo.get_current(str(identity_id))
+                if (
+                    current is not None
+                    and str(current.STAGE) == LifecycleStage.IN_LIBRARY.value
+                    and str(current.STATUS) == LifecycleStatus.SUCCEEDED.value
+                ):
+                    continue
+                if current is not None and (
+                    str(current.STAGE)
+                    in {
+                        LifecycleStage.DOWNLOAD_QUEUED.value,
+                        LifecycleStage.DOWNLOADING.value,
+                        LifecycleStage.TRANSFER_QUEUED.value,
+                        LifecycleStage.TRANSFERRING.value,
+                        LifecycleStage.SCRAPE_QUEUED.value,
+                        LifecycleStage.SCRAPING.value,
+                    }
+                    and str(current.STATUS)
+                    in {
+                        LifecycleStatus.QUEUED.value,
+                        LifecycleStatus.RUNNING.value,
+                        LifecycleStatus.RETRYING.value,
+                    }
+                ):
+                    continue
+                media_type = (
+                    "tv"
+                    if str(item_type or "").lower() in {"episode", "series", "season", "tv"}
+                    else "movie"
+                )
+                if self._projector.record(
+                    identity_id=str(identity_id),
+                    stage=LifecycleStage.IN_LIBRARY,
+                    status=LifecycleStatus.SUCCEEDED,
+                    event_type="reconcile.library.sync",
+                    media_type=media_type,
+                    title=title or origin_title,
+                    year=year,
+                    source_provider=provider,
+                    content_profile=profile,
+                    progress=100,
+                    message="媒体库同步索引已存在",
+                    payload={"source": "MEDIASYNC_ITEMS"},
+                    occurred_at=datetime.now(),
+                    event_key=f"library-sync:{identity_id}",
+                ):
+                    count += 1
             identity_by_external: dict[str, str] = {}
             identity_by_title: dict[tuple[str, str, str], str] = {}
             for row in downloads:
