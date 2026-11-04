@@ -29,6 +29,7 @@ from app.plugin_framework.registry import PluginRegistry
 from app.plugin_framework.sandbox import PluginSandbox
 from app.schemas.plugin import PluginManifest
 from app.utils.json_utils import JsonUtils
+from version import APP_VERSION
 
 
 def _deep_merge(base: dict, patch: dict) -> dict:
@@ -53,6 +54,7 @@ class PluginFrameworkService:
         plugin_registry: PluginRegistry,
         plugin_sandbox: PluginSandbox,
         hook_system=None,
+        metadata_service=None,
     ):
         self._repo = repo
         self._menu_repo = menu_repo
@@ -60,6 +62,7 @@ class PluginFrameworkService:
         self._plugin_registry = plugin_registry
         self._plugin_sandbox = plugin_sandbox
         self._hook_system = hook_system
+        self._metadata_service = metadata_service
         self._plugins_dir = os.path.join(settings.data_path, "plugins")
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)
@@ -68,6 +71,28 @@ class PluginFrameworkService:
         if self._hook_system is None:
             raise RuntimeError("插件钩子系统尚未初始化")
         return self._hook_system
+
+    def _invalidate_metadata_cache(self) -> None:
+        service = self._metadata_service
+        if service is not None:
+            try:
+                service.bump_detail_cache_version()
+            except Exception as exc:  # noqa: BLE001 - 缓存失效失败不影响插件生命周期
+                log.warn(f"[Plugin]刷新元数据缓存版本失败: {exc}")
+
+    @staticmethod
+    def _version_tuple(value: str) -> tuple[int, ...]:
+        parts = str(value or "").strip().lstrip("vV").split(".")
+        result: list[int] = []
+        for part in parts:
+            digits = "".join(ch for ch in part if ch.isdigit())
+            result.append(int(digits or 0))
+        return tuple(result)
+
+    def _check_min_app_version(self, manifest: PluginManifest) -> None:
+        required = str(manifest.min_app_version or "").strip()
+        if required and self._version_tuple(required) > self._version_tuple(APP_VERSION):
+            raise PluginManifestInvalidError(f"插件要求主程序 >= {required}，当前版本 {APP_VERSION}")
 
     def _get_plugin_parent_menu(self):
         """获取 Plugin 父菜单"""
@@ -489,6 +514,7 @@ class PluginFrameworkService:
             manifest_data = JsonUtils.load(f)
 
         manifest = PluginManifest.from_dict(manifest_data)
+        self._check_min_app_version(manifest)
         if manifest.backend.metadata.visibility == "private":
             validate_private_manifest(manifest)
         if not manifest.id or not manifest.name:
@@ -568,6 +594,7 @@ class PluginFrameworkService:
                 args=(manifest.id,),
                 daemon=True,
             ).start()
+        self._invalidate_metadata_cache()
         self._get_hook_system().emit("plugin.install", {"plugin_id": manifest.id})
         return manifest
 
@@ -608,6 +635,7 @@ class PluginFrameworkService:
             if state:
                 state.installed = False
                 state.enabled = False
+            self._invalidate_metadata_cache()
             self._get_hook_system().emit("plugin.uninstall", {"plugin_id": plugin_id})
             log.info(f"[PluginFrameworkService] 内置插件软卸载: {plugin_id}")
             return
@@ -623,6 +651,7 @@ class PluginFrameworkService:
         self._remove_plugin_menus(plugin_id)
 
         self._repo.delete_manifest(plugin_id)
+        self._invalidate_metadata_cache()
         self._repo.delete_config(plugin_id)
         if purge_data:
             self._purge_plugin_data(plugin_id)
@@ -729,6 +758,9 @@ class PluginFrameworkService:
         if not orm_model:
             raise PluginNotInstalledError(f"插件未安装: {plugin_id}")
 
+        manifest = self.get_manifest(plugin_id)
+        if manifest is not None:
+            self._check_min_app_version(manifest)
         # 首次启用时标记为已安装
         if not getattr(orm_model, "INSTALLED", True):
             self._repo.set_manifest_installed(plugin_id, True)
@@ -748,6 +780,7 @@ class PluginFrameworkService:
             manifest = self.get_manifest(plugin_id)
             if manifest:
                 self._plugin_registry.update_manifest_cache(manifest, enabled=True, installed=True)
+        self._invalidate_metadata_cache()
 
     def disable(self, plugin_id: str) -> None:
         """禁用插件"""
@@ -758,6 +791,7 @@ class PluginFrameworkService:
         sandbox = self._plugin_sandbox
         sandbox.unload(plugin_id)
         self._repo.set_manifest_enabled(plugin_id, False)
+        self._invalidate_metadata_cache()
 
         # 删除插件菜单
         self._remove_plugin_menus(plugin_id)
@@ -874,5 +908,7 @@ class PluginFrameworkService:
         try:
             if not self._plugin_sandbox.reload(plugin_id):
                 log.error(f"[Plugin]插件 {plugin_id} 热重载失败")
+            else:
+                self._invalidate_metadata_cache()
         except Exception as e:  # noqa: BLE001 - 后台任务失败写入日志
             log.error(f"[Plugin]插件 {plugin_id} 热重载异常: {e}")

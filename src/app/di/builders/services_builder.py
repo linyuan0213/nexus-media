@@ -419,6 +419,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         plugin_registry=infra.plugin_registry,
         plugin_sandbox=infra.plugin_sandbox,
         hook_system=infra.hook_system,
+        metadata_service=metadata_service,
     )
 
     plugin_market_service = PluginMarketService(
