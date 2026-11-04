@@ -21,6 +21,7 @@ from app.db.repositories.download_repository import DownloadRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_download_state, map_task_status
+from app.media.display_image_policy import unwrap_display_image_url
 from app.services.identity_resolver import IdentityResolver
 
 
@@ -69,6 +70,7 @@ class LifecycleProjector:
         stage_value = LifecycleStage(stage).value
         status_value = LifecycleStatus(status).value
         key = event_key or self._event_key(identity_id, season, episode, stage_value, event_type, trace_id, occurred)
+        poster = unwrap_display_image_url(poster) if poster else poster
         if str(identity_id or "") and str(identity_id) != "preview" and not source_provider:
             ref = self._identity_repo.get_display_ref(str(identity_id))
             if ref is not None:
