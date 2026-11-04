@@ -284,6 +284,7 @@ class TmdbProvider:
                         if item.get("poster_path")
                         else None,
                         score=float(item.get("popularity") or 0.0),
+                        extra={"rating": item.get("vote_average")} if item.get("vote_average") else {},
                     )
                 )
         return hits

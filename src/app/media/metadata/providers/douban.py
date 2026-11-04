@@ -227,6 +227,8 @@ class DoubanProvider:
             media_type = MediaType.from_string(str(item.get("type_name") or target.get("type") or ""))
             if media_type == MediaType.UNKNOWN:
                 media_type = MediaType.MOVIE
+            target_rating = target.get("rating")
+            rating_value = target_rating.get("value") if isinstance(target_rating, dict) else target_rating
             hits.append(
                 SearchHit(
                     provider="douban",
@@ -236,6 +238,7 @@ class DoubanProvider:
                     media_type=media_type,
                     content_profile=query.content_profile,
                     poster=target.get("cover_url"),
+                    extra={"rating": rating_value} if rating_value else {},
                 )
             )
         return hits

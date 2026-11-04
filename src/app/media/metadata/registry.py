@@ -69,6 +69,12 @@ class MetadataRegistry:
             entry = self._providers.get(provider_key)
             return entry.obj if entry else None
 
+    def is_builtin_provider(self, provider_key: str) -> bool:
+        """provider 是否由核心内置注册（非插件）。"""
+        with self._lock:
+            entry = self._providers.get(provider_key)
+            return bool(entry and entry.plugin_id == BUILTIN_PLUGIN_ID)
+
     def list_providers(
         self,
         *,

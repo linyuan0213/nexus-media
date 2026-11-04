@@ -211,6 +211,7 @@ class BangumiProvider:
                     content_profile="anime",
                     poster=images.get("large") or images.get("common"),
                     score=float(rating.get("score") or 0.0),
+                    extra={"rating": rating.get("score")} if rating.get("score") else {},
                 )
             )
         return hits
