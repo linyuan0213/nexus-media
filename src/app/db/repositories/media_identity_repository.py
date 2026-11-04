@@ -88,6 +88,50 @@ class MediaIdentityRepository(BaseRepository):
                 db.commit()
             return identity
 
+    def ensure_identity_for_ref(
+        self,
+        provider: str,
+        external_id: str,
+        *,
+        scope: str = "default",
+        media_type: str | None = None,
+        content_profile: str = "default",
+        title: str | None = None,
+        year: str | None = None,
+        url: str | None = None,
+        link_method: str = "identity_boundary",
+    ) -> str:
+        """按外部引用查找身份；不存在时创建身份和 ref，返回 IDENTITY_ID."""
+        provider = str(provider or "").strip()
+        external_id = str(external_id or "").strip()
+        if not provider or not external_id:
+            return ""
+        normalized_type = media_type if media_type and media_type != "unknown" else None
+        found = self.find_by_ref(provider, external_id, scope=scope, media_type=normalized_type)
+        if found is not None:
+            return found.IDENTITY_ID
+        identity = self.ensure_identity(
+            media_type=normalized_type or "unknown",
+            content_profile=content_profile or "default",
+            title=title,
+            year=year,
+        )
+        try:
+            self.upsert_ref(
+                identity.IDENTITY_ID,
+                provider=provider,
+                external_id=external_id,
+                media_type=normalized_type,
+                scope=scope,
+                url=url,
+                link_method=link_method,
+                is_primary=True,
+            )
+        except ValueError:
+            found = self.find_by_ref(provider, external_id, scope=scope, media_type=normalized_type)
+            return found.IDENTITY_ID if found is not None else ""
+        return identity.IDENTITY_ID
+
     def find_by_ref(
         self,
         provider: str,

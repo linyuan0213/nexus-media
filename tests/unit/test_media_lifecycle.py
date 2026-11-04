@@ -577,3 +577,17 @@ def test_new_cycle_can_reset_terminal_stage():
     assert current is not None
     assert current.STAGE == LifecycleStage.DOWNLOAD_QUEUED.value
     assert current.STATUS == LifecycleStatus.QUEUED.value
+
+
+def test_ensure_identity_for_ref_is_idempotent():
+    from app.db.repositories.media_identity_repository import MediaIdentityRepository
+
+    repo = MediaIdentityRepository()
+    first = repo.ensure_identity_for_ref("tmdb", "12345", media_type="tv", title="Demo")
+    second = repo.ensure_identity_for_ref("tmdb", "12345", media_type="tv", title="Demo")
+
+    assert first
+    assert first == second
+    found = repo.find_by_ref("tmdb", "12345", media_type="tv")
+    assert found is not None
+    assert found.IDENTITY_ID == first

@@ -11,11 +11,14 @@ from typing import Any
 
 from sqlalchemy import and_, func, or_
 
+import log
 from app.db.models import SYNCHISTORY, TRANSFERBLACKLIST, TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.episode_progress import contiguous_episodes
+from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.mediatypes import MediaType
 from app.schemas.media import TransferMediaDTO
+from app.utils.identity import fallback_identity
 from app.utils.string_utils import StringUtils
 
 
@@ -24,6 +27,35 @@ class TransferRepository(BaseRepository):
     转移历史仓储
     处理转移历史、未识别记录和黑名单的数据库操作
     """
+
+    def _identity_for_media(self, media_info: Any, title: str | None) -> str:
+        identity_id = str(getattr(media_info, "identity_id", "") or "")
+        if identity_id:
+            return identity_id
+        provider = str(getattr(media_info, "anchor_provider", "") or "")
+        external_id = str(getattr(media_info, "anchor_external_id", "") or "")
+        media_type = str(getattr(media_info, "type_value", "") or "movie")
+        if provider and external_id:
+            try:
+                resolved = MediaIdentityRepository().ensure_identity_for_ref(
+                    provider,
+                    external_id,
+                    media_type=media_type,
+                    content_profile=str(getattr(media_info, "content_profile", "") or "default"),
+                    title=title or getattr(media_info, "title", None),
+                    year=str(getattr(media_info, "year", "") or "") or None,
+                )
+                if resolved:
+                    return resolved
+            except Exception as exc:  # noqa: BLE001
+                log.debug(f"[TransferRepository]解析身份失败: {exc}")
+        return fallback_identity(
+            title or getattr(media_info, "title", None),
+            media_type,
+            0,
+            provider,
+            external_id,
+        )
 
     # ==================== Transfer History ====================
 
@@ -170,7 +202,7 @@ class TransferRepository(BaseRepository):
                     POSTER=(media_info.poster or None),
                     DST_BACKEND=dst_backend or "local",
                     DATE=timestr,
-                    IDENTITY_ID=getattr(media_info, "identity_id", None),
+                    IDENTITY_ID=self._identity_for_media(media_info, title),
                     ANCHOR_PROVIDER=getattr(media_info, "anchor_provider", None),
                     ANCHOR_EXTERNAL_ID=getattr(media_info, "anchor_external_id", None),
                     CONTENT_PROFILE=getattr(media_info, "content_profile", None),

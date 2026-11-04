@@ -19,38 +19,7 @@ from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_download_state, map_task_status
-
-_IDENTITY_CODE_RE = re.compile(r"([A-Za-z]{2,12})[-_ ]?(\d{2,6})")
-
-
-def fallback_identity(
-    title: Any,
-    media_type: str = "movie",
-    season: int = 0,
-    anchor_provider: str = "",
-    anchor_external_id: str = "",
-) -> str:
-    """为缺失 anchor 的历史/下载记录生成稳定身份，保证生命周期可投影."""
-    def fit(value: str) -> str:
-        # IDENTITY_ID 列为 varchar(26)；超长时退化为稳定哈希。
-        if len(value) <= 26:
-            return value
-        return "local:" + hashlib.sha1(value.encode("utf-8")).hexdigest()[:20]
-
-    provider = str(anchor_provider or "").strip()
-    external_id = str(anchor_external_id or "").strip()
-    if provider and external_id:
-        return fit(f"{provider}:{external_id}")
-    text = str(title or "").strip()
-    match = _IDENTITY_CODE_RE.search(text)
-    if match:
-        code = f"{match.group(1).upper()}-{match.group(2)}"
-        suffix = ""
-        if media_type != "movie" or season:
-            suffix = f":{media_type}:{int(season or 0)}"
-        return fit(f"local:{code}{suffix}")
-    digest = hashlib.sha1(f"{text}|{media_type}|{int(season or 0)}".encode("utf-8")).hexdigest()[:20]
-    return f"local:{digest}"
+from app.utils.identity import fallback_identity
 
 
 class LifecycleProjector:

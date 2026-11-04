@@ -10,10 +10,13 @@ from typing import Any
 
 from sqlalchemy import Integer, and_, case, cast, func, or_, tuple_
 
+import log
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.episode_progress import contiguous_episodes
+from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.media_ref import is_tmdb_media
+from app.utils.identity import fallback_identity
 
 
 class DownloadRepository(BaseRepository):
@@ -21,6 +24,41 @@ class DownloadRepository(BaseRepository):
     下载历史和设置仓储
     处理下载历史、下载设置和索引器统计的数据库操作
     """
+
+    def _identity_for_media(self, media_info: Any) -> str:
+        identity_id = str(getattr(media_info, "identity_id", "") or "")
+        if identity_id:
+            return identity_id
+        provider = str(getattr(media_info, "anchor_provider", "") or "")
+        external_id = str(getattr(media_info, "anchor_external_id", "") or "")
+        media_type = getattr(getattr(media_info, "type", None), "value", None) or "movie"
+        if provider and external_id:
+            try:
+                resolved = MediaIdentityRepository().ensure_identity_for_ref(
+                    provider,
+                    external_id,
+                    media_type=str(media_type),
+                    content_profile=str(getattr(media_info, "content_profile", "") or "default"),
+                    title=getattr(media_info, "title", None),
+                    year=str(getattr(media_info, "year", "") or "") or None,
+                )
+                if resolved:
+                    return resolved
+            except Exception as exc:  # noqa: BLE001
+                log.debug(f"[DownloadRepository]解析身份失败: {exc}")
+        season = 0
+        if hasattr(media_info, "get_season_seq"):
+            try:
+                season = int(media_info.get_season_seq() or 0)
+            except (TypeError, ValueError):
+                season = 0
+        return fallback_identity(
+            getattr(media_info, "title", None),
+            str(media_type),
+            season,
+            provider,
+            external_id,
+        )
 
     # ==================== Download History ====================
 
@@ -269,7 +307,7 @@ class DownloadRepository(BaseRepository):
                         "SE": media_info.get_season_episode_string() or "",
                         "STATE": state,
                         "DATE": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
-                        "IDENTITY_ID": getattr(media_info, "identity_id", None),
+                        "IDENTITY_ID": self._identity_for_media(media_info),
                         "ANCHOR_PROVIDER": getattr(media_info, "anchor_provider", None),
                         "ANCHOR_EXTERNAL_ID": getattr(media_info, "anchor_external_id", None),
                         "CONTENT_PROFILE": getattr(media_info, "content_profile", None),
@@ -297,7 +335,7 @@ class DownloadRepository(BaseRepository):
                         SAVE_PATH=save_dir,
                         SE=media_info.get_season_episode_string() or "",
                         STATE=state,
-                        IDENTITY_ID=getattr(media_info, "identity_id", None),
+                        IDENTITY_ID=self._identity_for_media(media_info),
                         ANCHOR_PROVIDER=getattr(media_info, "anchor_provider", None),
                         ANCHOR_EXTERNAL_ID=getattr(media_info, "anchor_external_id", None),
                         CONTENT_PROFILE=getattr(media_info, "content_profile", None),
