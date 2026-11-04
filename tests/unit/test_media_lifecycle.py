@@ -520,7 +520,7 @@ def test_timeline_is_chronological():
 
 class TestFallbackIdentity:
     def test_prefers_anchor(self):
-        from app.services.lifecycle_service import fallback_identity
+        from app.utils.identity import fallback_identity
 
         assert (
             fallback_identity("ignored", "movie", 0, "javdb", "JJDA-083")
@@ -528,12 +528,12 @@ class TestFallbackIdentity:
         )
 
     def test_uses_title_code(self):
-        from app.services.lifecycle_service import fallback_identity
+        from app.utils.identity import fallback_identity
 
         assert fallback_identity("JJDA-083 Some Title", "movie") == "local:JJDA-083"
 
     def test_hashes_unknown_title(self):
-        from app.services.lifecycle_service import fallback_identity
+        from app.utils.identity import fallback_identity
 
         first = fallback_identity("没有番号的标题", "movie")
         second = fallback_identity("没有番号的标题", "movie")
@@ -541,7 +541,7 @@ class TestFallbackIdentity:
         assert first.startswith("local:")
 
     def test_identity_fits_column_length(self):
-        from app.services.lifecycle_service import fallback_identity
+        from app.utils.identity import fallback_identity
 
         for value in (
             fallback_identity("A" * 100, "movie"),

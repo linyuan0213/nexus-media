@@ -11,7 +11,8 @@ from app.events.constants import DOWNLOAD_COMPLETED, DOWNLOAD_FAILED, DOWNLOAD_S
 from app.events.payloads import DownloadCompletedPayload, DownloadFailedPayload, DownloadStartedPayload
 from app.media.models import MediaInfo
 from app.services.download_event_queue import publish_download_event
-from app.services.lifecycle_service import LifecycleProjector, fallback_identity
+from app.services.identity_resolver import IdentityResolver
+from app.services.lifecycle_service import LifecycleProjector
 
 
 def _record_download(
@@ -97,44 +98,55 @@ def handle_download_completed(event: Event) -> None:
         payload = DownloadCompletedPayload(**payload)
     log.info(f"[Event]下载完成: {payload.task_id} @ {payload.path}")
 
-    row = DownloadRepository().get_download_history_by_download_id(payload.downloader_id or "", payload.task_id or "")
+    try:
+        row = DownloadRepository().get_download_history_by_download_id(
+            payload.downloader_id or "", payload.task_id or ""
+        )
+    except Exception as exc:  # noqa: BLE001 - 历史表不可用时仍要转发事件
+        log.debug(f"[Lifecycle]读取下载历史失败: {exc}")
+        row = None
     if row is not None:
         season, episode = _parse_season_episode(getattr(row, "SE", None))
-        identity_id = str(getattr(row, "IDENTITY_ID", "") or "") or fallback_identity(
-            getattr(row, "TITLE", "") or payload.name,
-            _row_media_type(getattr(row, "TYPE", None)),
-            season,
-            str(getattr(row, "ANCHOR_PROVIDER", "") or ""),
-            str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or ""),
+        resolved = IdentityResolver().resolve_values(
+            identity_id=getattr(row, "IDENTITY_ID", None),
+            provider=getattr(row, "ANCHOR_PROVIDER", None),
+            external_id=getattr(row, "ANCHOR_EXTERNAL_ID", None),
+            title=getattr(row, "TITLE", "") or payload.name,
+            year=getattr(row, "YEAR", None),
+            media_type=_row_media_type(getattr(row, "TYPE", None)),
+            content_profile=getattr(row, "CONTENT_PROFILE", None),
+            season=season,
+            allow_local=True,
         )
-        try:
-            LifecycleProjector().record(
-                identity_id=identity_id,
-                stage=LifecycleStage.DOWNLOADED,
-                status=LifecycleStatus.SUCCEEDED,
-                event_type="download.completed",
-                media_type=_row_media_type(getattr(row, "TYPE", None)),
-                season=season,
-                episode=episode,
-                run_id=f"download:{getattr(row, 'ID', payload.task_id)}",
-                trace_id=f"download:{payload.task_id}",
-                title=getattr(row, "TITLE", None),
-                year=getattr(row, "YEAR", None),
-                poster=getattr(row, "POSTER", None),
-                progress=100,
-                source_provider=getattr(row, "ANCHOR_PROVIDER", None),
-                content_profile=getattr(row, "CONTENT_PROFILE", None),
-                user_id=getattr(row, "USER_ID", None),
-                payload={
-                    "downloader_id": payload.downloader_id,
-                    "download_id": payload.task_id,
-                    "source": "DOWNLOAD_COMPLETED",
-                    "path": payload.path,
-                },
-                event_key=f"download-completed:{getattr(row, 'ID', payload.task_id)}:{season}:{episode}",
-            )
-        except Exception as exc:  # noqa: BLE001
-            log.warn(f"[Lifecycle]记录下载完成生命周期失败: {exc}")
+        if resolved.identity_id:
+            try:
+                LifecycleProjector().record(
+                    identity_id=resolved.identity_id,
+                    stage=LifecycleStage.DOWNLOADED,
+                    status=LifecycleStatus.SUCCEEDED,
+                    event_type="download.completed",
+                    media_type=_row_media_type(getattr(row, "TYPE", None)),
+                    season=season,
+                    episode=episode,
+                    run_id=f"download:{getattr(row, 'ID', payload.task_id)}",
+                    trace_id=f"download:{payload.task_id}",
+                    title=getattr(row, "TITLE", None),
+                    year=getattr(row, "YEAR", None),
+                    poster=getattr(row, "POSTER", None),
+                    progress=100,
+                    source_provider=resolved.provider or getattr(row, "ANCHOR_PROVIDER", None),
+                    content_profile=resolved.content_profile or getattr(row, "CONTENT_PROFILE", None),
+                    user_id=getattr(row, "USER_ID", None),
+                    payload={
+                        "downloader_id": payload.downloader_id,
+                        "download_id": payload.task_id,
+                        "source": "DOWNLOAD_COMPLETED",
+                        "path": payload.path,
+                    },
+                    event_key=f"download-completed:{getattr(row, 'ID', payload.task_id)}:{season}:{episode}",
+                )
+            except Exception as exc:  # noqa: BLE001
+                log.warn(f"[Lifecycle]记录下载完成生命周期失败: {exc}")
 
     name = payload.name or os.path.basename(str(payload.path or "").rstrip("/")) or payload.task_id
     publish_download_event(

@@ -79,6 +79,7 @@ class MediaIdentityRepository(BaseRepository):
                 db.add(identity)
                 db.commit()
                 db.refresh(identity)
+                db.expunge(identity)
                 return identity
             changed = False
             if title and identity.CANONICAL_TITLE != title:
@@ -95,6 +96,8 @@ class MediaIdentityRepository(BaseRepository):
                 changed = True
             if changed:
                 db.commit()
+                db.refresh(identity)
+            db.expunge(identity)
             return identity
 
     def ensure_identity_for_ref(

@@ -13,9 +13,9 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.db.models import SEARCHRESULTINFO
 from app.db.repositories.base_repository import BaseRepository
-from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.mediatypes import MediaType
 from app.media.metadata.policy import ANCHOR_POLICY
+from app.services.identity_resolver import IdentityResolver
 from app.utils.json_utils import JsonUtils
 
 
@@ -57,8 +57,7 @@ class SearchRepository(BaseRepository):
                 db.query(SEARCHRESULTINFO).delete(synchronize_session=False)
 
             mappings = []
-            identity_cache: dict[tuple[str, str], str] = {}
-            identity_repo = MediaIdentityRepository()
+            resolver = IdentityResolver()
             for media_item in media_items:
                 if media_item.type == MediaType.ANIME:
                     mtype = MediaType.ANIME.value
@@ -75,22 +74,10 @@ class SearchRepository(BaseRepository):
                 elif enclosure and len(enclosure) > 4000:
                     enclosure = enclosure[:4000]
 
-                anchor_provider = str(getattr(media_item, "anchor_provider", "") or "")
-                anchor_external = str(getattr(media_item, "anchor_external_id", "") or "")
-                identity_id = str(getattr(media_item, "identity_id", "") or "")
-                if not identity_id and anchor_provider and anchor_external:
-                    cache_key = (anchor_provider, anchor_external)
-                    identity_id = identity_cache.get(cache_key, "")
-                    if not identity_id:
-                        identity_id = identity_repo.ensure_identity_for_ref(
-                            anchor_provider,
-                            anchor_external,
-                            media_type=mtype,
-                            content_profile=str(getattr(media_item, "content_profile", "") or "default"),
-                            title=media_item.title or None,
-                            year=str(media_item.year or "") or None,
-                        )
-                        identity_cache[cache_key] = identity_id
+                resolved = resolver.resolve_media(media_item, allow_local=False)
+                anchor_provider = resolved.provider
+                anchor_external = resolved.external_id
+                identity_id = resolved.identity_id
 
                 mapping = {
                     "TORRENT_NAME": media_item.org_string or "",

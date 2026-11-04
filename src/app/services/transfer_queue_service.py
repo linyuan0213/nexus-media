@@ -11,7 +11,8 @@ from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.infrastructure.task_queue import Task, TaskQueue, TaskWorker, create_task_queue
-from app.services.lifecycle_service import LifecycleProjector, fallback_identity
+from app.services.identity_resolver import IdentityResolver
+from app.services.lifecycle_service import LifecycleProjector
 
 
 class TransferQueueService:
@@ -174,15 +175,18 @@ class TransferQueueService:
             return
         media_type = str(payload.get("media_type") or "movie")
         season = int(payload.get("season") or 0)
-        identity_id = str(payload.get("identity_id") or "")
-        if not identity_id:
-            identity_id = fallback_identity(
-                payload.get("title"),
-                media_type,
-                season,
-                str(payload.get("anchor_provider") or payload.get("source_provider") or ""),
-                str(payload.get("anchor_external_id") or ""),
-            )
+        resolved = IdentityResolver().resolve_values(
+            identity_id=payload.get("identity_id"),
+            provider=payload.get("anchor_provider") or payload.get("source_provider"),
+            external_id=payload.get("anchor_external_id"),
+            title=payload.get("title"),
+            year=payload.get("year"),
+            media_type=media_type,
+            content_profile=payload.get("content_profile"),
+            season=season,
+            allow_local=True,
+        )
+        identity_id = resolved.identity_id
         if not identity_id:
             return
         try:

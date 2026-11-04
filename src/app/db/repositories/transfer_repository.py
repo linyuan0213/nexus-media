@@ -5,21 +5,15 @@ Handles transfer history and unrecognized transfer related database operations.
 
 import datetime
 import os.path
-import time
-from enum import Enum
 from typing import Any
 
 from sqlalchemy import and_, func, or_
 
-import log
 from app.db.models import SYNCHISTORY, TRANSFERBLACKLIST, TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.episode_progress import contiguous_episodes
-from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.mediatypes import MediaType
-from app.schemas.media import TransferMediaDTO
-from app.utils.identity import fallback_identity
-from app.utils.string_utils import StringUtils
+from app.services.identity_resolver import IdentityResolver
 
 
 class TransferRepository(BaseRepository):
@@ -29,194 +23,7 @@ class TransferRepository(BaseRepository):
     """
 
     def _identity_for_media(self, media_info: Any, title: str | None) -> str:
-        identity_id = str(getattr(media_info, "identity_id", "") or "")
-        if identity_id:
-            return identity_id
-        provider = str(getattr(media_info, "anchor_provider", "") or "")
-        external_id = str(getattr(media_info, "anchor_external_id", "") or "")
-        media_type = str(getattr(media_info, "type_value", "") or "movie")
-        if provider and external_id:
-            try:
-                resolved = MediaIdentityRepository().ensure_identity_for_ref(
-                    provider,
-                    external_id,
-                    media_type=media_type,
-                    content_profile=str(getattr(media_info, "content_profile", "") or "default"),
-                    title=title or getattr(media_info, "title", None),
-                    year=str(getattr(media_info, "year", "") or "") or None,
-                )
-                if resolved:
-                    return resolved
-            except Exception as exc:  # noqa: BLE001
-                log.debug(f"[TransferRepository]解析身份失败: {exc}")
-        existing = MediaIdentityRepository().find_by_title(
-            title or getattr(media_info, "title", None),
-            str(getattr(media_info, "year", "") or "") or None,
-            media_type,
-        )
-        if existing is not None:
-            return existing.IDENTITY_ID
-        return fallback_identity(
-            title or getattr(media_info, "title", None),
-            media_type,
-            0,
-            provider,
-            external_id,
-        )
-
-    # ==================== Transfer History ====================
-
-    def is_transfer_history_exists(
-        self, source_path: str, source_filename: str, dest_path: str, dest_filename: str
-    ) -> bool:
-        """
-        查询识别转移记录是否存在
-        """
-        if not source_path or not source_filename or not dest_path or not dest_filename:
-            return False
-        with self.session() as db:
-            ret = (
-                db.query(TRANSFERHISTORY)
-                .filter(
-                    TRANSFERHISTORY.SOURCE_PATH == source_path,
-                    TRANSFERHISTORY.SOURCE_FILENAME == source_filename,
-                    TRANSFERHISTORY.DEST_PATH == dest_path,
-                    TRANSFERHISTORY.DEST_FILENAME == dest_filename,
-                )
-                .count()
-            )
-        return ret > 0
-
-    def update_transfer_history_date(
-        self, source_path: str, source_filename: str, dest_path: str, dest_filename: str, date: str
-    ) -> None:
-        """
-        更新历史转移记录时间
-        """
-        with self.session() as db:
-            db.query(TRANSFERHISTORY).filter(
-                TRANSFERHISTORY.SOURCE_PATH == source_path,
-                TRANSFERHISTORY.SOURCE_FILENAME == source_filename,
-                TRANSFERHISTORY.DEST_PATH == dest_path,
-                TRANSFERHISTORY.DEST_FILENAME == dest_filename,
-            ).update({"DATE": date})
-
-    def update_transfer_history_poster(self, logid: int | None, poster: str) -> None:
-        """回填历史记录海报，后续列表直接读库，避免逐条回源."""
-        if not logid or not poster:
-            return
-        with self.session() as db:
-            db.query(TRANSFERHISTORY).filter(TRANSFERHISTORY.ID == logid).update({"POSTER": poster})
-
-    def update_transfer_file_state(
-        self,
-        logid: int,
-        *,
-        source_state: str | None = None,
-        source_deleted_at: str | None = None,
-        dest_state: str | None = None,
-        dest_deleted_at: str | None = None,
-        files_checked_at: str | None = None,
-    ) -> None:
-        """更新记录关联文件的持久化状态，供历史列表直接读取."""
-        values: dict[Any, Any] = {}
-        if source_state is not None:
-            values["SOURCE_STATE"] = source_state
-        if source_deleted_at is not None:
-            values["SOURCE_DELETED_AT"] = source_deleted_at
-        if dest_state is not None:
-            values["DEST_STATE"] = dest_state
-        if dest_deleted_at is not None:
-            values["DEST_DELETED_AT"] = dest_deleted_at
-        if files_checked_at is not None:
-            values["FILES_CHECKED_AT"] = files_checked_at
-        if not values:
-            return
-        with self.session() as db:
-            db.query(TRANSFERHISTORY).filter(TRANSFERHISTORY.ID == int(logid)).update(values)
-
-    def insert_transfer_history(
-        self,
-        in_from: Enum,
-        rmt_mode: str,
-        in_path: str,
-        out_path: str,
-        dest: str,
-        media_info: TransferMediaDTO,
-        dst_backend: str | None = None,
-    ) -> None:
-        """插入识别转移记录（单 session 原子操作，避免查-插竞态）。"""
-        if not media_info:
-            return
-
-        if in_path:
-            in_path = os.path.normpath(in_path)
-            source_path = os.path.dirname(in_path)
-            source_filename = os.path.basename(in_path)
-        else:
-            return
-
-        if out_path:
-            outpath = os.path.normpath(out_path)
-            dest_path = os.path.dirname(outpath)
-            dest_filename = os.path.basename(outpath)
-            season_episode = media_info.season_episode
-        else:
-            dest_path = ""
-            dest_filename = ""
-            season_episode = media_info.season_episode
-
-        title = media_info.title
-        timestr = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-
-        with self.session() as db:
-            exists = (
-                db.query(TRANSFERHISTORY)
-                .filter(
-                    TRANSFERHISTORY.SOURCE_PATH == source_path,
-                    TRANSFERHISTORY.SOURCE_FILENAME == source_filename,
-                    TRANSFERHISTORY.DEST_PATH == dest_path,
-                    TRANSFERHISTORY.DEST_FILENAME == dest_filename,
-                )
-                .count()
-            )
-            if exists:
-                db.query(TRANSFERHISTORY).filter(
-                    TRANSFERHISTORY.SOURCE_PATH == source_path,
-                    TRANSFERHISTORY.SOURCE_FILENAME == source_filename,
-                    TRANSFERHISTORY.DEST_PATH == dest_path,
-                    TRANSFERHISTORY.DEST_FILENAME == dest_filename,
-                ).update({"DATE": timestr})
-                return
-
-            dest = dest or ""
-            mode_value = rmt_mode or ""
-            db.add(
-                TRANSFERHISTORY(
-                    MODE=mode_value,
-                    TYPE=media_info.type_value,
-                    CATEGORY=media_info.category,
-                    TMDBID=int(media_info.tmdb_id) if str(media_info.tmdb_id or "").isdigit() else 0,
-                    TITLE=title,
-                    YEAR=media_info.year,
-                    SEASON_EPISODE=season_episode,
-                    SOURCE=StringUtils.resolve_in_from_display(in_from),
-                    SOURCE_PATH=source_path,
-                    SOURCE_FILENAME=source_filename,
-                    DEST=dest,
-                    DEST_PATH=dest_path,
-                    DEST_FILENAME=dest_filename,
-                    POSTER=(media_info.poster or None),
-                    DST_BACKEND=dst_backend or "local",
-                    DATE=timestr,
-                    IDENTITY_ID=self._identity_for_media(media_info, title),
-                    ANCHOR_PROVIDER=getattr(media_info, "anchor_provider", None),
-                    ANCHOR_EXTERNAL_ID=getattr(media_info, "anchor_external_id", None),
-                    CONTENT_PROFILE=getattr(media_info, "content_profile", None),
-                    SOURCE_STATE="present",
-                    DEST_STATE="present" if dest_filename else "unknown",
-                )
-            )
+        return IdentityResolver().resolve_media(media_info, allow_local=True).identity_id
 
     def get_transfer_history(
         self, search: str | None, page: int, rownum: int, media_type: str | None = None

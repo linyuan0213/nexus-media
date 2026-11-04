@@ -8,6 +8,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import sessionmaker
 
 from app.db.models import SEARCHRESULTINFO, Base
+from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.db.repositories.search_repository import SearchRepository
 from app.db.session import SessionManager
 from app.domain.mediatypes import MediaType
@@ -60,9 +61,16 @@ def repo():
     manager = SessionManager()
     manager._engine = engine
     manager._factory = sessionmaker(bind=engine)
+    original_search = SearchRepository._session_manager
+    original_identity = MediaIdentityRepository._session_manager
     SearchRepository._session_manager = manager
-    yield SearchRepository()
-    engine.dispose()
+    MediaIdentityRepository._session_manager = manager
+    try:
+        yield SearchRepository()
+    finally:
+        SearchRepository._session_manager = original_search
+        MediaIdentityRepository._session_manager = original_identity
+        engine.dispose()
 
 
 class TestInsertSearchResults:

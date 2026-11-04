@@ -10,13 +10,11 @@ from typing import Any
 
 from sqlalchemy import Integer, and_, case, cast, func, or_, tuple_
 
-import log
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.episode_progress import contiguous_episodes
-from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.media_ref import is_tmdb_media
-from app.utils.identity import fallback_identity
+from app.services.identity_resolver import IdentityResolver
 
 
 class DownloadRepository(BaseRepository):
@@ -26,46 +24,7 @@ class DownloadRepository(BaseRepository):
     """
 
     def _identity_for_media(self, media_info: Any) -> str:
-        identity_id = str(getattr(media_info, "identity_id", "") or "")
-        if identity_id:
-            return identity_id
-        provider = str(getattr(media_info, "anchor_provider", "") or "")
-        external_id = str(getattr(media_info, "anchor_external_id", "") or "")
-        media_type = getattr(getattr(media_info, "type", None), "value", None) or "movie"
-        if provider and external_id:
-            try:
-                resolved = MediaIdentityRepository().ensure_identity_for_ref(
-                    provider,
-                    external_id,
-                    media_type=str(media_type),
-                    content_profile=str(getattr(media_info, "content_profile", "") or "default"),
-                    title=getattr(media_info, "title", None),
-                    year=str(getattr(media_info, "year", "") or "") or None,
-                )
-                if resolved:
-                    return resolved
-            except Exception as exc:  # noqa: BLE001
-                log.debug(f"[DownloadRepository]解析身份失败: {exc}")
-        existing = MediaIdentityRepository().find_by_title(
-            getattr(media_info, "title", None),
-            str(getattr(media_info, "year", "") or "") or None,
-            str(media_type),
-        )
-        if existing is not None:
-            return existing.IDENTITY_ID
-        season = 0
-        if hasattr(media_info, "get_season_seq"):
-            try:
-                season = int(media_info.get_season_seq() or 0)
-            except (TypeError, ValueError):
-                season = 0
-        return fallback_identity(
-            getattr(media_info, "title", None),
-            str(media_type),
-            season,
-            provider,
-            external_id,
-        )
+        return IdentityResolver().resolve_media(media_info, allow_local=True).identity_id
 
     # ==================== Download History ====================
 

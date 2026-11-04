@@ -18,9 +18,8 @@ from app.db.models.subscribe import SubscribeHistory
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.lifecycle_repository import LifecycleRepository
-from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_download_state, map_task_status
-from app.utils.identity import fallback_identity
+from app.services.identity_resolver import IdentityResolver
 
 
 class LifecycleProjector:
@@ -31,7 +30,7 @@ class LifecycleProjector:
 
     def __init__(self, repository: LifecycleRepository | None = None):
         self._repo = repository or LifecycleRepository()
-        self._identity_repo = MediaIdentityRepository()
+        self._resolver = IdentityResolver()
 
     def record(
         self,
@@ -139,9 +138,6 @@ class LifecycleProjector:
         event_key: str | None = None,
     ) -> bool:
         """从 MediaInfo 投影事件；没有稳定身份时跳过，不影响业务."""
-        identity_id = str(getattr(media, "identity_id", "") or "")
-        provider = str(getattr(media, "anchor_provider", "") or "")
-        external_id = str(getattr(media, "anchor_external_id", "") or "")
         media_type = getattr(getattr(media, "type", None), "value", getattr(media, "type", "movie")) or "movie"
         season = 0
         episode = 0
@@ -150,41 +146,12 @@ class LifecycleProjector:
                 season = int(media.get_season_seq() or 0)
             except (TypeError, ValueError):
                 season = 0
-        if not identity_id and provider and external_id:
-            canonical = self._identity_repo.find_by_ref(
-                provider,
-                external_id,
-                media_type=str(media_type),
-            )
-            if canonical is not None:
-                identity_id = canonical.IDENTITY_ID
+        resolved = self._resolver.resolve_media(media, allow_local=True)
+        identity_id = resolved.identity_id
         if not identity_id:
-            identity_id = self._repo.resolve_identity_by_anchor(provider, external_id) or ""
-        if not identity_id:
-            existing = self._identity_repo.find_by_title(
-                getattr(media, "title", "") or None,
-                str(getattr(media, "year", "") or "") or None,
-                str(media_type),
-            )
-            if existing is not None:
-                identity_id = existing.IDENTITY_ID
-        content_profile = str(getattr(media, "content_profile", "") or "default")
-        if identity_id and (not provider or content_profile == "default"):
-            identity = self._identity_repo.get_identity(identity_id)
-            ref = self._identity_repo.get_primary_ref(identity_id)
-            if not provider and ref is not None:
-                provider = str(ref.PROVIDER or "")
-                external_id = external_id or str(ref.EXTERNAL_ID or "")
-            if content_profile == "default" and identity is not None and identity.CONTENT_PROFILE:
-                content_profile = str(identity.CONTENT_PROFILE)
-        if not identity_id:
-            identity_id = fallback_identity(
-                getattr(media, "title", "") or "",
-                str(media_type),
-                season,
-                provider,
-                external_id,
-            )
+            return False
+        provider = resolved.provider
+        content_profile = resolved.content_profile
         return self.record(
             identity_id=identity_id,
             stage=stage,
@@ -261,6 +228,7 @@ class LifecycleReconciler:
 
     def __init__(self, projector: LifecycleProjector | None = None):
         self._projector = projector or LifecycleProjector()
+        self._resolver = IdentityResolver()
 
     def reconcile_recent(self, limit: int = 500) -> dict[str, int]:
         count = 0
@@ -310,7 +278,7 @@ class LifecycleReconciler:
                     identity_id,
                 )
             for row in reversed(downloads):
-                identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
+                identity_id = _canonical_identity(row, identity_by_external, identity_by_title, self._resolver)
                 if not identity_id:
                     continue
                 stage, status = map_download_state(row.STATE)
@@ -343,7 +311,7 @@ class LifecycleReconciler:
                     ):
                         count += 1
             for row in reversed(subscriptions):
-                identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
+                identity_id = _canonical_identity(row, identity_by_external, identity_by_title, self._resolver)
                 if not identity_id:
                     continue
                 occurred = _parse_history_time(row.FINISH_TIME)
@@ -372,7 +340,7 @@ class LifecycleReconciler:
                 episode_pairs = _parse_season_episodes(row.SEASON_EPISODE)
                 occurred = _parse_history_time(row.DATE)
                 failed = str(row.DEST_STATE or "") in {"missing", "deleted"}
-                identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
+                identity_id = _canonical_identity(row, identity_by_external, identity_by_title, self._resolver)
                 if not identity_id:
                     continue
                 for season, episode in episode_pairs:
@@ -475,7 +443,7 @@ class LifecycleReconciler:
             # 用转移目标目录里的 NFO + 视频文件直接回填 in_library。
             scanned_library: set[tuple[str, int, int]] = set()
             for row in transfers:
-                identity_id = _canonical_identity(row, identity_by_external, identity_by_title)
+                identity_id = _canonical_identity(row, identity_by_external, identity_by_title, self._resolver)
                 if not identity_id:
                     continue
                 target = Path(str(row.DEST_PATH or row.DEST or ""))
@@ -552,7 +520,12 @@ def _valid_identity(value: Any) -> str:
     return "" if text.lower() in {"", "preview"} else text
 
 
-def _canonical_identity(row: Any, by_external: dict[str, str], by_title: dict[tuple[str, str, str], str]) -> str:
+def _canonical_identity(
+    row: Any,
+    by_external: dict[str, str],
+    by_title: dict[tuple[str, str, str], str],
+    resolver: IdentityResolver,
+) -> str:
     """优先按 anchor 归并历史表中的重复/占位 identity。"""
     external_id = str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or "")
     if external_id and external_id in by_external:
@@ -568,13 +541,16 @@ def _canonical_identity(row: Any, by_external: dict[str, str], by_title: dict[tu
     matched = by_title.get(key, "")
     if matched:
         return matched
-    return fallback_identity(
-        getattr(row, "TITLE", "") or getattr(row, "NAME", "") or "",
-        _row_media_type(getattr(row, "TYPE", None)),
-        0,
-        str(getattr(row, "ANCHOR_PROVIDER", "") or ""),
-        str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or ""),
+    resolved = resolver.resolve_values(
+        identity_id=getattr(row, "IDENTITY_ID", None),
+        provider=getattr(row, "ANCHOR_PROVIDER", None),
+        external_id=getattr(row, "ANCHOR_EXTERNAL_ID", None),
+        title=getattr(row, "TITLE", "") or getattr(row, "NAME", "") or "",
+        year=getattr(row, "YEAR", None),
+        media_type=_row_media_type(getattr(row, "TYPE", None)),
+        allow_local=True,
     )
+    return resolved.identity_id
 
 
 def _scoped_event_key(base: str, row_identity: Any, canonical_identity: str) -> str:
