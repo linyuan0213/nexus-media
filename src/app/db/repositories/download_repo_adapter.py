@@ -185,6 +185,19 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
     def count_download_history_by_path(self, path: str) -> int:
         return self._repo.count_download_history_by_path(path)
 
+    def has_active_download_for_media(
+        self,
+        *,
+        identity_id: str | None = None,
+        anchor_provider: str | None = None,
+        anchor_external_id: str | None = None,
+    ) -> bool:
+        return self._repo.has_active_download_for_media(
+            identity_id=identity_id,
+            anchor_provider=anchor_provider,
+            anchor_external_id=anchor_external_id,
+        )
+
     def get_active_downloads(self) -> list[DownloadHistoryEntity]:
         rows = self._repo.get_active_downloads()
         if not rows:

@@ -537,6 +537,46 @@ class DownloadRepository(BaseRepository):
             db.commit()
             return True
 
+    def has_active_download_for_media(
+        self,
+        *,
+        identity_id: str | None = None,
+        anchor_provider: str | None = None,
+        anchor_external_id: str | None = None,
+    ) -> bool:
+        """订阅再次搜索前检查同一媒体是否已有在途下载."""
+        states = (
+            "pending",
+            "queued",
+            "downloading",
+            "paused",
+            "retrying",
+            "blocked",
+            "running",
+        )
+        conditions = []
+        if identity_id:
+            conditions.append(DOWNLOADHISTORY.IDENTITY_ID == str(identity_id))
+        if anchor_provider and anchor_external_id:
+            conditions.append(
+                and_(
+                    DOWNLOADHISTORY.ANCHOR_PROVIDER == str(anchor_provider),
+                    DOWNLOADHISTORY.ANCHOR_EXTERNAL_ID == str(anchor_external_id),
+                )
+            )
+        if not conditions:
+            return False
+        with self.readonly() as db:
+            return (
+                db.query(DOWNLOADHISTORY.ID)
+                .filter(
+                    DOWNLOADHISTORY.STATE.in_(states),
+                    or_(*conditions),
+                )
+                .first()
+                is not None
+            )
+
     def get_active_download_states(self, identity_ids: set[str]) -> dict[str, str]:
         """返回指定身份最新的活跃下载状态，用于生命周期心跳/防误判停滞."""
         ids = {str(item) for item in identity_ids if item and str(item) != "preview"}
