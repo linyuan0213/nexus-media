@@ -26,7 +26,6 @@ from app.db.repositories.download_repo_adapter import (
     DownloadSettingRepositoryAdapter,
 )
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
-from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
 from app.downloader.client_factory import DownloadClientFactory
 from app.downloader.pipeline import DownloadPipeline
@@ -212,19 +211,6 @@ class DownloadCore:
             "file_names": file_names,
             "user_id": user_id,
         }
-        source = getattr(in_from, "value", in_from)
-        if (
-            str(source or "") in {SearchType.SUBSCRIBE.value, SearchType.USERRSS.value}
-            and not bool(getattr(media_info, "over_edition", False))
-            and self._download_repo.has_active_download_for_media(
-                identity_id=getattr(media_info, "identity_id", None),
-                anchor_provider=getattr(media_info, "anchor_provider", None),
-                anchor_external_id=getattr(media_info, "anchor_external_id", None),
-            )
-        ):
-            log.info(f"[Downloader]{media_info.get_name()} 已有在途下载任务，跳过重复下载")
-            return None, None, "已有在途下载任务，等待完成"
-
         fail_key = media_info.enclosure or media_info.page_url or ""
         if fail_key:
             # 单飞：并发同一链接串行执行，锁内复查失败负缓存，避免并发重复取链
