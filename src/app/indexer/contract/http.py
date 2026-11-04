@@ -35,6 +35,7 @@ class HttpIndexerProvider:
             timeout=timeout,
             headers={"Authorization": f"Bearer {token}"} if token else {},
         )
+        self._sites: tuple[IndexerSite, ...] | None = None
 
     def info(self) -> IndexerInfo:
         payload = self._request(self._info_path)
@@ -46,6 +47,7 @@ class HttpIndexerProvider:
             )
             for site in payload.get("sites", [])
         )
+        self._sites = sites
         return IndexerInfo(
             provider_id=self.provider_id,
             name=str(payload.get("name") or "Remote Indexer"),
@@ -67,13 +69,34 @@ class HttpIndexerProvider:
     def search(self, query: IndexerQuery) -> IndexerPage:
         query = query.normalized()
         params = self._params(query)
+        if not self._apply_site_filter(query, params):
+            return IndexerPage(offset=query.offset, limit=query.limit)
         if query.keyword:
             params["keyword"] = query.keyword
         return self._page(self._search_path, params, query)
 
     def list(self, query: IndexerQuery) -> IndexerPage:
         query = query.normalized()
-        return self._page(self._list_path, self._params(query), query)
+        params = self._params(query)
+        if not self._apply_site_filter(query, params):
+            return IndexerPage(offset=query.offset, limit=query.limit)
+        return self._page(self._list_path, params, query)
+
+    def _apply_site_filter(self, query: IndexerQuery, params: dict[str, Any]) -> bool:
+        """把选中的站点收敛到本 provider 实际拥有的站点；无交集则不发起搜索。"""
+        if not query.sites:
+            return True
+        if self._sites is None:
+            try:
+                self.info()
+            except Exception:  # noqa: BLE001
+                return False
+        names = {site.name for site in self._sites or ()} | {site.id for site in self._sites or ()}
+        matching = [site for site in query.sites if site in names]
+        if not matching:
+            return False
+        params["site"] = matching[0]
+        return True
 
     def close(self) -> None:
         self._client.close()
@@ -103,9 +126,23 @@ class HttpIndexerProvider:
             "limit": query.limit,
             "dedup": True,
         }
-        if query.sites:
-            params["site"] = query.sites[0]
         return params
+
+    def _site_public(self, row: dict[str, Any], site: str) -> bool:
+        """外部索引器未返回促销字段时，按 provider 站点目录判断是否公开免费."""
+        if row.get("public") is not None:
+            return bool(row.get("public"))
+        if not site:
+            return True
+        if self._sites is None:
+            try:
+                self.info()
+            except Exception:  # noqa: BLE001
+                return True
+        for entry in self._sites or ():
+            if site in (entry.id, entry.name):
+                return entry.public
+        return True
 
     def _to_item(self, row: dict[str, Any]) -> IndexerItem | None:
         title = str(row.get("title") or "").strip()
@@ -128,7 +165,14 @@ class HttpIndexerProvider:
             info_hash=row.get("info_hash"),
             resource_type=str(row.get("resource_type") or "magnet"),
             description=str(row.get("description") or ""),
-            extra={"external": True},
+            extra={
+                "external": True,
+                "uploadvolumefactor": row.get("uploadvolumefactor") or row.get("upload_volume_factor"),
+                "downloadvolumefactor": row.get("downloadvolumefactor") or row.get("download_volume_factor"),
+                "public": self._site_public(row, site),
+                "labels": row.get("labels"),
+                "imdbid": row.get("imdbid"),
+            },
         )
 
 

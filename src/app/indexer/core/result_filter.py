@@ -485,7 +485,23 @@ class ResultFilter:
                         p_norm = str(StringUtils.handler_special_chars(phrase)).upper().strip()
                         m_norm = str(StringUtils.handler_special_chars(match_media.cn_name or "")).upper().strip()
                         t_norm = str(StringUtils.handler_special_chars(match_media.title or "")).upper().strip()
-                        if p_norm and (p_norm == m_norm or p_norm == t_norm or p_norm in m_norm or m_norm in p_norm):
+                        matched_cn = bool(
+                            m_norm
+                            and (
+                                p_norm == m_norm
+                                or p_norm in m_norm
+                                or m_norm in p_norm
+                            )
+                        )
+                        matched_title = bool(
+                            t_norm
+                            and (
+                                p_norm == t_norm
+                                or p_norm in t_norm
+                                or t_norm in p_norm
+                            )
+                        )
+                        if p_norm and (matched_cn or matched_title):
                             _, cleaned, _, _, _, _ = StringUtils.get_keyword_from_string(phrase)
                             # 剥除字幕/配音标签前缀（如 "中字攻壳机动队" → "攻壳机动队"）
                             mi.cn_name = _strip_cn_tag_prefix(cleaned or phrase)

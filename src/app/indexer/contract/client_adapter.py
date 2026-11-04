@@ -126,12 +126,14 @@ def _row_to_item(provider_id: str, indexer: Any, row: dict[str, Any]) -> Indexer
     enclosure = str(row.get("enclosure") or row.get("download_url") or "").strip()
     magnet = str(row.get("magnet") or "").strip() or None
     ed2k = str(row.get("ed2k") or "").strip() or None
-    if not title or not (enclosure or magnet or ed2k):
+    page_url = str(row.get("page_url") or row.get("detail_url") or "").strip()
+    # 部分 HTML 站点只提供详情页，下载时才从详情页解析磁力；不能在这里丢弃
+    if not title or not (enclosure or magnet or ed2k or page_url):
         return None
     info_hash = str(row.get("info_hash") or "").strip() or None
     item_id = str(row.get("id") or info_hash or "").strip()
     if not item_id:
-        item_id = hashlib.sha1(f"{indexer.name}|{title}|{enclosure}".encode()).hexdigest()[:16]
+        item_id = hashlib.sha1(f"{indexer.name}|{title}|{enclosure or page_url}".encode()).hexdigest()[:16]
     return IndexerItem(
         provider_id=provider_id,
         site=str(indexer.name),
@@ -141,14 +143,21 @@ def _row_to_item(provider_id: str, indexer: Any, row: dict[str, Any]) -> Indexer
         category=str(row.get("category") or ""),
         size_bytes=_to_int(row.get("size")),
         published_at=str(row.get("pubdate") or row.get("published_at") or ""),
-        detail_url=str(row.get("page_url") or row.get("detail_url") or ""),
+        detail_url=page_url,
         download_url=enclosure or magnet or ed2k or "",
         magnet=magnet,
         ed2k=ed2k,
         info_hash=info_hash,
-        resource_type="magnet" if magnet or enclosure else "ed2k",
+        resource_type="magnet" if magnet or enclosure else "ed2k" if ed2k else "page",
         description=str(row.get("description") or ""),
         seeders=_to_int(row.get("seeders")),
         peers=_to_int(row.get("peers")),
-        extra={"source": row.get("_indexer_source", "")},
+        extra={
+            "source": row.get("_indexer_source", ""),
+            "uploadvolumefactor": row.get("uploadvolumefactor"),
+            "downloadvolumefactor": row.get("downloadvolumefactor"),
+            "public": bool(row.get("_indexer_public", getattr(indexer, "public", False))),
+            "labels": row.get("labels"),
+            "imdbid": row.get("imdbid"),
+        },
     )
