@@ -1120,13 +1120,7 @@ class MetadataService:
             return []
         providers = self._registry.list_providers(capability=ProviderCapability.SEARCH)
         if provider:
-            primary = [item for item in providers if item.descriptor.provider_key == provider]
-            # 单一来源失败时并行查询画像聚合源，避免 JavDB 等慢源把整次搜索拖死。
-            profile_fallback = str(content_profile or "").strip()
-            fallback = []
-            if profile_fallback not in ("", "default", "anime") and profile_fallback != provider:
-                fallback = [item for item in providers if item.descriptor.provider_key == profile_fallback]
-            providers = [*primary, *fallback]
+            providers = [item for item in providers if item.descriptor.provider_key == provider]
         selected = []
         for item in providers:
             descriptor = item.descriptor
