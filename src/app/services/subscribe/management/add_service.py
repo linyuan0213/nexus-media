@@ -92,6 +92,16 @@ def _split_provider_ref(value: Any) -> tuple[str, str] | None:
     return aliases.get(provider, provider), external_id
 
 
+def _season_number(value, default: int = 0) -> int:
+    text = str(value or "").strip()
+    if text.upper().startswith("S"):
+        text = text[1:]
+    try:
+        return int(text)
+    except (TypeError, ValueError):
+        return default
+
+
 class SubscribeAddService:
     """添加订阅服务"""
 
@@ -205,7 +215,7 @@ class SubscribeAddService:
         media_info.overview = overview
         media_info.type = resolved_type
         extra = record.get("extra") or {}
-        season_number = int(season or 1)
+        season_number = _season_number(season, 1)
         total_episodes = (
             record.get("episode_count")
             or extra.get("bangumi.eps")
@@ -442,13 +452,15 @@ class SubscribeAddService:
                         total_episode = media_info.total_episodes or 0
                 else:
                     total_episode = total_ep or (
-                        self._media.get_tmdb_season_episodes_num(tv_info=media_info.provider_data, season=int(season))
+                        self._media.get_tmdb_season_episodes_num(
+                            tv_info=media_info.provider_data, season=_season_number(season)
+                        )
                         if media_info.provider_data
                         else (media_info.total_episodes or 0)
                     )
                 if not total_episode and media_info.provider_data:
                     return 3, f"第{season}季获取剧集数失败，请确认该季是否存在", media_info
-                media_info.begin_season = int(season or 0)
+                media_info.begin_season = _season_number(season, 0)
                 media_info.total_episodes = total_episode
                 if total_ep:
                     total = total_ep
@@ -466,7 +478,7 @@ class SubscribeAddService:
                     if self._transfer_history_manager:
                         try:
                             continue_ep = self._transfer_history_manager.get_contiguous_transferred_episode_by_tmdb(
-                                media_info.tmdb_id, int(season or 1), start=sub_start
+                                media_info.tmdb_id, _season_number(season, 1), start=sub_start
                             )
                         except Exception as e:  # noqa: BLE001
                             log.debug(f"[SubscribeAdd] 查询转移历史失败: {e}")
@@ -475,7 +487,7 @@ class SubscribeAddService:
                             continue_ep = max(
                                 continue_ep,
                                 self._download_repo.get_contiguous_completed_episode_by_tmdb(
-                                    media_info.tmdb_id, int(season or 1), start=sub_start
+                                    media_info.tmdb_id, _season_number(season, 1), start=sub_start
                                 ),
                             )
                         except Exception as e:  # noqa: BLE001
@@ -499,7 +511,7 @@ class SubscribeAddService:
                             try:
                                 continue_ep = self._transfer_history_manager.get_contiguous_transferred_episode_by_ref(
                                     ref_key,
-                                    int(season or 1),
+                                    _season_number(season, 1),
                                     media_type=str(media_info.type.value) if media_info.type else None,
                                     start=sub_start,
                                 )
@@ -513,7 +525,7 @@ class SubscribeAddService:
                                         identity_id=getattr(media_info, "identity_id", None),
                                         anchor_provider=ref.provider,
                                         anchor_external_id=ref.external_id,
-                                        season=int(season or 1),
+                                        season=_season_number(season, 1),
                                         start=sub_start,
                                     ),
                                 )
@@ -617,7 +629,7 @@ class SubscribeAddService:
             if year:
                 media_info.year = str(year)
             if season:
-                media_info.begin_season = int(season)
+                media_info.begin_season = _season_number(season)
             if mtype == MediaType.MOVIE:
                 identity_fields = self._identity_fields(
                     media_info,

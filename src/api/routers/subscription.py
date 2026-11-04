@@ -189,7 +189,7 @@ def _build_add_kwargs(req: AddRssMediaRequest) -> dict:
         "channel": channel,
         "keyword": req.keyword,
         "fuzzy_match": req.fuzzy_match,
-        "mediaid": req.mediaid,
+        "mediaid": req.mediaid or req.metadata_ref,
         "metadata_ref": req.metadata_ref,
         "provider": req.provider,
         "rss_sites": req.rss_sites,
@@ -220,7 +220,7 @@ def _build_update_kwargs(req: AddRssMediaRequest) -> dict:
         "year": req.year,
         "keyword": req.keyword,
         "fuzzy_match": req.fuzzy_match,
-        "mediaid": req.mediaid,
+        "mediaid": req.mediaid or req.metadata_ref,
         "metadata_ref": req.metadata_ref,
         "provider": req.provider,
         "content_profile": profile,
@@ -271,13 +271,18 @@ def _invoke_for_seasons(
     msg = ""
     media_info = None
     if isinstance(season, list):
+        codes: list[int] = []
         for sea in season:
-            kwargs["season"] = sea
+            kwargs["season"] = _normalize_season(sea) or sea
             kwargs.pop("total_ep", None)
             kwargs.pop("current_ep", None)
             code, msg, media_info = invoke(**kwargs)
-            if code != 0:
-                break
+            codes.append(code)
+            if code not in (0, 9):
+                return code, msg, media_info
+        if codes and all(item == 9 for item in codes):
+            return 9, "订阅已存在", media_info
+        return 0, "添加订阅成功", media_info
     else:
         kwargs["season"] = season
         if total_ep is not None:
@@ -490,6 +495,14 @@ def remove_rss_media(
         name = meta_info(title=name).get_name()
     rssid = req.rssid
     mtype, _profile = _resolve_type_and_profile(req.type, req.content_profile)
+    if rssid is None and req.anchor_provider and req.anchor_external_id:
+        rssid = svc.get_subscribe_id_by_anchor(
+            mtype,
+            req.anchor_provider,
+            req.anchor_external_id,
+            season=_normalize_season(req.season),
+            user=user,
+        )
     deleted = 0
     if rssid:
         deleted = int(svc.delete_subscribe(mtype=mtype, rssid=rssid, user=user) or 0)
@@ -711,6 +724,8 @@ def get_tv_subscribed_seasons(
         title=req.name,
         year=req.year,
         user=user,
+        anchor_provider=req.anchor_provider,
+        anchor_external_id=req.anchor_external_id,
     )
     return success(data={"seasons": seasons})
 

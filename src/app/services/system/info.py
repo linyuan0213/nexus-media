@@ -222,10 +222,12 @@ class WebSearchService:
             if profile != "default":
                 filters = {**(filters or {}), "content_profile": profile}
             parsed_type = MediaType.from_string(request_type or "")
-            if parsed_type in (MediaType.MOVIE, MediaType.ANIME):
-                media_type = MediaType.MOVIE
+            if parsed_type == MediaType.ANIME:
+                media_type = MediaType.TV
             elif parsed_type == MediaType.TV:
                 media_type = MediaType.TV
+            elif parsed_type == MediaType.MOVIE:
+                media_type = MediaType.MOVIE
             elif profile != "default":
                 media_type = MediaType.MOVIE
             else:

@@ -455,6 +455,8 @@ class SubscribeQueryService:
         title: str | None = None,
         year: str | None = None,
         user: UserContext | None = None,
+        anchor_provider: str | None = None,
+        anchor_external_id: str | None = None,
     ) -> list[int]:
         """获取某部剧集已订阅的季号列表
 
@@ -465,7 +467,12 @@ class SubscribeQueryService:
         tmdbid_str = str(tmdbid) if tmdbid else ""
         for rss_tv in self._tv_repo.get_all(user=user):
             matched = False
-            if tmdbid_str and str(rss_tv.tmdb_id) == tmdbid_str:
+            if anchor_provider and anchor_external_id:
+                matched = (
+                    str(getattr(rss_tv, "anchor_provider", "") or "") == anchor_provider
+                    and str(getattr(rss_tv, "anchor_external_id", "") or "") == anchor_external_id
+                )
+            elif tmdbid_str and str(rss_tv.tmdb_id) == tmdbid_str:
                 matched = True
             elif not tmdbid_str and title and rss_tv.name == title:
                 matched = not year or str(rss_tv.year) == str(year)
@@ -473,6 +480,26 @@ class SubscribeQueryService:
                 continue
             seasons.update(self._parse_season_numbers(rss_tv.season))
         return sorted(seasons)
+
+    def get_subscribe_id_by_anchor(
+        self,
+        mtype: MediaType,
+        anchor_provider: str | None,
+        anchor_external_id: str | None,
+        season: str | None = None,
+        user: UserContext | None = None,
+    ) -> int | None:
+        if not anchor_provider or not anchor_external_id:
+            return None
+        rows = self._movie_repo.get_all(user=user) if mtype == MediaType.MOVIE else self._tv_repo.get_all(user=user)
+        for row in rows:
+            if (
+                str(getattr(row, "anchor_provider", "") or "") == anchor_provider
+                and str(getattr(row, "anchor_external_id", "") or "") == anchor_external_id
+                and (season is None or str(getattr(row, "season", "") or "") == season)
+            ):
+                return int(row.id)
+        return None
 
     @staticmethod
     def _parse_season_numbers(season_str: str | None) -> list[int]:

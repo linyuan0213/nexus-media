@@ -84,10 +84,13 @@ class SearchPaginationManager:
         current = page_info["page"]
         size = page_info["page_size"]
         items = page_info["all_items"]
-        item_idx = (current - 1) * size + (index - 1)
-        if 0 <= item_idx < len(items):
-            return items[item_idx]
-        return None
+        if index < 1 or index > size:
+            return None
+        start = (current - 1) * size
+        page_items = items[start : start + size]
+        if index > len(page_items):
+            return None
+        return page_items[index - 1]
 
     def get_current_page_items(self, user_id: str) -> dict | None:
         return self._get_current_page(user_id)

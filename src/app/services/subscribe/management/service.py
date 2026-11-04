@@ -304,8 +304,39 @@ class SubscribeService:
     ) -> dict | None:
         return self._query_svc.get_subscribe_by_anchor(anchor_provider, anchor_external_id, mtype, user=user)
 
-    def get_subscribe_seasons(self, tmdbid=None, title=None, year=None, user=None):
-        return self._query_svc.get_subscribe_seasons(tmdbid, title, year, user=user)
+    def get_subscribe_seasons(
+        self,
+        tmdbid=None,
+        title=None,
+        year=None,
+        user=None,
+        anchor_provider=None,
+        anchor_external_id=None,
+    ):
+        return self._query_svc.get_subscribe_seasons(
+            tmdbid,
+            title,
+            year,
+            user=user,
+            anchor_provider=anchor_provider,
+            anchor_external_id=anchor_external_id,
+        )
+
+    def get_subscribe_id_by_anchor(
+        self,
+        mtype,
+        anchor_provider,
+        anchor_external_id,
+        season=None,
+        user=None,
+    ) -> int | None:
+        return self._query_svc.get_subscribe_id_by_anchor(
+            mtype,
+            anchor_provider,
+            anchor_external_id,
+            season=season,
+            user=user,
+        )
 
     def check_history(self, type_str, name, year=None, season=None):
         return self._query_svc.check_history(type_str, name, year, season)

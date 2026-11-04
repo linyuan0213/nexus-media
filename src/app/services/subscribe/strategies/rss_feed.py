@@ -118,16 +118,19 @@ class RssFeedStrategy:
                 return
             self._do_rss_poll()
 
-    def _get_default_rss_sites(self, mtype: MediaType) -> list:
+    def _get_default_rss_sites(self, mtype: MediaType, content_profile: str | None = None) -> list:
         """读取默认订阅设置的 rss_sites（订阅未配置时的回退站点）"""
         if not self._system_config:
             return []
         try:
-            default_setting = self._system_config.get(
-                SystemConfigKey.DefaultSubscribeSettingTV
-                if mtype in (MediaType.TV, MediaType.ANIME)
-                else SystemConfigKey.DefaultSubscribeSettingMovie
-            )
+            if mtype in (MediaType.TV, MediaType.ANIME):
+                key = SystemConfigKey.DefaultSubscribeSettingTV
+            else:
+                key = SystemConfigKey.DefaultSubscribeSettingMovie
+                profile = str(content_profile or "").strip()
+                if profile and profile != "default":
+                    key = f"{key.value}::{profile}"
+            default_setting = self._system_config.get(key)
             if isinstance(default_setting, dict):
                 return default_setting.get("rss_sites") or []
         except Exception as e:
@@ -172,29 +175,15 @@ class RssFeedStrategy:
         if not rss_movies and not rss_tvs:
             return
 
-        check_sites = []
-        check_all = False
-        for rinfo in rss_movies.values():
+        check_sites: list = []
+        for rinfo in [*rss_movies.values(), *rss_tvs.values()]:
             rss_sites = rinfo.get("rss_sites")
-            if not rss_sites:
-                check_all = True
-                break
+            if rss_sites:
+                check_sites += list(rss_sites)
             else:
-                check_sites += rss_sites
-        if not check_all:
-            for rinfo in rss_tvs.values():
-                rss_sites = rinfo.get("rss_sites")
-                if not rss_sites:
-                    check_all = True
-                    break
-                else:
-                    check_sites += rss_sites
-        if check_all:
-            # 订阅未配置 rss_sites → 使用默认订阅设置的 rss_sites（与搜索/手动一致），而非全部站点
-            check_sites = self._get_default_rss_sites(MediaType.TV) + self._get_default_rss_sites(MediaType.MOVIE)
-            check_sites = list(set(check_sites))
-        else:
-            check_sites = list(set(check_sites))
+                mtype = MediaType.TV if rinfo in rss_tvs.values() else MediaType.MOVIE
+                check_sites += self._get_default_rss_sites(mtype, rinfo.get("content_profile"))
+        check_sites = list(set(check_sites))
 
         all_articles = []
         for site_info in rss_sites_info:
