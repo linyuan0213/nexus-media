@@ -125,6 +125,26 @@ class TestMakeWebSearchFn:
         assert ctx.match_media.anchor_provider == "content_id"
         assert ctx.match_media.anchor_external_id == "DEMO-4025269"
 
+    def test_content_id_fallback_keeps_selected_provider(self):
+        """编号详情失败时不能用内部 content_id 作为来源展示."""
+        orchestrator = MagicMock()
+        orchestrator.resolve_content_id_media.return_value = None
+        orchestrator.orchestrate.return_value = (None, {}, 0, 0)
+        fn = make_web_search_fn(orchestrator, system_config=None)
+        fn(
+            "SSIS-522 可爱...",
+            anchor_provider="content_id",
+            anchor_external_id="SSIS-522",
+            content_profile="adult",
+            media_type=MediaType.MOVIE,
+            filters={"metadata_source": "javdb", "content_profile": "adult"},
+        )
+        ctx = orchestrator.orchestrate.call_args[0][0]
+        assert ctx.match_media is not None
+        assert ctx.match_media.provider == "javdb"
+        assert ctx.match_media.metadata_ref == "javdb:SSIS-522"
+        assert ctx.match_media.anchor_provider == "content_id"
+
     def test_empty_media_type_is_normalized_for_metadata_lookup(self):
         """未选择类型时前端可能传空串，SearchQuery 枚举不接受空串."""
         orchestrator = MagicMock()

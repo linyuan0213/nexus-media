@@ -56,6 +56,8 @@ def _source_provider(item) -> str:
             desc = getattr(metadata_registry.get_provider(provider), "descriptor", None)
     if not provider:
         return ""
+    if provider == "content_id" and not metadata_ref:
+        return "番号识别"
     if getattr(desc, "virtual", False):
         return "未知来源"
     return str(getattr(desc, "display_name", "") or provider)

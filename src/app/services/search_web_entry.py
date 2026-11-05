@@ -71,6 +71,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
         requested_rule = filter_args.get("rule")
         profile = str(filter_args.get("content_profile") or "").strip()
         match_media = None
+        resolve_provider = ""
         if anchor_provider and anchor_external_id:
             resolve_provider = anchor_provider
             if anchor_provider == "content_id":
@@ -132,6 +133,13 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                 filter_args.get("anchor_provider") or filter_args.get("metadata_source") or profile
             )
             match_media.anchor_external_id = str(filter_args.get("anchor_external_id") or content)
+            fallback_provider = str(
+                resolve_provider or filter_args.get("metadata_source") or match_media.anchor_provider or ""
+            ).strip()
+            if fallback_provider and fallback_provider not in ("content_id", profile):
+                # 编号解析失败时仍保留真实搜索来源，避免通知里出现内部伪 provider。
+                match_media.provider = fallback_provider
+                match_media.metadata_ref = f"{fallback_provider}:{match_media.anchor_external_id}"
             if not match_media.get_name():
                 match_media.en_name = content
             # 自定义画像的编号不能走 TMDB 识别，避免错误映射导致资源过滤失败。

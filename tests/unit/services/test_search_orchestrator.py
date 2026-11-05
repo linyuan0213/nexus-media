@@ -225,3 +225,21 @@ class TestSiteTier:
         result = SearchOrchestrator._apply_site_tier([media], {})
 
         assert result[0].site_order == 10
+
+
+class TestContentIdSource:
+    def test_resolved_media_keeps_real_provider(self):
+        orchestrator = object.__new__(SearchOrchestrator)
+        service = MagicMock()
+        service.search.return_value = [{"ref": {"provider": "javdb", "external_id": "P0dyv"}}]
+        orchestrator._metadata_service = service
+        resolved = MediaInfo(title="SSIS-522", type=MediaType.MOVIE)
+        orchestrator.resolve_anchor_media = MagicMock(return_value=resolved)
+
+        media = orchestrator.resolve_content_id_media("javalibrary", "SSIS-522", media_type=MediaType.MOVIE)
+
+        assert media is not None
+        assert media.provider == "javdb"
+        assert media.metadata_ref == "javdb:P0dyv"
+        assert media.anchor_provider == "content_id"
+        assert media.anchor_external_id == "SSIS-522"

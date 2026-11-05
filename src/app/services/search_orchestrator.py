@@ -247,6 +247,9 @@ class SearchOrchestrator:
                 content_profile=content_profile,
             )
             if media is not None:
+                # 保留真实来源，content_id 只是内部定位锚点，不能覆盖通知/详情来源。
+                media.provider = hit_provider
+                media.metadata_ref = f"{hit_provider}:{hit_external}"
                 media.anchor_provider = "content_id"
                 media.anchor_external_id = str(content_id)
                 return media
