@@ -1,7 +1,10 @@
 {
-  "id": "1377x",
-  "name": "1377x",
-  "domain": "https://www.1377x.to",
+  "id": "1337x",
+  "name": "1337x",
+  "domain": "https://1337x.to",
+  "domain_aliases": [
+    "www.1337x.to"
+  ],
   "encoding": "UTF-8",
   "public": true,
   "html": {
@@ -60,5 +63,5 @@
       }
     }
   },
-  "favicon": "https://www.1377x.to/favicon.ico"
+  "favicon": "https://1337x.to/favicon.ico"
 }
