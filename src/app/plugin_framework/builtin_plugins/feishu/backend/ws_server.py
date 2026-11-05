@@ -6,6 +6,7 @@ stop 时关闭连接并禁用自动重连。
 """
 
 import asyncio
+import logging
 import threading
 
 import lark_oapi as lark
@@ -18,6 +19,18 @@ from lark_oapi.ws import client as ws_client
 
 import log
 from app.plugin_framework.builtin_plugins.feishu.backend.event_parser import parse_card_action, parse_im_message
+
+
+class _TransientDisconnectFilter(logging.Filter):
+    """SDK 在正常断线时也按 ERROR 输出，重连由 SDK 自动处理，降噪即可."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "receive message loop exit" not in record.getMessage()
+
+
+_lark_logger = logging.getLogger("Lark")
+if not any(isinstance(item, _TransientDisconnectFilter) for item in _lark_logger.filters):
+    _lark_logger.addFilter(_TransientDisconnectFilter())
 
 
 class WsServer(threading.Thread):
@@ -49,6 +62,14 @@ class WsServer(threading.Thread):
         self._dispatch(user_id, text)
         return P2CardActionTriggerResponse()
 
+    def _on_reconnecting(self) -> None:
+        if self._running:
+            log.warn("飞书长连接已断开，SDK 正在自动重连")
+
+    def _on_reconnected(self) -> None:
+        if self._running:
+            log.info("飞书长连接已恢复")
+
     def run(self) -> None:
         try:
             handler = (
@@ -62,7 +83,10 @@ class WsServer(threading.Thread):
                 app_secret=self._app_secret,
                 log_level=lark.LogLevel.WARNING,
                 event_handler=handler,
+                auto_reconnect=True,
             )
+            self._client.on_reconnecting = self._on_reconnecting
+            self._client.on_reconnected = self._on_reconnected
             log.info("飞书长连接已启动")
             self._client.start()
         except Exception as e:  # noqa: BLE001
