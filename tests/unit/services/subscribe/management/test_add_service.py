@@ -13,16 +13,24 @@ class _FakeTransferHistory:
     def __init__(self, contiguous):
         self._contiguous = contiguous
 
-    def get_contiguous_transferred_episode_by_tmdb(self, tmdbid, season=None, start=1):
+    def get_contiguous_transferred_episode_by_ref(self, ref, season=None, media_type=None, start=1):
         return self._contiguous
+
+    def get_contiguous_transferred_episode_by_tmdb(self, tmdbid, season=None, start=1):
+        raise AssertionError("不应再按 TMDB 专用接口查询转移历史")
 
 
 class _FakeDownloadRepo:
     def __init__(self, contiguous):
         self._contiguous = contiguous
 
-    def get_contiguous_completed_episode_by_tmdb(self, tmdb_id, season=None, start=1):
+    def get_contiguous_completed_episode_by_ref(
+        self, *, identity_id, anchor_provider, anchor_external_id, season=None, start=1
+    ):
         return self._contiguous
+
+    def get_contiguous_completed_episode_by_tmdb(self, tmdb_id, season=None, start=1):
+        raise AssertionError("不应再按 TMDB 专用接口查询下载历史")
 
 
 def _build_service(transfer_contiguous=0, download_contiguous=0):
@@ -127,12 +135,14 @@ class TestResolvedSeasonContinuation:
         seen = {}
 
         class _SeasonAwareHistory:
-            def get_contiguous_transferred_episode_by_tmdb(self, tmdbid, season=None, start=1):
+            def get_contiguous_transferred_episode_by_ref(self, ref, season=None, media_type=None, start=1):
                 seen["season"] = season
                 return 12 if int(season or 0) == 1 else 0
 
         class _SeasonAwareDownload:
-            def get_contiguous_completed_episode_by_tmdb(self, tmdb_id, season=None, start=1):
+            def get_contiguous_completed_episode_by_ref(
+                self, *, identity_id, anchor_provider, anchor_external_id, season=None, start=1
+            ):
                 return 0
 
         svc._transfer_history_manager = _SeasonAwareHistory()

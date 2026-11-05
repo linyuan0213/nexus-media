@@ -601,73 +601,53 @@ class SubscribeAddService:
                 # 避免重新订阅从头重复下载已下载剧集，或前端传入旧 current_ep 导致进度卡住。
                 # current_ep 语义 = 首个待下载集（与 RSS 兜底 range(current_ep, total+1) 一致）；
                 # 已获得连续 N 集 → 首个待下载 = N+1。转移记录集数最可靠，二者取较大值。
-                if media_info.tmdb_id and not str(media_info.tmdb_id).startswith("DB:"):
+                # 重订阅续订：统一按 media_ref/identity 查询历史，TMDB 只是 provider 之一。
+                ref = media_info.get_media_ref()
+                identity_id = getattr(media_info, "identity_id", None)
+                if ref is not None or identity_id:
                     continue_ep = 0
-                    # start = 订阅起点（首个待下载集）：中途订阅从第 N 集开始跟踪时，
-                    # 历史只有 N 之后的集，须从 N 数起而非从第 1 集（否则误判为 0）
                     sub_start = int(current_ep) if current_ep and str(current_ep).isdigit() else 1
+                    season_no = _season_number(season, 1)
+                    media_type = str(media_info.type.value) if media_info.type else None
+                    identity_ref = f"id:{identity_id}" if identity_id else ""
+                    provider_ref = f"{ref.provider}:{ref.external_id}" if ref is not None else ""
                     if self._transfer_history_manager:
-                        try:
-                            continue_ep = self._transfer_history_manager.get_contiguous_transferred_episode_by_tmdb(
-                                media_info.tmdb_id, _season_number(season, 1), start=sub_start
-                            )
-                        except Exception as e:  # noqa: BLE001
-                            log.debug(f"[SubscribeAdd] 查询转移历史失败: {e}")
-                    if self._download_repo:
-                        try:
-                            continue_ep = max(
-                                continue_ep,
-                                self._download_repo.get_contiguous_completed_episode_by_tmdb(
-                                    media_info.tmdb_id, _season_number(season, 1), start=sub_start
-                                ),
-                            )
-                        except Exception as e:  # noqa: BLE001
-                            log.debug(f"[SubscribeAdd] 查询下载历史失败: {e}")
-                    if continue_ep > 0:
-                        # 历史推导只向前：取 历史推导点 与 已传入/显式 current_ep 的较大者，
-                        # 避免前端回传旧进度把已转移的集误标回缺失
-                        current_ep = max(current_ep or 0, continue_ep + 1)
-                        log.info(
-                            f"[SubscribeAdd]{media_info.get_title_string()} S{season} "
-                            f"历史记录已有 {continue_ep} 集，从第 {current_ep} 集开始续订"
-                        )
-                else:
-                    # 非 TMDB 订阅按统一身份恢复断点，避免重订阅后从第 1 集重复下载。
-                    ref = media_info.get_media_ref()
-                    if ref is not None:
-                        continue_ep = 0
-                        sub_start = int(current_ep) if current_ep and str(current_ep).isdigit() else 1
-                        ref_key = f"{ref.provider}:{ref.external_id}"
-                        if self._transfer_history_manager:
+                        for ref_key in [value for value in (identity_ref, provider_ref) if value]:
                             try:
-                                continue_ep = self._transfer_history_manager.get_contiguous_transferred_episode_by_ref(
-                                    ref_key,
-                                    _season_number(season, 1),
-                                    media_type=str(media_info.type.value) if media_info.type else None,
-                                    start=sub_start,
+                                continue_ep = max(
+                                    continue_ep,
+                                    self._transfer_history_manager.get_contiguous_transferred_episode_by_ref(
+                                        ref_key,
+                                        season_no,
+                                        media_type=media_type,
+                                        start=sub_start,
+                                    ),
                                 )
                             except Exception as e:  # noqa: BLE001
                                 log.debug(f"[SubscribeAdd] 查询转移历史失败: {e}")
-                        if self._download_repo:
+                    if self._download_repo:
+                        for ref_identity in [identity_id, None]:
+                            if not ref_identity and ref is None:
+                                continue
                             try:
                                 continue_ep = max(
                                     continue_ep,
                                     self._download_repo.get_contiguous_completed_episode_by_ref(
-                                        identity_id=getattr(media_info, "identity_id", None),
-                                        anchor_provider=ref.provider,
-                                        anchor_external_id=ref.external_id,
-                                        season=_season_number(season, 1),
+                                        identity_id=ref_identity,
+                                        anchor_provider=ref.provider if ref is not None else None,
+                                        anchor_external_id=ref.external_id if ref is not None else None,
+                                        season=season_no,
                                         start=sub_start,
                                     ),
                                 )
                             except Exception as e:  # noqa: BLE001
                                 log.debug(f"[SubscribeAdd] 查询下载历史失败: {e}")
-                        if continue_ep > 0:
-                            current_ep = max(current_ep or 0, continue_ep + 1)
-                            log.info(
-                                f"[SubscribeAdd]{media_info.get_title_string()} S{season} "
-                                f"身份历史已有 {continue_ep} 集，从第 {current_ep} 集开始续订"
-                            )
+                    if continue_ep > 0:
+                        current_ep = max(current_ep or 0, continue_ep + 1)
+                        log.info(
+                            f"[SubscribeAdd]{media_info.get_title_string()} S{season} "
+                            f"身份历史已有 {continue_ep} 集，从第 {current_ep} 集开始续订"
+                        )
                 if current_ep:
                     # 首个待下载集为 current_ep → 缺失集数 = total - current_ep + 1
                     lack = max(0, total - current_ep + 1)
