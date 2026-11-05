@@ -200,6 +200,8 @@ class MediaInfo(BaseModel):
         return ""
 
     def get_season_string(self) -> str:
+        if self.type == MediaType.MOVIE:
+            return ""
         if self.begin_season is not None:
             b = self.begin_season
             e = self.end_season
@@ -544,11 +546,7 @@ class MediaInfo(BaseModel):
             genre_ids = info.get("genre_ids") or []
             # TMDB detail 返回 genres（数组）而非 genre_ids，需兼容提取
             if not genre_ids:
-                genre_ids = [
-                    g.get("id")
-                    for g in (info.get("genres") or [])
-                    if hasattr(g, "get") and g.get("id")
-                ]
+                genre_ids = [g.get("id") for g in (info.get("genres") or []) if hasattr(g, "get") and g.get("id")]
             if isinstance(genre_ids, list):
                 genre_ids = [str(val).upper() for val in genre_ids]
             else:

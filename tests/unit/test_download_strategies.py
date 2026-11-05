@@ -61,6 +61,21 @@ class TestMovieDownloadStrategy:
         assert attempted == ["bad", "good"]
         assert result == [good]
 
+    def test_download_movies_same_identity_different_title_stops_after_success(self):
+        """同一电影不同版本的标题/年份不同，也只能下载一个候选."""
+        hd = MockMediaItem(type=MediaType.MOVIE, enclosure="hd", title="Movie 2023", tmdb_id=9)
+        uhd = MockMediaItem(type=MediaType.MOVIE, enclosure="uhd", title="Movie 2024", tmdb_id=9)
+        attempted = []
+
+        def download_cb(item, torrent_file=None, tag=None, is_paused=None):
+            attempted.append(item.enclosure)
+            return "did", f"id-{item.enclosure}", ""
+
+        result = MovieDownloadStrategy.download_movies([hd, uhd], download_cb, lambda x: x)
+
+        assert attempted == ["hd"]
+        assert result == [hd]
+
     def test_download_movies_same_title_stops_after_success(self):
         first = MockMediaItem(type=MediaType.MOVIE, enclosure="first", title="Same Movie", tmdb_id=9)
         second = MockMediaItem(type=MediaType.MOVIE, enclosure="second", title="Same Movie", tmdb_id=9)

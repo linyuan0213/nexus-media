@@ -54,7 +54,7 @@ DEFAULT_MESSAGE_TEMPLATES = {
     },
     "rss_added": {
         "title": (
-            "📌 {% if media_info.type.value == '电影' %}{{ media_info.get_title_string() }}"
+            "📌 {% if media_info.type.value == 'movie' %}{{ media_info.get_title_string() }}"
             "{% else %}{{ media_info.get_title_string() }} {{ media_info.get_season_string() }}"
             "{% endif %} 已添加订阅"
         ),

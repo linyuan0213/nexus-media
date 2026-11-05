@@ -54,8 +54,9 @@ class MovieDownloadStrategy:
             movie_title = (
                 item.get_title_string() if hasattr(item, "get_title_string") else (getattr(item, "title", "") or "")
             )
+            # 同一电影只下载一个候选：身份相同即可，年份/标题不同不能当成不同电影
             movie_key = media_identity_key(item)
-            movie_name = f"{movie_key}:{movie_title}" if movie_key else movie_title
+            movie_name = movie_key or movie_title
             if movie_name in downloaded_names:
                 continue
             if not item.enclosure:
