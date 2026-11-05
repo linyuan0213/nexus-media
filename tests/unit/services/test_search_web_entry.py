@@ -125,6 +125,17 @@ class TestMakeWebSearchFn:
         assert ctx.match_media.anchor_provider == "content_id"
         assert ctx.match_media.anchor_external_id == "DEMO-4025269"
 
+    def test_movie_search_sets_result_type_filter(self):
+        """电影资源搜索必须带 type=MOVIE，供结果过滤器排除剧集."""
+        orchestrator = MagicMock()
+        orchestrator.orchestrate.return_value = (None, {}, 1, 0)
+        fn = make_web_search_fn(orchestrator, system_config=None)
+
+        fn("生化危机：爆发夜", media_type=MediaType.MOVIE)
+
+        ctx = orchestrator.orchestrate.call_args[0][0]
+        assert ctx.filter_args["type"] == MediaType.MOVIE
+
     def test_content_id_fallback_keeps_selected_provider(self):
         """编号详情失败时不能用内部 content_id 作为来源展示."""
         orchestrator = MagicMock()

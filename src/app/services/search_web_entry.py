@@ -144,6 +144,15 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                 match_media.en_name = content
             # 自定义画像的编号不能走 TMDB 识别，避免错误映射导致资源过滤失败。
             ident_flag = False
+        # 资源搜索必须把类型传给结果过滤器，否则电影搜索会混入 Sxx/全 N 集等剧集资源。
+        requested_type = filter_args.get("type") or media_type
+        if not requested_type and match_media is not None:
+            requested_type = match_media.type
+        if isinstance(requested_type, str):
+            requested_type = MediaType.from_string(requested_type)
+        if requested_type:
+            filter_args["type"] = requested_type
+
         # 探索/订阅来源：站点优先级 = 订阅默认设置 → 页面选择的搜索站点 → 全部站点
         site_fallback = filter_args.pop("site_fallback", None)
         default_site_first = bool(filter_args.pop("site_default_first", None))
