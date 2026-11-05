@@ -42,6 +42,26 @@ if TYPE_CHECKING:
     from app.services.site_grant_service import SiteGrantService
 
 
+def resolve_indexer_priority(
+    indexer: object,
+    configured: int | str | None,
+    site_priorities: dict[str, int],
+) -> int:
+    """解析索引器优先级：索引器显式配置 > 站点管理优先级 > 公共兜底.
+
+    `site_priorities` 来自 CONFIG_SITE.PRI（用户在站点管理里设置的顺序），
+    必须优先于 public 索引器的固定兜底值，否则公共站会与主站并列。
+    """
+    if configured is not None:
+        return int(configured)
+    name = str(getattr(indexer, "name", "") or "")
+    if name in site_priorities:
+        return int(site_priorities[name])
+    if getattr(indexer, "public", False):
+        return 100
+    return int(getattr(indexer, "pri", 100) or 100)
+
+
 class Indexer:
     """索引器管理.
 
@@ -170,17 +190,17 @@ class Indexer:
         self._ensure_clients()
         registry = IndexerProviderRegistry()
         priority_map = self._site_config_repo.get_priority_map()
+        site_priorities: dict[str, int] = {}
+        for site in self._site_cache.get_sites():
+            site_name = str(site.get("name") or "")
+            site_pri = site.get("pri")
+            if site_name and site_pri is not None:
+                site_priorities[site_name] = int(str(site_pri))
         for client in self._clients.values():
             source = client.get_client_id()
             for indexer in self._filter_indexers(client, check=True, filter_args=filter_args):
                 configured = priority_map.get(f"{source}:{indexer.name}")
-                if configured is not None:
-                    pri = int(configured)
-                elif getattr(indexer, "public", False):
-                    # 公共索引器默认作为兜底，不能因 pri 缺省为 0 抢在私有站点前。
-                    pri = 100
-                else:
-                    pri = int(getattr(indexer, "pri", 100) or 0)
+                pri = resolve_indexer_priority(indexer, configured, site_priorities)
                 provider = SiteIndexerProvider(client, indexer, site_priority_order(pri))
                 registry.register(
                     PriorityProvider(provider, {indexer.name: pri}, default=pri),
