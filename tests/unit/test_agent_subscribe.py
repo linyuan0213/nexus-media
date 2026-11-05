@@ -123,13 +123,13 @@ def test_default_subscribe_setting_is_profile_aware():
     from app.services.subscribe.management.add_service import SubscribeAddService
 
     keys = {
-        SystemConfigKey.DefaultSubscribeSettingMovie: {"pix": "1080p"},
+        SystemConfigKey.DefaultSubscribeSettingMovie.value: {"pix": "1080p"},
         f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::demo": {"pix": "4K"},
     }
 
     class _Config:
         def get(self, key):
-            return keys.get(key) if not isinstance(key, str) else keys.get(key, {})
+            return keys.get(str(getattr(key, "value", key)), {})
 
     service = SubscribeAddService.__new__(SubscribeAddService)
     service._system_config = _Config()

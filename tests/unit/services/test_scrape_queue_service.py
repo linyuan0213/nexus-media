@@ -110,3 +110,43 @@ class TestScrapeQueueService:
         svc.finalize_duplicate(media, {"in_from": "downloaders", "exist_filenum": 1})
 
         message.send_transfer_movie_message.assert_not_called()
+
+
+class TestFinalizeReceipt:
+    def test_duplicate_finalize_skipped_by_receipt(self):
+        message = MagicMock()
+        event_bus = MagicMock()
+        receipt = MagicMock()
+        receipt.claim.return_value = False
+        svc = ScrapeQueueService(
+            scraper=MagicMock(),
+            max_workers=1,
+            message=message,
+            event_bus=event_bus,
+            receipt_repo=receipt,
+        )
+        media = MediaInfo(title="DEMO-001", type=MediaType.MOVIE)
+
+        svc._finalize(media, {"in_from": "downloaders", "exist_filenum": 1}, metadata_ok=True)
+
+        message.send_transfer_movie_message.assert_not_called()
+        event_bus.publish.assert_not_called()
+
+    def test_first_finalize_claims_receipt(self):
+        message = MagicMock()
+        event_bus = MagicMock()
+        receipt = MagicMock()
+        receipt.claim.return_value = True
+        svc = ScrapeQueueService(
+            scraper=MagicMock(),
+            max_workers=1,
+            message=message,
+            event_bus=event_bus,
+            receipt_repo=receipt,
+        )
+        media = MediaInfo(title="DEMO-001", type=MediaType.MOVIE)
+
+        svc._finalize(media, {"in_from": "downloaders", "exist_filenum": 1}, metadata_ok=True)
+
+        receipt.claim.assert_called_once()
+        message.send_transfer_movie_message.assert_called_once()

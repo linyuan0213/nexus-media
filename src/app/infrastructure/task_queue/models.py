@@ -11,6 +11,11 @@ from typing import Any
 from app.utils.json_utils import JsonUtils
 
 
+def retry_delay_seconds(attempts: int, base: float = 5.0, cap: float = 300.0) -> float:
+    """指数退避：5s, 10s, 20s... 上限 300s."""
+    return min(base * (2 ** max(0, int(attempts) - 1)), cap)
+
+
 class TaskStatus(str, Enum):
     """任务生命周期状态."""
 
@@ -56,6 +61,7 @@ class Task:
     lease_owner: str = ""
     lease_until: float = 0.0
     last_error: str = ""
+    next_retry_at: float = 0.0
     result: dict[str, Any] | None = None
 
     @classmethod
@@ -133,6 +139,7 @@ class Task:
                 "lease_owner": self.lease_owner,
                 "lease_until": f"{self.lease_until:.6f}",
                 "last_error": self.last_error,
+                "next_retry_at": f"{self.next_retry_at:.6f}",
                 "result": JsonUtils.dumps(JsonUtils.to_jsonable(self.result)) if self.result is not None else "",
             }
         )
@@ -147,6 +154,7 @@ class Task:
         task.lease_owner = str(fields.get("lease_owner") or "")
         task.lease_until = _as_float(fields.get("lease_until"), 0.0)
         task.last_error = str(fields.get("last_error") or "")
+        task.next_retry_at = _as_float(fields.get("next_retry_at"), 0.0)
         raw_result = fields.get("result")
         if isinstance(raw_result, str) and raw_result:
             parsed = JsonUtils.loads(raw_result)

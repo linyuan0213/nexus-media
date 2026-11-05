@@ -348,3 +348,47 @@ class TestRssTorrentScope:
             assert row.IDENTITY_ID == "01IDENTITY"
             assert row.ANCHOR_PROVIDER == "tmdb"
             assert row.ANCHOR_EXTERNAL_ID == "100"
+
+
+class TestSubscribeDedup:
+    def test_dedup_key_same_name_year_and_user(self):
+        from types import SimpleNamespace
+
+        from app.db.repositories.subscribe_repo_adapter import _subscribe_dedup_key
+
+        media = SimpleNamespace(title="Demo", year="2024")
+        kwargs = {"user_id": 1}
+        assert _subscribe_dedup_key("movie", media, kwargs) == _subscribe_dedup_key("movie", media, kwargs)
+
+    def test_dedup_key_differs_by_user_and_year(self):
+        from types import SimpleNamespace
+
+        from app.db.repositories.subscribe_repo_adapter import _subscribe_dedup_key
+
+        media = SimpleNamespace(title="Demo", year="2024")
+        assert _subscribe_dedup_key("movie", media, {"user_id": 1}) != _subscribe_dedup_key(
+            "movie", media, {"user_id": 2}
+        )
+        assert _subscribe_dedup_key("movie", media, {}) != _subscribe_dedup_key(
+            "movie", SimpleNamespace(title="Demo", year="2025"), {}
+        )
+
+
+class TestResetStaleSearching:
+    def test_resets_both_tables(self):
+        from app.db.repositories.subscribe_repository import SubscribeRepository
+
+        repo = SubscribeRepository()
+        session = MagicMock()
+        query = MagicMock()
+        query.filter.return_value = query
+        query.update.side_effect = [2, 1]
+        session.__enter__.return_value.query.return_value = query
+
+        with patch.object(repo, "session", return_value=session):
+            total = repo.reset_stale_searching("2026-01-01 00:00:00")
+
+        assert total == 3
+        first_update = query.update.call_args_list[0][0][0]
+        assert first_update["STATE"] == "E"
+        assert first_update["STATE_UPDATED_AT"]

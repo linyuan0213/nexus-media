@@ -7,8 +7,10 @@ from typing import Any
 
 import log
 from app.core.settings import settings
+from app.db.repositories.finalize_receipt_repository import FinalizeReceiptRepository
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
+from app.domain.media_ref import media_identity_key
 from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.bus import EventBus
@@ -50,12 +52,14 @@ class ScrapeQueueService:
         event_bus: EventBus | None = None,
         queue_name: str = "scrape",
         lifecycle: LifecycleProjector | None = None,
+        receipt_repo: FinalizeReceiptRepository | None = None,
     ):
         self._scraper = scraper
         self._max_workers = max(1, int(max_workers))
         self._message = message
         self._event_bus = event_bus
         self._lifecycle = lifecycle
+        self._receipt_repo = receipt_repo or FinalizeReceiptRepository()
         self._queue_name = queue_name
         self._queues: dict[str, TaskQueue] = {}
         self._workers: list[TaskWorker] = []
@@ -242,6 +246,13 @@ class ScrapeQueueService:
     def _finalize(self, media: MediaInfo, finalize: dict[str, Any], *, metadata_ok: bool) -> None:
         if not finalize or self._event_bus is None:
             return
+        receipt_key = self._finalize_receipt_key(media)
+        try:
+            if not self._receipt_repo.claim(receipt_key):
+                log.info(f"[ScrapeQueue]定稿已处理，跳过重复通知: {receipt_key}")
+                return
+        except Exception as exc:  # noqa: BLE001 - 收据不可用时继续定稿，避免阻塞入库
+            log.warn(f"[ScrapeQueue]定稿收据写入失败，继续处理: {exc}")
         in_from = finalize.get("in_from")
         if metadata_ok and self._message is not None:
             try:
@@ -307,6 +318,15 @@ class ScrapeQueueService:
                     ),
                 )
             )
+
+    @staticmethod
+    def _finalize_receipt_key(media: MediaInfo) -> str:
+        try:
+            identity = media_identity_key(media)
+        except Exception:  # noqa: BLE001 - 兜底避免收据影响定稿
+            identity = f"{getattr(media, 'type', '')}:{media.get_name()}:{getattr(media, 'year', '')}"
+        episodes = ",".join(str(item) for item in (media.get_episode_list() or []))
+        return f"{identity}|s{media.get_season_seq()}|e{episodes}"
 
     def _scrape_file(self, media, dir_path, file_name, file_ext, dst_backend, *, force: bool = False) -> bool:
         try:

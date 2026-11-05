@@ -25,3 +25,17 @@ def test_terminal_statuses():
     assert TaskStatus.DEAD.terminal
     assert not TaskStatus.QUEUED.terminal
     assert not TaskStatus.RUNNING.terminal
+
+
+class TestRetryDelaySeconds:
+    def test_exponential_growth(self):
+        from app.infrastructure.task_queue.models import retry_delay_seconds
+
+        assert retry_delay_seconds(1) == 5
+        assert retry_delay_seconds(2) == 10
+        assert retry_delay_seconds(3) == 20
+
+    def test_capped_at_max(self):
+        from app.infrastructure.task_queue.models import retry_delay_seconds
+
+        assert retry_delay_seconds(20) == 300

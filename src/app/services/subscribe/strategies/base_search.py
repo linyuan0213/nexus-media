@@ -25,7 +25,7 @@ from app.db.repositories.subscribe_repo_adapter import (
 )
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.domain.entities.rss import SubscribeState
-from app.domain.enums import SearchType, SystemConfigKey
+from app.domain.enums import SearchType
 from app.domain.interfaces.rss_repo import (
     ISubscribeMovieRepository,
     ISubscribeTvEpisodeRepository,
@@ -42,6 +42,7 @@ from app.services.filter_service import FilterService as Filter
 from app.services.lifecycle_service import LifecycleProjector
 from app.services.search_service import Searcher
 from app.services.subscribe.coordinator import DownloadCoordinator
+from app.services.subscribe.default_settings import get_default_setting
 from app.sites.torrent import Torrent
 
 # 订阅搜索每轮处理上限（subscribe.batch_limit 可覆盖）
@@ -78,16 +79,34 @@ def _in_background(func):
 class BaseSearchStrategy:
     _batch_cursors: dict[str, int] = {}
 
-    @classmethod
-    def _take_batch(cls, items: list, kind: str, limit: int) -> list:
+    def _load_batch_cursor(self, kind: str, size: int) -> int:
+        position = self._batch_cursors.get(kind, 0)
+        try:
+            position = self._rss_repo.get_search_cursor(kind)
+        except Exception as e:  # noqa: BLE001 - 游标读取失败不应阻断搜索
+            log.debug(f"[Subscribe]读取批次游标失败: {e}")
+        if size <= 0:
+            return 0
+        position = max(0, int(position)) % size
+        self._batch_cursors[kind] = position
+        return position
+
+    def _save_batch_cursor(self, kind: str, position: int) -> None:
+        self._batch_cursors[kind] = position
+        try:
+            self._rss_repo.set_search_cursor(kind, position)
+        except Exception as e:  # noqa: BLE001 - 持久化失败时退回内存游标
+            log.debug(f"[Subscribe]保存批次游标失败: {e}")
+
+    def _take_batch(self, items: list, kind: str, limit: int) -> list:
         """按轮转游标取一批，避免固定前 N 条长期饿死后续订阅。"""
         if len(items) <= limit:
             return items
-        start = cls._batch_cursors.get(kind, 0) % len(items)
+        start = self._load_batch_cursor(kind, len(items))
         batch = items[start : start + limit]
         if len(batch) < limit:
             batch += items[: limit - len(batch)]
-        cls._batch_cursors[kind] = (start + limit) % len(items)
+        self._save_batch_cursor(kind, (start + limit) % len(items))
         return batch
 
     """搜索策略基类 — 封装 movie/tv 的公共搜索/下载逻辑."""
@@ -181,16 +200,12 @@ class BaseSearchStrategy:
         if not self._system_config:
             return None
         try:
-            if mtype in (MediaType.TV, MediaType.ANIME):
-                key = SystemConfigKey.DefaultSubscribeSettingTV.value
-            else:
-                profile = str(rss_info.get("content_profile") or "").strip()
-                key = SystemConfigKey.DefaultSubscribeSettingMovie.value
-                if profile and profile != "default":
-                    key = f"{key}::{profile}"
-            default_setting = self._system_config.get(key)
-            if not isinstance(default_setting, dict):
-                return None
+            default_setting = get_default_setting(
+                self._system_config,
+                mtype,
+                rss_info.get("content_profile"),
+                rss_info.get("user_id"),
+            )
             return default_setting.get("search_sites") or None
         except Exception as e:
             log.debug(f"[Subscribe]读取默认订阅设置站点失败: {e}")

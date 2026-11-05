@@ -16,7 +16,6 @@ from api.deps import (
     get_system_config_service,
 )
 from api.routers import subscription as subscription_router
-from app.domain.enums import SystemConfigKey
 from app.domain.mediatypes import MediaType
 from app.schemas.auth import UserContext
 
@@ -67,6 +66,16 @@ def mock_monitor():
 def mock_system_config():
     cfg = MagicMock()
     cfg.set.return_value = None
+
+    def _get(key):
+        name = str(getattr(key, "value", key))
+        if name.startswith("DefaultSubscribeSettingTV"):
+            return {"restype": "1080p"}
+        if name.startswith("DefaultSubscribeSettingMovie"):
+            return {"restype": "4k"}
+        return {}
+
+    cfg.get.side_effect = _get
     return cfg
 
 
@@ -155,7 +164,7 @@ class TestSubscriptionRouter:
         assert resp.status_code == 200
         assert resp.json()["code"] == 0
         mock_system_config.set.assert_called_once()
-        assert mock_system_config.set.call_args.kwargs["key"] == SystemConfigKey.DefaultSubscribeSettingTV
+        assert mock_system_config.set.call_args.kwargs["key"] == "DefaultSubscribeSettingTV::u1"
 
     def test_delete_rss_history(self, client, mock_history_service):
         resp = client.post("/api/v1/subscription/history/delete", json={"rssid": "1"})
@@ -217,9 +226,9 @@ class TestSubscriptionRouter:
         assert resp.status_code == 200
         assert resp.json()["data"]["restype"] == "4k"
 
-    def test_get_default_rss_setting_empty(self, client, mock_subscribe_service):
-        mock_subscribe_service.default_subscribe_setting_tv = None
-        mock_subscribe_service.default_subscribe_setting_mov = None
+    def test_get_default_rss_setting_empty(self, client, mock_system_config):
+        mock_system_config.get.side_effect = None
+        mock_system_config.get.return_value = None
         resp = client.post("/api/v1/subscription/default_setting", json={"mtype": "tv"})
         assert resp.status_code == 200
         assert resp.json()["code"] == 0

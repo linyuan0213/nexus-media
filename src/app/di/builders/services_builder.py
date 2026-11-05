@@ -410,6 +410,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         indexer_service=indexer_service,
         torrent_remover=torrent_remover,
         download_history_repo=DownloadHistoryRepositoryAdapter(),
+        lifecycle=lifecycle_projector,
     )
 
     plugin_framework_service = PluginFrameworkService(

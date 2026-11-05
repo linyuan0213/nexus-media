@@ -11,6 +11,8 @@ from app.core.exceptions import DomainError, ServiceError
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.domain.enums import SearchType
+from app.domain.lifecycle import LifecycleStage, LifecycleStatus
+from app.domain.mediatypes import MediaType
 from app.infrastructure.temp import temp_manager
 from app.media import MediaService
 from app.media.display_image_policy import transform_display_image, unwrap_display_image_url
@@ -22,6 +24,7 @@ from app.schemas.download import (
 )
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
+from app.services.lifecycle_service import LifecycleProjector
 from app.services.search_service import Searcher
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
 from app.sites.engine import SiteEngine
@@ -50,6 +53,7 @@ class DownloadService:
         torrent_remover: TorrentRemover,
         download_history_repo: DownloadHistoryRepositoryAdapter,
         subscribe_repo: SubscribeRepository | None = None,
+        lifecycle: LifecycleProjector | None = None,
     ):
         self._downloader = downloader
         self._searcher = searcher
@@ -60,6 +64,8 @@ class DownloadService:
         self._torrent_remover = torrent_remover
         self._download_history_repo = download_history_repo
         self._subscribe_repo = subscribe_repo or SubscribeRepository()
+        self._lifecycle = lifecycle
+        self._progress_reported: dict[str, int] = {}
 
     # ---------- 下载编排 ----------
 
@@ -424,6 +430,8 @@ class DownloadService:
                         completed_ids.append((did, tid))
                         continue
 
+                    self._project_download_progress(task, prog_val)
+
                     # 任务还在下载中，确保 state 为 downloading
                     if getattr(task, "state", None) != "downloading":
                         active_ids.append((did, tid))
@@ -475,6 +483,40 @@ class DownloadService:
         start = (page - 1) * page_size
         end = start + page_size
         return {"items": result[start:end], "total": total}
+
+    def _project_download_progress(self, task, progress: Any) -> None:
+        """把下载器百分比投影到生命周期；按 10% 步进降频，避免刷事件."""
+        if self._lifecycle is None:
+            return
+        try:
+            value = max(0, min(100, int(float(progress))))
+        except (TypeError, ValueError):
+            return
+        key = str(getattr(task, "download_id", "") or getattr(task, "id", "") or "")
+        last = self._progress_reported.get(key)
+        if last is not None and abs(value - last) < 10:
+            return
+        self._progress_reported[key] = value
+        media = MediaInfo()
+        media.title = str(getattr(task, "title", "") or getattr(task, "torrent", "") or "")
+        media.year = str(getattr(task, "year", "") or "")
+        media.tmdb_id = str(getattr(task, "tmdb_id", "") or "")
+        media.type = MediaType.TV if str(getattr(task, "media_type", "") or "").lower() == "tv" else MediaType.MOVIE
+        media.anchor_provider = getattr(task, "anchor_provider", None)
+        media.anchor_external_id = getattr(task, "anchor_external_id", None)
+        media.identity_id = getattr(task, "identity_id", None)
+        media.content_profile = getattr(task, "content_profile", None) or "default"
+        try:
+            self._lifecycle.record_media(
+                media,
+                stage=LifecycleStage.DOWNLOADING,
+                status=LifecycleStatus.RUNNING,
+                event_type="download.progress",
+                progress=value,
+                event_key=f"download:{key}",
+            )
+        except Exception as exc:  # noqa: BLE001 - 进度投影失败不影响下载状态
+            log.debug(f"[DownloadService]下载进度投影失败 {key}: {exc}")
 
     def _build_display_info(self, task) -> tuple[str, str]:
         """根据下载历史任务构建显示标题和海报"""

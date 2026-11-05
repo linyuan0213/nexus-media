@@ -21,7 +21,6 @@ from api.deps import (
 from app.core.error_codes import ErrorCode
 from app.core.system_config import SystemConfig
 from app.domain.entities.custom_rss import custom_rss_id
-from app.domain.enums import SystemConfigKey
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType, normalize_media_type_input
 from app.media import meta_info
@@ -29,6 +28,7 @@ from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse
 from app.services.apikey_service import APIKeyService
 from app.services.metadata_permissions import can_use_private_metadata
+from app.services.subscribe.default_settings import default_setting_key, get_default_setting
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
 from app.services.subscribe.management.history_service import SubscribeHistoryService
 from app.services.subscribe.management.service import SubscribeService
@@ -562,18 +562,10 @@ def rss_detail(
 def get_default_rss_setting(
     req: GetDefaultSubscribeSettingRequest,
     user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
-    svc: SubscribeService = Depends(get_subscribe_service),
+    cfg: SystemConfig = Depends(get_system_config_service),
 ):
     parsed, profile = _resolve_type_and_profile(req.mtype, req.content_profile)
-    if parsed in (MediaType.TV, MediaType.ANIME):
-        setting = svc.default_subscribe_setting_tv
-    elif parsed == MediaType.MOVIE:
-        if profile and profile != "default":
-            setting = SystemConfig().get(f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::{profile}") or {}
-        else:
-            setting = svc.default_subscribe_setting_mov
-    else:
-        setting = {}
+    setting = get_default_setting(cfg, parsed, profile, user.user_id)
     if setting:
         return success(data=setting)
     return success(data={})
@@ -590,13 +582,10 @@ def save_default_rss_setting(
     data.pop("mtype", None)
     profile = (data.pop("content_profile", None) or "").strip()
     parsed, profile = _resolve_type_and_profile(mtype, profile)
-    # 动漫与电视剧共用一份默认设置（读取侧同样把 ANIME 归到 TV），否则动漫页保存会被静默丢弃
-    if parsed in (MediaType.TV, MediaType.ANIME):
-        cfg.set(key=SystemConfigKey.DefaultSubscribeSettingTV, value=data)
-    elif parsed == MediaType.MOVIE and profile and profile != "default":
-        cfg.set(key=f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::{profile}", value=data)
-    elif parsed == MediaType.MOVIE:
-        cfg.set(key=SystemConfigKey.DefaultSubscribeSettingMovie, value=data)
+    # 默认设置按用户保存；超级管理员同时更新全局兜底，供新用户继承。
+    cfg.set(key=default_setting_key(parsed, profile, user.user_id), value=data)
+    if user.is_superadmin:
+        cfg.set(key=default_setting_key(parsed, profile, None), value=data)
     return success()
 
 

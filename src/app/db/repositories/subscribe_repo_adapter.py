@@ -3,6 +3,9 @@ RSS领域 Repository 适配器
 将旧版 SubscribeRepository 适配为新领域接口
 """
 
+import hashlib
+from functools import wraps
+
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.domain.entities.rss import (
     SubscribeHistoryEntity,
@@ -11,7 +14,45 @@ from app.domain.entities.rss import (
     SubscribeTvEntity,
 )
 from app.domain.mediatypes import MediaType
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.schemas.auth import UserContext
+
+
+def _subscribe_dedup_key(kind: str, media_info, kwargs: dict) -> str:
+    """与查重条件一致的锁键：锚点优先，否则名称/年份/季."""
+    anchor_provider = kwargs.get("anchor_provider")
+    anchor_external_id = kwargs.get("anchor_external_id")
+    user_id = kwargs.get("user_id")
+    if anchor_provider and anchor_external_id:
+        base = f"anchor:{anchor_provider}:{anchor_external_id}:{kwargs.get('content_profile') or ''}"
+    else:
+        year = getattr(media_info, "year", None)
+        if kind == "tv":
+            season = media_info.get_season_string() if hasattr(media_info, "get_season_string") else ""
+            base = f"name:{getattr(media_info, 'title', '')}|year:{year}|season:{season}"
+        else:
+            base = f"name:{getattr(media_info, 'title', '')}|year:{year}"
+    digest = hashlib.md5(base.encode()).hexdigest()
+    return f"subscribe:add:{kind}:{user_id if user_id is not None else 'sys'}:{digest}"
+
+
+def _serialize_subscribe_insert(kind: str):
+    """同一查重键的订阅新增串行化，避免非锚点订阅并发插入重复行."""
+
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(self, media_info, *args, **kwargs):
+            lock = get_lock_manager().create_lock(_subscribe_dedup_key(kind, media_info, kwargs), ttl_seconds=30)
+            if not lock.acquire():
+                return 9
+            try:
+                return fn(self, media_info, *args, **kwargs)
+            finally:
+                lock.release()
+
+        return wrapper
+
+    return decorator
 
 
 class SubscribeMovieRepositoryAdapter:
@@ -50,6 +91,9 @@ class SubscribeMovieRepositoryAdapter:
     def update_state(self, title: str | None, year: str | None, rssid: int | None, state: str) -> None:
         self._repo.update_rss_movie_state(title, year, rssid, state)
 
+    def reset_stale_searching(self, cutoff: str) -> int:
+        return self._repo.reset_stale_searching(cutoff)
+
     # 兼容旧Repository方法名
     def update_subscribe_movie_state(
         self,
@@ -85,6 +129,7 @@ class SubscribeMovieRepositoryAdapter:
     ) -> int:
         return self._repo.delete_rss_movie(title, year, rssid, tmdbid, user=user)
 
+    @_serialize_subscribe_insert("movie")
     def insert(
         self,
         media_info,
@@ -242,6 +287,7 @@ class SubscribeTvRepositoryAdapter:
     def update(self, rssid: int, user: UserContext | None = None, **kwargs) -> int:
         return self._repo.update_rss_tv(rssid, user=user, **kwargs)
 
+    @_serialize_subscribe_insert("tv")
     def insert(
         self,
         media_info,

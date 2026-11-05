@@ -157,6 +157,14 @@ class SubscriptionMonitor:
             # 记录尝试时间（而非成功时间），避免策略异常时每个调度周期紧循环重试
             self._last_queue_run = datetime.datetime.now(self._tz)
             self._save_last_run_times()
+            try:
+                timeout_minutes = int(str(self._system_config.get("subscribe.searching_timeout_minutes") or 90))
+            except (TypeError, ValueError):
+                timeout_minutes = 90
+            stale = self._subscribe.reset_stale_searching(timeout_minutes)
+            if stale:
+                log.warn(f"[SubscriptionMonitor] {stale} 个订阅停留在 SEARCHING，已重置为 ERROR")
+
             self._queue_strategy.run()
 
             self._error_retry_count += 1

@@ -10,7 +10,12 @@ from redis.exceptions import RedisError, ResponseError
 
 import log
 from app.infrastructure.task_queue.base import TaskQueue
-from app.infrastructure.task_queue.models import QueueUnavailableError, Task, TaskStatus
+from app.infrastructure.task_queue.models import (
+    QueueUnavailableError,
+    Task,
+    TaskStatus,
+    retry_delay_seconds,
+)
 
 
 class RedisStreamTaskQueue(TaskQueue):
@@ -128,6 +133,9 @@ class RedisStreamTaskQueue(TaskQueue):
                 self._finish_stream_entry(str(stream_id))
                 continue
             now = time.time()
+            if task.next_retry_at and task.next_retry_at > now:
+                # 指数退避未到期：保留在 pending，下次 claim 再检查
+                continue
             task.status = TaskStatus.RUNNING
             task.stream_id = str(stream_id)
             task.lease_owner = consumer
@@ -185,7 +193,10 @@ class RedisStreamTaskQueue(TaskQueue):
                 task.status = TaskStatus.QUEUED
                 task.lease_owner = ""
                 task.lease_until = 0.0
+                delay = retry_delay_seconds(task.attempts)
+                task.next_retry_at = time.time() + delay
                 self._write_hash(task)
+                log.info(f"[TaskQueue]任务将退避重试 {task.id} attempts={task.attempts} delay={delay:.0f}s")
                 # 不 ACK，保留 pending，由 XAUTOCLAIM 在 retry_idle_ms 后重投
                 return True
             task.status = TaskStatus.DEAD if retryable else TaskStatus.FAILED

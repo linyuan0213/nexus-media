@@ -18,6 +18,7 @@ from app.media import meta_info
 from app.media.display_image_policy import unwrap_display_image_url
 from app.media.metadata import ProviderRef
 from app.media.metadata.registry import registry as metadata_registry
+from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.management.utils import gen_rss_note
 from app.services.web.utils import WebUtils
 
@@ -275,17 +276,14 @@ class SubscribeAddService:
         media_info.content_profile = content_profile or record.get("content_profile") or "default"
         return media_info
 
-    def _default_setting_for(self, mtype: Any, content_profile: str | None) -> dict:
-        """按载体和内容画像读取默认订阅设置；画像配置为空时回退到载体默认."""
-        if mtype in (MediaType.TV, MediaType.ANIME):
-            return self.default_subscribe_setting_tv or {}
-        profile = str(content_profile or "").strip()
-        if profile and profile != "default":
-            key = f"{SystemConfigKey.DefaultSubscribeSettingMovie.value}::{profile}"
-            setting = self._system_config.get(key)
-            if isinstance(setting, dict) and setting:
-                return setting
-        return self.default_subscribe_setting_mov or {}
+    def _default_setting_for(
+        self,
+        mtype: Any,
+        content_profile: str | None,
+        user_id: int | str | None = None,
+    ) -> dict:
+        """按用户、载体和内容画像读取默认订阅设置；用户级缺失回退全局."""
+        return get_default_setting(self._system_config, mtype, content_profile, user_id)
 
     def add_rss_subscribe(
         self,
@@ -336,7 +334,7 @@ class SubscribeAddService:
 
         # 新增订阅且未显式传值时，应用默认订阅设置
         if not rssid:
-            default_rss_setting = self._default_setting_for(mtype, content_profile)
+            default_rss_setting = self._default_setting_for(mtype, content_profile, user_id)
             if default_rss_setting:
                 default_restype = default_rss_setting.get("restype")
                 default_pix = default_rss_setting.get("pix")

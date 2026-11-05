@@ -16,7 +16,7 @@ from app.core.settings import settings
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.domain.entities.rss import SubscribeState
-from app.domain.enums import SearchType, SystemConfigKey
+from app.domain.enums import SearchType
 from app.domain.media_ref import media_identity_key
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
@@ -25,6 +25,7 @@ from app.message import Message
 from app.services.downloader_core import DownloaderCore
 from app.services.rss_automation.custom_source_service import CustomRssSourceService
 from app.services.rss_processor import RssHelper
+from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.matcher import SubscribeMatcher
 from app.services.subscribe.strategy_lock import strategy_lock
@@ -118,21 +119,18 @@ class RssFeedStrategy:
                 return
             self._do_rss_poll()
 
-    def _get_default_rss_sites(self, mtype: MediaType, content_profile: str | None = None) -> list:
+    def _get_default_rss_sites(
+        self,
+        mtype: MediaType,
+        content_profile: str | None = None,
+        user_id: int | str | None = None,
+    ) -> list:
         """读取默认订阅设置的 rss_sites（订阅未配置时的回退站点）"""
         if not self._system_config:
             return []
         try:
-            if mtype in (MediaType.TV, MediaType.ANIME):
-                key = SystemConfigKey.DefaultSubscribeSettingTV
-            else:
-                key = SystemConfigKey.DefaultSubscribeSettingMovie
-                profile = str(content_profile or "").strip()
-                if profile and profile != "default":
-                    key = f"{key.value}::{profile}"
-            default_setting = self._system_config.get(key)
-            if isinstance(default_setting, dict):
-                return default_setting.get("rss_sites") or []
+            default_setting = get_default_setting(self._system_config, mtype, content_profile, user_id)
+            return default_setting.get("rss_sites") or []
         except Exception as e:
             log.debug(f"[RssFeedStrategy]读取默认订阅设置 RSS 站点失败: {e}")
         return []
@@ -182,7 +180,7 @@ class RssFeedStrategy:
                 check_sites += list(rss_sites)
             else:
                 mtype = MediaType.TV if rinfo in rss_tvs.values() else MediaType.MOVIE
-                check_sites += self._get_default_rss_sites(mtype, rinfo.get("content_profile"))
+                check_sites += self._get_default_rss_sites(mtype, rinfo.get("content_profile"), rinfo.get("user_id"))
         check_sites = list(set(check_sites))
 
         all_articles = []

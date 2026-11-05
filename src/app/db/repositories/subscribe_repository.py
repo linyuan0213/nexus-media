@@ -13,7 +13,14 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Integer, and_, cast, or_
 from sqlalchemy.exc import IntegrityError
 
-from app.db.models import SubscribeHistory, SubscribeMovies, SubscribeTorrents, SubscribeTvEpisodes, SubscribeTvs
+from app.db.models import (
+    SubscribeHistory,
+    SubscribeMovies,
+    SubscribeSearchCursor,
+    SubscribeTorrents,
+    SubscribeTvEpisodes,
+    SubscribeTvs,
+)
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.data_scope import apply_owner_scope
 from app.domain.entities.rss import SubscribeState
@@ -532,6 +539,7 @@ class SubscribeRepository(BaseRepository):
                     NOTE=note,
                     KEYWORD=keyword,
                     ADD_DATE=time.strftime("%Y-%m-%d %H:%M:%S"),
+                    STATE_UPDATED_AT=time.strftime("%Y-%m-%d %H:%M:%S"),
                     USER_ID=user_id,
                     IDENTITY_ID=identity_id,
                     ANCHOR_PROVIDER=anchor_provider,
@@ -603,6 +611,8 @@ class SubscribeRepository(BaseRepository):
                 update_fields[col] = _normalize_tv_season(v)
             else:
                 update_fields[col] = v
+        if "STATE" in update_fields:
+            update_fields["STATE_UPDATED_AT"] = time.strftime("%Y-%m-%d %H:%M:%S")
         if not update_fields:
             return 0
         with self.session() as db:
@@ -666,13 +676,48 @@ class SubscribeRepository(BaseRepository):
         """
         if not title and not rssid:
             return
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
         with self.session() as db:
             if rssid:
-                db.query(SubscribeMovies).filter(SubscribeMovies.ID == int(rssid)).update({"STATE": state})
+                db.query(SubscribeMovies).filter(SubscribeMovies.ID == int(rssid)).update(
+                    {"STATE": state, "STATE_UPDATED_AT": now}
+                )
             else:
                 db.query(SubscribeMovies).filter(
                     SubscribeMovies.NAME == title, SubscribeMovies.YEAR == str(year)
-                ).update({"STATE": state})
+                ).update({"STATE": state, "STATE_UPDATED_AT": now})
+
+    def reset_stale_searching(self, cutoff: str) -> int:
+        """将长期停留在 SEARCHING 的订阅重置为 ERROR，避免看门狗缺失导致永久卡住."""
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        total = 0
+        with self.session() as db:
+            for model in (SubscribeMovies, SubscribeTvs):
+                stale = db.query(model).filter(
+                    model.STATE == SubscribeState.SEARCHING.value,
+                    or_(model.STATE_UPDATED_AT.is_(None), model.STATE_UPDATED_AT < cutoff),
+                )
+                total += stale.update(
+                    {"STATE": SubscribeState.ERROR.value, "STATE_UPDATED_AT": now},
+                    synchronize_session=False,
+                )
+        return total
+
+    def get_search_cursor(self, kind: str) -> int:
+        """读取批量搜索轮转游标；缺失或异常时从 0 开始."""
+        with self.session() as db:
+            row = db.get(SubscribeSearchCursor, kind)
+            return int(row.POSITION or 0) if row is not None else 0
+
+    def set_search_cursor(self, kind: str, position: int) -> None:
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        with self.session() as db:
+            row = db.get(SubscribeSearchCursor, kind)
+            if row is None:
+                db.add(SubscribeSearchCursor(KIND=kind, POSITION=int(position), UPDATED_AT=now))
+            else:
+                row.POSITION = int(position)
+                row.UPDATED_AT = now
 
     # ==================== RSS TV Shows ====================
 
@@ -973,6 +1018,7 @@ class SubscribeRepository(BaseRepository):
                     NOTE=note,
                     KEYWORD=keyword,
                     ADD_DATE=time.strftime("%Y-%m-%d %H:%M:%S"),
+                    STATE_UPDATED_AT=time.strftime("%Y-%m-%d %H:%M:%S"),
                     USER_ID=user_id,
                     IDENTITY_ID=identity_id,
                     ANCHOR_PROVIDER=anchor_provider,
@@ -1049,6 +1095,8 @@ class SubscribeRepository(BaseRepository):
                 update_fields[col] = _normalize_tv_season(v)
             else:
                 update_fields[col] = v
+        if "STATE" in update_fields:
+            update_fields["STATE_UPDATED_AT"] = time.strftime("%Y-%m-%d %H:%M:%S")
         if not update_fields:
             return 0
         # 开始集数变更时，同步重置持久化的缺失集列表与 LACK，
@@ -1217,13 +1265,16 @@ class SubscribeRepository(BaseRepository):
         """
         if not title and not rssid:
             return
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
         with self.session() as db:
             if rssid:
-                db.query(SubscribeTvs).filter(SubscribeTvs.ID == int(rssid)).update({"STATE": state})
+                db.query(SubscribeTvs).filter(SubscribeTvs.ID == int(rssid)).update(
+                    {"STATE": state, "STATE_UPDATED_AT": now}
+                )
             else:
                 db.query(SubscribeTvs).filter(
                     SubscribeTvs.NAME == title, SubscribeTvs.YEAR == str(year), SubscribeTvs.SEASON == season
-                ).update({"STATE": state})
+                ).update({"STATE": state, "STATE_UPDATED_AT": now})
 
     # ==================== RSS TV Episodes ====================
 

@@ -81,6 +81,7 @@ class SubscribeMovies(Base):
     DOWNLOAD_SETTING: Mapped[int] = mapped_column(Integer, nullable=True)
     FUZZY_MATCH: Mapped[int] = mapped_column(Integer, nullable=True)
     STATE: Mapped[str] = mapped_column(String(255), index=True, nullable=True)
+    STATE_UPDATED_AT: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     DESC: Mapped[str] = mapped_column(String(255), nullable=True)
     NOTE: Mapped[str] = mapped_column(Text, nullable=True)
     ADD_DATE: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -159,6 +160,7 @@ class SubscribeTvs(Base):
     TOTAL: Mapped[int] = mapped_column(Integer, nullable=True)
     LACK: Mapped[int] = mapped_column(Integer, nullable=True)
     STATE: Mapped[str] = mapped_column(String(255), index=True, nullable=True)
+    STATE_UPDATED_AT: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     DESC: Mapped[str] = mapped_column(String(255), nullable=True)
     NOTE: Mapped[str] = mapped_column(Text, nullable=True)
     ADD_DATE: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -191,3 +193,13 @@ class SubscribeTvEpisodes(Base):
     CONTENT_PROFILE: Mapped[str | None] = mapped_column(String(64), nullable=True)
     PROVIDER: Mapped[str | None] = mapped_column(String(64), nullable=True)
     METADATA_REF: Mapped[str | None] = mapped_column(String(512), nullable=True)
+
+
+class SubscribeSearchCursor(Base):
+    """订阅批量搜索的持久化轮转游标（重启不回到队首）."""
+
+    __tablename__ = "SUBSCRIBE_SEARCH_CURSOR"
+
+    KIND: Mapped[str] = mapped_column(String(32), primary_key=True)
+    POSITION: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    UPDATED_AT: Mapped[str | None] = mapped_column(String(255), nullable=True)

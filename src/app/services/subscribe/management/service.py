@@ -3,6 +3,7 @@
 import datetime
 import re
 import time
+from datetime import timedelta
 from typing import Any
 
 import log
@@ -411,6 +412,13 @@ class SubscribeService:
 
     def refresh_rss_metainfo(self):
         return self._refresh_svc.refresh_rss_metainfo(self.get_subscribe_movies, self.get_subscribe_tvs)
+
+    def reset_stale_searching(self, timeout_minutes: int = 90) -> int:
+        """SEARCHING 看门狗：超时未推进的订阅回到 ERROR，等待下一轮重试."""
+        cutoff = (datetime.datetime.now() - timedelta(minutes=max(1, int(timeout_minutes)))).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        return self._movie_repo.reset_stale_searching(cutoff)
 
     def update_rss_state(self, rtype, rssid, state):
         if rtype == MediaType.MOVIE:

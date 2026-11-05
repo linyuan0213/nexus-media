@@ -9,11 +9,12 @@ from concurrent.futures import TimeoutError as FuturesTimeoutError
 from typing import Any
 
 import log
-from app.domain.enums import SearchType, SystemConfigKey
+from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
 from app.media import meta_info
 from app.services.search_context import SearchContext
 from app.services.search_orchestrator import SearchOrchestrator
+from app.services.subscribe.default_settings import get_default_setting
 
 # 锚点元数据只是资源搜索的辅助信息；外部源不可用时必须尽快回退关键词，
 # 不能因为一次详情抓取把整次搜索拖在 0%。
@@ -150,10 +151,11 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     profile,
                     site_fallback,
                     default_first=default_site_first,
+                    user_id=user_id,
                 )
             else:
                 # 站点已经由前端指定/归一为全部时，仍要继承默认过滤规则。
-                _apply_default_rule(filter_args, media_type, system_config, profile)
+                _apply_default_rule(filter_args, media_type, system_config, profile, user_id)
 
         if requested_rule in (None, ""):
             # 手动资源搜索不默认套用中字规则组；用户显式选择规则时仍生效。
@@ -192,16 +194,9 @@ def _default_subscribe_setting(
     media_type: MediaType | None,
     system_config: Any,
     content_profile: str | None = None,
+    user_id: int | str | None = None,
 ) -> dict:
-    if media_type in (MediaType.TV, MediaType.ANIME):
-        key = SystemConfigKey.DefaultSubscribeSettingTV
-    else:
-        profile = str(content_profile or "").strip()
-        key = SystemConfigKey.DefaultSubscribeSettingMovie
-        if profile and profile != "default":
-            key = f"{key.value}::{profile}"
-    default_setting = system_config.get(key)
-    return default_setting if isinstance(default_setting, dict) else {}
+    return get_default_setting(system_config, media_type, content_profile, user_id)
 
 
 def _apply_default_rule(
@@ -209,9 +204,10 @@ def _apply_default_rule(
     media_type: MediaType | None,
     system_config: Any,
     content_profile: str | None = None,
+    user_id: int | str | None = None,
 ) -> None:
     """站点已指定时仍继承默认订阅的过滤规则."""
-    default_setting = _default_subscribe_setting(media_type, system_config, content_profile)
+    default_setting = _default_subscribe_setting(media_type, system_config, content_profile, user_id)
     if not filter_args.get("rule") and default_setting.get("rule") not in (None, ""):
         filter_args["rule"] = default_setting.get("rule")
 
@@ -223,10 +219,11 @@ def _apply_default_sites(
     content_profile: str | None = None,
     fallback_sites: list[str] | None = None,
     default_first: bool = False,
+    user_id: int | str | None = None,
 ) -> None:
     """探索/订阅搜索：订阅默认站点 + 页面选择站点合并，默认站点优先；都为空则全部可见."""
     try:
-        default_setting = _default_subscribe_setting(media_type, system_config, content_profile)
+        default_setting = _default_subscribe_setting(media_type, system_config, content_profile, user_id)
         default_sites = list(default_setting.get("search_sites") or [])
         resolved = list(default_sites)
         for site in fallback_sites or []:
