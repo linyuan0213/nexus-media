@@ -951,17 +951,19 @@ def media_detail_by_ref(
     media_type = MediaType.from_string(request_type) if request_type else None
     if media_type == MediaType.UNKNOWN:
         media_type = None
-    try:
-        record = svc.lookup(
-            req.provider,
-            req.external_id,
-            media_type=media_type,
-            allow_private=allow_private,
-            permissions=permissions,
-        )
-    except Exception:  # noqa: BLE001 - 上游抓取/熔断返回明确错误
-        return fail(code=ErrorCode.OPERATION_FAILED, msg="无法获取媒体详情")
+    record = None
     is_custom_profile = content_profile != "default"
+    if is_custom_profile:
+        try:
+            record = svc.lookup(
+                req.provider,
+                req.external_id,
+                media_type=media_type,
+                allow_private=allow_private,
+                permissions=permissions,
+            )
+        except Exception:  # noqa: BLE001 - 上游抓取/熔断返回明确错误
+            return fail(code=ErrorCode.OPERATION_FAILED, msg="无法获取媒体详情")
     if is_custom_profile and req.content_id:
         # 前端已知道内容编号时，优先按编号取聚合详情，避免来源 slug 失效。
         try:
@@ -1030,15 +1032,26 @@ def media_detail_by_ref(
         permissions=permissions,
     )
     if not snapshot:
-        if is_custom_profile:
-            status = sub_svc.get_subscribe_by_anchor(
-                str(record.get("provider") or req.provider),
-                str(record.get("external_id") or req.external_id),
-                media_type or MediaType.MOVIE,
-                user=current_user,
-            )
-            return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status))
-        return fail(msg="无法获取媒体详情")
+        if record is None:
+            try:
+                record = svc.lookup(
+                    req.provider,
+                    req.external_id,
+                    media_type=media_type,
+                    allow_private=allow_private,
+                    permissions=permissions,
+                )
+            except Exception:  # noqa: BLE001
+                record = None
+        if not record:
+            return fail(msg="无法获取媒体详情")
+        status = sub_svc.get_subscribe_by_anchor(
+            str(record.get("provider") or req.provider),
+            str(record.get("external_id") or req.external_id),
+            media_type or MediaType.MOVIE,
+            user=current_user,
+        )
+        return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status))
     fields = snapshot.get("fields") or {}
     images = snapshot.get("images") or {}
     poster = next(
