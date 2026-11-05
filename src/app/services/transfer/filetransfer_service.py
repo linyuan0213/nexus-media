@@ -1193,6 +1193,11 @@ class FileTransferService:
             media.anchor_external_id = external
         if getattr(record, "IDENTITY_ID", None) and not getattr(media, "identity_id", None):
             media.identity_id = record.IDENTITY_ID
+        record_type = MediaType.from_string(str(getattr(record, "TYPE", "") or ""))
+        current_type = getattr(media, "type", None)
+        if record_type and current_type != record_type:
+            log.info(f"[Rmt]按下载记录纠正媒体类型：{current_type} -> {record_type}")
+            media.type = record_type
         profile = str(getattr(record, "CONTENT_PROFILE", "") or "")
         if profile and (
             not str(getattr(media, "content_profile", "") or "")
@@ -1471,7 +1476,11 @@ class FileTransferService:
                 # 失败或已存在（转移历史/目标文件已存在）都不进入成功处理与消息聚合
                 if fc > 0:
                     success_flag = False
-                if fc > 0 or exist_filenum > 0:
+                # _record_fail 在已有待处理记录时返回 0 失败数，但路径为空；
+                # 不能把这种情况当成成功继续入队刮削，否则会生成 dir/file 为空的死任务。
+                if fc > 0 or exist_filenum > 0 or (not ret_file_path and not ret_dir_path):
+                    if fc > 0 or (not ret_file_path and not ret_dir_path):
+                        success_flag = False
                     if exist_filenum > 0 and ret_file_path and ret_dir_path:
                         # 目标文件已存在即已入库；补刮时携带 finalize，
                         # 让刮削成功后照常发送入库消息并触发订阅定稿。

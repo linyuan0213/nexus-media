@@ -128,6 +128,9 @@ class ScrapeQueueService:
         finalize: dict[str, Any] | None = None,
     ) -> None:
         """提交单文件刮削；成功后由任务发布最终转移事件."""
+        if not dir_path or not file_name:
+            log.error(f"[ScrapeQueue]拒绝空路径刮削任务: dir={dir_path!r} file={file_name!r}")
+            return
         payload = {
             "media": JsonUtils.model_to_jsonable(media),
             "dir_path": dir_path,
