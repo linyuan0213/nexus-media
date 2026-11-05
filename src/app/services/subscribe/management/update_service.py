@@ -3,6 +3,7 @@
 from dataclasses import asdict
 from typing import Any, cast
 
+import log
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SubscribeType
 from app.domain.mediatypes import MediaType
@@ -44,11 +45,17 @@ class SubscribeUpdateService:
 
     @classmethod
     def _is_generic_subscription(cls, row) -> bool:
-        provider = cls._text(row, "ANCHOR_PROVIDER")
+        anchor_provider = cls._text(row, "ANCHOR_PROVIDER")
         profile = cls._text(row, "CONTENT_PROFILE")
         tmdbid = cls._text(row, "TMDBID")
+        source_provider = cls._text(row, "PROVIDER")
+        metadata_ref = cls._text(row, "METADATA_REF")
         return bool(
-            (provider and provider != "tmdb") or (profile and profile != "default") or (not tmdbid and provider)
+            (anchor_provider and anchor_provider != "tmdb")
+            or (profile and profile != "default")
+            or (source_provider and source_provider != "tmdb")
+            or (metadata_ref and not metadata_ref.startswith("tmdb:"))
+            or (not tmdbid and (anchor_provider or source_provider or metadata_ref))
         )
 
     @staticmethod
@@ -231,39 +238,38 @@ class SubscribeUpdateService:
         repo = self._movie_repo if mtype == MediaType.MOVIE else self._tv_repo
         existing_rows = repo.get_all(rssid=int(rssid), user=user)
         existing = existing_rows[0] if existing_rows else None
+        generic_kwargs = {
+            "mtype": mtype,
+            "rssid": int(rssid),
+            "name": name,
+            "year": year,
+            "keyword": keyword,
+            "season": season,
+            "image": image,
+            "over_edition": over_edition,
+            "filter_restype": filter_restype,
+            "filter_pix": filter_pix,
+            "filter_team": filter_team,
+            "filter_rule": filter_rule,
+            "filter_include": filter_include,
+            "filter_exclude": filter_exclude,
+            "filter_free": filter_free,
+            "save_path": save_path,
+            "download_setting": download_setting,
+            "total_ep": total_ep,
+            "current_ep": current_ep,
+            "state": state,
+            "rss_sites": rss_sites,
+            "search_sites": search_sites,
+            "user": user,
+            "content_profile": content_profile,
+            "provider": provider,
+            "metadata_ref": metadata_ref,
+            "metadata_policy": metadata_policy,
+            "naming_profile": naming_profile,
+        }
         if existing is not None and self._is_generic_subscription(existing):
-            return self._update_generic(
-                repo,
-                existing,
-                mtype=mtype,
-                rssid=int(rssid),
-                name=name,
-                year=year,
-                keyword=keyword,
-                season=season,
-                image=image,
-                over_edition=over_edition,
-                filter_restype=filter_restype,
-                filter_pix=filter_pix,
-                filter_team=filter_team,
-                filter_rule=filter_rule,
-                filter_include=filter_include,
-                filter_exclude=filter_exclude,
-                filter_free=filter_free,
-                save_path=save_path,
-                download_setting=download_setting,
-                total_ep=total_ep,
-                current_ep=current_ep,
-                state=state,
-                rss_sites=rss_sites,
-                search_sites=search_sites,
-                user=user,
-                content_profile=content_profile,
-                provider=provider,
-                metadata_ref=metadata_ref,
-                metadata_policy=metadata_policy,
-                naming_profile=naming_profile,
-            )
+            return self._update_generic(repo, existing, **generic_kwargs)
 
         media_info = None
         if not fuzzy_match:
@@ -278,6 +284,10 @@ class SubscribeUpdateService:
                     title = "%s %s".strip() % (name, year)
                 media_info = self._media.get_media_info(title=title, mtype=mtype, strict=bool(year), cache=False)
             if not media_info or not media_info.provider_data:
+                if existing is not None:
+                    # 编辑已有订阅不应依赖 TMDB 可用性：保留原锚点/身份并保存可编辑字段。
+                    log.warn(f"[Subscribe]更新时 TMDB 查询失败，使用现有订阅身份保存: {name} ({year})")
+                    return self._update_generic(repo, existing, **generic_kwargs)
                 return 1, "TMDB无法查询到媒体信息", None
             if media_info.type != MediaType.MOVIE:
                 if not season and str(mediaid).startswith("DB:"):

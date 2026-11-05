@@ -226,6 +226,46 @@ class TestSubscribeUpdateService:
         assert args.kwargs["filter_rule"] == 0
         assert args.kwargs["download_setting"] == -1
 
+    def test_update_existing_movie_falls_back_when_tmdb_lookup_fails(self):
+        """编辑已有订阅时 TMDB 查询失败不应导致保存失败，保留原身份更新."""
+        from types import SimpleNamespace
+
+        movie_repo = MagicMock()
+        movie_repo.update.return_value = 0
+        existing = SimpleNamespace(
+            NAME="Demo",
+            YEAR="2026",
+            IMAGE="https://example.com/p.jpg",
+            TMDBID="999",
+            ANCHOR_PROVIDER="tmdb",
+            ANCHOR_EXTERNAL_ID="999",
+            CONTENT_PROFILE="default",
+            PROVIDER="tmdb",
+            METADATA_REF="tmdb:999",
+            KEYWORD="",
+            IDENTITY_ID="id-999",
+            STATE="R",
+        )
+        movie_repo.get_all.return_value = [existing]
+        media_service = MagicMock()
+        media_info = MagicMock()
+        media_info.provider_data = None
+        media_service.get_media_info.return_value = media_info
+        svc = SubscribeUpdateService(
+            movie_repo, MagicMock(), media_service, MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        )
+
+        code, msg, _result = svc.update_rss_subscribe(
+            mtype=MediaType.MOVIE, rssid=1, name="Demo", year="2026", state="D"
+        )
+
+        assert code == 0
+        assert "成功" in msg
+        args = movie_repo.update.call_args.kwargs
+        assert args["tmdbid"] == "999"
+        assert args["identity_id"] == "id-999"
+        assert args["anchor_provider"] == "tmdb"
+
     def test_update_tv_no_total_episode(self):
         tv_repo = MagicMock()
         media_service = MagicMock()
