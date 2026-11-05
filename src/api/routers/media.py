@@ -945,7 +945,98 @@ def media_detail(
     return success(data=result)
 
 
-def _minimal_detail_record(req: "MediaDetailByRefRequest", media_type: MediaType | None) -> dict:
+def _bangumi_season_episode_count(svc: MetadataService, title: str, year: str, season: int) -> int:
+    """Bangumi 单季条目自带 eps，作为豆瓣/TMDB 分集缺失时的兜底."""
+    if not title:
+        return 0
+    try:
+        hits = run_with_timeout(
+            lambda: svc.search(
+                query=title,
+                provider="bangumi",
+                media_type=MediaType.ANIME,
+                limit=8,
+                wait_timeout=6,
+            ),
+            7.0,
+            name="detail-bangumi-search",
+        )
+    except Exception:  # noqa: BLE001
+        return 0
+    for hit in hits or []:
+        ref = hit.get("ref") or {}
+        if str(ref.get("provider") or "") != "bangumi":
+            continue
+        hit_title = str(hit.get("title") or "")
+        _, hit_season = SeriesService.split_title_season(hit_title)
+        if season > 1 and hit_season and int(hit_season) != int(season):
+            continue
+        external = str(ref.get("external_id") or "")
+        if not external:
+            continue
+        try:
+            record = run_with_timeout(
+                lambda: svc.lookup("bangumi", external, media_type=MediaType.ANIME),
+                6.0,
+                name="detail-bangumi-lookup",
+            )
+        except Exception:  # noqa: BLE001
+            continue
+        extra = record.get("extra") if isinstance(record, dict) else None
+        if not isinstance(extra, dict):
+            continue
+        eps = extra.get("bangumi.eps") or extra.get("bangumi_eps")
+        if str(eps or "").isdigit():
+            return int(str(eps))
+    return 0
+
+
+def _tmdb_season_episode_count(svc: MetadataService, title: str, year: str, season: int) -> int:
+    """按标题查 TMDB 剧集，取指定季的集数，作为豆瓣分集页不可用时的兜底."""
+    try:
+        hits = run_with_timeout(
+            lambda: svc.search(
+                query=title,
+                provider="tmdb",
+                media_type=MediaType.TV,
+                limit=8,
+                wait_timeout=6,
+            ),
+            7.0,
+            name="detail-tmdb-search",
+        )
+    except Exception:  # noqa: BLE001
+        return 0
+    for hit in hits or []:
+        ref = hit.get("ref") or {}
+        if str(ref.get("provider") or "") != "tmdb":
+            continue
+        external = str(ref.get("external_id") or "")
+        if not external:
+            continue
+        try:
+            record = run_with_timeout(
+                lambda: svc.lookup("tmdb", external, media_type=MediaType.TV),
+                6.0,
+                name="detail-tmdb-lookup",
+            )
+        except Exception:  # noqa: BLE001
+            continue
+        seasons = record.get("seasons") if isinstance(record, dict) else None
+        if not isinstance(seasons, list):
+            continue
+        for item in seasons:
+            if not isinstance(item, dict):
+                continue
+            if int(item.get("season_number") or 0) != int(season):
+                continue
+            count = item.get("episode_count")
+            if count:
+                return int(count)
+    return 0
+
+
+def _minimal_detail_record(req: "MediaDetailByRefRequest", media_type: MediaType | None, svc: MetadataService) -> dict:
     """来源详情不可用时，用锚点/前端标题构造最小记录，并补齐豆瓣分集数."""
     mtype = media_type or MediaType.MOVIE
     base_title = str(req.title or f"{req.provider}:{req.external_id}")
@@ -989,6 +1080,21 @@ def _minimal_detail_record(req: "MediaDetailByRefRequest", media_type: MediaType
                     "name": f"第{season_number}季",
                 }
             ]
+    if not record.get("seasons") and base_title:
+        total = _tmdb_season_episode_count(svc, base_title, str(req.year or ""), season_number)
+        if not total:
+            total = _bangumi_season_episode_count(
+                svc, str(record.get("title") or base_title), str(req.year or record.get("year") or ""), season_number
+            )
+        if total:
+            record["episode_count"] = total
+            record["seasons"] = [
+                {
+                    "season_number": int(season_number),
+                    "episode_count": int(total),
+                    "name": f"第{season_number}季",
+                }
+            ]
     return record
 
 
@@ -1016,7 +1122,7 @@ def media_detail_by_ref(
                 permissions=permissions,
             )
         except Exception:  # noqa: BLE001 - 上游抓取/熔断时仍可用前端已有标题展示
-            record = _minimal_detail_record(req, media_type)
+            record = _minimal_detail_record(req, media_type, svc)
             if record is None:
                 return fail(code=ErrorCode.OPERATION_FAILED, msg="无法获取媒体详情")
     if is_custom_profile and req.content_id:
@@ -1109,7 +1215,7 @@ def media_detail_by_ref(
             except Exception:  # noqa: BLE001
                 record = None
         if not record:
-            record = _minimal_detail_record(req, media_type)
+            record = _minimal_detail_record(req, media_type, svc)
         if not record:
             return fail(msg="无法获取媒体详情")
         status = sub_svc.get_subscribe_by_anchor(
@@ -1215,6 +1321,21 @@ def media_detail_by_ref(
                     "season_number": number,
                     "name": f"第 {number} 季",
                     "episode_count": episodes_count,
+                }
+            )
+    if not seasons and media_type in {MediaType.TV, MediaType.ANIME}:
+        title_hint = str(_field_value(fields, "title") or req.title or "")
+        base_hint, parsed_hint = SeriesService.split_title_season(title_hint)
+        season_hint = int(parsed_hint or 1)
+        total_hint = _tmdb_season_episode_count(svc, base_hint or title_hint, str(req.year or ""), season_hint)
+        if not total_hint:
+            total_hint = _bangumi_season_episode_count(svc, title_hint or base_hint, str(req.year or ""), season_hint)
+        if total_hint:
+            seasons.append(
+                {
+                    "season_number": season_hint,
+                    "name": f"第 {season_hint} 季",
+                    "episode_count": int(total_hint),
                 }
             )
     facts = []
