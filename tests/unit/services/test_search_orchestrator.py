@@ -274,3 +274,26 @@ class TestAnchorMediaTitle:
 
         assert media is not None
         assert media.year == ""
+
+
+class TestSeasonSuffix:
+    def test_anchor_title_parses_season_number(self):
+        orchestrator = object.__new__(SearchOrchestrator)
+        service = MagicMock()
+        service.lookup.return_value = {
+            "title": "赛博朋克：边缘行者 第二季",
+            "original_title": "Cyberpunk: Edgerunners",
+            "year": "2026",
+        }
+        orchestrator._metadata_service = service
+
+        media = orchestrator.resolve_anchor_media("douban", "1", media_type=MediaType.TV)
+
+        assert media is not None
+        assert media.begin_season == 2
+
+    def test_strip_season_suffix_for_search_name(self):
+        from app.services.search_service import _strip_season_suffix
+
+        assert _strip_season_suffix("赛博朋克：边缘行者 第二季") == "赛博朋克：边缘行者"
+        assert _strip_season_suffix("Cyberpunk Edgerunners Season 2") == "Cyberpunk Edgerunners"

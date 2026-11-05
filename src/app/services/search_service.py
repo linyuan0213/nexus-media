@@ -36,6 +36,19 @@ from app.services.subscription_download_guard import SubscriptionDownloadGuard
 from app.utils.string_utils import StringUtils
 
 
+def _strip_season_suffix(name: str) -> str:
+    """去掉“第二季 / Season 2 / S02”后缀，搜索词用母标题更容易命中资源."""
+    value = str(name or "").strip()
+    if not value:
+        return ""
+    try:
+        parsed = StringUtils.get_keyword_from_string(value)
+        keyword = str(parsed[1] or "").strip() if parsed else ""
+        return keyword or value
+    except Exception:  # noqa: BLE001 - 解析失败保留原名
+        return value
+
+
 class SearchQueryBuilder:
     """
     搜索查询构建器
@@ -81,14 +94,24 @@ class SearchQueryBuilder:
                 if en_title:
                     search_en_name = en_title
 
-        search_name_list.append(search_cn_name)
-        search_name_list.append(search_en_name)
+        for name in (search_cn_name, search_en_name):
+            if not name:
+                continue
+            base_name = _strip_season_suffix(str(name))
+            if base_name:
+                search_name_list.append(base_name)
+            search_name_list.append(str(name))
         for alias in getattr(media_info, "aliases", None) or []:
             alias_text = str(alias or "").strip()
-            if alias_text and alias_text not in search_name_list:
+            if not alias_text:
+                continue
+            base_alias = _strip_season_suffix(alias_text)
+            if base_alias and base_alias not in search_name_list:
+                search_name_list.append(base_alias)
+            if alias_text not in search_name_list:
                 search_name_list.append(alias_text)
-                if len(search_name_list) >= 6:
-                    break
+            if len(search_name_list) >= 6:
+                break
 
         # 开启多语言搜索
         max_workers = 1

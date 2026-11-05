@@ -218,6 +218,11 @@ class SearchOrchestrator:
             info.en_name = latin_alias
         info.aliases = aliases
         info.original_title = original_title or title
+        if actual_type in (MediaType.TV, MediaType.ANIME) and info.begin_season is None and title:
+            # 豆瓣等单季条目把季写在标题里：解析成真实季号，供匹配和过滤使用。
+            _, _, title_season, _, _, _ = StringUtils.get_keyword_from_string(title)
+            if title_season:
+                info.begin_season = int(title_season)
         info.original_language = str(record.get("original_language") or "")
         raw_year = str(record.get("year") or "").strip()
         info.year = "" if raw_year in ("", "0", "0000") else raw_year

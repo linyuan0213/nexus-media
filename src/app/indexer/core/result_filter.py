@@ -195,7 +195,9 @@ class ResultFilter:
             cleaned = _strip_cn_tag_prefix(
                 StringUtils.handler_special_chars(str(name)).upper().strip()  # type: ignore[union-attr]
             )
-            # 年份由年份字段单独处理，不能把 2026 当作标题的一部分影响名称相似度
+            # 年份/季号由独立字段处理，不能把 2026、第二季、S02 当作标题的一部分
+            cleaned = re.sub(r"第\s*[0-9一二三四五六七八九十]+\s*季", " ", cleaned)
+            cleaned = re.sub(r"(?i)(?:[Ss]|Season\s*)\s*\d{1,2}\b", " ", cleaned)
             return re.sub(r"(?<!\d)(?:19|20)\d{2}(?!\d)", "", cleaned).strip()
 
         # 中文虚词归一化：去掉 "的"/"之"/"与"/"和" 等，解决 "黄泉使者" vs "黄泉的使者"
