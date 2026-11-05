@@ -522,6 +522,9 @@ class RssFeedStrategy:
             pending_rss_torrents.append(download_item.rssid)
             if self.subscribe is None:
                 return
+            if mtype in (MediaType.TV, MediaType.ANIME):
+                # 整季已覆盖：清空缺集，防止状态短暂回退到 RUNNING 时旧缺集再次触发下载
+                self.subscribe.clear_subscribe_tv_lack(download_item.rssid, download_item)
             self.subscribe.update_rss_state(mtype, download_item.rssid, SubscribeState.COMPLETED.value)
             if mtype != MediaType.TV:
                 return

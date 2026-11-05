@@ -504,6 +504,16 @@ class SubscribeService:
             siblings.append(row)
         return siblings
 
+    def clear_subscribe_tv_lack(self, rssid, media_info=None) -> None:
+        """整季已全部拿到时清空缺失集，避免状态回退后按旧缺集重复下载."""
+        targets = [rssid]
+        if media_info is not None:
+            for sibling in self._find_tv_siblings(rssid, media_info):
+                targets.append(getattr(sibling, "id", None))
+        for target in targets:
+            if target:
+                self._tv_repo.update_lack(title=None, year=None, season=None, rssid=target, lack_episodes=[])
+
     def update_subscribe_tv_lack(self, rssid, media_info, seasoninfo):
         self._apply_tv_lack(rssid, media_info, seasoninfo)
         # 同媒体其他用户订阅联动更新缺集进度（ADR-021 5.4）

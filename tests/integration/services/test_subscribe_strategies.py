@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from app.core.settings import settings as app_settings
 from app.domain.entities.rss import SubscribeState
 from app.domain.mediatypes import MediaType
+from app.media.models import MediaInfo
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.services.subscribe.search_engine import SubscribeSearchEngine
 from app.services.subscribe.strategies.indexer_search import IndexerSearchStrategy
@@ -339,6 +340,27 @@ class TestRssFeedStrategy:
         subscribe = cast(Any, strategy.subscribe)
         subscribe.finish_rss_subscribe.assert_not_called()
         subscribe.update_rss_state.assert_called_once_with(MediaType.TV, 5, SubscribeState.COMPLETED.value)
+
+    def test_rss_tv_full_coverage_clears_lack_before_completed(self):
+        """整季覆盖后清空缺集，避免状态回退时旧缺集触发重复下载."""
+        strategy = self._make_strategy()
+        media = MediaInfo(title="Demo", type=MediaType.TV)
+        media.tmdb_id = "335790"
+        media.begin_season = 1
+        media.begin_episode = 1
+        media.end_episode = 2
+        media.total_episodes = 2
+        media.rssid = 7
+        media.over_edition = False
+        media.enclosure = ""
+        media.user_id = 1
+        cast(Any, strategy.downloader).batch_download.return_value = ([media], {})
+
+        strategy._download_matched_torrents([media], {})
+
+        subscribe = cast(Any, strategy.subscribe)
+        subscribe.clear_subscribe_tv_lack.assert_called_once_with(7, media)
+        subscribe.update_rss_state.assert_called_once_with(MediaType.TV, 7, SubscribeState.COMPLETED.value)
 
     def test_rss_movie_marks_pending_transfer(self):
         """电影下载成功登记“待转移”（COMPLETED），由转移落盘确认后定稿。"""

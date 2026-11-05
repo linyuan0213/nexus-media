@@ -375,9 +375,12 @@ class Torrent:
                 continue
             if not source_info.get("episodes"):
                 continue
+            if "episodes" in target_info and not target_info.get("episodes"):
+                # 空列表表示“已无缺失”，不能被媒体库缺失集重新填充，
+                # 否则已完成但尚未转移的集会被再次下载。
+                continue
             if not target_info.get("episodes"):
-                target_episodes = source_info.get("episodes")
-                target[title][index]["episodes"] = target_episodes
+                target[title][index]["episodes"] = source_info.get("episodes")
                 continue
             target_episodes = list(set(target_info.get("episodes")).intersection(set(source_info.get("episodes"))))
             target[title][index]["episodes"] = target_episodes

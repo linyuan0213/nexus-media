@@ -313,3 +313,31 @@ class TestTorrentContentErrors:
         assert content == magnet
         assert client.return_value.get.call_count == 2
         assert client.return_value.get.call_args_list[1].kwargs["url"] == "https://cdn.example.com/a.torrent"
+
+
+class TestIntersectionEpisodes:
+    def test_explicit_empty_target_stays_empty(self):
+        """缺集已清空时不能被媒体库缺失集重新填满（避免重复下载）."""
+        target = {"id1": [{"season": 1, "episodes": [], "total_episodes": 12}]}
+        source = {"id1": [{"season": 1, "episodes": [1, 2], "total_episodes": 12}]}
+
+        result = Torrent.get_intersection_episodes(target, source, "id1")
+
+        assert result["id1"][0]["episodes"] == []
+
+    def test_unknown_target_still_inherits_source(self):
+        """目标没有 episodes 字段时才继承媒体库缺失集."""
+        target = {"id1": [{"season": 1, "total_episodes": 12}]}
+        source = {"id1": [{"season": 1, "episodes": [1, 2], "total_episodes": 12}]}
+
+        result = Torrent.get_intersection_episodes(target, source, "id1")
+
+        assert result["id1"][0]["episodes"] == [1, 2]
+
+    def test_non_empty_target_intersects(self):
+        target = {"id1": [{"season": 1, "episodes": [1, 2, 3]}]}
+        source = {"id1": [{"season": 1, "episodes": [2, 3, 4]}]}
+
+        result = Torrent.get_intersection_episodes(target, source, "id1")
+
+        assert set(result["id1"][0]["episodes"]) == {2, 3}

@@ -568,6 +568,7 @@ class BaseSearchStrategy:
                         "free": rss_info.get("filter_free"),
                         "content_profile": rss_info.get("content_profile"),
                     }
+                    had_missing_entry = bool(rss_no_exists_local.get(media_key))
                     search_result, no_exists, _, _ = self._searcher.search_one_media(
                         media_info=media_info,
                         in_from=SearchType.SUBSCRIBE,
@@ -596,6 +597,25 @@ class BaseSearchStrategy:
                         if exist_flag:
                             if self._service:
                                 self._service.finish_rss_subscribe(rssid=rid, media=media_info)
+                        elif had_missing_entry:
+                            # 下载后以更新过的 no_exists 为准；媒体库此刻可能尚未完成转移，
+                            # 不能用 library_no_exists 把刚下载的集重新写回缺集。
+                            remaining = (no_exists or {}).get(media_key)
+                            if remaining:
+                                if self._service:
+                                    self._service.update_subscribe_tv_lack(
+                                        rssid=rid, media_info=media_info, seasoninfo=remaining
+                                    )
+                            else:
+                                if self._service:
+                                    self._service.clear_subscribe_tv_lack(rid, media_info)
+                                self._tv_repo.update_state(
+                                    title=None,
+                                    year=None,
+                                    season=None,
+                                    rssid=rid,
+                                    state=SubscribeState.RUNNING.value,
+                                )
                         elif library_no_exists and library_no_exists.get(media_key):
                             if self._service:
                                 self._service.update_subscribe_tv_lack(
