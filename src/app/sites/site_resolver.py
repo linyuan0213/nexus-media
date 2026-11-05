@@ -6,6 +6,7 @@
 
 from datetime import datetime
 
+from app.infrastructure.chrome.challenge import is_challenge
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
@@ -53,9 +54,36 @@ class SiteResolver:
             proxy_url = get_proxies().get("http") if proxy and get_proxies() else None
             use_headers = {"User-Agent": ua} if ua else {}
             cookie_auth = CookieAuth(site_cookie) if site_cookie else None
-            res = HttpClient(
-                config=HttpClientConfig(proxy_url=proxy_url),
-            ).get(url=site_url, headers=use_headers, auth=cookie_auth)
+            browser = (
+                build_browser_mode(
+                    site_info=site_info,
+                    site_key=site_info.get("domain") or site_info.get("name") or site_url,
+                    proxy_url=proxy_url,
+                )
+                if site_info.get("chrome")
+                else None
+            )
+
+            def _request(with_browser):
+                client = None
+                try:
+                    client = HttpClient(config=HttpClientConfig(proxy_url=proxy_url, browser=with_browser))
+                    return client.get(url=site_url, headers=use_headers, auth=cookie_auth)
+                finally:
+                    if client is not None and with_browser is not None:
+                        client.close()
+
+            res = None
+            try:
+                res = _request(None)
+                if browser and (res is None or res.status_code != 200 or is_challenge(res.text or "")):
+                    res = _request(browser)
+            except Exception:  # noqa: BLE001
+                if browser:
+                    try:
+                        res = _request(browser)
+                    except Exception:  # noqa: BLE001
+                        res = None
             seconds = round((datetime.now() - start_time).total_seconds(), 3)
             if res and res.status_code == 200:
                 # 公开站以“是否被重定向到登录页”判断登录态，
@@ -68,7 +96,7 @@ class SiteResolver:
                         return False, "Cookie失效", seconds
                     return False, "站点需要登录但未配置认证信息", seconds
                 return True, "连接成功", seconds
-            elif res is not None:
+            if res is not None:
                 return False, f"连接失败，状态码：{res.status_code}", seconds
             return False, "无法打开网站", seconds
 
@@ -92,6 +120,9 @@ class SiteResolver:
                 "ua": ua,
                 "headers": headers,
                 "proxy": proxy,
+                "chrome": bool(site_info.get("chrome")),
+                "browser_persistent": bool(site_info.get("browser_persistent")),
+                "browser_render": bool(site_info.get("browser_render")),
             }
             return self._site_engine.test_connection(site_url, user_config)
 

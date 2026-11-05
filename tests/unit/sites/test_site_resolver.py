@@ -54,6 +54,29 @@ class TestSiteResolver:
         assert ok is False
         assert "500" in msg
 
+    def test_test_connection_public_site_browser_fallback(self, resolver):
+        resolver._cache.get_sites.return_value = {
+            "public": True,
+            "chrome": True,
+            "rssurl": "https://example.com/rss",
+        }
+        blocked = MagicMock()
+        blocked.status_code = 403
+        blocked.text = "<html>just a moment</html>"
+        ok_resp = MagicMock()
+        ok_resp.status_code = 200
+        ok_resp.text = "<html>ok</html>"
+        with (
+            patch("app.sites.site_resolver.build_browser_mode") as mock_browser,
+            patch("app.sites.site_resolver.HttpClient") as mock_client,
+        ):
+            mock_browser.return_value = MagicMock()
+            mock_client.return_value.get.side_effect = [blocked, ok_resp]
+            ok, msg, seconds = resolver.test_connection(1)
+        assert ok is True
+        assert msg == "连接成功"
+        assert mock_client.return_value.get.call_count == 2
+
     def test_test_connection_no_auth(self, resolver):
         resolver._cache.get_sites.return_value = {"rssurl": "https://example.com/rss"}
         ok, msg, seconds = resolver.test_connection(1)
