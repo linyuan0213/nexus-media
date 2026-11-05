@@ -8,8 +8,20 @@ from app.indexer.indexer import Indexer
 def test_dedup_builtin_priority():
     """builtin 来源的同名结果应优先保留"""
     results = [
-        {"title": "Movie 2024", "size": "1000", "_indexer_source": "jackett", "_indexer_order": 1},
-        {"title": "Movie 2024", "size": "1000", "_indexer_source": "builtin", "_indexer_order": 2},
+        {
+            "title": "Movie 2024",
+            "size": "1000",
+            "_indexer_name": "M-Team",
+            "_indexer_source": "jackett",
+            "_indexer_order": 1,
+        },
+        {
+            "title": "Movie 2024",
+            "size": "1000",
+            "_indexer_name": "M-Team",
+            "_indexer_source": "builtin",
+            "_indexer_order": 2,
+        },
     ]
     deduped = Indexer._dedup(results)
     assert len(deduped) == 1
@@ -19,8 +31,20 @@ def test_dedup_builtin_priority():
 def test_dedup_order_priority():
     """同来源时 order_seq 大的优先（order_seq=100-pri，pri 小=主站优先）"""
     results = [
-        {"title": "Movie 2024", "size": "1000", "_indexer_source": "jackett", "_indexer_order": 5},
-        {"title": "Movie 2024", "size": "1000", "_indexer_source": "jackett", "_indexer_order": 3},
+        {
+            "title": "Movie 2024",
+            "size": "1000",
+            "_indexer_name": "SiteA",
+            "_indexer_source": "jackett",
+            "_indexer_order": 5,
+        },
+        {
+            "title": "Movie 2024",
+            "size": "1000",
+            "_indexer_name": "SiteA",
+            "_indexer_source": "jackett",
+            "_indexer_order": 3,
+        },
     ]
     deduped = Indexer._dedup(results)
     assert len(deduped) == 1
@@ -35,3 +59,14 @@ def test_dedup_different_sizes():
     ]
     deduped = Indexer._dedup(results)
     assert len(deduped) == 2
+
+
+def test_dedup_keeps_cross_site_candidate_for_fallback():
+    """同标题同大小但不同站点：保留两个候选供下载失败回退."""
+    results = [
+        {"title": "Movie 2024", "size": "1000", "_indexer_name": "MainSite", "_indexer_order": 5},
+        {"title": "Movie 2024", "size": "1000", "_indexer_name": "BackupSite", "_indexer_order": 3},
+    ]
+    deduped = Indexer._dedup(results)
+    assert len(deduped) == 2
+    assert [row["_indexer_name"] for row in deduped] == ["MainSite", "BackupSite"]

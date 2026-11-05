@@ -472,7 +472,11 @@ class Indexer:
 
     @staticmethod
     def _dedup(results: list[dict]) -> list[dict]:
-        """按 (title, size) 去重；builtin 来源优先，同来源 order_seq 大者（pri 小=主站）优先"""
+        """按 (title, size, site) 去重；跨站同种子保留为备用候选.
+
+        builtin 来源优先，同来源 order_seq 大者（pri 小=主站）优先；仅合并同一
+        站点的重复条目，避免首选站下载失败时丢失其他站点候选。
+        """
         ordered = sorted(
             results,
             key=lambda r: (
@@ -483,7 +487,8 @@ class Indexer:
         seen: set[tuple] = set()
         deduped: list[dict] = []
         for r in ordered:
-            key = (r.get("title", ""), r.get("size", ""))
+            site = str(r.get("_indexer_name") or r.get("_indexer_source") or "")
+            key = (r.get("title", ""), r.get("size", ""), site)
             if key not in seen:
                 seen.add(key)
                 deduped.append(r)

@@ -31,6 +31,9 @@ from app.services.search_context import SearchContext
 from app.services.search_service import SearchQueryBuilder, SearchResultDeduplicator, SearchResultProcessor
 from app.utils import StringUtils
 
+# 默认站点 tier 的排序抬升量，必须大于 site_priority_order 的最大值（9999）
+SITE_TIER_BOOST = 100_000
+
 
 class SearchOrchestrator:
     def __init__(
@@ -69,6 +72,18 @@ class SearchOrchestrator:
         """确保搜索任务任何退出路径都会关闭进度，前端不会停在 0%."""
         self._progress.end(f"search:{session_id or 'web'}")
 
+    @staticmethod
+    def _apply_site_tier(media_list: list, filter_args: dict | None) -> list:
+        """默认站点 tier：整体抬升 site_order，保证不被更高全局优先级的补充站点压过."""
+        tier_sites = (filter_args or {}).get("site_tier")
+        if not tier_sites:
+            return media_list
+        tier = {str(site) for site in tier_sites if str(site)}
+        for media in media_list:
+            if str(getattr(media, "site", "") or "") in tier:
+                media.site_order = int(getattr(media, "site_order", 0) or 0) + SITE_TIER_BOOST
+        return media_list
+
     def orchestrate(self, ctx: SearchContext) -> tuple[Any | None, dict | None, int, int]:
         progress_key: str = f"search:{ctx.session_id}"
         self._progress.start(progress_key)
@@ -85,6 +100,7 @@ class SearchOrchestrator:
 
         # 3. 去重
         media_list = SearchResultDeduplicator.deduplicate(media_list)
+        media_list = self._apply_site_tier(media_list, filter_args)
 
         if not media_list:
             log.info(f"[Orchestrator]{ctx.keyword} 未搜索到任何资源")

@@ -645,10 +645,10 @@ class RssFeedStrategy:
                     log.info(f"[RssFeedStrategy] {item.title} 已被其他策略锁定，跳过")
             rss_download_torrents = filtered
 
-        # 电影订阅同一 rssid 只下载排序后最优的一条，避免 1080P/4K
-        # 等多个种子同时命中过滤规则后被批量下载。列表已按
-        # “站点优先/做种数优先”排好，不能再按 res_order 覆盖排序结果。
-        best_movies: dict = {}
+        # 电影订阅同一 rssid 保留排序后的前几个候选：首选站点下载失败时
+        # Downloader 会继续尝试备用源；成功一个后策略层会停止该电影。
+        max_movie_candidates = 3
+        movie_candidate_counts: dict = {}
         selected_movies = []
         for media in rss_download_torrents:
             if getattr(media, "type", None) != MediaType.MOVIE:
@@ -658,14 +658,12 @@ class RssFeedStrategy:
             if rssid is None:
                 selected_movies.append(media)
                 continue
-            current = best_movies.get(rssid)
-            if current is None:
-                best_movies[rssid] = media
-                selected_movies.append(media)
+            count = movie_candidate_counts.get(rssid, 0)
+            if count >= max_movie_candidates:
+                log.info(f"[RssFeedStrategy] 订阅 {rssid} 备用候选已达上限，跳过：{media.title}")
                 continue
-            log.info(
-                f"[RssFeedStrategy] 订阅 {rssid} 跳过次优资源：{media.title}（已选择 {getattr(current, 'title', '')}）"
-            )
+            movie_candidate_counts[rssid] = count + 1
+            selected_movies.append(media)
         rss_download_torrents = selected_movies
 
         try:

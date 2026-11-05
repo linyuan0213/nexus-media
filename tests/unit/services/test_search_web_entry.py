@@ -151,6 +151,21 @@ class TestMakeWebSearchFn:
         ctx = orchestrator.orchestrate.call_args[0][0]
         assert ctx.filter_args["site"] == ["site_a"]
 
+    def test_default_first_creates_site_tier(self):
+        orchestrator = MagicMock()
+        orchestrator.orchestrate.return_value = (None, {}, 1, 0)
+        system_config = MagicMock()
+        system_config.get.return_value = {"search_sites": ["site_a"]}
+        fn = make_web_search_fn(orchestrator, system_config=system_config)
+        fn(
+            "x",
+            media_type=MediaType.MOVIE,
+            filters={"site_default_first": True, "site_fallback": ["site_b"]},
+        )
+        ctx = orchestrator.orchestrate.call_args[0][0]
+        assert ctx.filter_args["site"] == ["site_a", "site_b"]
+        assert ctx.filter_args["site_tier"] == ["site_a"]
+
     def test_explicit_sites_not_overridden(self):
         orchestrator = MagicMock()
         orchestrator.orchestrate.return_value = (None, {}, 1, 0)

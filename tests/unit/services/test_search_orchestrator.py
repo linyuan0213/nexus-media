@@ -202,3 +202,26 @@ class TestProviderIdentityRecovery:
         assert names == ["凡人修仙传"]
         assert filter_args["year"] is None
         assert filter_args.get("type") is None
+
+
+class TestSiteTier:
+    def test_default_site_tier_beats_fallback_priority(self):
+        default_site = MediaInfo(title="A", type=MediaType.MOVIE)
+        default_site.site = "DefaultSite"
+        default_site.site_order = 100
+        fallback = MediaInfo(title="B", type=MediaType.MOVIE)
+        fallback.site = "FallbackSite"
+        fallback.site_order = 9999
+
+        result = SearchOrchestrator._apply_site_tier([fallback, default_site], {"site_tier": ["DefaultSite"]})
+
+        assert result[1].site_order > result[0].site_order
+
+    def test_no_tier_keeps_site_order(self):
+        media = MediaInfo(title="A", type=MediaType.MOVIE)
+        media.site = "Site"
+        media.site_order = 10
+
+        result = SearchOrchestrator._apply_site_tier([media], {})
+
+        assert result[0].site_order == 10

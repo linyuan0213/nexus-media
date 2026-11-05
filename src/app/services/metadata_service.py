@@ -9,7 +9,7 @@ import difflib
 import re
 import threading
 import time
-from concurrent.futures import Future, ThreadPoolExecutor, wait
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Protocol
@@ -43,6 +43,10 @@ from app.media.metadata.providers import register_builtin_providers
 from app.media.metadata.registry import MetadataRegistry
 from app.media.metadata.registry import registry as global_registry
 from app.services.identity_resolver import IdentityResolver
+from app.utils.timeout import run_parallel_with_timeout, run_with_timeout
+
+# 详情抓取硬超时：必须大于正常浏览器导航（约 20-30s），但不能无限挂起
+METADATA_DETAIL_TIMEOUT = 45.0
 
 
 class IdentityRepositoryProtocol(Protocol):
@@ -1169,21 +1173,15 @@ class MetadataService:
         if not selected:
             return []
         hits: list[dict[str, Any]] = []
-        executor = ThreadPoolExecutor(max_workers=min(8, len(selected)), thread_name_prefix="metadata_search")
-        futures = {executor.submit(search_one, item): item.descriptor.provider_key for item in selected}
-        # 单个 provider 也不能无限等：外部元数据源遇到 Cloudflare/SSL 抖动时
-        # 会重试到 120s，详情页会被拖死。超时后返回部分结果，由调用方回退。
+        # 单 provider 也不能无限等：外部元数据源遇到 Cloudflare/SSL 抖动时
+        # 会重试到 120s。用独立 daemon 线程硬超时，避免卡死线程长期占用搜索线程池。
         effective_timeout = wait_timeout or (20.0 if len(selected) == 1 else 8.0)
-        done, not_done = wait(futures, timeout=effective_timeout)
-        for future in done:
-            try:
-                hits.extend(future.result() or [])
-            except Exception as exc:  # noqa: BLE001
-                log.warn(f"[Metadata]搜索任务失败: {exc}")
-        for future in not_done:
-            future.cancel()
-            log.warn(f"[Metadata]搜索超时，忽略 provider: {futures[future]}")
-        executor.shutdown(wait=False, cancel_futures=True)
+        tasks = {item.descriptor.provider_key: (lambda item=item: search_one(item)) for item in selected}
+        payload_map, timed_out = run_parallel_with_timeout(tasks, effective_timeout)
+        for provider_key, payloads in payload_map.items():
+            hits.extend(payloads)
+        for provider_key in timed_out:
+            log.warn(f"[Metadata]搜索超时，忽略 provider: {provider_key}")
         hits.sort(key=lambda item: float(item.get("score") or 0), reverse=True)
         deduped: list[dict[str, Any]] = []
         seen: set[tuple[str, str, str]] = set()
@@ -1411,7 +1409,11 @@ class MetadataService:
         runtime = self._orchestrator.runtime_for(target.descriptor)
         try:
             runtime.acquire()
-            record = target.detail(ref, None)
+            record = run_with_timeout(
+                lambda: target.detail(ref, None),
+                METADATA_DETAIL_TIMEOUT,
+                name=f"metadata-detail-{provider}",
+            )
             runtime.record_success()
             data = record.model_dump(mode="json") if record is not None else None
             if isinstance(data, dict) and self._has_detail_payload(data):
@@ -1503,8 +1505,23 @@ class MetadataService:
                 }
 
         if probe_health:
-            with ThreadPoolExecutor(max_workers=min(8, len(visible) or 1)) as pool:
-                healths = list(pool.map(probe, visible))
+            tasks = {
+                provider.descriptor.provider_key: (lambda provider=provider: probe(provider)) for provider in visible
+            }
+            health_map, timed_out = run_parallel_with_timeout(tasks, 10.0)
+            healths = []
+            for provider in visible:
+                key = provider.descriptor.provider_key
+                healths.append(
+                    health_map.get(
+                        key,
+                        {
+                            "provider": key,
+                            "ok": False,
+                            "message": "健康检查超时" if key in timed_out else "健康检查失败",
+                        },
+                    )
+                )
         else:
             healths = [{} for _ in visible]
 

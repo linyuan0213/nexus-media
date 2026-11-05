@@ -137,13 +137,20 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
             ident_flag = False
         # 探索/订阅来源：站点优先级 = 订阅默认设置 → 页面选择的搜索站点 → 全部站点
         site_fallback = filter_args.pop("site_fallback", None)
-        filter_args.pop("site_default_first", None)
+        default_site_first = bool(filter_args.pop("site_default_first", None))
         if filter_args.get("site") == []:
             # 显式选择「全部已授权站点」：归一为 None（全部可见站点）
             filter_args["site"] = None
         if system_config:
             if "site" not in filter_args:
-                _apply_default_sites(filter_args, media_type, system_config, profile, site_fallback)
+                _apply_default_sites(
+                    filter_args,
+                    media_type,
+                    system_config,
+                    profile,
+                    site_fallback,
+                    default_first=default_site_first,
+                )
             else:
                 # 站点已经由前端指定/归一为全部时，仍要继承默认过滤规则。
                 _apply_default_rule(filter_args, media_type, system_config, profile)
@@ -215,14 +222,19 @@ def _apply_default_sites(
     system_config: Any,
     content_profile: str | None = None,
     fallback_sites: list[str] | None = None,
+    default_first: bool = False,
 ) -> None:
     """探索/订阅搜索：订阅默认站点 + 页面选择站点合并，默认站点优先；都为空则全部可见."""
     try:
         default_setting = _default_subscribe_setting(media_type, system_config, content_profile)
-        resolved = list(default_setting.get("search_sites") or [])
+        default_sites = list(default_setting.get("search_sites") or [])
+        resolved = list(default_sites)
         for site in fallback_sites or []:
             if site not in resolved:
                 resolved.append(site)
+        if default_first and default_sites:
+            # 真正的搜索 tier：默认站点整体高于补充站点，不被更高的全局优先级压过。
+            filter_args["site_tier"] = default_sites
         # None = 不限制，由索引器按用户可见站点过滤；避免空列表被当成"零站点"
         filter_args["site"] = resolved or None
         # 资源搜索沿用默认订阅的过滤规则，不静默退回全局默认组。

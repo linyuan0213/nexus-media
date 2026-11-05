@@ -396,7 +396,7 @@ class TestRssFeedStrategy:
 
         selected = self._selected_movies(strategy, [low_seed, high_seed])
 
-        assert [item.title for item in selected] == ["HighSeed"]
+        assert [item.title for item in selected] == ["HighSeed", "LowSeed"]
 
     def test_rss_seeder_mode_prefers_more_seeders_over_site(self):
         """做种数优先：低优先级站点做种更多时应胜出."""
@@ -406,7 +406,15 @@ class TestRssFeedStrategy:
         strategy = self._make_strategy()
         selected = self._selected_movies(strategy, [preferred_site, other_site], order="seeder")
 
-        assert [item.title for item in selected] == ["OtherSite"]
+        assert [item.title for item in selected] == ["OtherSite", "PreferredSite"]
+
+    def test_rss_movie_keeps_at_most_three_fallback_candidates(self):
+        strategy = self._make_strategy()
+        medias = [self._movie(title=f"C{i}", site_order=9999, seeders=10 - i, res_order=1) for i in range(5)]
+
+        selected = self._selected_movies(strategy, medias)
+
+        assert [item.title for item in selected] == ["C0", "C1", "C2"]
 
     def test_rss_site_mode_keeps_higher_priority_site(self):
         """站点优先：低优先级站点做种再多也不能越过站点顺序."""
@@ -416,7 +424,7 @@ class TestRssFeedStrategy:
         strategy = self._make_strategy()
         selected = self._selected_movies(strategy, [other_site, preferred_site])
 
-        assert [item.title for item in selected] == ["PreferredSite"]
+        assert [item.title for item in selected] == ["PreferredSite", "OtherSite"]
 
     def test_get_default_rss_sites_no_system_config(self):
         strategy = self._make_strategy()
