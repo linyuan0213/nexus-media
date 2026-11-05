@@ -21,7 +21,6 @@ from app.media.metadata.registry import registry as metadata_registry
 from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.management.utils import gen_rss_note
 from app.services.web.utils import WebUtils
-from app.utils.string_utils import StringUtils
 
 
 def _provider_is_virtual(provider: str) -> bool:
@@ -262,10 +261,8 @@ class SubscribeAddService:
         media_info.overview = overview
         media_info.type = resolved_type
         extra = record.get("extra") or {}
-        if season is None:
-            _, _, title_season, _, _, _ = StringUtils.get_keyword_from_string(str(title or name or ""))
-            if title_season:
-                season = int(title_season)
+        # 豆瓣等“一季一个条目”的来源，该条目自身只有一季，季号固定为 1；
+        # 标题里的“第二季”只是条目标题，不作为订阅季号，避免生成第2季空目录。
         season_number = _season_number(season, 1)
         total_episodes = (
             record.get("episode_count")
