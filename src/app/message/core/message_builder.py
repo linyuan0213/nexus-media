@@ -70,6 +70,7 @@ def _message_variables(item, *, source_provider: str | None = None) -> dict[str,
     return {
         "content_profile": profile,
         "profile_label": message_template_registry.label(profile) or (profile if profile != "default" else ""),
+        "type_label": _type_label(item, profile),
         "source_provider": source,
         "keyword": str(getattr(item, "keyword", "") or ""),
         "filter_restype": str(getattr(item, "filter_restype", "") or ""),

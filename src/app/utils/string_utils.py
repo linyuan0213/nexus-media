@@ -11,6 +11,7 @@ import cn2an
 import dateparser
 import dateutil.parser
 
+from app.domain.enums import SubscribeType
 from app.domain.mediatypes import MediaType
 from app.utils.exception_utils import ExceptionUtils
 
@@ -43,6 +44,8 @@ class StringUtils:
         """
         渲染消息来源文本：枚举取 .value，字符串（如下载器名称）原样返回
         """
+        if isinstance(in_from, SubscribeType):
+            return "手动" if in_from == SubscribeType.Manual else "自动"
         return in_from.value if hasattr(in_from, "value") else str(in_from)
 
     @staticmethod
