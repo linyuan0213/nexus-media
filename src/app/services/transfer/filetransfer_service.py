@@ -16,6 +16,8 @@ from concurrent.futures import Future, wait
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
+
 import log
 from app.core.constants import RMT_MEDIAEXT, RMT_MIN_FILESIZE
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
@@ -540,6 +542,13 @@ class FileTransferService:
                     in_path, download_record
                 )
 
+            anchor_medias: dict[str, object] = {}
+            if download_record is not None:
+                for _path in file_list:
+                    anchor_info = self._media_info_from_anchor_record(download_record, _path, dl_season, dl_episode)
+                    if anchor_info is not None:
+                        anchor_medias[_path] = anchor_info
+
             # 先用插件 ParserProfile 短路识别，避免已识别文件再走一次 TMDB。
             policy = str((settings.get("media") or {}).get("metadata_default_policy") or "tmdb_primary")
             parser_chain = ParserChain()
@@ -552,6 +561,8 @@ class FileTransferService:
                     parsed_profile = parser_chain.extract(os.path.basename(_path))
                 except Exception:
                     parsed_profile = None
+                if _path in anchor_medias:
+                    continue
                 if parsed_profile is None or not getattr(parsed_profile, "content_profile", None):
                     # 普通媒体：非 TMDB 主源先按策略识别，命中则完全跳过 TMDB。
                     if self._metadata_service is not None and not policy.startswith("tmdb_"):
@@ -579,7 +590,7 @@ class FileTransferService:
                     _info.title = str(parsed_code)
                 profile_medias[_path] = _info
 
-            medias = {**primary_medias, **profile_medias}
+            medias = {**primary_medias, **profile_medias, **anchor_medias}
             if unprofiled_files:
                 identified = self.media.get_media_info_on_files(
                     unprofiled_files,
@@ -1101,6 +1112,48 @@ class FileTransferService:
                 # 非 TMDB 记录仍需回传画像/季集，供 ParserProfile 之外的识别兜底。
                 return None, parsed_type, dl_season, dl_episode
         return None, None, None, None
+
+    def _media_info_from_anchor_record(self, record, path: str, season, episode):
+        """下载记录有非 TMDB 锚点时，直接用该来源识别，避免先去查 TMDB."""
+        provider = str(getattr(record, "ANCHOR_PROVIDER", "") or "").strip()
+        external = str(getattr(record, "ANCHOR_EXTERNAL_ID", "") or "").strip()
+        if not provider or not external or provider == "tmdb":
+            return None
+        mtype = MediaType.from_string(str(getattr(record, "TYPE", "") or "")) or MediaType.MOVIE
+        profile = str(getattr(record, "CONTENT_PROFILE", "") or "default")
+        record_data = None
+        if self._metadata_service is not None:
+            try:
+                record_data = self._metadata_service.lookup(
+                    provider=provider,
+                    external_id=external,
+                    media_type=mtype,
+                    scope=profile,
+                    content_profile=profile,
+                    allow_private=True,
+                )
+            except Exception as exc:  # noqa: BLE001 - 来源失败仍保留锚点继续识别
+                log.warn(f"[Rmt]按锚点 {provider}:{external} 读取元数据失败: {exc}")
+        title = str((record_data or {}).get("title") or getattr(record, "TITLE", "") or "").strip()
+        if not title:
+            title = os.path.splitext(os.path.basename(path))[0]
+        info = meta_info_fn(title, mtype=mtype)
+        info.title = title
+        info.year = str((record_data or {}).get("year") or getattr(record, "YEAR", "") or "")
+        info.org_string = os.path.basename(path)
+        info.anchor_provider = provider
+        info.anchor_external_id = external
+        info.content_profile = profile
+        info.identity_id = getattr(record, "IDENTITY_ID", None)
+        if record_data:
+            info.original_title = str(record_data.get("original_title") or info.original_title or "")
+            info.aliases = list(record_data.get("aliases") or [])
+        if season:
+            info.begin_season = int(season)
+            if episode:
+                info.begin_episode = int(episode)
+                info.end_episode = int(episode)
+        return info
 
     @staticmethod
     def _apply_download_record_hint(media, record) -> None:
@@ -1968,15 +2021,19 @@ class FileTransferService:
             anchor_external_id=getattr(media, "anchor_external_id", None),
             content_profile=getattr(media, "content_profile", None),
         )
-        self._history.insert_transfer_history(
-            in_from=in_from,
-            rmt_mode=operation,
-            in_path=reg_path,
-            out_path=out_path or "",
-            dest=dist_path,
-            media_info=media_dto,
-            dst_backend=getattr(resolved_backend, "id", None) or "local",
-        )
+        try:
+            self._history.insert_transfer_history(
+                in_from=in_from,
+                rmt_mode=operation,
+                in_path=reg_path,
+                out_path=out_path or "",
+                dest=dist_path,
+                media_info=media_dto,
+                dst_backend=getattr(resolved_backend, "id", None) or "local",
+            )
+        except IntegrityError:
+            # 队列重投/重复转移：同源同目标历史已存在即视为成功，不再报错
+            log.info(f"[Rmt]转移历史已存在，跳过重复写入：{reg_path}")
         self._history.update_transfer_unknown_state(reg_path)
 
     def _replicate_to_enabled_backends(self, media, transferred_path, primary_backend) -> None:

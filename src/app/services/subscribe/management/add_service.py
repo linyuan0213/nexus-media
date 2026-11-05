@@ -21,6 +21,7 @@ from app.media.metadata.registry import registry as metadata_registry
 from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.management.utils import gen_rss_note
 from app.services.web.utils import WebUtils
+from app.utils.string_utils import StringUtils
 
 
 def _provider_is_virtual(provider: str) -> bool:
@@ -261,6 +262,10 @@ class SubscribeAddService:
         media_info.overview = overview
         media_info.type = resolved_type
         extra = record.get("extra") or {}
+        if season is None:
+            _, _, title_season, _, _, _ = StringUtils.get_keyword_from_string(str(title or name or ""))
+            if title_season:
+                season = int(title_season)
         season_number = _season_number(season, 1)
         total_episodes = (
             record.get("episode_count")
