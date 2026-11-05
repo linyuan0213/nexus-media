@@ -1211,6 +1211,7 @@ class MetadataService:
         refs: list[ProviderRef] | None = None,
         allow_private: bool = False,
         permissions: set[str] | None = None,
+        with_episodes: bool = True,
     ) -> dict[str, Any] | None:
         """按外部锚点合成快照；显式 refs 时保留聚合来源上下文."""
         if refs:
@@ -1254,7 +1255,7 @@ class MetadataService:
         snapshot = self.compose_for_media(
             media_info,
             content_profile=content_profile,
-            with_episodes=True,
+            with_episodes=with_episodes,
             user_id=user_id,
             refs_override=refs,
         )

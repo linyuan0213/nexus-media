@@ -58,6 +58,7 @@ from app.services.transfer.name_format import FIELD_CATALOG, field_groups, rende
 from app.services.web.utils import get_mediainfo_from_id
 from app.utils import StringUtils
 from app.utils.response import fail, success
+from app.utils.timeout import run_with_timeout
 
 router = APIRouter()
 
@@ -947,13 +948,14 @@ def media_detail(
 def _minimal_detail_record(req: "MediaDetailByRefRequest", media_type: MediaType | None) -> dict:
     """来源详情不可用时，用锚点/前端标题构造最小记录，并补齐豆瓣分集数."""
     mtype = media_type or MediaType.MOVIE
+    base_title = str(req.title or f"{req.provider}:{req.external_id}")
     season_number = SeriesService.split_title_season(str(req.title or ""))[1] or 1
     record = {
         "provider": req.provider,
         "external_id": req.external_id,
         "mediaid": f"{req.provider}:{req.external_id}",
         "metadata_ref": f"{req.provider}:{req.external_id}",
-        "title": str(req.title or ""),
+        "title": base_title,
         "year": str(req.year or ""),
         "type": mtype.value,
         "refs": [{"provider": req.provider, "external_id": req.external_id}],
@@ -963,7 +965,11 @@ def _minimal_detail_record(req: "MediaDetailByRefRequest", media_type: MediaType
         "credits": [],
     }
     try:
-        legacy = get_mediainfo_from_id(mtype, f"{req.provider}:{req.external_id}")
+        legacy = run_with_timeout(
+            lambda: get_mediainfo_from_id(mtype, f"{req.provider}:{req.external_id}"),
+            3.0,
+            name="media-detail-legacy",
+        )
     except Exception:  # noqa: BLE001 - 详情兜底不能再抛错
         legacy = None
     if legacy is not None:
@@ -1010,7 +1016,7 @@ def media_detail_by_ref(
                 permissions=permissions,
             )
         except Exception:  # noqa: BLE001 - 上游抓取/熔断时仍可用前端已有标题展示
-            record = _minimal_detail_record(req, media_type) if req.title else None
+            record = _minimal_detail_record(req, media_type)
             if record is None:
                 return fail(code=ErrorCode.OPERATION_FAILED, msg="无法获取媒体详情")
     if is_custom_profile and req.content_id:
@@ -1072,16 +1078,24 @@ def media_detail_by_ref(
         )
         return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status))
     record = record or {}
-    snapshot = svc.compose_for_ref(
-        req.provider,
-        req.external_id,
-        media_type=media_type or MediaType.MOVIE,
-        content_profile=content_profile,
-        include_tmdb=True,
-        user_id=current_user.user_id,
-        allow_private=allow_private,
-        permissions=permissions,
-    )
+    try:
+        snapshot = run_with_timeout(
+            lambda: svc.compose_for_ref(
+                req.provider,
+                req.external_id,
+                media_type=media_type or MediaType.MOVIE,
+                content_profile=content_profile,
+                include_tmdb=True,
+                user_id=current_user.user_id,
+                allow_private=allow_private,
+                permissions=permissions,
+                with_episodes=False,
+            ),
+            8.0,
+            name="media-detail",
+        )
+    except Exception:  # noqa: BLE001 - 上游慢/失败时走最小记录兜底
+        snapshot = None
     if not snapshot:
         if not record:
             try:
@@ -1094,7 +1108,7 @@ def media_detail_by_ref(
                 )
             except Exception:  # noqa: BLE001
                 record = None
-        if not record and req.title:
+        if not record:
             record = _minimal_detail_record(req, media_type)
         if not record:
             return fail(msg="无法获取媒体详情")
