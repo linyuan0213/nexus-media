@@ -33,6 +33,9 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
             return False
         return self._repo.is_completed_download_history_by_tmdb(int(tmdb_id), season_episode)
 
+    def is_completed_by_series(self, series_key: str | None, season_episode: str | None) -> bool:
+        return self._repo.is_completed_download_history_by_series(series_key, season_episode)
+
     def is_completed_by_identity(
         self,
         *,

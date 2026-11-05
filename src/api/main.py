@@ -34,6 +34,7 @@ from api.routers import (
     rbac,
     rss_automation,
     scheduler,
+    series,
     site,
     storage_backend,
     subscription,
@@ -243,6 +244,7 @@ app.include_router(plugin_market.router, prefix="/api/plugin/market", tags=["plu
 app.include_router(rss_automation.router, prefix="/api/rss-automation", tags=["rss-automation"])
 app.include_router(custom_rss.router, prefix="/api/site", tags=["custom-rss"])
 app.include_router(words.router, prefix="/api/words", tags=["words"])
+app.include_router(series.router, prefix="/api/series", tags=["series"])
 app.include_router(media.router, prefix="/api/media", tags=["media"])
 app.include_router(lifecycle.router, prefix="/api/media/lifecycle", tags=["media-lifecycle"])
 app.include_router(library_rename.router, prefix="/api/media", tags=["media-library-rename"])

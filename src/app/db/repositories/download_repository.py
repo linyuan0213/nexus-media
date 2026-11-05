@@ -100,6 +100,19 @@ class DownloadRepository(BaseRepository):
                 query = query.filter(DOWNLOADHISTORY.SE == season_episode)
             return query.first() is not None
 
+    def is_completed_download_history_by_series(self, series_key: str | None, season_episode: str | None) -> bool:
+        """按内部 series_key + 季集查询已完成下载，跨来源共享."""
+        if not series_key:
+            return False
+        with self.session() as db:
+            query = db.query(DOWNLOADHISTORY.ID).filter(
+                DOWNLOADHISTORY.SERIES_KEY == str(series_key),
+                DOWNLOADHISTORY.STATE == "completed",
+            )
+            if season_episode:
+                query = query.filter(DOWNLOADHISTORY.SE == season_episode)
+            return query.first() is not None
+
     def get_contiguous_completed_episode_by_tmdb(
         self, tmdb_id: int | str | None, season: int | None, start: int = 1
     ) -> int:

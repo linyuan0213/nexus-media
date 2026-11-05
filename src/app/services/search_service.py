@@ -307,6 +307,12 @@ class SearchResultProcessor:
                     return list(media_list)
         filtered = []
         for media_item in media_list:
+            series_key = getattr(media_item, "series_key", None)
+            if series_key:
+                season_episode = media_item.get_season_episode_string()
+                if self._download_repo.is_completed_by_series(series_key, season_episode):
+                    log.info(f"[Searcher]{media_item.title} {season_episode} 已存在完成下载，跳过下载（series）")
+                    continue
             ref = media_item.get_media_ref()
             if ref is not None and ref.provider != "tmdb":
                 season_episode = media_item.get_season_episode_string()

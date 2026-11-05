@@ -27,6 +27,10 @@ class IDownloadHistoryRepository(Protocol):
         """根据TMDB ID和季集信息查询是否已有已完成的下载历史"""
         ...
 
+    def is_completed_by_series(self, series_key: str | None, season_episode: str | None) -> bool:
+        """根据内部 series_key 和季集查询是否已有已完成的下载历史"""
+        ...
+
     def has_active_download_for_media(
         self,
         *,
