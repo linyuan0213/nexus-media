@@ -188,12 +188,15 @@ class PluginContext:
         """发送消息通知"""
         self._message.send_plugin_message(title=title, text=text, image=image)
 
-    def schedule_cron(self, job_id: str, func, cron: str, **kwargs) -> bool:
+    def _job_display_name(self, job_id: str, name: str | None) -> str:
+        return name or f"{self._plugin_name} · {job_id.replace('_', ' ')}"
+
+    def schedule_cron(self, job_id: str, func, cron: str, name: str | None = None, **kwargs) -> bool:
         """注册 cron 定时任务，返回是否成功"""
         job = self._scheduler.register_smart_cron(
             job_id=f"plugin_{self._plugin_id}_{job_id}",
             func=func,
-            name=self._plugin_name,
+            name=self._job_display_name(job_id, name),
             cron=cron,
             jobstore="plugin",
             **kwargs,
@@ -204,10 +207,14 @@ class PluginContext:
         self.error(f"定时任务注册失败: {job_id} (cron={cron})")
         return False
 
-    def schedule_interval(self, job_id: str, func, **kwargs) -> bool:
+    def schedule_interval(self, job_id: str, func, name: str | None = None, **kwargs) -> bool:
         """注册 interval 定时任务，返回是否成功"""
         job = self._scheduler.register_interval(
-            job_id=f"plugin_{self._plugin_id}_{job_id}", func=func, name=self._plugin_name, jobstore="plugin", **kwargs
+            job_id=f"plugin_{self._plugin_id}_{job_id}",
+            func=func,
+            name=self._job_display_name(job_id, name),
+            jobstore="plugin",
+            **kwargs,
         )
         if job:
             self.info(f"interval 任务已注册: {job_id}")
@@ -215,13 +222,13 @@ class PluginContext:
         self.error(f"interval 任务注册失败: {job_id}")
         return False
 
-    def schedule_date(self, job_id: str, func, run_date) -> bool:
+    def schedule_date(self, job_id: str, func, run_date, name: str | None = None) -> bool:
         """注册一次性日期任务，返回是否成功"""
         job = self._scheduler.register_date(
             job_id=f"plugin_{self._plugin_id}_{job_id}",
             func=func,
             run_date=run_date,
-            name=self._plugin_name,
+            name=self._job_display_name(job_id, name),
             jobstore="plugin",
         )
         if job:
