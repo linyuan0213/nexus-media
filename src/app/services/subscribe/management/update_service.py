@@ -227,7 +227,7 @@ class SubscribeUpdateService:
         download_setting: int | str | None = None,
         total_ep: int | None = None,
         current_ep: int | None = None,
-        state: str = SubscribeState.PENDING.value,
+        state: str | None = None,
         in_from: str | None = None,
         user_name: str | None = None,
         image: str | None = None,
@@ -265,6 +265,11 @@ class SubscribeUpdateService:
         repo = self._movie_repo if mtype == MediaType.MOVIE else self._tv_repo
         existing_rows = repo.get_all(rssid=int(rssid), user=user)
         existing = existing_rows[0] if existing_rows else None
+        effective_state = state or (
+            self._existing(existing, "STATE", "state", default=SubscribeState.PENDING.value)
+            if existing is not None
+            else SubscribeState.PENDING.value
+        )
         generic_kwargs = {
             "mtype": mtype,
             "rssid": int(rssid),
@@ -285,7 +290,7 @@ class SubscribeUpdateService:
             "download_setting": download_setting,
             "total_ep": total_ep,
             "current_ep": current_ep,
-            "state": state,
+            "state": effective_state,
             "rss_sites": rss_sites,
             "search_sites": search_sites,
             "user": user,
@@ -379,7 +384,7 @@ class SubscribeUpdateService:
                     current_ep=current_ep,
                     total=total,
                     lack=lack,
-                    state=state,
+                    state=effective_state,
                     desc=media_info.overview,
                     note=gen_rss_note(media_info),
                     keyword=keyword,
@@ -410,7 +415,7 @@ class SubscribeUpdateService:
                     filter_free=filter_free,
                     save_path=save_path,
                     download_setting=download_setting,
-                    state=state,
+                    state=effective_state,
                     desc=media_info.overview,
                     note=gen_rss_note(media_info),
                     keyword=keyword,
@@ -446,7 +451,7 @@ class SubscribeUpdateService:
                     filter_free=filter_free,
                     save_path=save_path,
                     download_setting=download_setting,
-                    state=state,
+                    state=effective_state,
                     keyword=keyword,
                     fuzzy_match=1,
                 )
@@ -473,7 +478,7 @@ class SubscribeUpdateService:
                     download_setting=download_setting,
                     total=0,
                     lack=0,
-                    state=state,
+                    state=effective_state,
                     keyword=keyword,
                     fuzzy_match=1,
                 )

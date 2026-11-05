@@ -260,7 +260,7 @@ class TestSubscribeUpdateService:
             movie_repo, MagicMock(), media_service, MagicMock(), MagicMock(), MagicMock(), web_utils
         )
 
-        code, _msg, _result = svc.update_rss_subscribe(mtype=MediaType.MOVIE, rssid=1, state="D")
+        code, _msg, _result = svc.update_rss_subscribe(mtype=MediaType.MOVIE, rssid=1)
 
         assert code == 0
         web_utils.get_mediainfo_from_id.assert_called_once_with(mtype=MediaType.MOVIE, mediaid="db:123")
@@ -268,6 +268,7 @@ class TestSubscribeUpdateService:
         args = movie_repo.update.call_args.kwargs
         assert args["name"] == "豆瓣新标题"
         assert args["year"] == "2025"
+        assert args["state"] == "R"
 
     def test_update_existing_movie_falls_back_when_tmdb_lookup_fails(self):
         """编辑已有订阅时 TMDB 查询失败不应导致保存失败，保留原身份更新."""
