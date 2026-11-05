@@ -166,7 +166,6 @@ class MediaConfig(BaseModel):
     ignored_paths: str = "Specials;Extras;Bonus.*;.*Scan;Menu.*;CDs"
     ignored_files: str = "SP\\d+"
     media_default_path: str = ""
-    default_rmt_mode: str = "link"
     tmdb_language: str = "zh"
     metadata_default_policy: str = "tmdb_primary"
     episode_mapping_enabled: bool = True
@@ -177,8 +176,6 @@ class PtConfig(BaseModel):
 
     search_auto: bool = False
     search_no_result_rss: bool = False
-    pt_check_interval: int = 3600
-    search_rss_interval: int = 6
     download_order: str = "seeder"
     ptrefresh_date_cron: str = "00:05"
     # 站点配置远程更新源（GitHub release API），留空使用内置默认地址
@@ -206,8 +203,6 @@ class LaboratoryConfig(BaseModel):
     """实验室功能配置"""
 
     search_keyword: bool = False
-    tmdb_cache_expire: bool = True
-    use_douban_titles: bool = True
     search_en_title: bool = True
     show_more_sites: bool = True
     ocr_server_host: str = ""

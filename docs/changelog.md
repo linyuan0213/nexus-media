@@ -50,6 +50,7 @@
 - 订阅搜索与 RSS 使用独立线程池，避免占满默认线程池。
 - 新增 subscribe.batch_workers（默认 3），站点配额低时降低并发，避免同一站点瞬时并发。
 - 系统设置页新增订阅监控配置（队列/RSS/主动搜索周期、每轮上限、并发数、对账间隔），后端提供默认值。
+- 移除已无代码使用的设置项：pt.pt_check_interval、pt.search_rss_interval、media.default_rmt_mode、laboratory.tmdb_cache_expire、laboratory.use_douban_titles。
 - 自动删种通知去除重复标题/emoji，企业微信链接改为纯文本；Web 消息图片避免被二次 library 代理。
 - 修复非洗版剧集在已下载但尚未转移时被重复下载：整季覆盖后清空缺集，显式空缺集不再被媒体库缺失集重新填充。
 - 编辑已有订阅时按订阅自身来源解析元数据：TMDB 订阅查 TMDB，豆瓣/插件订阅查对应 provider；来源不可用时保留原锚点/身份保存，不再误报 TMDB 查询失败。
