@@ -458,6 +458,46 @@ class TestSubscribeAddService:
             code, msg, result = svc.add_rss_subscribe(mtype=MediaType.MOVIE, name="Test", year="2024")
         assert code == 0
         movie_repo.insert.assert_called_once()
+        assert movie_repo.insert.call_args.kwargs["rss_sites"] == ["site1"]
+
+    def test_add_snapshots_visible_sites_when_no_defaults(self):
+        """新增订阅必须把当前可见站点写入数据库，而不是留空依赖运行时兜底."""
+        movie_repo = MagicMock()
+        movie_repo.insert.return_value = 0
+        media_service = MagicMock()
+        media_info = MagicMock()
+        media_info.provider_data = {"id": 1}
+        media_info.type = MediaType.MOVIE
+        media_info.title = "Test"
+        media_info.year = "2024"
+        media_info.tmdb_id = "123"
+        media_info.to_dict.return_value = {}
+        media_service.get_media_info.return_value = media_info
+        system_config = MagicMock()
+        system_config.get.return_value = {}
+        site_cache = MagicMock()
+        site_cache.get_site_names.return_value = ["M-Team"]
+        indexer_service = MagicMock()
+        indexer_service.get_user_indexer_names.return_value = ["M-Team", "观众"]
+        svc = SubscribeAddService(
+            movie_repo,
+            MagicMock(),
+            media_service,
+            MagicMock(),
+            MagicMock(),
+            system_config,
+            MagicMock(),
+            site_cache=site_cache,
+            indexer_service=indexer_service,
+        )
+
+        with patch("app.services.subscribe.management.add_service.gen_rss_note", return_value="{}"):
+            code, _msg, _result = svc.add_rss_subscribe(mtype=MediaType.MOVIE, name="Test", year="2024")
+
+        assert code == 0
+        kwargs = movie_repo.insert.call_args.kwargs
+        assert kwargs["rss_sites"] == ["M-Team"]
+        assert kwargs["search_sites"] == ["M-Team", "观众"]
 
     def test_add_movie_exists(self):
         movie_repo = MagicMock()

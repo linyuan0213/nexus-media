@@ -159,6 +159,8 @@ class SubscribeAddService:
         download_repo=None,
         transfer_history_manager=None,
         metadata_service=None,
+        site_cache=None,
+        indexer_service=None,
     ):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
@@ -170,6 +172,8 @@ class SubscribeAddService:
         self._download_repo = download_repo
         self._transfer_history_manager = transfer_history_manager
         self._metadata_service = metadata_service
+        self._site_cache = site_cache
+        self._indexer_service = indexer_service
 
     @property
     def default_subscribe_setting_tv(self) -> dict | None:
@@ -345,6 +349,9 @@ class SubscribeAddService:
                 default_free = default_rss_setting.get("free")
                 default_download_setting = default_rss_setting.get("download_setting")
                 default_over_edition = default_rss_setting.get("over_edition")
+                default_rss_sites = default_rss_setting.get("rss_sites")
+                default_search_sites = default_rss_setting.get("search_sites")
+                default_save_path = default_rss_setting.get("save_path")
                 if filter_restype is None and default_restype:
                     filter_restype = default_restype
                 if filter_pix is None and default_pix:
@@ -359,17 +366,35 @@ class SubscribeAddService:
                     filter_exclude = default_exclude
                 if filter_free is None and default_free is not None:
                     filter_free = bool(default_free)
-                if over_edition is None and default_over_edition:
-                    over_edition = 1 if default_over_edition == "1" else 0
-                if download_setting is None and default_download_setting:
+                if over_edition is None and default_over_edition is not None:
+                    over_edition = 1 if str(default_over_edition) == "1" else 0
+                if download_setting is None and default_download_setting is not None:
                     download_setting = (
                         int(default_download_setting)
                         if str(default_download_setting).replace("-", "").isdigit()
                         else None
                     )
-                # 站点留空表示"全部当前用户可见站点"：不再强制继承默认设置，
-                # 由搜索/RSS 执行时按用户可见站点兜底，避免"未配置即搜不到"
+                # 订阅创建时把默认站点/目录写入订阅自身，编辑时无需再依赖运行时兜底。
+                if not rss_sites and default_rss_sites:
+                    rss_sites = default_rss_sites
+                if not search_sites and default_search_sites:
+                    search_sites = default_search_sites
+                if not save_path and default_save_path:
+                    save_path = str(default_save_path)
 
+        # 未配置默认站点时，把当前可见站点固化为订阅快照，避免编辑时读不到。
+        site_cache = getattr(self, "_site_cache", None)
+        indexer_service = getattr(self, "_indexer_service", None)
+        if not rss_sites and site_cache is not None:
+            try:
+                rss_sites = site_cache.get_site_names(rss=True)
+            except Exception as exc:  # noqa: BLE001 - 站点快照失败不阻断订阅
+                log.warn(f"[Subscribe]读取订阅站点快照失败: {exc}")
+        if not search_sites and indexer_service is not None:
+            try:
+                search_sites = indexer_service.get_user_indexer_names()
+            except Exception as exc:  # noqa: BLE001
+                log.warn(f"[Subscribe]读取搜索站点快照失败: {exc}")
         rss_sites = rss_sites or []
         if isinstance(rss_sites, str):
             rss_sites = rss_sites.split(",")

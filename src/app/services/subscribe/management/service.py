@@ -100,6 +100,8 @@ class SubscribeService:
             self._download_repo,
             self._transfer_history_manager,
             metadata_service,
+            self._sites,
+            self._indexer_service,
         )
         self._finish_svc = SubscribeFinishService(
             self._movie_repo, self._tv_repo, self._history_repo, self._message, self._event_bus, self._download_repo
