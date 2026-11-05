@@ -43,6 +43,7 @@ from app.media.metadata.providers import register_builtin_providers
 from app.media.metadata.registry import MetadataRegistry
 from app.media.metadata.registry import registry as global_registry
 from app.services.identity_resolver import IdentityResolver
+from app.utils import StringUtils
 from app.utils.timeout import run_parallel_with_timeout, run_with_timeout
 
 # 详情抓取硬超时：必须大于正常浏览器导航（约 20-30s），但不能无限挂起
@@ -1264,6 +1265,128 @@ class MetadataService:
         data = snapshot.model_dump(mode="json")
         data.setdefault("extra", {})["douban.season"] = season
         return data
+
+    @staticmethod
+    def _episode_count_from_record(record: dict[str, Any] | None, season: int) -> int:
+        if not isinstance(record, dict):
+            return 0
+        seasons = record.get("seasons")
+        if isinstance(seasons, list):
+            for item in seasons:
+                if not isinstance(item, dict):
+                    continue
+                if int(item.get("season_number") or 0) != int(season):
+                    continue
+                count = item.get("episode_count")
+                if str(count or "").isdigit() and int(str(count)) > 0:
+                    return int(str(count))
+        raw_extra = record.get("extra")
+        extra: dict[str, Any] = raw_extra if isinstance(raw_extra, dict) else {}
+        for key in ("episodes_count", "total_episodes", "episode_count"):
+            value = record.get(key) or extra.get(key)
+            if str(value or "").isdigit() and int(str(value)) > 0:
+                return int(str(value))
+        for key, value in extra.items():
+            if str(key).endswith(".eps") or str(key).endswith(".episodes_count"):
+                if str(value or "").isdigit() and int(str(value)) > 0:
+                    return int(str(value))
+        return 0
+
+    def resolve_season_episode_count(
+        self,
+        *,
+        provider: str,
+        external_id: str,
+        title: str,
+        year: str | None = None,
+        media_type: MediaType = MediaType.TV,
+        season: int = 1,
+        content_profile: str = "default",
+        allow_private: bool = False,
+        permissions: set[str] | None = None,
+    ) -> int:
+        """按来源优先级从可用 provider 解析指定季集数，不在 API 层硬编码来源."""
+        self._ensure_builtin()
+        source_record = None
+        try:
+            source_record = self.lookup(
+                provider,
+                external_id,
+                media_type=media_type,
+                allow_private=allow_private,
+                permissions=permissions,
+            )
+        except Exception:  # noqa: BLE001 - 来源详情失败继续用其他 provider
+            source_record = None
+        count = self._episode_count_from_record(source_record, season)
+        if count:
+            return count
+
+        query = str(title or "").strip()
+        if not query:
+            return 0
+        candidates = self._registry.list_providers(
+            capability=ProviderCapability.SEARCH,
+            content_profile=content_profile if content_profile != "default" else None,
+            media_type=media_type,
+        )
+        candidates.sort(key=lambda item: int(getattr(item.descriptor, "default_priority", 100)))
+        for item in candidates:
+            key = str(item.descriptor.provider_key)
+            if key == provider:
+                continue
+            if item.descriptor.visibility == "private":
+                required = item.descriptor.required_permission or "metadata:private:view"
+                if not allow_private or (
+                    permissions is not None and "*" not in permissions and required not in permissions
+                ):
+                    continue
+            hits = []
+            try:
+                hits = run_with_timeout(
+                    lambda key=key: self.search(
+                        query=query,
+                        provider=key,
+                        media_type=media_type,
+                        content_profile=content_profile,
+                        limit=5,
+                        allow_private=allow_private,
+                        permissions=permissions,
+                        wait_timeout=5,
+                    ),
+                    6.0,
+                    name=f"episode-count-search-{key}",
+                )
+            except Exception:  # noqa: BLE001
+                continue
+            for hit in hits or []:
+                hit_title = str(hit.get("title") or "")
+                parsed_hit = StringUtils.get_keyword_from_string(hit_title) if hit_title else None
+                hit_season = parsed_hit[2] if parsed_hit else None
+                if season > 1 and hit_season and int(hit_season) != int(season):
+                    continue
+                ref = hit.get("ref") or {}
+                external = str(ref.get("external_id") or "")
+                if not external:
+                    continue
+                try:
+                    record = run_with_timeout(
+                        lambda external=external, key=key: self.lookup(
+                            key,
+                            external,
+                            media_type=media_type,
+                            allow_private=allow_private,
+                            permissions=permissions,
+                        ),
+                        6.0,
+                        name=f"episode-count-lookup-{key}",
+                    )
+                except Exception:  # noqa: BLE001
+                    continue
+                count = self._episode_count_from_record(record, season)
+                if count:
+                    return count
+        return 0
 
     def similar_for_ref(
         self,
