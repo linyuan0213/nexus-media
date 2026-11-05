@@ -55,7 +55,7 @@ class SubscribeUpdateService:
             or (profile and profile != "default")
             or (source_provider and source_provider != "tmdb")
             or (metadata_ref and not metadata_ref.startswith("tmdb:"))
-            or (not tmdbid and (anchor_provider or source_provider or metadata_ref))
+            or (not tmdbid)
         )
 
     @staticmethod
@@ -176,6 +176,33 @@ class SubscribeUpdateService:
         media_info.keyword = values["keyword"]
         return code, "更新成功" if code == 0 else "更新失败", media_info
 
+    def _resolve_existing_source(
+        self,
+        row,
+        mtype,
+        mediaid: str | None,
+        metadata_ref: str | None,
+        provider: str | None,
+    ):
+        """按订阅自身来源解析元数据：TMDB 走 TMDB，豆瓣/插件走各自 provider."""
+        ref = ""
+        if mediaid and ":" in str(mediaid):
+            ref = str(mediaid)
+        elif metadata_ref and ":" in str(metadata_ref):
+            ref = str(metadata_ref)
+        else:
+            source_provider = str(provider or self._text(row, "PROVIDER") or "").strip().lower()
+            external = self._text(row, "ANCHOR_EXTERNAL_ID")
+            if source_provider and external:
+                ref = f"{source_provider}:{external}"
+        if not ref or ref.lower().startswith("tmdb:"):
+            return None
+        try:
+            return self._web_utils.get_mediainfo_from_id(mtype=mtype, mediaid=ref)
+        except Exception as exc:  # noqa: BLE001 - 元数据源失败时仍允许保存
+            log.warn(f"[Subscribe]按来源 {ref} 解析元数据失败，使用现有字段保存: {exc}")
+            return None
+
     def update_rss_subscribe(
         self,
         mtype: Any,
@@ -269,6 +296,13 @@ class SubscribeUpdateService:
             "naming_profile": naming_profile,
         }
         if existing is not None and self._is_generic_subscription(existing):
+            resolved = self._resolve_existing_source(existing, mtype, mediaid, metadata_ref, provider)
+            if resolved is not None:
+                # 用户显式填写的字段优先，其余用来源自身的最新元数据补齐。
+                generic_kwargs["name"] = name or resolved.title
+                generic_kwargs["year"] = year or resolved.year
+                if not image:
+                    generic_kwargs["image"] = resolved.get_poster_image() or generic_kwargs["image"]
             return self._update_generic(repo, existing, **generic_kwargs)
 
         media_info = None

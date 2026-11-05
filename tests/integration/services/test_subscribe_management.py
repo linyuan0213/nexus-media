@@ -202,6 +202,7 @@ class TestSubscribeUpdateService:
     def test_update_movie_success(self):
         movie_repo = MagicMock()
         movie_repo.update.return_value = 0
+        movie_repo.get_all.return_value = []
         media_service = MagicMock()
         media_info = MagicMock()
         media_info.provider_data = {"id": 1}
@@ -225,6 +226,48 @@ class TestSubscribeUpdateService:
         args = movie_repo.update.call_args
         assert args.kwargs["filter_rule"] == 0
         assert args.kwargs["download_setting"] == -1
+
+    def test_update_douban_subscription_resolves_douban_not_tmdb(self):
+        """多元数据订阅按自身来源解析：豆瓣订阅编辑不应查询 TMDB."""
+        from types import SimpleNamespace
+
+        movie_repo = MagicMock()
+        movie_repo.update.return_value = 0
+        movie_repo.get_all.return_value = [
+            SimpleNamespace(
+                NAME="旧标题",
+                YEAR="2024",
+                IMAGE="",
+                TMDBID="",
+                ANCHOR_PROVIDER="db",
+                ANCHOR_EXTERNAL_ID="123",
+                CONTENT_PROFILE="default",
+                PROVIDER="db",
+                METADATA_REF="db:123",
+                KEYWORD="",
+                IDENTITY_ID="id-db",
+                STATE="R",
+            )
+        ]
+        media_service = MagicMock()
+        web_utils = MagicMock()
+        resolved = MagicMock()
+        resolved.title = "豆瓣新标题"
+        resolved.year = "2025"
+        resolved.get_poster_image.return_value = "https://example.com/db.jpg"
+        web_utils.get_mediainfo_from_id.return_value = resolved
+        svc = SubscribeUpdateService(
+            movie_repo, MagicMock(), media_service, MagicMock(), MagicMock(), MagicMock(), web_utils
+        )
+
+        code, _msg, _result = svc.update_rss_subscribe(mtype=MediaType.MOVIE, rssid=1, state="D")
+
+        assert code == 0
+        web_utils.get_mediainfo_from_id.assert_called_once_with(mtype=MediaType.MOVIE, mediaid="db:123")
+        media_service.get_media_info.assert_not_called()
+        args = movie_repo.update.call_args.kwargs
+        assert args["name"] == "豆瓣新标题"
+        assert args["year"] == "2025"
 
     def test_update_existing_movie_falls_back_when_tmdb_lookup_fails(self):
         """编辑已有订阅时 TMDB 查询失败不应导致保存失败，保留原身份更新."""
@@ -267,7 +310,21 @@ class TestSubscribeUpdateService:
         assert args["anchor_provider"] == "tmdb"
 
     def test_update_tv_no_total_episode(self):
+        from types import SimpleNamespace
+
         tv_repo = MagicMock()
+        tv_repo.get_all.return_value = [
+            SimpleNamespace(
+                NAME="Test",
+                YEAR="2024",
+                TMDBID="999",
+                ANCHOR_PROVIDER="tmdb",
+                ANCHOR_EXTERNAL_ID="999",
+                CONTENT_PROFILE="default",
+                PROVIDER="tmdb",
+                METADATA_REF="tmdb:999",
+            )
+        ]
         media_service = MagicMock()
         media_info = MagicMock()
         media_info.provider_data = {"id": 1}
