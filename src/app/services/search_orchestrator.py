@@ -399,9 +399,15 @@ class SearchOrchestrator:
             search_season = media_info.get_season_list() if media_info.begin_season is not None else None
             search_episode = media_info.get_episode_list()
             if ctx.search_type == SearchType.WEB:
-                # 手动资源搜索按整部剧召回；用户显式指定季/集时才过滤。
+                # 手动资源搜索：标题里的“第二季/S02”作为匹配季，母标题用于召回；
+                # 没有季标记时才按整部剧召回。
                 if not (ctx.filter_args or {}).get("season"):
-                    search_season = None
+                    title_season = None
+                    if media_info.type in (MediaType.TV, MediaType.ANIME):
+                        _, _, title_season, _, _, _ = StringUtils.get_keyword_from_string(
+                            str(media_info.title or media_info.cn_name or "")
+                        )
+                    search_season = [int(title_season)] if title_season else None
                 if not (ctx.filter_args or {}).get("episode"):
                     search_episode = None
             if search_episode and not search_season:

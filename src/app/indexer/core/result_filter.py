@@ -394,6 +394,19 @@ class ResultFilter:
         return False
 
     @staticmethod
+    def _is_second_season_title(name: str) -> bool:
+        """识别标题中的第二季标记；豆瓣单季条目常把“2”写在标题里而非 S02."""
+        text = str(name or "")
+        return bool(
+            re.search(
+                r"(?:第\s*[二2]\s*季|\bS02\b|\bSeason[ ._-]?2\b|\bPart[ ._-]?2\b|\bII\b|"
+                r"[\u4e00-\u9fffA-Za-z][ ._-]2(?:[ ._-]|$))",
+                text,
+                re.IGNORECASE,
+            )
+        )
+
+    @staticmethod
     def _title_specific_without_year(torrent_name: str, match_media) -> bool:
         """无年份时判断标题是否足够具体，避免只命中系列前缀.
 
@@ -1002,6 +1015,14 @@ class ResultFilter:
                     )
                     continue
 
+            filter_seasons = filter_args.get("season") or []
+            if (
+                2 in filter_seasons
+                and str(getattr(media_info, "begin_season", "")) == "1"
+                and self._is_second_season_title(torrent_name)
+            ):
+                # 解析器把“Edgerunners 2 / 第二季”识别成 S01，按标题标记归一到 S02
+                media_info.begin_season = 2
             sey_match = self._engine.is_torrent_match_sey(
                 media_info, filter_args.get("season"), filter_args.get("episode"), filter_args.get("year")
             )

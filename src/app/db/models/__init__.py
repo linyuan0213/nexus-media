@@ -88,6 +88,7 @@ from app.db.models.media_identity import (
 
 # 媒体同步模型
 from app.db.models.media_library_route import MediaLibraryRoute
+from app.db.models.media_series import MediaSeries, MediaSeriesAlias, MediaSeriesSeason
 from app.db.models.media_sync import (
     MEDIASYNCITEMS,
     MEDIASYNCSTATISTIC,

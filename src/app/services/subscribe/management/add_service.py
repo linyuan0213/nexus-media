@@ -18,6 +18,7 @@ from app.media import meta_info
 from app.media.display_image_policy import unwrap_display_image_url
 from app.media.metadata import ProviderRef
 from app.media.metadata.registry import registry as metadata_registry
+from app.services.series_service import SeriesService
 from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.management.utils import gen_rss_note
 from app.services.web.utils import WebUtils
@@ -161,6 +162,7 @@ class SubscribeAddService:
         metadata_service=None,
         site_cache=None,
         indexer_service=None,
+        series_service=None,
     ):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
@@ -174,6 +176,7 @@ class SubscribeAddService:
         self._metadata_service = metadata_service
         self._site_cache = site_cache
         self._indexer_service = indexer_service
+        self._series_service = series_service or SeriesService()
 
     @property
     def default_subscribe_setting_tv(self) -> dict | None:
@@ -337,6 +340,8 @@ class SubscribeAddService:
             image = unwrap_display_image_url(image)
             image = _preferred_profile_poster(image, content_profile, mediaid, mtype)
         year = int(year) if str(year).isdigit() else ""
+        requested_season = season
+        series_key = None
 
         # 新增订阅且未显式传值时，应用默认订阅设置
         if not rssid:
@@ -546,6 +551,39 @@ class SubscribeAddService:
                     return 3, f"第{season}季获取剧集数失败，请确认该季是否存在", media_info
                 media_info.begin_season = _season_number(season, 0)
                 media_info.total_episodes = total_episode
+                series_key = None
+                if mtype in (MediaType.TV, MediaType.ANIME):
+                    series_provider = str(
+                        getattr(media_info, "anchor_provider", "")
+                        or getattr(media_info, "provider", "")
+                        or provider
+                        or ""
+                    )
+                    series_external = str(getattr(media_info, "anchor_external_id", "") or "")
+                    if not series_external:
+                        ref = _split_provider_ref(mediaid or metadata_ref)
+                        if ref:
+                            series_provider, series_external = ref
+                    if not series_external and media_info.tmdb_id:
+                        series_provider, series_external = "tmdb", str(media_info.tmdb_id)
+                    series_service = getattr(self, "_series_service", None)
+                    if series_provider and series_external and series_service is not None:
+                        try:
+                            resolution = series_service.resolve(
+                                provider=series_provider,
+                                external_id=str(series_external),
+                                title=str(media_info.title or name or ""),
+                                year=str(media_info.year or year or "") or None,
+                                season_number=requested_season,
+                                scope=str(content_profile or "default"),
+                                total_episodes=media_info.total_episodes,
+                            )
+                        except Exception as exc:  # noqa: BLE001 - 规范剧集失败不阻断订阅
+                            log.warn(f"[Subscribe]规范剧集解析失败，继续使用原锚点: {exc}")
+                        else:
+                            series_key = resolution.series_key
+                            media_info.begin_season = resolution.season_number
+                            setattr(media_info, "series_key", resolution.series_key)
                 if total_ep:
                     total = total_ep
                 else:
@@ -638,6 +676,7 @@ class SubscribeAddService:
                     media_info=media_info,
                     total=total,
                     lack=lack,
+                    series_key=series_key,
                     **identity_fields,
                     state=state,
                     rss_sites=rss_sites,
@@ -759,6 +798,7 @@ class SubscribeAddService:
                     media_info=media_info,
                     total=0,
                     lack=0,
+                    series_key=series_key,
                     **identity_fields,
                     state=SubscribeState.RUNNING.value,
                     rss_sites=rss_sites,

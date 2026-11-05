@@ -165,6 +165,7 @@ class SubscribeTvs(Base):
     NOTE: Mapped[str] = mapped_column(Text, nullable=True)
     ADD_DATE: Mapped[str | None] = mapped_column(String(255), nullable=True)
     IDENTITY_ID: Mapped[str | None] = mapped_column(String(26), nullable=True)
+    SERIES_KEY: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     ANCHOR_PROVIDER: Mapped[str | None] = mapped_column(String(64), nullable=True)
     ANCHOR_EXTERNAL_ID: Mapped[str | None] = mapped_column(String(255), nullable=True)
     CONTENT_PROFILE: Mapped[str | None] = mapped_column(String(64), nullable=True)

@@ -373,3 +373,22 @@ class TestTitleSpecificityRejectsDifferentWorks:
 
     def test_rejects_sequel_number(self):
         assert not self._check("RESIDENT EVIL 2 -CODEX")
+
+
+class TestSecondSeasonMarker:
+    def _check(self, name):
+        from app.indexer.core.result_filter import ResultFilter
+
+        return ResultFilter._is_second_season_title(name)
+
+    def test_edgerunners_2_marker(self):
+        assert self._check("Cyberpunk Edgerunners 2 - 05 [WebRip 1080p]")
+
+    def test_chinese_second_season(self):
+        assert self._check("赛博朋克：边缘行者 第二季 第01集")
+
+    def test_s02_marker(self):
+        assert self._check("Cyberpunk Edgerunners S02 2026 1080p")
+
+    def test_plain_audio_not_marker(self):
+        assert not self._check("Movie 2023 1080p DDP 2Audio")
