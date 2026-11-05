@@ -191,7 +191,7 @@ class Indexer:
         registry = IndexerProviderRegistry()
         priority_map = self._site_config_repo.get_priority_map()
         site_priorities: dict[str, int] = {}
-        for site in self._site_cache.get_sites():
+        for site in self._site_cache.get_sites(public=True):
             site_name = str(site.get("name") or "")
             site_pri = site.get("pri")
             if site_name and site_pri is not None:
