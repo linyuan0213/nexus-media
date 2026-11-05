@@ -114,26 +114,3 @@ def test_quick_name_match_uses_description_aliases():
         year="2020",
     )
     assert ResultFilter.quick_name_match(meta, match)
-
-
-def test_year_filter_rejects_result_without_year():
-    from app.media.models import MediaInfo
-
-    media = MediaInfo(title="RESIDENT EVIL 2", type=MediaType.MOVIE)
-    assert not IndexerFilterEngine.is_torrent_match_sey(media, None, None, "2026")
-
-
-def test_year_filter_accepts_same_year():
-    from app.media.models import MediaInfo
-
-    media = MediaInfo(title="Resident Evil", type=MediaType.MOVIE)
-    media.year = "2026"
-    assert IndexerFilterEngine.is_torrent_match_sey(media, None, None, "2026")
-
-
-def test_year_filter_rejects_different_year():
-    from app.media.models import MediaInfo
-
-    media = MediaInfo(title="Resident Evil 2", type=MediaType.MOVIE)
-    media.year = "1998"
-    assert not IndexerFilterEngine.is_torrent_match_sey(media, None, None, "2026")

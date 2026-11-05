@@ -285,3 +285,33 @@ def test_multilingual_torrent_survives_rule_and_identity_pipeline(title):
     assert len(result.results) == 1
     assert result.results[0].tmdb_id == 106449
     assert result.results[0].provider_data["name"] == "凡人修仙传"
+
+
+class TestTitleSpecificityWithoutYear:
+    def _match(self, **kwargs):
+        from types import SimpleNamespace
+
+        base = {
+            "title": "生化危机：爆发夜",
+            "cn_name": "生化危机：爆发夜",
+            "en_name": "Resident Evil",
+            "original_title": "Resident Evil",
+        }
+        base.update(kwargs)
+        return SimpleNamespace(**base)
+
+    def test_rejects_franchise_prefix_with_sequel_number(self):
+        from app.indexer.core.result_filter import ResultFilter
+
+        assert not ResultFilter._title_specific_without_year("RESIDENT EVIL 2 -CODEX", self._match())
+
+    def test_accepts_specific_subtitle_without_year(self):
+        from app.indexer.core.result_filter import ResultFilter
+
+        match = self._match(original_title="Resident Evil The Umbrella Chronicles")
+        assert ResultFilter._title_specific_without_year("Resident.Evil.The.Umbrella.Chronicles.2160p.WEB-DL", match)
+
+    def test_accepts_chinese_title_without_year(self):
+        from app.indexer.core.result_filter import ResultFilter
+
+        assert ResultFilter._title_specific_without_year("生化危机：爆发夜 2160p", self._match())

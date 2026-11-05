@@ -380,6 +380,38 @@ class ResultFilter:
         return False
 
     @staticmethod
+    def _title_specific_without_year(torrent_name: str, match_media) -> bool:
+        """无年份时判断标题是否足够具体，避免只命中系列前缀.
+
+        允许：Resident Evil The Umbrella Chronicles（同作品完整标题）
+        拒绝：RESIDENT EVIL 2 -CODEX（只命中 Resident Evil，且多出续集数字）
+        """
+        text = str(torrent_name or "")
+        compact = "".join(ch for ch in text.casefold() if ch.isalnum())
+        tokens = re.findall(r"[a-z]+|\d+", text.casefold())
+        for attr in ("original_title", "en_name", "title", "cn_name"):
+            candidate = str(getattr(match_media, attr, "") or "").strip()
+            if not candidate:
+                continue
+            cand_compact = "".join(ch for ch in candidate.casefold() if ch.isalnum())
+            if not cand_compact:
+                continue
+            if any("\u4e00" <= ch <= "\u9fff" for ch in candidate):
+                if cand_compact in compact:
+                    return True
+                continue
+            cand_tokens = re.findall(r"[a-z]+|\d+", candidate.casefold())
+            if not cand_tokens:
+                continue
+            for index in range(len(tokens) - len(cand_tokens) + 1):
+                if tokens[index : index + len(cand_tokens)] != cand_tokens:
+                    continue
+                rest = tokens[:index] + tokens[index + len(cand_tokens) :]
+                if not any(token.isdigit() and 1 <= int(token) <= 9 for token in rest):
+                    return True
+        return False
+
+    @staticmethod
     def _type_compatible(a, b):
         if a == b:
             return True
@@ -485,22 +517,8 @@ class ResultFilter:
                         p_norm = str(StringUtils.handler_special_chars(phrase)).upper().strip()
                         m_norm = str(StringUtils.handler_special_chars(match_media.cn_name or "")).upper().strip()
                         t_norm = str(StringUtils.handler_special_chars(match_media.title or "")).upper().strip()
-                        matched_cn = bool(
-                            m_norm
-                            and (
-                                p_norm == m_norm
-                                or p_norm in m_norm
-                                or m_norm in p_norm
-                            )
-                        )
-                        matched_title = bool(
-                            t_norm
-                            and (
-                                p_norm == t_norm
-                                or p_norm in t_norm
-                                or t_norm in p_norm
-                            )
-                        )
+                        matched_cn = bool(m_norm and (p_norm == m_norm or p_norm in m_norm or m_norm in p_norm))
+                        matched_title = bool(t_norm and (p_norm == t_norm or p_norm in t_norm or t_norm in p_norm))
                         if p_norm and (matched_cn or matched_title):
                             _, cleaned, _, _, _, _ = StringUtils.get_keyword_from_string(phrase)
                             # 剥除字幕/配音标签前缀（如 "中字攻壳机动队" → "攻壳机动队"）
@@ -820,12 +838,18 @@ class ResultFilter:
                         continue
                 elif self._use_target_matcher():
                     # ADR-014 P3：TargetMatcher 统一判等（ID 判等 + edition 距离，可解释）
+                    if match_media is None:
+                        stats.index_match_fail += 1
+                        continue
                     result = get_target_matcher().match(media_info, match_media)
                     if not result.matched:
                         log.info(f"[ResultFilter]{torrent_name} ({cache_key}) {result.reason}")
                         stats.index_match_fail += 1
                         continue
                     media_info = self._media.merge_media_info(media_info, match_media)
+                elif match_media is None:
+                    stats.index_match_fail += 1
+                    continue
                 elif str(media_info.tmdb_id) != str(match_media.tmdb_id):
                     media_type_str = media_info.type.value if media_info.type else "Unknown"
                     match_type_str = match_media.type.value if match_media.type else "Unknown"
@@ -843,6 +867,17 @@ class ResultFilter:
             if meta_info.org_string:
                 media_info.org_string = meta_info.org_string
 
+            if (
+                filter_args.get("type") == MediaType.MOVIE
+                and match_media is not None
+                and str(getattr(match_media, "year", "") or "").isdigit()
+                and not str(media_info.year).isdigit()
+                and not self._title_specific_without_year(torrent_name, match_media)
+            ):
+                log.info(f"[ResultFilter]{torrent_name} 无年份且标题只命中系列前缀，不匹配 {match_media.year} 年的电影")
+                stats.index_rule_fail += 1
+                continue
+
             if filter_args.get("type"):
                 if (filter_args.get("type") == MediaType.TV and media_info.type == MediaType.MOVIE) or (
                     filter_args.get("type") == MediaType.MOVIE and media_info.type == MediaType.TV
@@ -856,7 +891,7 @@ class ResultFilter:
                     continue
 
             display_name = cache_key if not cand.skip_tmdb else torrent_name
-            if match_media.over_edition:
+            if match_media is not None and match_media.over_edition:
                 if media_info.type != MediaType.MOVIE and media_info.get_episode_list():
                     log.info(
                         f"[ResultFilter]"

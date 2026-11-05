@@ -289,12 +289,8 @@ class IndexerFilterEngine:
                 e_num = [e_num]
             if not set(e_num).issuperset(set(media_info.get_episode_list())):
                 return False
-        # 显式指定年份时必须能识别出年份：无年份的旧作/游戏重制包不能混入。
         # 年份允许 ±1 年偏差（如订阅 S1 2025，匹配 S2 2026 的种子）
-        if year_str:
-            if getattr(media_info, "type", None) == MediaType.MOVIE and not str(media_info.year).isdigit():
+        if year_str and str(media_info.year).isdigit() and str(year_str).isdigit():
+            if abs(int(media_info.year) - int(year_str)) > 1:
                 return False
-            if str(media_info.year).isdigit() and str(year_str).isdigit():
-                if abs(int(media_info.year) - int(year_str)) > 1:
-                    return False
         return True
