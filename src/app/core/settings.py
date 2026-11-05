@@ -191,6 +191,9 @@ class SubscribeConfig(BaseModel):
     queue_interval: int = 300
     rss_interval: int = 1800
     search_interval: int = 6
+    batch_limit: int = 20
+    batch_workers: int = 3
+    reconcile_interval: int = 900
 
 
 class SecurityConfig(BaseModel):
