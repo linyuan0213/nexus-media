@@ -152,6 +152,14 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
             requested_type = MediaType.from_string(requested_type)
         if requested_type:
             filter_args["type"] = requested_type
+        if (
+            requested_type == MediaType.MOVIE
+            and match_media is not None
+            and str(getattr(match_media, "year", "") or "").isdigit()
+        ):
+            # 电影搜索用身份年份收敛同系列的不同作品，避免“生化危机2”混进 2026 新片。
+            if not str(filter_args.get("year") or "").strip():
+                filter_args["year"] = str(match_media.year)
 
         # 探索/订阅来源：站点优先级 = 订阅默认设置 → 页面选择的搜索站点 → 全部站点
         site_fallback = filter_args.pop("site_fallback", None)
