@@ -27,9 +27,7 @@ class LifecycleRepository(BaseRepository):
     ) -> bool:
         """幂等写入事件并更新当前快照；EVENT_KEY 已存在时返回 False."""
         with self.session() as db:
-            exists = (
-                db.query(MediaLifecycleEvent).filter(MediaLifecycleEvent.EVENT_KEY == event.EVENT_KEY).first()
-            )
+            exists = db.query(MediaLifecycleEvent).filter(MediaLifecycleEvent.EVENT_KEY == event.EVENT_KEY).first()
             if exists is not None:
                 if update_snapshot:
                     # 重复事件必须按首次发生时间修复快照；否则重启后的旧事件
@@ -298,10 +296,11 @@ class LifecycleRepository(BaseRepository):
                     if key not in activity or occurred > activity[key]:
                         activity[key] = occurred
             subscription_map = _subscription_map(db, identities)
+            active_identities = _active_subscription_identities(db, identities)
         grouped = _group_lifecycle_rows(rows)
         for item in grouped:
             item["ACTIVITY_AT"] = activity.get(str(item.get("IDENTITY_ID")), datetime.min)
-        _apply_subscription_state(grouped, subscription_map)
+        _apply_subscription_state(grouped, subscription_map, active_identities)
         existing = {str(item.get("IDENTITY_ID") or "") for item in grouped}
         synthetic = _active_subscription_items(db, user, existing)
         if keyword:
@@ -362,7 +361,11 @@ class LifecycleRepository(BaseRepository):
             grouped = _group_lifecycle_rows(rows)
             if not grouped:
                 return None
-            _apply_subscription_state(grouped, _subscription_map(db, [identity_id]))
+            _apply_subscription_state(
+                grouped,
+                _subscription_map(db, [identity_id]),
+                _active_subscription_identities(db, [identity_id]),
+            )
             return grouped[0]
 
     def resolve_identity_by_anchor(self, provider: str | None, external_id: str | None) -> str | None:
@@ -482,8 +485,7 @@ class LifecycleRepository(BaseRepository):
                         "state": row.STATE,
                         "name": row.NAME,
                         "year": getattr(row, "YEAR", None),
-                        "anchor_provider": getattr(row, "ANCHOR_PROVIDER", None)
-                        or getattr(row, "PROVIDER", None),
+                        "anchor_provider": getattr(row, "ANCHOR_PROVIDER", None) or getattr(row, "PROVIDER", None),
                         "content_profile": getattr(row, "CONTENT_PROFILE", None),
                         "user_id": getattr(row, "USER_ID", None),
                     }
@@ -498,7 +500,11 @@ class LifecycleRepository(BaseRepository):
             rows = query.all()
             identities = list({str(row.IDENTITY_ID) for row in rows})
             grouped = _group_lifecycle_rows(rows)
-            _apply_subscription_state(grouped, _subscription_map(db, identities))
+            _apply_subscription_state(
+                grouped,
+                _subscription_map(db, identities),
+                _active_subscription_identities(db, identities),
+            )
             existing = {str(item.get("IDENTITY_ID") or "") for item in grouped}
             grouped.extend(_active_subscription_items(db, user, existing))
         by_status: dict[str, int] = {}
@@ -556,8 +562,7 @@ def _active_subscription_items(db, user, existing: set[str]) -> list[dict[str, A
                     "RUN_ID": None,
                     "TRACE_ID": None,
                     "PROGRESS": round(completed * 100 / total) if total else 0,
-                    "SOURCE_PROVIDER": getattr(row, "ANCHOR_PROVIDER", None)
-                    or getattr(row, "PROVIDER", None),
+                    "SOURCE_PROVIDER": getattr(row, "ANCHOR_PROVIDER", None) or getattr(row, "PROVIDER", None),
                     "CONTENT_PROFILE": profile,
                     "USER_ID": getattr(row, "USER_ID", None),
                     "STAGE_STARTED_AT": now,
@@ -574,6 +579,24 @@ def _active_subscription_items(db, user, existing: set[str]) -> list[dict[str, A
                 }
             )
     return result
+
+
+def _active_subscription_identities(db, identities: list[str]) -> set[str]:
+    """当前仍存在的订阅身份（含电影/剧集），用于识别已取消订阅."""
+    if not identities:
+        return set()
+    active: set[str] = set()
+    for model in (SubscribeTvs, SubscribeMovies):
+        rows = (
+            db.query(model.IDENTITY_ID)
+            .filter(
+                model.IDENTITY_ID.in_(identities),
+                model.IDENTITY_ID.isnot(None),
+            )
+            .all()
+        )
+        active.update(str(row[0]) for row in rows if row[0])
+    return active
 
 
 def _subscription_map(db, identities: list[str]) -> dict[str, tuple[int, str, int]]:
@@ -608,11 +631,29 @@ def _subscription_map(db, identities: list[str]) -> dict[str, tuple[int, str, in
     return result
 
 
-def _apply_subscription_state(grouped: list[dict[str, Any]], subscription_map: dict[str, tuple[int, str, int]]) -> None:
+def _apply_subscription_state(
+    grouped: list[dict[str, Any]],
+    subscription_map: dict[str, tuple[int, str, int]],
+    active_identities: set[str] | None = None,
+) -> None:
     """用订阅总集数约束整季状态，避免只统计已产生生命周期记录的分集。"""
+    active_identities = active_identities or set()
     for item in grouped:
-        sub = subscription_map.get(str(item.get("IDENTITY_ID")))
+        identity = str(item.get("IDENTITY_ID") or "")
+        sub = subscription_map.get(identity)
         if not sub:
+            # 订阅已取消/删除但生命周期仍停在订阅中：投影为已取消，不保留“进行中”假象。
+            if (
+                identity not in active_identities
+                and str(item.get("STAGE") or "") in {LifecycleStage.SUBSCRIBED.value, LifecycleStage.SEARCHING.value}
+                and str(item.get("STATUS") or "")
+                in {
+                    LifecycleStatus.QUEUED.value,
+                    LifecycleStatus.RUNNING.value,
+                    LifecycleStatus.RETRYING.value,
+                }
+            ):
+                item["STATUS"] = LifecycleStatus.CANCELLED.value
             continue
         total_ep, sub_state, subscribed_episodes = sub
         completed = int(item.get("COMPLETED_EPISODES") or 0)

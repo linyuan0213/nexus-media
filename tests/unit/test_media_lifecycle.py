@@ -367,6 +367,43 @@ def test_duplicate_background_event_does_not_restart_library_stage():
     assert current.LAST_EVENT_AT == library_at
 
 
+def test_grouped_cancelled_subscription_projects_cancelled_status():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    projector.record(
+        identity_id="identity-cancelled",
+        stage=LifecycleStage.SUBSCRIBED,
+        status=LifecycleStatus.RUNNING,
+        event_type="search.started",
+        title="Cancelled Demo",
+        media_type="tv",
+        season=2,
+        event_key="search-cancelled",
+    )
+
+    rows, total = repo.list_grouped(pagenum=10)
+    assert total == 1
+    assert rows[0]["STAGE"] == LifecycleStage.SUBSCRIBED.value
+    assert rows[0]["STATUS"] == LifecycleStatus.CANCELLED.value
+
+    with repo.session() as db:
+        db.add(
+            SubscribeTvs(
+                NAME="Cancelled Demo",
+                SEASON="S02",
+                TOTAL_EP=12,
+                CURRENT_EP=0,
+                STATE="S",
+                IDENTITY_ID="identity-cancelled",
+            )
+        )
+        db.commit()
+
+    rows, total = repo.list_grouped(pagenum=10)
+    assert total == 1
+    assert rows[0]["STATUS"] == LifecycleStatus.RUNNING.value
+
+
 def test_grouped_stage_uses_furthest_episode():
     repo = LifecycleRepository()
     projector = LifecycleProjector(repo)
