@@ -152,6 +152,9 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
             requested_type = MediaType.from_string(requested_type)
         if requested_type:
             filter_args["type"] = requested_type
+            if match_media is not None and match_media.type != requested_type:
+                # 锚点详情缺媒体类型时可能默认成 TV，以本次搜索显式类型为准。
+                match_media.type = requested_type
         if (
             requested_type == MediaType.MOVIE
             and match_media is not None

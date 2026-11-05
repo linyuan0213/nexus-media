@@ -5,6 +5,7 @@
 所有结果按 session_id 隔离存储，新搜索覆盖旧结果。
 """
 
+import re
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from typing import Any
@@ -203,14 +204,23 @@ class SearchOrchestrator:
         has_cjk = any("\u4e00" <= char <= "\u9fff" for char in title)
         info.cn_name = title if has_cjk else None
         aliases = [str(item).strip() for item in (record.get("aliases") or []) if str(item).strip()]
-        latin_alias = next((item for item in aliases if any("a" <= ch.lower() <= "z" for ch in item)), "")
+        original_title = str(record.get("original_title") or "").strip()
+        latin_aliases = [item for item in aliases if any("a" <= ch.lower() <= "z" for ch in item)]
+        original_is_latin = bool(original_title) and not any("\u4e00" <= ch <= "\u9fff" for ch in original_title)
+        # 优先 official original_title，别名里的 "Resident Evil 0" 只是地区/暂定名
+        latin_alias = (
+            original_title
+            if original_is_latin
+            else next((item for item in latin_aliases if not re.search(r"\s0$", item)), "")
+        )
         info.en_name = None if has_cjk else title
         if not info.en_name and latin_alias:
             info.en_name = latin_alias
         info.aliases = aliases
-        info.original_title = str(record.get("original_title") or title)
+        info.original_title = original_title or title
         info.original_language = str(record.get("original_language") or "")
-        info.year = str(record.get("year") or "")
+        raw_year = str(record.get("year") or "").strip()
+        info.year = "" if raw_year in ("", "0", "0000") else raw_year
         info.overview = str(record.get("overview") or "")
         info.anchor_provider = anchor_provider
         info.anchor_external_id = str(anchor_external_id)

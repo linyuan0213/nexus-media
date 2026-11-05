@@ -136,6 +136,27 @@ class TestMakeWebSearchFn:
         ctx = orchestrator.orchestrate.call_args[0][0]
         assert ctx.filter_args["type"] == MediaType.MOVIE
 
+    def test_requested_movie_type_overrides_anchor_default_tv(self):
+        from app.media.models import MediaInfo
+
+        orchestrator = MagicMock()
+        resolved = MediaInfo(title="生化危机：爆发夜", type=MediaType.TV)
+        resolved.year = "2026"
+        orchestrator.resolve_anchor_media.return_value = resolved
+        orchestrator.orchestrate.return_value = (None, {}, 1, 0)
+        fn = make_web_search_fn(orchestrator, system_config=None)
+
+        fn(
+            "生化危机：爆发夜",
+            anchor_provider="douban",
+            anchor_external_id="37068446",
+            media_type=MediaType.MOVIE,
+        )
+
+        ctx = orchestrator.orchestrate.call_args[0][0]
+        assert ctx.match_media.type == MediaType.MOVIE
+        assert ctx.filter_args["type"] == MediaType.MOVIE
+
     def test_content_id_fallback_keeps_selected_provider(self):
         """编号详情失败时不能用内部 content_id 作为来源展示."""
         orchestrator = MagicMock()

@@ -243,3 +243,34 @@ class TestContentIdSource:
         assert media.metadata_ref == "javdb:P0dyv"
         assert media.anchor_provider == "content_id"
         assert media.anchor_external_id == "SSIS-522"
+
+
+class TestAnchorMediaTitle:
+    def test_prefers_original_title_over_numeric_alias(self):
+        orchestrator = object.__new__(SearchOrchestrator)
+        service = MagicMock()
+        service.lookup.return_value = {
+            "title": "生化危机：爆发夜",
+            "original_title": "Resident Evil",
+            "year": "2026",
+            "aliases": ["Resident Evil 0", "生化危机0"],
+        }
+        orchestrator._metadata_service = service
+
+        media = orchestrator.resolve_anchor_media("douban", "37068446", media_type=MediaType.MOVIE)
+
+        assert media is not None
+        assert media.title == "生化危机：爆发夜"
+        assert media.en_name == "Resident Evil"
+        assert media.year == "2026"
+
+    def test_zero_year_is_normalized_to_empty(self):
+        orchestrator = object.__new__(SearchOrchestrator)
+        service = MagicMock()
+        service.lookup.return_value = {"title": "Demo", "original_title": "Demo", "year": "0"}
+        orchestrator._metadata_service = service
+
+        media = orchestrator.resolve_anchor_media("douban", "1", media_type=MediaType.MOVIE)
+
+        assert media is not None
+        assert media.year == ""

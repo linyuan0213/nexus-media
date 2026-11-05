@@ -158,7 +158,6 @@ class ResultFilter:
         """
         if not meta_info or not match_media:
             return False
-
         # 年份冲突拒绝：种子有年份且与订阅年份偏差超过1年 → 不匹配
         meta_year = str(meta_info.year or "").strip()
         match_year = str(match_media.year or "").strip()
