@@ -249,6 +249,7 @@ class DownloadRepository(BaseRepository):
         elif enclosure and len(enclosure) > 4000:
             enclosure = enclosure[:4000]
         media_info.enclosure = enclosure
+        series_key = getattr(media_info, "series_key", None)
 
         with self.session() as db:
             if self.is_exists_download_history(enclosure=enclosure, downloader=downloader, download_id=download_id):
@@ -275,6 +276,7 @@ class DownloadRepository(BaseRepository):
                         "STATE": state,
                         "DATE": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
                         "IDENTITY_ID": self._identity_for_media(media_info),
+                        "SERIES_KEY": series_key,
                         "ANCHOR_PROVIDER": getattr(media_info, "anchor_provider", None),
                         "ANCHOR_EXTERNAL_ID": getattr(media_info, "anchor_external_id", None),
                         "CONTENT_PROFILE": getattr(media_info, "content_profile", None),
@@ -303,6 +305,7 @@ class DownloadRepository(BaseRepository):
                         SE=media_info.get_season_episode_string() or "",
                         STATE=state,
                         IDENTITY_ID=self._identity_for_media(media_info),
+                        SERIES_KEY=series_key,
                         ANCHOR_PROVIDER=getattr(media_info, "anchor_provider", None),
                         ANCHOR_EXTERNAL_ID=getattr(media_info, "anchor_external_id", None),
                         CONTENT_PROFILE=getattr(media_info, "content_profile", None),

@@ -169,6 +169,7 @@ class TransferRepository(BaseRepository):
                     DST_BACKEND=dst_backend or "local",
                     DATE=timestr,
                     IDENTITY_ID=self._identity_for_media(media_info, title),
+                    SERIES_KEY=getattr(media_info, "series_key", None),
                     ANCHOR_PROVIDER=getattr(media_info, "anchor_provider", None),
                     ANCHOR_EXTERNAL_ID=getattr(media_info, "anchor_external_id", None),
                     CONTENT_PROFILE=getattr(media_info, "content_profile", None),

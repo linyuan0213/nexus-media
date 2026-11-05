@@ -104,6 +104,28 @@ class TestSeriesService:
         aliases = service.list_aliases(first.series_key)
         assert any(alias.PROVIDER == "bangumi" and alias.EXTERNAL_ID == "400602" for alias in aliases)
 
+    def test_ensure_media_series_sets_runtime_key(self):
+        media = SimpleNamespace(
+            series_key=None,
+            anchor_provider="douban",
+            anchor_external_id="37421775",
+            provider=None,
+            metadata_ref=None,
+            tmdb_id=None,
+            title="赛博朋克：边缘行者 第二季",
+            year="2026",
+            begin_season=2,
+            content_profile="anime",
+            total_episodes=10,
+            original_title=None,
+        )
+        service = _service()
+
+        key = service.ensure_media_series(media)
+
+        assert key and key.startswith("series:")
+        assert media.series_key == key
+
     def test_title_parser_strips_season_marker(self):
         assert SeriesService.split_title_season("赛博朋克：边缘行者 第二季") == ("赛博朋克：边缘行者", 2)
         assert SeriesService.split_title_season("Cyberpunk Edgerunners Season 2") == (

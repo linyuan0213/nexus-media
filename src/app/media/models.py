@@ -72,6 +72,7 @@ class MediaInfo(BaseModel):
     anchor_provider: str | None = None
     anchor_external_id: str | None = None
     identity_id: str | None = None
+    series_key: str | None = None
     provider: str | None = None
     metadata_ref: str | None = None
 
@@ -797,6 +798,7 @@ class MediaInfo(BaseModel):
             "provider": self.provider,
             "metadata_ref": self.metadata_ref,
             "identity_id": self.identity_id,
+            "series_key": self.series_key,
             "keyword": self.keyword,
             "original_language": self.original_language,
             "original_title": self.original_title,

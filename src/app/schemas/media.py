@@ -83,3 +83,4 @@ class TransferMediaDTO:
     anchor_provider: str | None = None
     anchor_external_id: str | None = None
     content_profile: str | None = None
+    series_key: str | None = None

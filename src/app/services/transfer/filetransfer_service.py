@@ -52,6 +52,7 @@ from app.media.parser import RegexParser
 from app.message import Message
 from app.schemas.media import TransferMediaDTO
 from app.services.scrape_queue_service import ScrapeQueueService
+from app.services.series_service import SeriesService
 from app.services.transfer.cleanup_service import TransferCleanupService
 from app.services.transfer.existence_checker import MediaExistenceChecker
 from app.services.transfer.history_manager import TransferHistoryManager
@@ -2008,6 +2009,10 @@ class FileTransferService:
             self._metadata_service.latest_snapshot_for_media(media) if self._metadata_service is not None else None
         )
         season_episode = media.get_season_episode_string() if out_path else media.get_season_string()
+        try:
+            series_key = SeriesService().ensure_media_series(media)
+        except Exception:  # noqa: BLE001 - 剧集映射失败不阻断转移历史
+            series_key = getattr(media, "series_key", None)
         media_dto = TransferMediaDTO(
             title=media.title or "",
             type_value=media.type.value if media.type else "",
@@ -2017,6 +2022,7 @@ class FileTransferService:
             season_episode=season_episode,
             poster=media.get_poster_image() or "",
             identity_id=getattr(snapshot, "identity_id", None) or getattr(media, "identity_id", None),
+            series_key=series_key,
             anchor_provider=getattr(media, "anchor_provider", None),
             anchor_external_id=getattr(media, "anchor_external_id", None),
             content_profile=getattr(media, "content_profile", None),

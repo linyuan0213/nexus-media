@@ -23,6 +23,7 @@ from app.db.repositories.media_identity_repository import MediaIdentityRepositor
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus, map_download_state, map_task_status
 from app.media.display_image_policy import unwrap_display_image_url
 from app.services.identity_resolver import IdentityResolver
+from app.services.series_service import SeriesService
 
 
 class LifecycleProjector:
@@ -62,6 +63,7 @@ class LifecycleProjector:
         self,
         *,
         identity_id: str,
+        series_key: str | None = None,
         stage: LifecycleStage | str,
         status: LifecycleStatus | str,
         event_type: str,
@@ -116,6 +118,7 @@ class LifecycleProjector:
         event = MediaLifecycleEvent(
             EVENT_KEY=key,
             IDENTITY_ID=identity_id,
+            SERIES_KEY=series_key,
             MEDIA_TYPE=media_type or "movie",
             SEASON=int(season or 0),
             EPISODE=int(episode or 0),
@@ -132,6 +135,7 @@ class LifecycleProjector:
         )
         snapshot = {
             "IDENTITY_ID": identity_id,
+            "SERIES_KEY": series_key,
             "MEDIA_TYPE": media_type or "movie",
             "SEASON": int(season or 0),
             "EPISODE": int(episode or 0),
@@ -201,12 +205,17 @@ class LifecycleProjector:
             return False
         provider = resolved.provider
         content_profile = resolved.content_profile
+        try:
+            series_key = SeriesService().ensure_media_series(media)
+        except Exception:  # noqa: BLE001
+            series_key = getattr(media, "series_key", None)
         created_any = False
         for episode in episodes:
             episode_key = f"{event_key}:{episode}" if event_key and len(episodes) > 1 else event_key
             created_any = (
                 self.record(
                     identity_id=identity_id,
+                    series_key=series_key,
                     stage=stage,
                     status=status,
                     event_type=event_type,

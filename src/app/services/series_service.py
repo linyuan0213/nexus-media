@@ -112,5 +112,42 @@ class SeriesService:
             created=created,
         )
 
+    def ensure_media_series(self, media) -> str | None:
+        """为运行时 MediaInfo 补齐 series_key；无可靠来源时返回 None."""
+        current = str(getattr(media, "series_key", "") or "").strip()
+        if current:
+            return current
+        provider = str(getattr(media, "anchor_provider", "") or getattr(media, "provider", "") or "").strip()
+        external = str(getattr(media, "anchor_external_id", "") or "").strip()
+        metadata_ref = str(getattr(media, "metadata_ref", "") or "").strip()
+        if not external and metadata_ref and ":" in metadata_ref:
+            provider, external = metadata_ref.split(":", 1)
+        tmdb_id = str(getattr(media, "tmdb_id", "") or "").strip()
+        if not external and tmdb_id:
+            provider, external = "tmdb", tmdb_id
+        title = str(getattr(media, "title", "") or getattr(media, "org_string", "") or "").strip()
+        if not title:
+            return None
+        if not provider or not external:
+            base, parsed = self.split_title_season(title)
+            season = int(getattr(media, "begin_season", 0) or parsed or 1)
+            provider, external = "local", f"{base}:{getattr(media, 'year', '') or ''}:S{season}"
+        try:
+            resolution = self.resolve(
+                provider=provider,
+                external_id=external,
+                title=title,
+                year=str(getattr(media, "year", "") or "") or None,
+                season_number=getattr(media, "begin_season", None),
+                scope=str(getattr(media, "content_profile", "") or "default"),
+                total_episodes=getattr(media, "total_episodes", None),
+                original_title=getattr(media, "original_title", None),
+            )
+        except Exception as exc:  # noqa: BLE001 - 剧集解析失败不影响主流程
+            log.debug(f"[Series]运行时解析失败: {exc}")
+            return None
+        media.series_key = resolution.series_key
+        return resolution.series_key
+
     def list_aliases(self, series_key: str):
         return self._repo.list_aliases(series_key)

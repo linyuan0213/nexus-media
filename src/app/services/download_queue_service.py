@@ -19,6 +19,7 @@ from app.domain.mediatypes import MediaType
 from app.infrastructure.task_queue import Task, TaskQueue, TaskStatus, TaskWorker, create_task_queue
 from app.media.models import MediaInfo
 from app.services.lifecycle_service import LifecycleProjector
+from app.services.series_service import SeriesService
 from app.utils.json_utils import JsonUtils
 
 _MAX_QUEUED_TORRENT_BYTES = 20 * 1024 * 1024
@@ -111,6 +112,10 @@ class DownloadQueueService:
         task_id = uuid.uuid4().hex
         max_active = self._max_active(downloader_id)
         torrent_b64 = self._read_torrent(torrent_file)
+        try:
+            SeriesService().ensure_media_series(media_info)
+        except Exception as exc:  # noqa: BLE001 - 剧集映射失败不阻断下载
+            log.debug(f"[DownloadQueue]规范剧集解析失败: {exc}")
         history_id = self._history_repo.insert_download_history(
             media_info=media_info,
             downloader=str(downloader_id),
