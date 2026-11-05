@@ -206,6 +206,7 @@ class DoubanProvider:
             }
         ),
         media_types=frozenset({MediaType.MOVIE, MediaType.TV, MediaType.ANIME}),
+        rate_limit_per_minute=RATE,
         source_tiers=frozenset({SourceTier.API, SourceTier.HTML}),
     )
 
