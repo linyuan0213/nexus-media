@@ -162,7 +162,14 @@ class ResultFilter:
         # 年份冲突拒绝：种子有年份且与订阅年份偏差超过1年 → 不匹配
         meta_year = str(meta_info.year or "").strip()
         match_year = str(match_media.year or "").strip()
-        if meta_year and match_year and meta_year.isdigit() and match_year.isdigit():
+        if (
+            meta_year
+            and match_year
+            and meta_year.isdigit()
+            and match_year.isdigit()
+            and int(meta_year) > 0
+            and int(match_year) > 0
+        ):
             if abs(int(meta_year) - int(match_year)) > 1:
                 return False
 
@@ -186,9 +193,11 @@ class ResultFilter:
         def _norm(name):
             if not name:
                 return ""
-            return _strip_cn_tag_prefix(
+            cleaned = _strip_cn_tag_prefix(
                 StringUtils.handler_special_chars(str(name)).upper().strip()  # type: ignore[union-attr]
             )
+            # 年份由年份字段单独处理，不能把 2026 当作标题的一部分影响名称相似度
+            return re.sub(r"(?<!\d)(?:19|20)\d{2}(?!\d)", "", cleaned).strip()
 
         # 中文虚词归一化：去掉 "的"/"之"/"与"/"和" 等，解决 "黄泉使者" vs "黄泉的使者"
         def _cn_simplify(name):
@@ -205,7 +214,7 @@ class ResultFilter:
             source = mi.org_string or mi.rev_string or ""
             found = re.findall(r"(?<!\d)(19\d{2}|20[0-4]\d)(?!\d)", str(source))
             for y in found:
-                if y.isdigit() and expected_year.isdigit():
+                if y.isdigit() and expected_year.isdigit() and int(expected_year) > 0:
                     if abs(int(y) - int(expected_year)) > 1:
                         return y
             return None
@@ -248,6 +257,10 @@ class ResultFilter:
         if meta_names & match_names:
             # 所有 meta 名都在 match 中才算可靠；否则另一半名包含区分信息
             if meta_names.issubset(match_names):
+                return True
+            # 去掉年份后存在完整长名相等，视为同一作品（如 Resident Evil 2026 vs Resident Evil）
+            shared = meta_names & match_names
+            if any(len(name) >= 6 for name in shared):
                 return True
             # 有多个名称但未全部匹配 → 存在区分信息，不走快速匹配
             if len(meta_names) > 1:
@@ -870,7 +883,6 @@ class ResultFilter:
             if (
                 filter_args.get("type") == MediaType.MOVIE
                 and match_media is not None
-                and str(getattr(match_media, "year", "") or "").isdigit()
                 and not str(media_info.year).isdigit()
                 and not self._title_specific_without_year(torrent_name, match_media)
             ):

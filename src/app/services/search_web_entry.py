@@ -156,6 +156,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
             requested_type == MediaType.MOVIE
             and match_media is not None
             and str(getattr(match_media, "year", "") or "").isdigit()
+            and int(str(match_media.year)) > 0
         ):
             # 电影搜索用身份年份收敛同系列的不同作品，避免“生化危机2”混进 2026 新片。
             if not str(filter_args.get("year") or "").strip():

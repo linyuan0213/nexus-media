@@ -84,6 +84,18 @@ class SearchOrchestrator:
                 media.site_order = int(getattr(media, "site_order", 0) or 0) + SITE_TIER_BOOST
         return media_list
 
+    def _finish_progress(self, progress_key: str, site_count: int, total: int) -> None:
+        """全部后处理完成后再置 100%，避免前端在 100% 时仍看到加载态."""
+        self._progress.update_max(
+            value=100,
+            text=(
+                f"关键词完成 {site_count}/{site_count} · 搜索完成，共 {total} 条"
+                f"{self._failed_sites_summary(progress_key)}"
+            ),
+            ptype=progress_key,
+        )
+        self._progress.end(progress_key)
+
     def orchestrate(self, ctx: SearchContext) -> tuple[Any | None, dict | None, int, int]:
         progress_key: str = f"search:{ctx.session_id}"
         self._progress.start(progress_key)
@@ -122,19 +134,16 @@ class SearchOrchestrator:
             self._enrich_and_persist(ctx, media_list)
 
         self._progress.update_max(
-            value=100,
-            text=(
-                f"关键词完成 {len(search_names)}/{len(search_names)} · "
-                f"搜索完成，共 {len(media_list)} 条{self._failed_sites_summary(progress_key)}"
-            ),
+            value=95,
+            text=f"关键词完成 {len(search_names)}/{len(search_names)} · 正在整理结果...",
             ptype=progress_key,
         )
-        self._progress.end(progress_key)
 
         # 6. 过滤已下载
         filtered = self._filter_downloaded(media_list)
         if not filtered:
             log.info("[Orchestrator]所有搜索结果已在下载历史中存在")
+            self._finish_progress(progress_key, len(search_names), len(media_list))
             return None, ctx.no_exists or {}, len(media_list), 0
 
         # 7. 择优下载
@@ -151,8 +160,10 @@ class SearchOrchestrator:
                 dl_count = len(download_items)
                 log.info(f"[Orchestrator]下载了 {dl_count}/{total} 个资源")
                 result_no_exists = left_medias if left_medias is not None else (ctx.no_exists or {})
+                self._finish_progress(progress_key, len(search_names), total)
                 return download_items[0], result_no_exists, total, dl_count
 
+        self._finish_progress(progress_key, len(search_names), len(media_list))
         return None, ctx.no_exists or {}, len(media_list), 0
 
     def resolve_anchor_media(

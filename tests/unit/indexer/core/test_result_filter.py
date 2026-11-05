@@ -315,3 +315,29 @@ class TestTitleSpecificityWithoutYear:
         from app.indexer.core.result_filter import ResultFilter
 
         assert ResultFilter._title_specific_without_year("生化危机：爆发夜 2160p", self._match())
+
+
+def test_quick_name_match_ignores_zero_year():
+    from types import SimpleNamespace
+
+    from app.indexer.core.result_filter import ResultFilter
+
+    meta = SimpleNamespace(
+        title="Resident Evil 2026",
+        cn_name="生化危机",
+        en_name="Resident Evil",
+        description="",
+        year="2026",
+        type=MediaType.MOVIE,
+        rev_string="",
+        org_string="",
+    )
+    match = SimpleNamespace(
+        title="生化危机：爆发夜",
+        cn_name="生化危机：爆发夜",
+        en_name="Resident Evil",
+        original_title="Resident Evil",
+        year="0",
+        type=MediaType.MOVIE,
+    )
+    assert ResultFilter.quick_name_match(meta, match)
