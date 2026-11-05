@@ -29,8 +29,7 @@ DEFAULT_MESSAGE_TEMPLATES = {
         "text": (
             "{% if media_info.vote_average %}⭐ {{ media_info.get_vote_string() }}\n{% endif %}"
             "📺 类型："
-            "{% if content_profile and content_profile != 'default' %}"
-            "{{ profile_label|default(content_profile) }}"
+            "{% if profile_label %}{{ profile_label }}"
             "{% else %}{{ type_label }}{% endif %}\n"
             "{% if media_info.category and category_flag %}📁 类别：{{ media_info.category }}\n{% endif %}"
             "{% if media_info.get_resource_type_string() %}"
@@ -61,8 +60,7 @@ DEFAULT_MESSAGE_TEMPLATES = {
         "text": (
             "{% if media_info.vote_average %}⭐ {{ media_info.get_vote_string() }}\n{% endif %}"
             "📺 类型："
-            "{% if content_profile and content_profile != 'default' %}"
-            "{{ profile_label|default(content_profile) }}"
+            "{% if profile_label %}{{ profile_label }}"
             "{% else %}{{ type_label }}{% endif %}\n"
             "{% if keyword %}🔢 关键词：{{ keyword }}\n{% endif %}"
             "{% if source_provider %}📡 来源：{{ source_provider }}\n{% endif %}"
@@ -84,8 +82,7 @@ DEFAULT_MESSAGE_TEMPLATES = {
         "text": (
             "{% if media_info.vote_average %}⭐ {{ media_info.get_vote_string() }}\n{% endif %}"
             "📺 类型："
-            "{% if content_profile and content_profile != 'default' %}"
-            "{{ profile_label|default(content_profile) }}"
+            "{% if profile_label %}{{ profile_label }}"
             "{% else %}{{ type_label }}{% endif %}"
             "{% if keyword %}\n🔢 关键词：{{ keyword }}{% endif %}"
             "{% if source_provider %}\n📡 来源：{{ source_provider }}{% endif %}"

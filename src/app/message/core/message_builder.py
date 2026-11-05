@@ -36,7 +36,11 @@ def _should_notify_fail(key: str) -> bool:
 def _type_label(media_info, profile: str) -> str:
     """消息中的用户可见类型：普通媒体用电影/电视剧，扩展画像用插件标签."""
     if profile and profile != "default":
-        return message_template_registry.label(profile) or profile
+        label = message_template_registry.label(profile)
+        if label:
+            return label
+        if profile.lower() in {"anime", "tv", "movie"}:
+            return media_info.type.display_name
     return media_info.type.display_name
 
 
@@ -69,7 +73,7 @@ def _message_variables(item, *, source_provider: str | None = None) -> dict[str,
     source = source_provider if source_provider is not None else _source_provider(item)
     return {
         "content_profile": profile,
-        "profile_label": message_template_registry.label(profile) or (profile if profile != "default" else ""),
+        "profile_label": message_template_registry.label(profile) or "",
         "type_label": _type_label(item, profile),
         "source_provider": source,
         "keyword": str(getattr(item, "keyword", "") or ""),

@@ -12,6 +12,11 @@ def test_anime_type_label_is_chinese():
     assert _type_label(media, "default") == "动漫"
 
 
+def test_anime_profile_label_is_chinese():
+    media = MediaInfo(title="Demo", type=MediaType.ANIME)
+    assert _type_label(media, "anime") == "动漫"
+
+
 def test_tv_type_label_is_chinese():
     media = MediaInfo(title="Demo", type=MediaType.TV)
     assert _type_label(media, "default") == "电视剧"
