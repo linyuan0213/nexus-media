@@ -572,7 +572,7 @@ class SubscribeAddService:
                             resolution = series_service.resolve(
                                 provider=series_provider,
                                 external_id=str(series_external),
-                                title=str(media_info.title or name or ""),
+                                title=str(name or media_info.title or ""),
                                 year=str(media_info.year or year or "") or None,
                                 season_number=requested_season,
                                 scope=str(content_profile or "default"),
@@ -757,7 +757,7 @@ class SubscribeAddService:
                 media_info.poster_path = image
             if year:
                 media_info.year = str(year)
-            if season:
+            if season and not getattr(media_info, "series_key", None):
                 media_info.begin_season = _season_number(season)
             if mtype == MediaType.MOVIE:
                 identity_fields = self._identity_fields(

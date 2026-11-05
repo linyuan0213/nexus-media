@@ -52,7 +52,8 @@ class SeriesService:
             return SeriesResolution("", parsed or 1, base, year)
 
         base, parsed_season = self.split_title_season(title)
-        season = int(season_number or parsed_season or 1)
+        # 单季来源标题里的“第三季/Season 3”优先于前端默认的 season=1
+        season = int(parsed_season or season_number or 1)
 
         alias = self._repo.get_alias(provider, external_id, scope, season)
         if alias is None and season_number is None and parsed_season is None:

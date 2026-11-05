@@ -52,8 +52,10 @@ from app.services.media_service import (
 )
 from app.services.metadata_service import MetadataService
 from app.services.search_service import Searcher
+from app.services.series_service import SeriesService
 from app.services.transfer.filetransfer_service import FileTransferService
 from app.services.transfer.name_format import FIELD_CATALOG, field_groups, render_path, validate
+from app.services.web.utils import get_mediainfo_from_id
 from app.utils import StringUtils
 from app.utils.response import fail, success
 
@@ -271,6 +273,8 @@ class MediaDetailByRefRequest(BaseModel):
     media_type: str | None = None
     content_profile: str = "default"
     content_id: str | None = None
+    title: str | None = None
+    year: str | None = None
 
 
 class FieldOverrideRequest(BaseModel):
@@ -378,7 +382,8 @@ def _record_detail_data(record: dict, media_type: MediaType, status: dict | None
         "crews": crews,
         "actor_profiles": actor_profiles,
         "fact": facts,
-        "seasons": [],
+        "seasons": record.get("seasons") or [],
+        "episode_count": record.get("episode_count"),
         "links": [],
         "link": "",
         "similar": [],
@@ -939,6 +944,48 @@ def media_detail(
     return success(data=result)
 
 
+def _minimal_detail_record(req: "MediaDetailByRefRequest", media_type: MediaType | None) -> dict:
+    """来源详情不可用时，用锚点/前端标题构造最小记录，并补齐豆瓣分集数."""
+    mtype = media_type or MediaType.MOVIE
+    season_number = SeriesService.split_title_season(str(req.title or ""))[1] or 1
+    record = {
+        "provider": req.provider,
+        "external_id": req.external_id,
+        "mediaid": f"{req.provider}:{req.external_id}",
+        "metadata_ref": f"{req.provider}:{req.external_id}",
+        "title": str(req.title or ""),
+        "year": str(req.year or ""),
+        "type": mtype.value,
+        "refs": [{"provider": req.provider, "external_id": req.external_id}],
+        "images": {},
+        "ratings": {},
+        "genres": [],
+        "credits": [],
+    }
+    try:
+        legacy = get_mediainfo_from_id(mtype, f"{req.provider}:{req.external_id}")
+    except Exception:  # noqa: BLE001 - 详情兜底不能再抛错
+        legacy = None
+    if legacy is not None:
+        record["title"] = str(getattr(legacy, "title", None) or record["title"])
+        record["year"] = str(getattr(legacy, "year", None) or record["year"])
+        record["overview"] = str(getattr(legacy, "overview", None) or "")
+        poster = getattr(legacy, "get_poster_image", lambda: "")()
+        if poster:
+            record["images"] = {"poster": [{"url": poster}]}
+        total = getattr(legacy, "total_episodes", None)
+        if total:
+            record["episode_count"] = int(total)
+            record["seasons"] = [
+                {
+                    "season_number": int(season_number),
+                    "episode_count": int(total),
+                    "name": f"第{season_number}季",
+                }
+            ]
+    return record
+
+
 @router.post("/detail_by_ref", response_model=CommonResponse, summary="按外部锚点获取媒体详情")
 def media_detail_by_ref(
     req: MediaDetailByRefRequest,
@@ -962,8 +1009,10 @@ def media_detail_by_ref(
                 allow_private=allow_private,
                 permissions=permissions,
             )
-        except Exception:  # noqa: BLE001 - 上游抓取/熔断返回明确错误
-            return fail(code=ErrorCode.OPERATION_FAILED, msg="无法获取媒体详情")
+        except Exception:  # noqa: BLE001 - 上游抓取/熔断时仍可用前端已有标题展示
+            record = _minimal_detail_record(req, media_type) if req.title else None
+            if record is None:
+                return fail(code=ErrorCode.OPERATION_FAILED, msg="无法获取媒体详情")
     if is_custom_profile and req.content_id:
         # 前端已知道内容编号时，优先按编号取聚合详情，避免来源 slug 失效。
         try:
@@ -990,9 +1039,10 @@ def media_detail_by_ref(
             )
         except Exception:  # noqa: BLE001 - 聚合回退失败按原错误处理
             record = None
-    if not record:
+    if not record and is_custom_profile:
         return fail(msg="无法获取媒体详情")
     if is_custom_profile:
+        assert record is not None
         content_id = next(
             (
                 str(ref.get("external_id") or "")
@@ -1021,6 +1071,7 @@ def media_detail_by_ref(
             user=current_user,
         )
         return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status))
+    record = record or {}
     snapshot = svc.compose_for_ref(
         req.provider,
         req.external_id,
@@ -1032,7 +1083,7 @@ def media_detail_by_ref(
         permissions=permissions,
     )
     if not snapshot:
-        if record is None:
+        if not record:
             try:
                 record = svc.lookup(
                     req.provider,
@@ -1043,6 +1094,8 @@ def media_detail_by_ref(
                 )
             except Exception:  # noqa: BLE001
                 record = None
+        if not record and req.title:
+            record = _minimal_detail_record(req, media_type)
         if not record:
             return fail(msg="无法获取媒体详情")
         status = sub_svc.get_subscribe_by_anchor(
