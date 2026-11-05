@@ -14,6 +14,21 @@ from app.media import meta_info as parse_title
 from app.media.models import MediaInfo
 
 
+def test_skip_tmdb_bypasses_year_specificity():
+    match = SimpleNamespace(
+        year="2026",
+        title="DEMO-823 完全版",
+        en_name="",
+        original_title="",
+        cn_name="",
+    )
+    adult = SimpleNamespace(skip_tmdb=True)
+    unidentified = SimpleNamespace(skip_tmdb=False)
+    title = "DEMO-823 [LTX]完全版"
+    assert ResultFilter._allow_without_year(adult, title, match) is True
+    assert ResultFilter._allow_without_year(unidentified, title, match) is False
+
+
 def _no_rule_repos():
     """无规则组的仓库桩：filter_args 不含 rule 时直接通过规则检查"""
 

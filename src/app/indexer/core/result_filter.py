@@ -519,6 +519,13 @@ class ResultFilter:
         return False
 
     @staticmethod
+    def _allow_without_year(cand, torrent_name: str, match_media) -> bool:
+        """内容编号/身份已锚定（skip_tmdb）时不再用无年份标题规则误杀."""
+        if getattr(cand, "skip_tmdb", False):
+            return True
+        return ResultFilter._title_specific_without_year(torrent_name, match_media)
+
+    @staticmethod
     def _type_compatible(a, b):
         if a == b:
             return True
@@ -978,7 +985,9 @@ class ResultFilter:
                 filter_args.get("type") == MediaType.MOVIE
                 and match_media is not None
                 and not str(media_info.year).isdigit()
-                and not self._title_specific_without_year(torrent_name, match_media)
+                # skip_tmdb 表示已由内容编号/外部身份锚定；编号本身足够唯一，
+                # 不应用“无年份+系列前缀”规则误杀只有编号、没有年份的标题。
+                and not self._allow_without_year(cand, torrent_name, match_media)
             ):
                 log.info(f"[ResultFilter]{torrent_name} 无年份且标题只命中系列前缀，不匹配 {match_media.year} 年的电影")
                 stats.index_rule_fail += 1
