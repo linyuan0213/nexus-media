@@ -149,5 +149,11 @@ class SeriesService:
         media.series_key = resolution.series_key
         return resolution.series_key
 
+    def get_title(self, series_key: str | None) -> str | None:
+        if not isinstance(series_key, str) or not series_key.strip():
+            return None
+        row = self._repo.get_series(series_key)
+        return str(row.TITLE) if row is not None and row.TITLE else None
+
     def list_aliases(self, series_key: str):
         return self._repo.list_aliases(series_key)

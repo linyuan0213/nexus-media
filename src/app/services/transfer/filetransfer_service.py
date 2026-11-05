@@ -632,6 +632,13 @@ class FileTransferService:
                     except Exception as exc:  # noqa: BLE001
                         log.debug(f"[Rmt]主源识别失败: {exc}")
 
+            # 规范剧集标题优先：元数据快照可能带回“第一季/第二季”来源标题
+            for _info in medias.values():
+                canonical_title = SeriesService().get_title(getattr(_info, "series_key", None))
+                if canonical_title:
+                    _info.title = canonical_title
+                    _info.cn_name = canonical_title
+
             # 订阅/下载历史已知季集时兜底：文件名解析失败的动漫单集用订阅记录的集号补齐，
             # 避免"无法从文件名中识别出集数"导致订阅下载的剧集无法入库
             fallback_season = season if season is not None else dl_season
@@ -1149,6 +1156,24 @@ class FileTransferService:
         if record_data:
             info.original_title = str(record_data.get("original_title") or info.original_title or "")
             info.aliases = list(record_data.get("aliases") or [])
+        try:
+            resolution = SeriesService().resolve(
+                provider=provider,
+                external_id=external,
+                title=title,
+                year=str(info.year or "") or None,
+                season_number=int(season) if season else None,
+                scope=profile,
+                total_episodes=getattr(record, "TOTAL", None),
+                original_title=info.original_title,
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.debug(f"[Rmt]规范剧集解析失败: {exc}")
+        else:
+            info.series_key = resolution.series_key
+            if resolution.title:
+                info.title = resolution.title
+                info.cn_name = resolution.title
         if season:
             info.begin_season = int(season)
             if episode:

@@ -584,6 +584,12 @@ class SubscribeAddService:
                             series_key = resolution.series_key
                             media_info.begin_season = resolution.season_number
                             setattr(media_info, "series_key", resolution.series_key)
+                            if resolution.title:
+                                # 统一剧集模型：标题用母标题，季由 SEASON 字段表达
+                                media_info.title = resolution.title
+                                base_keyword, _ = SeriesService.split_title_season(str(keyword or ""))
+                                keyword = base_keyword or resolution.title
+                                name = resolution.title
                 if total_ep:
                     total = total_ep
                 else:
