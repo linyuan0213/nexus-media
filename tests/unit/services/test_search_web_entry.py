@@ -1,5 +1,6 @@
 """Web 搜索统一入口（make_web_search_fn）单元测试"""
 
+import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -53,6 +54,56 @@ class TestMakeWebSearchFn:
         code, msg = fn("x", anchor_provider="douban", anchor_external_id="99999")
         assert code == -1
         orchestrator.orchestrate.assert_not_called()
+        orchestrator.begin_search.assert_called_once()
+        orchestrator.end_search.assert_called_once()
+
+    def test_progress_starts_before_anchor_resolution(self):
+        """SSE 依赖进度记录；锚点解析前必须已建立 search:{session} 进度."""
+        orchestrator = MagicMock()
+        orchestrator.orchestrate.return_value = (None, {}, 3, 0)
+
+        def resolve(*args, **kwargs):
+            assert orchestrator.begin_search.called
+            return MagicMock()
+
+        orchestrator.resolve_anchor_media.side_effect = resolve
+        fn = make_web_search_fn(orchestrator, system_config=None)
+        code, _ = fn(
+            "x",
+            session_id="sid-1",
+            anchor_provider="douban",
+            anchor_external_id="36139980",
+        )
+        assert code == 0
+        orchestrator.begin_search.assert_called_once_with("sid-1", "x")
+        orchestrator.end_search.assert_called_once_with("sid-1")
+
+    def test_slow_anchor_resolution_falls_back_without_blocking(self, monkeypatch):
+        """元数据源卡住时按超时回退关键词，搜索不能一直停在 0%."""
+        monkeypatch.setattr("app.services.search_web_entry.ANCHOR_RESOLVE_TIMEOUT", 0.05)
+        orchestrator = MagicMock()
+        orchestrator.orchestrate.return_value = (None, {}, 2, 0)
+
+        def slow(*args, **kwargs):
+            time.sleep(0.5)
+            return None
+
+        orchestrator.resolve_content_id_media.side_effect = slow
+        fn = make_web_search_fn(orchestrator, system_config=None)
+        started = time.monotonic()
+        code, msg = fn(
+            "DEMO-4025269",
+            anchor_provider="content_id",
+            anchor_external_id="DEMO-4025269",
+            content_profile="demo",
+            media_type=MediaType.MOVIE,
+        )
+        elapsed = time.monotonic() - started
+        assert code == 0
+        assert msg == ""
+        assert elapsed < 0.4
+        orchestrator.orchestrate.assert_called_once()
+        orchestrator.end_search.assert_called_once()
 
     def test_content_id_anchor_unresolved_falls_back_to_keyword(self):
         orchestrator = MagicMock()

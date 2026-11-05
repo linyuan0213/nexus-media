@@ -4,6 +4,8 @@
 Web 特有逻辑（默认订阅站点、tmdbid 直达）在此收敛，orchestrator 保持通用。
 """
 
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from typing import Any
 
 import log
@@ -13,11 +15,31 @@ from app.media import meta_info
 from app.services.search_context import SearchContext
 from app.services.search_orchestrator import SearchOrchestrator
 
+# 锚点元数据只是资源搜索的辅助信息；外部源不可用时必须尽快回退关键词，
+# 不能因为一次详情抓取把整次搜索拖在 0%。
+ANCHOR_RESOLVE_TIMEOUT = 15.0
+
+
+def _resolve_anchor_with_timeout(fn, *args, **kwargs):
+    """在独立线程内解析锚点，超时/异常一律返回 None 交给调用方回退."""
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="anchor_resolve")
+    future = executor.submit(fn, *args, **kwargs)
+    try:
+        return future.result(timeout=ANCHOR_RESOLVE_TIMEOUT)
+    except FuturesTimeoutError:
+        log.warn(f"[Orchestrator]锚点元数据解析超过 {ANCHOR_RESOLVE_TIMEOUT:.0f}s，回退关键词搜索")
+        return None
+    except Exception as exc:  # noqa: BLE001 - 元数据失败不应中断资源搜索
+        log.warn(f"[Orchestrator]锚点元数据解析失败: {exc}")
+        return None
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
 
 def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
     """生成 WebSearchService 所需的 search_fn（签名与旧流水线一致）"""
 
-    def search_fn(
+    def _search_impl(
         content: str,
         ident_flag: bool = True,
         filters: dict | None = None,
@@ -55,7 +77,8 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     resolve_provider = "javalibrary"
             resolved_profile = content_profile or str(filter_args.get("content_profile") or "default")
             if anchor_provider == "content_id":
-                match_media = orchestrator.resolve_content_id_media(
+                match_media = _resolve_anchor_with_timeout(
+                    orchestrator.resolve_content_id_media,
                     resolve_provider,
                     str(anchor_external_id),
                     media_type=media_type,
@@ -67,7 +90,8 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     if identity_id:
                         match_media.identity_id = identity_id
             else:
-                match_media = orchestrator.resolve_anchor_media(
+                match_media = _resolve_anchor_with_timeout(
+                    orchestrator.resolve_anchor_media,
                     resolve_provider,
                     str(anchor_external_id),
                     media_type=media_type,
@@ -141,6 +165,15 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
         if total:
             return 0, ""
         return 1, f"{content} 未搜索到任何资源"
+
+    def search_fn(content: str, **kwargs: Any) -> tuple[int, str]:
+        """所有资源搜索都先建立进度：锚点解析可能慢，但前端不能停在 0%."""
+        session_id = str(kwargs.get("session_id") or "web")
+        orchestrator.begin_search(session_id, content)
+        try:
+            return _search_impl(content, **kwargs)
+        finally:
+            orchestrator.end_search(session_id)
 
     return search_fn
 

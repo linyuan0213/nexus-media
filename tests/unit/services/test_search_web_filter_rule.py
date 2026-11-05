@@ -32,6 +32,12 @@ def test_manual_search_ignores_default_rule():
     captured = {}
 
     class _Orchestrator:
+        def begin_search(self, *args, **kwargs):
+            pass
+
+        def end_search(self, *args, **kwargs):
+            pass
+
         def orchestrate(self, ctx):
             captured["filter_args"] = ctx.filter_args
             return [], [], 1, []
@@ -49,6 +55,12 @@ def test_custom_profile_web_search_skips_tmdb_identification():
     captured = {}
 
     class _Orchestrator:
+        def begin_search(self, *args, **kwargs):
+            pass
+
+        def end_search(self, *args, **kwargs):
+            pass
+
         def orchestrate(self, ctx):
             captured["ident_flag"] = ctx.ident_flag
             captured["filter_args"] = ctx.filter_args

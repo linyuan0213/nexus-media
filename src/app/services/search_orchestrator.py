@@ -58,6 +58,17 @@ class SearchOrchestrator:
         self._metadata_service = metadata_service
         self._search_auto = settings.get("pt").get("search_auto", True)
 
+    def begin_search(self, session_id: str, keyword: str = "") -> None:
+        """解析锚点元数据前先建立进度，避免 SSE 因长时间无记录提前断开."""
+        progress_key = f"search:{session_id or 'web'}"
+        self._progress.start(progress_key)
+        text = f"正在解析 {keyword} 的媒体信息..." if keyword else "正在解析媒体信息..."
+        self._progress.update(value=1, text=text, ptype=progress_key)
+
+    def end_search(self, session_id: str) -> None:
+        """确保搜索任务任何退出路径都会关闭进度，前端不会停在 0%."""
+        self._progress.end(f"search:{session_id or 'web'}")
+
     def orchestrate(self, ctx: SearchContext) -> tuple[Any | None, dict | None, int, int]:
         progress_key: str = f"search:{ctx.session_id}"
         self._progress.start(progress_key)
