@@ -410,15 +410,15 @@ class TestRssFeedStrategy:
             strategy._download_matched_torrents(medias, {})
         return cast(Any, strategy.downloader).batch_download.call_args[0][1]
 
-    def test_rss_site_mode_same_site_picks_more_seeders(self):
-        """站点优先：同站点内应选做种数最高的，不受 res_order 干扰."""
+    def test_rss_site_mode_same_site_prefers_higher_rule(self):
+        """站点优先：同站点内规则顺序第二，优先于做种数."""
         strategy = self._make_strategy()
         low_seed = self._movie(title="LowSeed", site_order=9999, seeders=5, res_order=99)
         high_seed = self._movie(title="HighSeed", site_order=9999, seeders=500, res_order=1)
 
         selected = self._selected_movies(strategy, [low_seed, high_seed])
 
-        assert [item.title for item in selected] == ["HighSeed", "LowSeed"]
+        assert [item.title for item in selected] == ["LowSeed", "HighSeed"]
 
     def test_rss_seeder_mode_prefers_more_seeders_over_site(self):
         """做种数优先：低优先级站点做种更多时应胜出."""

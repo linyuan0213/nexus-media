@@ -625,16 +625,16 @@ class RssFeedStrategy:
             else:
                 collection_priority = 0
             download_order = (settings.get("pt") or {}).get("download_order")
-            # 做种数优先时做种数在站点顺序前，与下载优先规则一致
+            # 规则固定第二，与下载优先规则一致
             if download_order == "seeder":
                 return (
                     collection_priority,
                     episode_count,
                     x.seeders,
-                    x.site_order,
                     x.res_order,
+                    x.site_order,
                 )
-            return (collection_priority, episode_count, x.site_order, x.seeders, x.res_order)
+            return (collection_priority, episode_count, x.site_order, x.res_order, x.seeders)
 
         rss_download_torrents.sort(key=_rss_sort_key, reverse=True)
 

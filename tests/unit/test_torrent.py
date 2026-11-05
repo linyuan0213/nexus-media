@@ -113,8 +113,8 @@ class TestTorrentGetDownloadList:
         result = Torrent.get_download_list([high_rule, high_site], download_order="site")
         assert result[0].title == "HighSite"
 
-    def test_site_mode_same_site_prefers_more_seeders(self):
-        """site 模式：同一站点内必须先按做种数选，不能被规则顺序抢先."""
+    def test_site_mode_same_site_prefers_higher_rule(self):
+        """site 模式：同一站点内规则顺序第二，优先于做种数."""
         same_site_low_seed = _MediaInfo(
             title="LowSeedHighRule",
             type=MediaType.MOVIE,
@@ -130,7 +130,7 @@ class TestTorrentGetDownloadList:
             seeders=500,
         )
         result = Torrent.get_download_list([same_site_low_seed, same_site_high_seed], download_order="site")
-        assert result[0].title == "HighSeedLowRule"
+        assert result[0].title == "LowSeedHighRule"
 
     def test_seeder_mode_prefers_more_seeders_over_site_priority(self):
         """做种数优先：低优先级站点做种更多时应胜出."""
