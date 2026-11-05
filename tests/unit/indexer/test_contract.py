@@ -6,6 +6,9 @@ import pytest
 
 from app.indexer.contract import (
     IndexerGateway,
+    IndexerHealth,
+    IndexerInfo,
+    IndexerPage,
     IndexerProviderRegistry,
     IndexerQuery,
     SiteIndexerProvider,
@@ -84,7 +87,8 @@ def test_site_provider_normalizes_search_and_dedup():
 def test_site_provider_forwards_content_profile():
     provider = make_provider()
     provider.search(IndexerQuery(keyword="demo", content_profile="demo", limit=10))
-    assert provider._client.last_filter_args["content_profile"] == "demo"
+    filter_args = getattr(provider._client, "last_filter_args", {})
+    assert filter_args["content_profile"] == "demo"
 
 
 def test_site_provider_list_and_site_filter():
@@ -285,28 +289,23 @@ class SlowProvider:
     def __init__(self, seconds: float = 2.0):
         self._seconds = seconds
 
-    def info(self):
-        raise AssertionError("not used")
+    def info(self) -> IndexerInfo:
+        return IndexerInfo(provider_id=self.provider_id, name="slow")
 
-    def health(self):
-        raise AssertionError("not used")
+    def health(self) -> IndexerHealth:
+        return IndexerHealth(ok=True)
 
-    def search(self, query):
+    def search(self, query: IndexerQuery) -> IndexerPage:
         import time
 
         time.sleep(self._seconds)
-        return IndexerPageStub()
+        return IndexerPage()
 
-    def list(self, query):
+    def list(self, query: IndexerQuery) -> IndexerPage:
         return self.search(query)
 
     def close(self):
         pass
-
-
-class IndexerPageStub:
-    items = []
-    warnings = []
 
 
 def test_gateway_times_out_slow_provider_and_keeps_fast_results():
