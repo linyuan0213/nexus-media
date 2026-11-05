@@ -1,9 +1,9 @@
-"""仓库层 session 作用域静态检查，防止 with 结束后继续复用连接."""
+"""DB session 作用域静态检查，防止 with 结束后继续复用连接."""
 
 import ast
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[2] / "src/app/db/repositories"
+_SRC_ROOT = Path(__file__).resolve().parents[2] / "src"
 
 
 def _uses_after_close(path: Path) -> list[str]:
@@ -43,8 +43,8 @@ def _uses_after_close(path: Path) -> list[str]:
     return findings
 
 
-def test_repository_sessions_not_used_after_close():
+def test_sessions_not_used_after_close():
     findings: list[str] = []
-    for path in _REPO_ROOT.rglob("*.py"):
+    for path in _SRC_ROOT.rglob("*.py"):
         findings.extend(_uses_after_close(path))
     assert not findings, "\n".join(findings)

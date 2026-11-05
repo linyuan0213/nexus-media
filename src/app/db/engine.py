@@ -49,6 +49,8 @@ def _init_engine():
                     autoflush=False,
                     autocommit=False,
                     expire_on_commit=False,
+                    # close 后禁止复用：复用会静默重开事务并泄漏连接
+                    close_resets_only=False,
                 )
                 log.info(f"[DB]连接预算：{DatabaseFactory.describe_pool_budget()}")
 
@@ -73,6 +75,8 @@ def _init_scheduler_engine():
                     autoflush=False,
                     autocommit=False,
                     expire_on_commit=False,
+                    # close 后禁止复用，避免后台任务跨作用域泄漏连接
+                    close_resets_only=False,
                 )
 
 
