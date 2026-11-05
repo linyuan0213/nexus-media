@@ -583,6 +583,9 @@ class SubscribeAddService:
                         else:
                             series_key = resolution.series_key
                             media_info.begin_season = resolution.season_number
+                            # 续订断点必须按“解析后的真实季”查询；否则 S02 新订阅会拿 S01 的
+                            # 转移历史把 current_ep 推到 total+1，导致整季被判为无缺失、无法下载。
+                            season = resolution.season_number
                             setattr(media_info, "series_key", resolution.series_key)
                             if resolution.title:
                                 # 统一剧集模型：标题用母标题，季由 SEASON 字段表达

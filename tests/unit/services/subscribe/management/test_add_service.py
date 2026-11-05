@@ -1,5 +1,6 @@
 """订阅重订阅续订点推导测试（修复：转移历史已到 N 集，前端回传旧 current_ep 导致进度卡住）."""
 
+from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import MagicMock
 
@@ -112,6 +113,39 @@ class TestResubscribeContinuation:
         )
         inserted_kw = svc._tv_repo.insert.call_args.kwargs
         assert inserted_kw["current_ep"] == 26
+
+
+class TestResolvedSeasonContinuation:
+    def test_s02_history_does_not_use_s01_progress(self):
+        svc = _build_service()
+        svc._media.get_media_info.return_value = _make_media_info()
+        svc._media.get_tmdb_season_episodes_num.return_value = 12
+        svc._series_service = MagicMock()
+        svc._series_service.resolve.return_value = SimpleNamespace(
+            series_key="series:demo", season_number=2, title="测试剧"
+        )
+        seen = {}
+
+        class _SeasonAwareHistory:
+            def get_contiguous_transferred_episode_by_tmdb(self, tmdbid, season=None, start=1):
+                seen["season"] = season
+                return 12 if int(season or 0) == 1 else 0
+
+        class _SeasonAwareDownload:
+            def get_contiguous_completed_episode_by_tmdb(self, tmdb_id, season=None, start=1):
+                return 0
+
+        svc._transfer_history_manager = _SeasonAwareHistory()
+        svc._download_repo = _SeasonAwareDownload()
+        # 请求仍按 S01 传入，但剧集解析把标题识别为 S02
+        code, _, _ = svc.add_rss_subscribe(
+            name="测试剧 第二季", year="2024", mtype=MediaType.TV, season=1, total_ep=12, current_ep=1
+        )
+        assert code == 0
+        assert seen["season"] == 2
+        inserted_kw = svc._tv_repo.insert.call_args.kwargs
+        assert inserted_kw["current_ep"] == 1
+        assert inserted_kw["lack"] == 12
 
 
 class TestDefaultSubscribeSetting:
