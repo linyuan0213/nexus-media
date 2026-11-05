@@ -254,7 +254,8 @@ class ScrapeQueueService:
         except Exception as exc:  # noqa: BLE001 - 收据不可用时继续定稿，避免阻塞入库
             log.warn(f"[ScrapeQueue]定稿收据写入失败，继续处理: {exc}")
         in_from = finalize.get("in_from")
-        if metadata_ok and self._message is not None:
+        notify = bool(finalize.get("notify", True))
+        if metadata_ok and notify and self._message is not None:
             try:
                 if media.type == MediaType.MOVIE:
                     self._message.send_transfer_movie_message(

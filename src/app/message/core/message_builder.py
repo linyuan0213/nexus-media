@@ -681,7 +681,6 @@ class MessageBuilder:
     def send_auto_remove_torrents_message(self, title: str, text: str) -> None:
         if not title or not text:
             return
-        title = f"🗑️ {title}"
         variables = {"title": title, "text": text}
         self._insert_system_message("auto_remove_torrents", variables, title, text)
         for client in self._client_manager.active_clients:

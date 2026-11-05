@@ -457,3 +457,18 @@ class TestMessageFacade:
         msg._client_manager.get_status.return_value = True
         result = msg.get_status("telegram", {})
         assert result is True
+
+
+class TestAutoRemoveMessageTitle:
+    def test_title_not_duplicated_or_double_emoji(self):
+        client_mgr = MagicMock()
+        client = {"id": 1, "name": "wx", "switches": ["auto_remove_torrents"]}
+        client_mgr.active_clients = [client]
+        dispatcher = MagicMock()
+        builder = MessageBuilder(client_mgr, dispatcher, MagicMock())
+
+        builder.send_auto_remove_torrents_message("暂停BT", "共暂停 1 个种子")
+
+        kwargs = dispatcher.sendmsg.call_args.kwargs
+        assert kwargs["title"] == "暂停BT"
+        assert "🗑️" not in kwargs["title"]

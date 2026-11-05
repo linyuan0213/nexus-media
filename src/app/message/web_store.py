@@ -11,11 +11,25 @@ import itertools
 import time
 from collections import deque
 from threading import Lock
+from urllib.parse import urlsplit
 
 import log
 from app.db.repositories.web_message_repo_adapter import WebMessageRepositoryAdapter
 from app.db.web_visibility import is_visible
 from app.infrastructure.image_proxy.proxy import ImageProxy
+
+
+def _message_image_url(image: str | None) -> str:
+    """已经是站内图片处理地址时不要再套一层 library 代理."""
+    value = str(image or "").strip()
+    if not value:
+        return ""
+    if value.startswith("/img/"):
+        return value
+    parsed = urlsplit(value)
+    if parsed.path.startswith("/img/"):
+        return value
+    return ImageProxy.get_proxy_image_url(value)
 
 
 class WebMessageStore:
@@ -94,7 +108,7 @@ class WebMessageStore:
         user_id="": 全局消息（系统通知），所有用户可见；
         user_id=<具体用户>: 仅该用户可见（命令交互回复）。
         """
-        proxied_image = ImageProxy.get_proxy_image_url(image) if image else ""
+        proxied_image = _message_image_url(image)
         proxied_items = self._proxy_items(items or [])
         cursor = None
         if self._repo is not None:
@@ -135,7 +149,7 @@ class WebMessageStore:
         for it in items:
             entry = dict(it)
             img = entry.get("image") or ""
-            entry["image"] = ImageProxy.get_proxy_image_url(img) if img else ""
+            entry["image"] = _message_image_url(img)
             proxied.append(entry)
         return proxied
 

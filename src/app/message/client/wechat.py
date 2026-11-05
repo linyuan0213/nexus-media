@@ -359,7 +359,7 @@ class WeChat(_IMessageClient):
         message_url = self._send_msg_url % token
         content = f"{title}\n{text.replace(chr(10) + chr(10), chr(10))}" if text else title
         if url:
-            content = f"{content}\n\n<a href='{url}'>查看详情</a>"
+            content = f"{content}\n\n查看详情：{url}"
         if not user_id:
             user_id = "@all"
         req = {

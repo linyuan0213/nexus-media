@@ -205,7 +205,7 @@ class TorrentRemoverService:
                     count, text = TorrentRemoverActionEngine.execute(task, self._downloader)
                     if count and text:
                         self._message.send_auto_remove_torrents_message(
-                            title=f"自动删种任务：{task.get('name')}", text=text
+                            title=str(task.get("name") or "自动删种任务"), text=text
                         )
                 except Exception as e:
                     ExceptionUtils.exception_traceback(e)
