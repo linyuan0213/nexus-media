@@ -12,10 +12,18 @@ class _FakeRepo:
         self.aliases = {}
         self.seasons = {}
 
-    def get_alias(self, provider, external_id, scope="default"):
-        alias = self.aliases.get((provider, external_id, scope))
-        if alias is None:
+    def get_alias(self, provider, external_id, scope="default", season_number=None):
+        matches = [
+            value
+            for (p, ext, sc, season), value in self.aliases.items()
+            if p == provider
+            and ext == external_id
+            and sc == scope
+            and (season_number is None or season == season_number)
+        ]
+        if not matches:
             return None
+        alias = matches[0]
         return SimpleNamespace(SERIES_KEY=alias["series_key"], SEASON_NUMBER=alias["season"])
 
     def get_series(self, series_key):
@@ -38,7 +46,7 @@ class _FakeRepo:
         self.seasons[(kwargs["series_key"], kwargs["season_number"])] = kwargs
 
     def create_alias(self, **kwargs):
-        self.aliases[(kwargs["provider"], kwargs["external_id"], kwargs["scope"])] = {
+        self.aliases[(kwargs["provider"], kwargs["external_id"], kwargs["scope"], kwargs["season_number"])] = {
             "series_key": kwargs["series_key"],
             "season": kwargs["season_number"],
         }
@@ -47,7 +55,7 @@ class _FakeRepo:
     def list_aliases(self, series_key):
         return [
             SimpleNamespace(PROVIDER=provider, EXTERNAL_ID=external_id)
-            for (provider, external_id, _), value in self.aliases.items()
+            for (provider, external_id, _, _), value in self.aliases.items()
             if value["series_key"] == series_key
         ]
 

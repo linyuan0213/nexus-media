@@ -51,7 +51,12 @@ class SeriesService:
             base, parsed = self.split_title_season(title)
             return SeriesResolution("", parsed or 1, base, year)
 
-        alias = self._repo.get_alias(provider, external_id, scope)
+        base, parsed_season = self.split_title_season(title)
+        season = int(season_number or parsed_season or 1)
+
+        alias = self._repo.get_alias(provider, external_id, scope, season)
+        if alias is None and season_number is None and parsed_season is None:
+            alias = self._repo.get_alias(provider, external_id, scope)
         if alias is not None:
             series = self._repo.get_series(alias.SERIES_KEY)
             return SeriesResolution(
@@ -60,9 +65,6 @@ class SeriesService:
                 title=series.TITLE if series else title,
                 year=series.YEAR if series else year,
             )
-
-        base, parsed_season = self.split_title_season(title)
-        season = int(season_number or parsed_season or 1)
         candidates = self._repo.find_series_by_title(base)
         series = None
         if candidates:

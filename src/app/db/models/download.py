@@ -51,6 +51,7 @@ class DOWNLOADHISTORY(Base):
     STATE: Mapped[str] = mapped_column(String(20), default="downloading")
     DATE: Mapped[str] = mapped_column(String(20), index=True)
     IDENTITY_ID: Mapped[str | None] = mapped_column(String(26), nullable=True, index=True)
+    SERIES_KEY: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     ANCHOR_PROVIDER: Mapped[str | None] = mapped_column(String(64), nullable=True)
     ANCHOR_EXTERNAL_ID: Mapped[str | None] = mapped_column(String(255), nullable=True)
     CONTENT_PROFILE: Mapped[str | None] = mapped_column(String(64), nullable=True)

@@ -10,17 +10,22 @@ from app.db.repositories.base_repository import BaseRepository
 
 
 class MediaSeriesRepository(BaseRepository):
-    def get_alias(self, provider: str, external_id: str, scope: str = "default") -> MediaSeriesAlias | None:
+    def get_alias(
+        self,
+        provider: str,
+        external_id: str,
+        scope: str = "default",
+        season_number: int | None = None,
+    ) -> MediaSeriesAlias | None:
         with self.session() as db:
-            return (
-                db.query(MediaSeriesAlias)
-                .filter(
-                    MediaSeriesAlias.PROVIDER == provider,
-                    MediaSeriesAlias.EXTERNAL_ID == external_id,
-                    MediaSeriesAlias.SCOPE == scope,
-                )
-                .first()
+            query = db.query(MediaSeriesAlias).filter(
+                MediaSeriesAlias.PROVIDER == provider,
+                MediaSeriesAlias.EXTERNAL_ID == external_id,
+                MediaSeriesAlias.SCOPE == scope,
             )
+            if season_number is not None:
+                query = query.filter(MediaSeriesAlias.SEASON_NUMBER == int(season_number))
+            return query.order_by(MediaSeriesAlias.SEASON_NUMBER.asc()).first()
 
     def get_series(self, series_key: str) -> MediaSeries | None:
         with self.session() as db:
@@ -121,4 +126,4 @@ class MediaSeriesRepository(BaseRepository):
             return row
         except IntegrityError:
             # 并发创建同一别名：以已有记录为准
-            return self.get_alias(provider, external_id, scope)
+            return self.get_alias(provider, external_id, scope, season_number)

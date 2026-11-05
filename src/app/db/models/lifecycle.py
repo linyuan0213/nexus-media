@@ -22,6 +22,7 @@ class MediaLifecycle(Base):
 
     ID: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     IDENTITY_ID: Mapped[str] = mapped_column(String(26), nullable=False)
+    SERIES_KEY: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     MEDIA_TYPE: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown")
     SEASON: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     EPISODE: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -61,6 +62,7 @@ class MediaLifecycleEvent(Base):
     ID: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     EVENT_KEY: Mapped[str] = mapped_column(String(128), nullable=False)
     IDENTITY_ID: Mapped[str] = mapped_column(String(26), nullable=False)
+    SERIES_KEY: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     MEDIA_TYPE: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown")
     SEASON: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     EPISODE: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
