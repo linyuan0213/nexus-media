@@ -246,24 +246,22 @@ class SearchResultProcessor:
                     str(x.title).ljust(100, " "),
                 )
             else:
-                # 站点优先：站点顺序 > 规则顺序 > 做种数
+                # 站点优先：站点顺序 > 做种数 > 规则顺序
                 order_key = "{}{}{}{}{}{}{}{}".format(
                     str(season).rjust(3, "0"),
                     str(collection_priority).rjust(1, "0"),
                     str(episode).rjust(3, "0"),
                     str(episode_count).rjust(3, "0"),
                     str(x.site_order).rjust(4, "0"),
-                    str(x.res_order).rjust(3, "0"),
                     str(x.seeders).rjust(10, "0"),
+                    str(x.res_order).rjust(3, "0"),
                     str(x.title).ljust(100, " "),
                 )
             return order_key
 
         return sorted(media_list, key=_sort_key, reverse=True)
 
-    def filter_downloaded(
-        self, media_list: list, force: bool = False, over_edition: bool = False
-    ) -> list:
+    def filter_downloaded(self, media_list: list, force: bool = False, over_edition: bool = False) -> list:
         """过滤已完成/在途下载；电影按整部，剧集动漫按分集，洗版模式放行."""
         if over_edition:
             return list(media_list)

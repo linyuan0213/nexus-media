@@ -3,6 +3,7 @@
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
+from app.core.settings import settings as app_settings
 from app.domain.entities.rss import SubscribeState
 from app.domain.mediatypes import MediaType
 from app.services.subscribe.coordinator import DownloadCoordinator
@@ -361,6 +362,51 @@ class TestRssFeedStrategy:
         subscribe = cast(Any, strategy.subscribe)
         subscribe.finish_rss_subscribe.assert_not_called()
         subscribe.update_rss_state.assert_called_once_with(MediaType.MOVIE, 7, SubscribeState.COMPLETED.value)
+
+    def _movie(self, *, title: str, site_order: int, seeders: int, res_order: int) -> MagicMock:
+        media = MagicMock()
+        media.type = MediaType.MOVIE
+        media.rssid = 7
+        media.title = title
+        media.site_order = site_order
+        media.seeders = seeders
+        media.res_order = res_order
+        media.over_edition = False
+        media.tmdb_id = 9
+        media.total_episodes = 0
+        media.begin_episode = None
+        media.get_episode_list.return_value = []
+        return media
+
+    def _selected_movies(self, strategy, medias: list) -> list:
+        cast(Any, strategy.downloader).batch_download.return_value = ([], {})
+        with patch.object(
+            type(app_settings),
+            "get",
+            side_effect=lambda key, default=None: {"pt": {"download_order": "site"}}.get(key, default),
+        ):
+            strategy._download_matched_torrents(medias, {})
+        return cast(Any, strategy.downloader).batch_download.call_args[0][1]
+
+    def test_rss_site_mode_same_site_picks_more_seeders(self):
+        """站点优先：同站点内应选做种数最高的，不受 res_order 干扰."""
+        strategy = self._make_strategy()
+        low_seed = self._movie(title="LowSeed", site_order=9999, seeders=5, res_order=99)
+        high_seed = self._movie(title="HighSeed", site_order=9999, seeders=500, res_order=1)
+
+        selected = self._selected_movies(strategy, [low_seed, high_seed])
+
+        assert [item.title for item in selected] == ["HighSeed"]
+
+    def test_rss_site_mode_keeps_higher_priority_site(self):
+        """站点优先：低优先级站点做种再多也不能越过站点顺序."""
+        preferred_site = self._movie(title="PreferredSite", site_order=9999, seeders=5, res_order=1)
+        other_site = self._movie(title="OtherSite", site_order=0, seeders=500, res_order=99)
+
+        strategy = self._make_strategy()
+        selected = self._selected_movies(strategy, [other_site, preferred_site])
+
+        assert [item.title for item in selected] == ["PreferredSite"]
 
     def test_get_default_rss_sites_no_system_config(self):
         strategy = self._make_strategy()

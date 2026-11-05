@@ -583,19 +583,8 @@ class RssFeedStrategy:
             unique_media.append(_m)
         rss_download_torrents = unique_media
 
-        # 电影同一订阅只下载一个候选；不同站点可能返回不同种子 URL，
-        # 仅按 URL 去重会把同一部电影重复提交到多个下载器。
-        movie_filtered: list = []
-        seen_movie_rss: set[int] = set()
-        for media in rss_download_torrents:
-            rssid = getattr(media, "rssid", None)
-            if getattr(media, "type", None) == MediaType.MOVIE and rssid:
-                if int(rssid) in seen_movie_rss:
-                    log.info(f"[RssFeedStrategy] 电影订阅 {rssid} 已有候选，跳过重复下载")
-                    continue
-                seen_movie_rss.add(int(rssid))
-            movie_filtered.append(media)
-        rss_download_torrents = movie_filtered
+        # 电影同一订阅的跨站候选必须在排序后再收敛（见下方 best_movies），
+        # 不能在这里按 RSS 原始顺序先保留第一条，否则站点/做种优先失效。
 
         for media in rss_download_torrents:
             if media.type not in (MediaType.TV, MediaType.ANIME):
@@ -643,7 +632,7 @@ class RssFeedStrategy:
                     x.site_order,
                     x.res_order,
                 )
-            return (collection_priority, episode_count, x.site_order, x.res_order, x.seeders)
+            return (collection_priority, episode_count, x.site_order, x.seeders, x.res_order)
 
         rss_download_torrents.sort(key=_rss_sort_key, reverse=True)
 
@@ -656,8 +645,9 @@ class RssFeedStrategy:
                     log.info(f"[RssFeedStrategy] {item.title} 已被其他策略锁定，跳过")
             rss_download_torrents = filtered
 
-        # 电影订阅同一 rssid 只下载最高优先级的一条，避免 1080P/4K
-        # 等多个种子同时命中过滤规则后被批量下载。
+        # 电影订阅同一 rssid 只下载排序后最优的一条，避免 1080P/4K
+        # 等多个种子同时命中过滤规则后被批量下载。列表已按
+        # “站点优先/做种数优先”排好，不能再按 res_order 覆盖排序结果。
         best_movies: dict = {}
         selected_movies = []
         for media in rss_download_torrents:
@@ -673,20 +663,9 @@ class RssFeedStrategy:
                 best_movies[rssid] = media
                 selected_movies.append(media)
                 continue
-            current_order = int(getattr(current, "res_order", 0) or 0)
-            media_order = int(getattr(media, "res_order", 0) or 0)
-            if media_order > current_order:
-                selected_movies[selected_movies.index(current)] = media
-                best_movies[rssid] = media
-                log.info(
-                    f"[RssFeedStrategy] 订阅 {rssid} 选择更高优先级资源："
-                    f"{media.title}（{media_order} > {current_order}）"
-                )
-            else:
-                log.info(
-                    f"[RssFeedStrategy] 订阅 {rssid} 跳过低优先级资源："
-                    f"{media.title}（{media_order} <= {current_order}）"
-                )
+            log.info(
+                f"[RssFeedStrategy] 订阅 {rssid} 跳过次优资源：{media.title}（已选择 {getattr(current, 'title', '')}）"
+            )
         rss_download_torrents = selected_movies
 
         try:
