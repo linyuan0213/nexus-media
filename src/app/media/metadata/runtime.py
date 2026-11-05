@@ -9,12 +9,28 @@ import time
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
-from .errors import ProviderUnavailable
+from app.infrastructure.rate_limiter.backends import RateLimitEngine
+
+from .errors import ProviderRateLimited, ProviderUnavailable
 from .models import ProviderDescriptor
 
 
 class UnsafeProviderURL(ValueError):
     pass
+
+
+_rate_engine: RateLimitEngine | None = None
+_rate_engine_lock = threading.Lock()
+
+
+def _shared_rate_engine() -> RateLimitEngine:
+    """Redis 可用时跨实例共享元数据限流；否则退化为内存令牌桶."""
+    global _rate_engine
+    if _rate_engine is None:
+        with _rate_engine_lock:
+            if _rate_engine is None:
+                _rate_engine = RateLimitEngine()
+    return _rate_engine
 
 
 def validate_outbound_url(url: str, allowed_hosts: frozenset[str] = frozenset()) -> str:
@@ -67,11 +83,27 @@ class ProviderRuntime:
                     self.descriptor.provider_key,
                     f"provider 熔断中，剩余 {int(self._open_until - now)}s",
                 )
-            interval = 60.0 / self.descriptor.rate_limit_per_minute if self.descriptor.rate_limit_per_minute else 0.0
-            wait = max(0.0, self._last_call + interval - now)
-            self._last_call = now + wait
-        if wait > 0:
-            time.sleep(wait)
+        rpm = int(self.descriptor.rate_limit_per_minute or 0)
+        if rpm <= 0:
+            return
+        interval = 60.0 / rpm
+        try:
+            engine = _shared_rate_engine()
+            acquired = engine.acquire(
+                f"metadata:rate:{self.descriptor.provider_key}",
+                rate=f"{rpm}/m",
+                burst=1,
+                timeout=max(interval * 2, 5.0),
+            )
+        except Exception:  # noqa: BLE001 - Redis 初始化失败时退回进程内间隔
+            with self._lock:
+                wait = max(0.0, self._last_call + interval - time.monotonic())
+                self._last_call = time.monotonic() + wait
+            if wait > 0:
+                time.sleep(wait)
+            return
+        if not acquired:
+            raise ProviderRateLimited(self.descriptor.provider_key, "provider 限流等待超时")
 
     def record_success(self) -> None:
         with self._lock:

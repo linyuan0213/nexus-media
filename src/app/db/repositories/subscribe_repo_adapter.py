@@ -94,6 +94,9 @@ class SubscribeMovieRepositoryAdapter:
     def reset_stale_searching(self, cutoff: str) -> int:
         return self._repo.reset_stale_searching(cutoff)
 
+    def schedule_rate_limit_retry(self, rssid: int | None, delay_seconds: int) -> None:
+        self._repo.schedule_rate_limit_retry("movie", rssid, delay_seconds)
+
     # 兼容旧Repository方法名
     def update_subscribe_movie_state(
         self,
@@ -241,6 +244,9 @@ class SubscribeTvRepositoryAdapter:
         self, title: str | None, year: str | None, season: str | None, rssid: int | None, state: str
     ) -> None:
         self._repo.update_rss_tv_state(title, year, season, rssid, state)
+
+    def schedule_rate_limit_retry(self, rssid: int | None, delay_seconds: int) -> None:
+        self._repo.schedule_rate_limit_retry("tv", rssid, delay_seconds)
 
     # 兼容旧Repository方法名
     def update_subscribe_tv_state(

@@ -47,6 +47,10 @@ class ISubscribeMovieRepository(Protocol):
         """更新状态"""
         ...
 
+    def schedule_rate_limit_retry(self, rssid: int | None, delay_seconds: int) -> None:
+        """限流后退避重试"""
+        ...
+
     def update_filter_order(self, rssid: int, res_order: int) -> None:
         """更新过滤优先级"""
         ...
@@ -131,6 +135,10 @@ class ISubscribeTvRepository(Protocol):
         self, title: str | None, year: str | None, season: str | None, rssid: int | None, state: str
     ) -> None:
         """更新状态"""
+        ...
+
+    def schedule_rate_limit_retry(self, rssid: int | None, delay_seconds: int) -> None:
+        """限流后退避重试"""
         ...
 
     def update_lack(

@@ -5,10 +5,12 @@ Handles RSS movies, TV shows, episodes and history related database operations.
 
 from __future__ import annotations
 
+import datetime
 import difflib
 import re
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+from typing import cast as type_cast
 
 from sqlalchemy import Integer, and_, cast, or_
 from sqlalchemy.exc import IntegrityError
@@ -679,13 +681,34 @@ class SubscribeRepository(BaseRepository):
         now = time.strftime("%Y-%m-%d %H:%M:%S")
         with self.session() as db:
             if rssid:
-                db.query(SubscribeMovies).filter(SubscribeMovies.ID == int(rssid)).update(
-                    {"STATE": state, "STATE_UPDATED_AT": now}
-                )
+                update_values: dict[str, Any] = {"STATE": state, "STATE_UPDATED_AT": now}
+                if state != SubscribeState.ERROR.value:
+                    update_values.update({"RETRY_COUNT": 0, "NEXT_RETRY_AT": None})
+                db.query(SubscribeMovies).filter(SubscribeMovies.ID == int(rssid)).update(type_cast(Any, update_values))
             else:
+                update_values: dict[str, Any] = {"STATE": state, "STATE_UPDATED_AT": now}
+                if state != SubscribeState.ERROR.value:
+                    update_values.update({"RETRY_COUNT": 0, "NEXT_RETRY_AT": None})
                 db.query(SubscribeMovies).filter(
                     SubscribeMovies.NAME == title, SubscribeMovies.YEAR == str(year)
-                ).update({"STATE": state, "STATE_UPDATED_AT": now})
+                ).update(type_cast(Any, update_values))
+
+    def schedule_rate_limit_retry(self, kind: str, rssid: int | None, delay_seconds: int) -> None:
+        """限流失败：写指数退避时间，ERROR 重试到期前不再处理."""
+        if not rssid:
+            return
+        now = datetime.datetime.now()
+        next_at = (now + datetime.timedelta(seconds=max(1, int(delay_seconds)))).strftime("%Y-%m-%d %H:%M:%S")
+        now_text = now.strftime("%Y-%m-%d %H:%M:%S")
+        model = SubscribeMovies if kind == "movie" else SubscribeTvs
+        with self.session() as db:
+            row = db.get(model, int(rssid))
+            if row is None:
+                return
+            row.RETRY_COUNT = int(getattr(row, "RETRY_COUNT", 0) or 0) + 1
+            row.NEXT_RETRY_AT = next_at
+            row.STATE = SubscribeState.ERROR.value
+            row.STATE_UPDATED_AT = now_text
 
     def reset_stale_searching(self, cutoff: str) -> int:
         """将长期停留在 SEARCHING 的订阅重置为 ERROR，避免看门狗缺失导致永久卡住."""
@@ -1270,13 +1293,17 @@ class SubscribeRepository(BaseRepository):
         now = time.strftime("%Y-%m-%d %H:%M:%S")
         with self.session() as db:
             if rssid:
-                db.query(SubscribeTvs).filter(SubscribeTvs.ID == int(rssid)).update(
-                    {"STATE": state, "STATE_UPDATED_AT": now}
-                )
+                update_values: dict[str, Any] = {"STATE": state, "STATE_UPDATED_AT": now}
+                if state != SubscribeState.ERROR.value:
+                    update_values.update({"RETRY_COUNT": 0, "NEXT_RETRY_AT": None})
+                db.query(SubscribeTvs).filter(SubscribeTvs.ID == int(rssid)).update(type_cast(Any, update_values))
             else:
+                update_values: dict[str, Any] = {"STATE": state, "STATE_UPDATED_AT": now}
+                if state != SubscribeState.ERROR.value:
+                    update_values.update({"RETRY_COUNT": 0, "NEXT_RETRY_AT": None})
                 db.query(SubscribeTvs).filter(
                     SubscribeTvs.NAME == title, SubscribeTvs.YEAR == str(year), SubscribeTvs.SEASON == season
-                ).update({"STATE": state, "STATE_UPDATED_AT": now})
+                ).update(type_cast(Any, update_values))
 
     # ==================== RSS TV Episodes ====================
 

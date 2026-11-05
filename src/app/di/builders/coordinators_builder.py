@@ -7,6 +7,7 @@ from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryA
 from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.di.builders.agent_builder import AgentRagObjects
 from app.di.models import BusinessFacades, CoordinatorObjects, InfrastructureObjects, ServiceObjects
+from app.infrastructure.thread import ThreadExecutor
 from app.media import MediaCache
 from app.message.agent_enhancer import AgentMessageEnhancer
 from app.services.rss_processor import RssHelper
@@ -98,9 +99,12 @@ def build_coordinators(
         message=message,
         system_config=system_config,
     )
+    subscribe_search_executor = ThreadExecutor.named("subscribe_search", max_workers=4)
+    subscribe_rss_executor = ThreadExecutor.named("subscribe_rss", max_workers=2)
     subscription_monitor = SubscriptionMonitor(
         subscribe_service=subscribe_service,
-        thread_executor=thread_executor,
+        thread_executor=subscribe_search_executor,
+        rss_thread_executor=subscribe_rss_executor,
         queue_strategy=queue_strategy,
         rss_strategy=rss_strategy,
         indexer_strategy=indexer_strategy,

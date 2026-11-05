@@ -2,6 +2,7 @@
 
 import copy
 import threading
+import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
@@ -43,6 +44,7 @@ from app.services.lifecycle_service import LifecycleProjector
 from app.services.search_service import Searcher
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.services.subscribe.default_settings import get_default_setting
+from app.services.subscribe.retry_policy import backoff_seconds, is_rate_limited
 from app.sites.torrent import Torrent
 
 # 订阅搜索每轮处理上限（subscribe.batch_limit 可覆盖）
@@ -178,6 +180,25 @@ class BaseSearchStrategy:
         except (ValueError, TypeError):
             return _SUBSCRIBE_BATCH_DEFAULT
 
+    def _get_batch_workers(self) -> int:
+        """订阅搜索并发上限；站点配额低时应调小（如 M-Team 5/min 建议 2）."""
+        try:
+            value = int((settings.get("subscribe") or {}).get("batch_workers") or 3)
+        except (ValueError, TypeError):
+            value = 3
+        return max(1, min(value, 10))
+
+    @staticmethod
+    def _filter_due_retries(items: dict, state: str) -> dict:
+        if state != SubscribeState.ERROR.value or not items:
+            return items
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        return {
+            key: item
+            for key, item in items.items()
+            if not item.get("next_retry_at") or str(item.get("next_retry_at")) <= now
+        }
+
     def search_pending(self) -> None:
         """触发一次队列搜索（处理 PENDING 订阅），供事件处理器调用."""
         self._search_movies(state=SubscribeState.PENDING.value)
@@ -244,6 +265,7 @@ class BaseSearchStrategy:
             rss_movies = self._service.get_subscribe_movies(rid=rssid) if self._service else {}
         else:
             rss_movies = self._service.get_subscribe_movies(state=state) if self._service else {}
+        rss_movies = self._filter_due_retries(rss_movies, state)
         if not rss_movies:
             return
         log.info(f"[Subscribe]共有 {len(rss_movies)} 个{MediaType.MOVIE.display_name}订阅需要搜索")
@@ -375,23 +397,33 @@ class BaseSearchStrategy:
                         RepositoryError,
                         ServiceError,
                         NetworkError,
-                    ):
-                        self._movie_repo.update_state(
-                            title=None, year=None, rssid=rid, state=SubscribeState.RUNNING.value
-                        )
+                    ) as exc:
+                        if rid and is_rate_limited(exc):
+                            delay = backoff_seconds(int(rss_info.get("retry_count") or 0) + 1)
+                            self._movie_repo.schedule_rate_limit_retry(rid, delay)
+                            log.warn(f"[Subscribe]{MediaType.MOVIE.display_name} {name_val} 被限流，{delay}s 后重试")
+                        else:
+                            self._movie_repo.update_state(
+                                title=None, year=None, rssid=rid, state=SubscribeState.RUNNING.value
+                            )
                         log.error(
                             f"[Subscribe]{MediaType.MOVIE.display_name} {name_val}"
                             f" 订阅搜索失败：{traceback.format_exc()}"
                         )
-            except Exception:
+            except Exception as exc:
                 log.error(
                     f"[Subscribe]{MediaType.MOVIE.display_name} {name_val} 订阅处理失败：{traceback.format_exc()}"
                 )
                 if rid:
                     try:
-                        self._movie_repo.update_state(
-                            title=None, year=None, rssid=rid, state=SubscribeState.ERROR.value
-                        )
+                        if is_rate_limited(exc):
+                            delay = backoff_seconds(int(rss_info.get("retry_count") or 0) + 1)
+                            self._movie_repo.schedule_rate_limit_retry(rid, delay)
+                            log.warn(f"[Subscribe]订阅 {rid} 被限流，{delay}s 后重试")
+                        else:
+                            self._movie_repo.update_state(
+                                title=None, year=None, rssid=rid, state=SubscribeState.ERROR.value
+                            )
                     except Exception as update_err:
                         log.debug(f"[Subscribe]设置 ERROR 状态失败 rssid={rid}: {update_err}")
 
@@ -401,7 +433,7 @@ class BaseSearchStrategy:
                 f"[Subscribe]订阅数 {len(rss_movies)} 超过单轮上限 {batch_limit}，"
                 f"本轮流处理前 {batch_limit} 个，其余保持 PENDING 下一轮继续"
             )
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=self._get_batch_workers()) as executor:
             batch = self._take_batch(list(rss_movies.values()), "movie", batch_limit)
             list(executor.map(_in_background(_process_one), batch))
 
@@ -412,6 +444,7 @@ class BaseSearchStrategy:
             rss_tvs = self._service.get_subscribe_tvs(rid=rssid) if self._service else {}
         else:
             rss_tvs = self._service.get_subscribe_tvs(state=state) if self._service else {}
+        rss_tvs = self._filter_due_retries(rss_tvs, state)
         if not rss_tvs:
             return
         log.info(f"[Subscribe]共有 {len(rss_tvs)} 个{MediaType.TV.display_name}订阅需要检索")
@@ -635,16 +668,26 @@ class BaseSearchStrategy:
                             self._tv_repo.update_state(
                                 title=None, year=None, season=None, rssid=rid, state=SubscribeState.RUNNING.value
                             )
-            except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError):
+            except (MediaError, DownloadError, IndexerError, RepositoryError, ServiceError, NetworkError) as exc:
                 log.error(f"[Subscribe]{MediaType.TV.display_name} {name_val} 订阅搜索失败：{traceback.format_exc()}")
-                self._tv_repo.update_state(
-                    title=None, year=None, season=None, rssid=rid, state=SubscribeState.RUNNING.value
-                )
-            except Exception:
+                if rid and is_rate_limited(exc):
+                    delay = backoff_seconds(int(rss_info.get("retry_count") or 0) + 1)
+                    self._tv_repo.schedule_rate_limit_retry(rid, delay)
+                    log.warn(f"[Subscribe]{MediaType.TV.display_name} {name_val} 被限流，{delay}s 后重试")
+                else:
+                    self._tv_repo.update_state(
+                        title=None, year=None, season=None, rssid=rid, state=SubscribeState.RUNNING.value
+                    )
+            except Exception as exc:
                 log.error(f"[Subscribe]{MediaType.TV.display_name} {name_val} 订阅处理失败：{traceback.format_exc()}")
-                self._tv_repo.update_state(
-                    title=None, year=None, season=None, rssid=rid, state=SubscribeState.ERROR.value
-                )
+                if rid and is_rate_limited(exc):
+                    delay = backoff_seconds(int(rss_info.get("retry_count") or 0) + 1)
+                    self._tv_repo.schedule_rate_limit_retry(rid, delay)
+                    log.warn(f"[Subscribe]{MediaType.TV.display_name} {name_val} 被限流，{delay}s 后重试")
+                else:
+                    self._tv_repo.update_state(
+                        title=None, year=None, season=None, rssid=rid, state=SubscribeState.ERROR.value
+                    )
 
         batch_limit = self._get_batch_limit()
         if len(rss_tvs) > batch_limit:
@@ -652,7 +695,7 @@ class BaseSearchStrategy:
                 f"[Subscribe]订阅数 {len(rss_tvs)} 超过单轮上限 {batch_limit}，"
                 f"本轮流处理前 {batch_limit} 个，其余保持 PENDING 下一轮继续"
             )
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers=self._get_batch_workers()) as executor:
             batch = self._take_batch(list(rss_tvs.values()), "tv", batch_limit)
             list(executor.map(_in_background(_process_one), batch))
 
