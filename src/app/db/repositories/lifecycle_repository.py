@@ -11,7 +11,7 @@ from sqlalchemy import func
 import log
 from app.db.models.download import DOWNLOADHISTORY
 from app.db.models.lifecycle import MediaLifecycle, MediaLifecycleEvent
-from app.db.models.subscribe import SubscribeMovies, SubscribeTvEpisodes, SubscribeTvs
+from app.db.models.subscribe import SubscribeHistory, SubscribeMovies, SubscribeTvEpisodes, SubscribeTvs
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.data_scope import apply_owner_scope
@@ -297,10 +297,11 @@ class LifecycleRepository(BaseRepository):
                         activity[key] = occurred
             subscription_map = _subscription_map(db, identities)
             active_identities = _active_subscription_identities(db, identities)
+            completed_identities = _completed_subscription_identities(db, identities)
         grouped = _group_lifecycle_rows(rows)
         for item in grouped:
             item["ACTIVITY_AT"] = activity.get(str(item.get("IDENTITY_ID")), datetime.min)
-        _apply_subscription_state(grouped, subscription_map, active_identities)
+        _apply_subscription_state(grouped, subscription_map, active_identities, completed_identities)
         existing = {str(item.get("IDENTITY_ID") or "") for item in grouped}
         synthetic = _active_subscription_items(db, user, existing)
         if keyword:
@@ -365,6 +366,7 @@ class LifecycleRepository(BaseRepository):
                 grouped,
                 _subscription_map(db, [identity_id]),
                 _active_subscription_identities(db, [identity_id]),
+                _completed_subscription_identities(db, [identity_id]),
             )
             return grouped[0]
 
@@ -504,6 +506,7 @@ class LifecycleRepository(BaseRepository):
                 grouped,
                 _subscription_map(db, identities),
                 _active_subscription_identities(db, identities),
+                _completed_subscription_identities(db, identities),
             )
             existing = {str(item.get("IDENTITY_ID") or "") for item in grouped}
             grouped.extend(_active_subscription_items(db, user, existing))
@@ -599,6 +602,21 @@ def _active_subscription_identities(db, identities: list[str]) -> set[str]:
     return active
 
 
+def _completed_subscription_identities(db, identities: list[str]) -> set[str]:
+    """已有完成订阅历史的身份，不能再被投影成“已取消”."""
+    if not identities:
+        return set()
+    rows = (
+        db.query(SubscribeHistory.IDENTITY_ID)
+        .filter(
+            SubscribeHistory.IDENTITY_ID.in_(identities),
+            SubscribeHistory.IDENTITY_ID.isnot(None),
+        )
+        .all()
+    )
+    return {str(row[0]) for row in rows if row[0]}
+
+
 def _subscription_map(db, identities: list[str]) -> dict[str, tuple[int, str, int]]:
     if not identities:
         return {}
@@ -635,9 +653,11 @@ def _apply_subscription_state(
     grouped: list[dict[str, Any]],
     subscription_map: dict[str, tuple[int, str, int]],
     active_identities: set[str] | None = None,
+    completed_identities: set[str] | None = None,
 ) -> None:
     """用订阅总集数约束整季状态，避免只统计已产生生命周期记录的分集。"""
     active_identities = active_identities or set()
+    completed_identities = completed_identities or set()
     for item in grouped:
         identity = str(item.get("IDENTITY_ID") or "")
         sub = subscription_map.get(identity)
@@ -645,6 +665,7 @@ def _apply_subscription_state(
             # 订阅已取消/删除但生命周期仍停在订阅中：投影为已取消，不保留“进行中”假象。
             if (
                 identity not in active_identities
+                and identity not in completed_identities
                 and str(item.get("STAGE") or "") in {LifecycleStage.SUBSCRIBED.value, LifecycleStage.SEARCHING.value}
                 and str(item.get("STATUS") or "")
                 in {
