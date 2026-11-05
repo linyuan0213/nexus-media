@@ -19,6 +19,7 @@ from typing import Any
 import log
 from app.core.constants import PT_TAG, RMT_MEDIAEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
+from app.core.settings import settings
 from app.core.system_config import SystemConfig
 from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import (
@@ -299,7 +300,10 @@ class DownloadCore:
         download_items: list = []
         # 每轮重置种子解析缓存；失败负缓存由 TTL 控制跨轮保留
         self._episode_cache.clear()
-        download_order = self._client_factory.download_order if self._client_factory else None
+        # 优先读当前配置；工厂缓存只在配置缺失时兜底，避免切换优先规则后仍用旧值
+        download_order = (settings.get("pt") or {}).get("download_order") or (
+            self._client_factory.download_order if self._client_factory else None
+        )
         # 订阅下载保留有序多站点候选，失败后可回退到下一个候选
         download_list = Torrent.get_download_list(media_list, download_order, collapse=False)
 

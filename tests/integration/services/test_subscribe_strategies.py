@@ -378,12 +378,12 @@ class TestRssFeedStrategy:
         media.get_episode_list.return_value = []
         return media
 
-    def _selected_movies(self, strategy, medias: list) -> list:
+    def _selected_movies(self, strategy, medias: list, order: str = "site") -> list:
         cast(Any, strategy.downloader).batch_download.return_value = ([], {})
         with patch.object(
             type(app_settings),
             "get",
-            side_effect=lambda key, default=None: {"pt": {"download_order": "site"}}.get(key, default),
+            side_effect=lambda key, default=None: {"pt": {"download_order": order}}.get(key, default),
         ):
             strategy._download_matched_torrents(medias, {})
         return cast(Any, strategy.downloader).batch_download.call_args[0][1]
@@ -397,6 +397,16 @@ class TestRssFeedStrategy:
         selected = self._selected_movies(strategy, [low_seed, high_seed])
 
         assert [item.title for item in selected] == ["HighSeed"]
+
+    def test_rss_seeder_mode_prefers_more_seeders_over_site(self):
+        """做种数优先：低优先级站点做种更多时应胜出."""
+        preferred_site = self._movie(title="PreferredSite", site_order=9999, seeders=5, res_order=1)
+        other_site = self._movie(title="OtherSite", site_order=0, seeders=500, res_order=99)
+
+        strategy = self._make_strategy()
+        selected = self._selected_movies(strategy, [preferred_site, other_site], order="seeder")
+
+        assert [item.title for item in selected] == ["OtherSite"]
 
     def test_rss_site_mode_keeps_higher_priority_site(self):
         """站点优先：低优先级站点做种再多也不能越过站点顺序."""
