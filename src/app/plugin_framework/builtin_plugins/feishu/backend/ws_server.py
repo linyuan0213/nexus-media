@@ -85,6 +85,9 @@ class WsServer(threading.Thread):
                 event_handler=handler,
                 auto_reconnect=True,
             )
+            # SDK 默认首次重连带最多 30s 随机延迟；单实例场景缩短为 1s，避免长时间空窗。
+            self._client._reconnect_nonce = 1
+            self._client._reconnect_interval = 3
             self._client.on_reconnecting = self._on_reconnecting
             self._client.on_reconnected = self._on_reconnected
             log.info("飞书长连接已启动")
