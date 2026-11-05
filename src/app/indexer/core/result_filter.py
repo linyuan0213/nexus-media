@@ -398,9 +398,84 @@ class ResultFilter:
         允许：Resident Evil The Umbrella Chronicles（同作品完整标题）
         拒绝：RESIDENT EVIL 2 -CODEX（只命中 Resident Evil，且多出续集数字）
         """
-        text = str(torrent_name or "")
+        text = re.sub(r"-[a-z0-9@._]+$", " ", str(torrent_name or ""), flags=re.IGNORECASE)
         compact = "".join(ch for ch in text.casefold() if ch.isalnum())
         tokens = re.findall(r"[a-z]+|\d+", text.casefold())
+        tech_tokens = {
+            "pc",
+            "act",
+            "repack",
+            "proper",
+            "internal",
+            "complete",
+            "multi",
+            "dual",
+            "web",
+            "webdl",
+            "webrip",
+            "bluray",
+            "blu",
+            "ray",
+            "remux",
+            "hdrip",
+            "dvdrip",
+            "brrip",
+            "bdrip",
+            "hdtv",
+            "uhd",
+            "4k",
+            "2160p",
+            "1080p",
+            "720p",
+            "480p",
+            "hdr",
+            "hdr10",
+            "dv",
+            "dolby",
+            "vision",
+            "10bit",
+            "8bit",
+            "hevc",
+            "avc",
+            "h264",
+            "h265",
+            "x264",
+            "x265",
+            "av1",
+            "ddp",
+            "dd",
+            "dts",
+            "truehd",
+            "atmos",
+            "aac",
+            "ac3",
+            "flac",
+            "lpcm",
+            "audio",
+            "audios",
+            "sub",
+            "subs",
+            "chs",
+            "cht",
+            "gb",
+            "big5",
+            "itunes",
+            "amzn",
+            "nf",
+            "dsnp",
+            "hmax",
+            "ma",
+            "dl",
+            "p",
+            "i",
+            "hdr10plus",
+            "diy",
+            "remastered",
+            "uncut",
+            "extended",
+            "theatrical",
+            "imax",
+        }
         for attr in ("original_title", "en_name", "title", "cn_name"):
             candidate = str(getattr(match_media, attr, "") or "").strip()
             if not candidate:
@@ -419,7 +494,12 @@ class ResultFilter:
                 if tokens[index : index + len(cand_tokens)] != cand_tokens:
                     continue
                 rest = tokens[:index] + tokens[index + len(cand_tokens) :]
-                if not any(token.isdigit() and 1 <= int(token) <= 9 for token in rest):
+                if rest and rest[0].isdigit() and 1 <= int(rest[0]) <= 9:
+                    continue
+                # 多出来的英文词必须是技术/版本标记；Requiem、trilogy、collection 等
+                # 说明是另一部作品或合集，不能因为共享系列名就匹配。
+                unknown = [token for token in rest if token.isalpha() and token not in tech_tokens]
+                if not unknown:
                     return True
         return False
 

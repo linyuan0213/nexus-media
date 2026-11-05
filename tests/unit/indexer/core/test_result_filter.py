@@ -341,3 +341,35 @@ def test_quick_name_match_ignores_zero_year():
         type=MediaType.MOVIE,
     )
     assert ResultFilter.quick_name_match(meta, match)
+
+
+class TestTitleSpecificityRejectsDifferentWorks:
+    def _match(self, original="Resident Evil"):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            title="生化危机：爆发夜",
+            cn_name="生化危机：爆发夜",
+            en_name="Resident Evil",
+            original_title=original,
+        )
+
+    def _check(self, name, original="Resident Evil"):
+        from app.indexer.core.result_filter import ResultFilter
+
+        return ResultFilter._title_specific_without_year(name, self._match(original))
+
+    def test_rejects_game_requiem(self):
+        assert not self._check("PC ACT Resident Evil Requiem-voices38")
+
+    def test_rejects_trilogy_collection(self):
+        assert not self._check("Resident Evil trilogy Blu-ray 1080p HDbits@CHDBits")
+
+    def test_accepts_full_specific_title(self):
+        assert self._check(
+            "Resident Evil Death Island 1080p BluRay DTS 5.1-CMCT",
+            original="Resident Evil Death Island",
+        )
+
+    def test_rejects_sequel_number(self):
+        assert not self._check("RESIDENT EVIL 2 -CODEX")
