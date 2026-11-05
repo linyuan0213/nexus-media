@@ -566,6 +566,7 @@ class PluginFrameworkService:
             old_manifest = self.get_manifest(manifest.id) if existing else None
             new_manifest_json = JsonUtils.dumps(manifest.to_dict(), ensure_ascii=False)
             backup_dir: str | None = None
+            reload_after_install = False
 
             with self._lifecycle_guard(manifest.id):
                 if was_enabled:
@@ -630,13 +631,9 @@ class PluginFrameworkService:
                         manifest, enabled=was_enabled if existing else False, installed=True
                     )
                     if was_enabled:
-                        # 升级前已启用：更新后恢复启用状态并重新加载，避免插件无感消失
+                        # 升级前已启用：先恢复启用状态；加载线程必须在 guard 释放后启动
                         self.enable(manifest.id)
-                        threading.Thread(
-                            target=self._do_enable,
-                            args=(manifest.id,),
-                            daemon=True,
-                        ).start()
+                        reload_after_install = True
                 except Exception:
                     self._rollback_install(
                         plugin_id=manifest.id,
@@ -653,6 +650,13 @@ class PluginFrameworkService:
                 if existing and old_entity and old_entity.path and old_entity.path != target_dir:
                     shutil.rmtree(old_entity.path, ignore_errors=True)
 
+            if reload_after_install:
+                threading.Thread(
+                    target=self._do_enable,
+                    args=(manifest.id,),
+                    daemon=True,
+                    name=f"plugin-enable-{manifest.id}",
+                ).start()
             self._invalidate_metadata_cache()
             self._get_hook_system().emit("plugin.install", {"plugin_id": manifest.id})
             return manifest
@@ -808,22 +812,25 @@ class PluginFrameworkService:
 
     def _do_enable(self, plugin_id: str) -> None:
         """后台线程执行插件加载和初始化"""
-        with self._lifecycle_guard(plugin_id):
-            state = self._plugin_registry.get_state(plugin_id)
-            if state is not None and not state.enabled:
-                log.info(f"[PluginFrameworkService] 插件已禁用，跳过加载: {plugin_id}")
-                return
-            try:
-                log.info(f"[PluginFrameworkService] 开始加载插件: {plugin_id}")
-                sandbox = self._plugin_sandbox
-                ok = sandbox.load(plugin_id)
-                if ok:
-                    self._get_hook_system().emit("plugin.enable", {"plugin_id": plugin_id})
-                    log.info(f"[PluginFrameworkService] 插件已启用: {plugin_id}")
-                else:
-                    log.error(f"[PluginFrameworkService] 插件加载返回失败: {plugin_id}")
-            except Exception as e:
-                log.error(f"[PluginFrameworkService] 插件后台加载异常 {plugin_id}: {e}")
+        try:
+            with self._lifecycle_guard(plugin_id):
+                state = self._plugin_registry.get_state(plugin_id)
+                if state is not None and not state.enabled:
+                    log.info(f"[PluginFrameworkService] 插件已禁用，跳过加载: {plugin_id}")
+                    return
+                try:
+                    log.info(f"[PluginFrameworkService] 开始加载插件: {plugin_id}")
+                    sandbox = self._plugin_sandbox
+                    ok = sandbox.load(plugin_id)
+                    if ok:
+                        self._get_hook_system().emit("plugin.enable", {"plugin_id": plugin_id})
+                        log.info(f"[PluginFrameworkService] 插件已启用: {plugin_id}")
+                    else:
+                        log.error(f"[PluginFrameworkService] 插件加载返回失败: {plugin_id}")
+                except Exception as e:
+                    log.error(f"[PluginFrameworkService] 插件后台加载异常 {plugin_id}: {e}")
+        except PluginInstallingError:
+            log.warn(f"[PluginFrameworkService] 插件加载跳过，生命周期锁仍被占用: {plugin_id}")
 
     def refresh_plugin_menus_at_startup(self) -> None:
         """启动时：同步已启用插件的菜单，清理已卸载插件的残留菜单."""
