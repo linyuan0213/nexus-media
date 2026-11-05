@@ -329,7 +329,9 @@ class IdentityResolver:
 
     @staticmethod
     def _strict(name: str, target_names: list[str]) -> bool:
-        n = normalize_text(name)
+        # 去除发布站前缀（如「【高清影视之家】片名」），避免把噪声当成区分信息
+        cleaned = re.sub(r"^\s*(?:[【\[][^】\]]*[】\]]\s*)+", "", str(name or ""))
+        n = normalize_text(cleaned)
         if not n:
             return False
         return any(n == normalize_text(t) for t in target_names if t)
@@ -344,7 +346,10 @@ class IdentityResolver:
                 return False
         g_year = str(group.get("year") or "")
         m_year = str(getattr(match_media, "year", "") or "")
-        return not (g_year and m_year and g_year != m_year)
+        if not (g_year and m_year and g_year != m_year):
+            return True
+        # 剧集/动漫跨季、发行年与首播年不同，不作为硬冲突（与旧 BatchIdentifier 一致）
+        return m_type in (MediaType.TV, MediaType.ANIME) or g_type in (MediaType.TV, MediaType.ANIME)
 
     def _target_names(self, match_media: MediaInfo | None) -> list[str]:
         if not match_media or not str(getattr(match_media, "tmdb_id", "") or "").isdigit():

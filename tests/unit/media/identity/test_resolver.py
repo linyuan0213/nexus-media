@@ -53,6 +53,21 @@ class TestExtractEditionMarkers:
         assert extract_edition_markers("穹庐下的魔女 S01E04") == []
 
 
+class TestResolverGuards:
+    def test_tv_year_mismatch_is_not_a_conflict(self):
+        group = _group(["Attack on Titan S04"], year="2020")
+        match = MediaInfo(cn_name="进击的巨人", title="进击的巨人", year="2013", type=MediaType.TV)
+        assert IdentityResolver._guards_pass(group, match) is True
+
+    def test_movie_year_mismatch_is_a_conflict(self):
+        group = _group(["Fight Club"], year="2014", mtype=MediaType.MOVIE, seasons=(), episodes=())
+        match = MediaInfo(cn_name="搏击俱乐部", title="搏击俱乐部", year="1999", type=MediaType.MOVIE)
+        assert IdentityResolver._guards_pass(group, match) is False
+
+    def test_strict_ignores_site_prefix(self):
+        assert IdentityResolver._strict("【高清影视之家】搏击俱乐部", ["搏击俱乐部"]) is True
+
+
 class TestDirectPass:
     def test_all_names_match_direct_hit(self, resolver):
         resolver.media.get_all_names.return_value = ["Jaadugar: A Witch in Mongolia", "天幕のジャードゥーガル"]
