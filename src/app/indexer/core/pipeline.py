@@ -3,8 +3,8 @@
 
 三阶段全局批量处理模型：
 1. 本地过滤（Local Filter）：遍历所有站点结果，做 meta_info 解析和规则过滤
-2. 批量识别（Batch Identify）：跨站点收集需要 TMDB 的候选，去重后并发查询
-3. 匹配过滤（Match Filter）：用 TMDB 结果统一匹配和过滤
+2. 批量识别（Batch Identify）：跨站点收集需要身份识别的候选，去重后并发查询
+3. 匹配过滤（Match Filter）：用识别结果统一匹配和过滤
 
 关键设计：所有站点的搜索结果收集完成后，统一进入流水线处理，
 实现真正的"批量识别"（跨站点去重，一次并发查询所有不重复名称）。
@@ -82,7 +82,7 @@ class SearchPipeline:
 
         # ---------- 阶段2：批量识别（跨站点去重） ----------
         if candidates:
-            ident_count = sum(1 for c in candidates if not c.skip_tmdb)
+            ident_count = sum(1 for c in candidates if not c.identity_anchored)
             progress.update_max(
                 ptype=progress_key,
                 value=70,
@@ -90,12 +90,12 @@ class SearchPipeline:
             )
             self.batch_identifier.identify(candidates, progress_key=progress_key, match_media=match_media)
 
-        # ---------- 阶段3：TMDB匹配和最终过滤 ----------
+        # ---------- 阶段3：身份匹配和最终过滤 ----------
         if match_media and candidates:
             progress.update_max(
                 ptype=progress_key,
                 value=85,
-                text=f"TMDB 匹配过滤 {len(candidates)} 条候选...",
+                text=f"身份匹配过滤 {len(candidates)} 条候选...",
             )
             matched_results, match_stats = self.result_filter.match_filter(
                 candidates=candidates,

@@ -469,13 +469,13 @@ class BaseSearchStrategy:
                     anchor_external_id=rss_info.get("anchor_external_id"),
                     content_profile=str(rss_info.get("content_profile") or ""),
                 )
-                non_tmdb_anchor = (
+                external_identity_anchor = (
                     bool(rss_info.get("anchor_provider") and rss_info.get("anchor_provider") != "tmdb")
                     or bool(rss_info.get("anchor_external_id"))
                     or str(tmdbid or "").startswith("DB:")
                     or self._is_external_ref(tmdbid)
                 )
-                if not media_info or (not media_info.provider_data and not non_tmdb_anchor):
+                if not media_info or (not media_info.provider_data and not external_identity_anchor):
                     log.warn(f"[Subscribe]{MediaType.TV.display_name} {name_val} TMDB 识别失败，标记为错误状态")
                     self._tv_repo.update_state(
                         title=None, year=None, season=None, rssid=rid, state=SubscribeState.ERROR.value

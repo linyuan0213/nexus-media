@@ -99,7 +99,7 @@ class BatchIdentifier:
 
     def identify(self, candidates, progress_key=ProgressKey.Search, match_media: MediaInfo | None = None):
         """
-        对 candidates 中 skip_tmdb=False 的条目分组识别。
+        对 candidates 中尚未锚定身份的条目分组识别。
 
         :param match_media: 搜索/订阅目标媒体，提供时启用先验直通
         """
@@ -109,7 +109,7 @@ class BatchIdentifier:
         groups: dict[str, dict] = {}
         order: list[str] = []
         for cand in candidates:
-            if cand.skip_tmdb:
+            if cand.identity_anchored:
                 continue
             cache_key = self.build_cache_key(cand.meta_info, cand.item.get("title"))
             if not cache_key:
@@ -239,7 +239,7 @@ class BatchIdentifier:
         if not pending:
             return
 
-        log.info(f"[BatchIdentifier]{len(pending)} 组需查 TMDB")
+        log.info(f"[BatchIdentifier]{len(pending)} 组需身份识别")
         try:
             status_map = self.media.identify_groups(pending)
         except Exception as e:
@@ -350,7 +350,7 @@ class BatchIdentifier:
 
     @staticmethod
     def _build_group_media_info(group: dict) -> MediaInfo:
-        """由组元信息构造无 TMDB 的 MediaInfo（本地排除/未命中用）"""
+        """由组元信息构造无外部元数据的 MediaInfo（本地排除/未命中用）"""
         seasons = group.get("seasons") or []
         episodes = group.get("episodes") or []
         info = MediaInfo(

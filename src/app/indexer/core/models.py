@@ -13,7 +13,7 @@ class SearchCandidate:
         item,
         meta_info,
         res_order=0,
-        skip_tmdb=False,
+        identity_anchored=False,
         media_info=None,
         indexer_name="",
         indexer_order=0,
@@ -22,7 +22,7 @@ class SearchCandidate:
         self.item = item
         self.meta_info = meta_info
         self.res_order = res_order
-        self.skip_tmdb = skip_tmdb
+        self.identity_anchored = identity_anchored
         self.media_info = media_info
         self.indexer_name = indexer_name
         self.indexer_order = indexer_order

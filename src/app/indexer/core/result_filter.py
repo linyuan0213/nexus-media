@@ -520,8 +520,8 @@ class ResultFilter:
 
     @staticmethod
     def _allow_without_year(cand, torrent_name: str, match_media) -> bool:
-        """内容编号/身份已锚定（skip_tmdb）时不再用无年份标题规则误杀."""
-        if getattr(cand, "skip_tmdb", False):
+        """内容编号/身份已锚定（identity_anchored）时不再用无年份标题规则误杀."""
+        if getattr(cand, "identity_anchored", False):
             return True
         return ResultFilter._title_specific_without_year(torrent_name, match_media)
 
@@ -757,7 +757,7 @@ class ResultFilter:
                         item=item,
                         meta_info=mi,
                         res_order=res_order,
-                        skip_tmdb=True,
+                        identity_anchored=True,
                         media_info=self._media.merge_media_info(mi, match_media),
                         indexer_name=indexer_name,
                         indexer_order=indexer_order,
@@ -773,7 +773,7 @@ class ResultFilter:
                         item=item,
                         meta_info=mi,
                         res_order=res_order,
-                        skip_tmdb=True,
+                        identity_anchored=True,
                         media_info=mi,
                         indexer_name=indexer_name,
                         indexer_order=indexer_order,
@@ -785,7 +785,7 @@ class ResultFilter:
             qnm_result = self.quick_name_match(mi, match_media)
             anchor_provider = str(getattr(match_media, "anchor_provider", "") or "")
             raw_tmdb = str(getattr(match_media, "tmdb_id", "") or "")
-            non_tmdb_anchor = bool(
+            external_identity_anchor = bool(
                 (anchor_provider and anchor_provider != "tmdb")
                 or getattr(match_media, "douban_id", None)
                 or (raw_tmdb and not raw_tmdb.isdigit())
@@ -802,7 +802,7 @@ class ResultFilter:
                         item=item,
                         meta_info=mi,
                         res_order=res_order,
-                        skip_tmdb=non_tmdb_anchor,
+                        identity_anchored=external_identity_anchor,
                         media_info=mi,
                         indexer_name=indexer_name,
                         indexer_order=indexer_order,
@@ -829,7 +829,7 @@ class ResultFilter:
                         item=item,
                         meta_info=mi,
                         res_order=res_order,
-                        skip_tmdb=non_tmdb_anchor,
+                        identity_anchored=external_identity_anchor,
                         media_info=mi,
                         indexer_name=indexer_name,
                         indexer_order=indexer_order,
@@ -898,10 +898,10 @@ class ResultFilter:
             indexer_name = cand.indexer_name
             indexer_order = cand.indexer_order
 
-            if cand.skip_tmdb:
+            if cand.identity_anchored:
                 media_info = cand.media_info
                 log.info(
-                    f"[ResultFilter]{torrent_name} skip_tmdb=True, merged_media_info: "
+                    f"[ResultFilter]{torrent_name} identity_anchored=True, merged_media_info: "
                     f"tmdb_id={media_info.tmdb_id}, type={media_info.type}, "
                     f"season={media_info.begin_season}, episode={media_info.begin_episode}"
                 )
@@ -985,7 +985,7 @@ class ResultFilter:
                 filter_args.get("type") == MediaType.MOVIE
                 and match_media is not None
                 and not str(media_info.year).isdigit()
-                # skip_tmdb 表示已由内容编号/外部身份锚定；编号本身足够唯一，
+                # identity_anchored 表示已由内容编号/外部身份锚定；编号本身足够唯一，
                 # 不应用“无年份+系列前缀”规则误杀只有编号、没有年份的标题。
                 and not self._allow_without_year(cand, torrent_name, match_media)
             ):
@@ -997,7 +997,7 @@ class ResultFilter:
                 if (filter_args.get("type") == MediaType.TV and media_info.type == MediaType.MOVIE) or (
                     filter_args.get("type") == MediaType.MOVIE and media_info.type == MediaType.TV
                 ):
-                    display_name = cache_key if not cand.skip_tmdb else torrent_name
+                    display_name = cache_key if not cand.identity_anchored else torrent_name
                     log.info(
                         f"[ResultFilter]{display_name} 是 {media_info.type.value}/"
                         f"{media_info.tmdb_id}，不是 {filter_args.get('type').value}"
@@ -1005,7 +1005,7 @@ class ResultFilter:
                     stats.index_rule_fail += 1
                     continue
 
-            display_name = cache_key if not cand.skip_tmdb else torrent_name
+            display_name = cache_key if not cand.identity_anchored else torrent_name
             if match_media is not None and match_media.over_edition:
                 if media_info.type != MediaType.MOVIE and media_info.get_episode_list():
                     log.info(
@@ -1035,7 +1035,7 @@ class ResultFilter:
             sey_match = self._engine.is_torrent_match_sey(
                 media_info, filter_args.get("season"), filter_args.get("episode"), filter_args.get("year")
             )
-            if cand.skip_tmdb and match_media:
+            if cand.identity_anchored and match_media:
                 # 锚点身份负责匹配；TMDB 只回填补充字段/结构，不参与本结果的判定
                 media_info.anchor_provider = match_media.anchor_provider
                 media_info.anchor_external_id = match_media.anchor_external_id

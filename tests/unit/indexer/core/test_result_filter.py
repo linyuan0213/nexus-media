@@ -14,7 +14,7 @@ from app.media import meta_info as parse_title
 from app.media.models import MediaInfo
 
 
-def test_skip_tmdb_bypasses_year_specificity():
+def test_identity_anchored_bypasses_year_specificity():
     match = SimpleNamespace(
         year="2026",
         title="DEMO-823 完全版",
@@ -22,8 +22,8 @@ def test_skip_tmdb_bypasses_year_specificity():
         original_title="",
         cn_name="",
     )
-    adult = SimpleNamespace(skip_tmdb=True)
-    unidentified = SimpleNamespace(skip_tmdb=False)
+    adult = SimpleNamespace(identity_anchored=True)
+    unidentified = SimpleNamespace(identity_anchored=False)
     title = "DEMO-823 [LTX]完全版"
     assert ResultFilter._allow_without_year(adult, title, match) is True
     assert ResultFilter._allow_without_year(unidentified, title, match) is False
@@ -96,8 +96,8 @@ def _gits_2026():
 class TestLocalFilterQnmRecallGate:
     """ADR-014：quick_name_match 降级为纯召回筛选后的 local_filter 调用处语义"""
 
-    def test_qnm_hit_with_en_name_no_longer_skips_tmdb(self):
-        """qnm 命中且带 en_name（旧高置信直通路径）→ 现一律 skip_tmdb=False 交身份层"""
+    def test_qnm_hit_with_en_name_no_longer_skips_identity_resolution(self):
+        """qnm 命中且带 en_name（旧高置信直通路径）→ 现一律 identity_anchored=False 交身份层"""
         rf = _make_filter()
         candidates, direct_results, stats = rf.local_filter(
             [_item("THE.GHOST.IN.THE.SHELL.S01E03.2026.1080p.AMZN.WEB-DL.H264.DDP-CMCTV")],
@@ -105,13 +105,13 @@ class TestLocalFilterQnmRecallGate:
             match_media=_gits_2026(),
         )
         assert len(candidates) == 1
-        assert candidates[0].skip_tmdb is False
+        assert candidates[0].identity_anchored is False
         assert candidates[0].media_info is candidates[0].meta_info
         assert direct_results == []
         assert stats.index_sucess == 0
 
-    def test_qnm_hit_cn_only_low_confidence_goes_to_tmdb(self):
-        """qnm 命中但仅 cn_name（低置信）→ skip_tmdb=False 走 TMDB"""
+    def test_qnm_hit_cn_only_low_confidence_goes_to_identity_resolution(self):
+        """qnm 命中但仅 cn_name（低置信）→ identity_anchored=False 走身份识别"""
         rf = _make_filter()
         candidates, direct_results, stats = rf.local_filter(
             [_item("[LoliHouse] 攻壳机动队 - 03 [WebRip 1080p]")],
@@ -119,7 +119,7 @@ class TestLocalFilterQnmRecallGate:
             match_media=_gits_2026(),
         )
         assert len(candidates) == 1
-        assert candidates[0].skip_tmdb is False
+        assert candidates[0].identity_anchored is False
         assert direct_results == []
 
     def test_zero_intersection_rejected_and_records_miss(self):
@@ -158,7 +158,7 @@ class TestLocalFilterQnmRecallGate:
         assert stats.index_match_fail == 1
 
     @patch("app.indexer.core.result_filter.cached_meta_info")
-    def test_year_conflict_with_name_overlap_goes_to_tmdb(self, mock_parse):
+    def test_year_conflict_with_name_overlap_goes_to_identity_resolution(self, mock_parse):
         """年份冲突但名称有交集 → 不再本地拒绝，交身份层消歧（召回语义）"""
         mi = parse_title(title="Ghostbusters 2016 1080p")
         mi.cn_name = None
@@ -173,7 +173,7 @@ class TestLocalFilterQnmRecallGate:
         rf = _make_filter()
         candidates, _, stats = rf.local_filter([_item("Ghostbusters 2016 1080p")], filter_args={}, match_media=match)
         assert len(candidates) == 1
-        assert candidates[0].skip_tmdb is False
+        assert candidates[0].identity_anchored is False
         assert stats.index_match_fail == 0
 
     @patch("app.indexer.core.result_filter.cached_meta_info")
@@ -195,7 +195,7 @@ class TestLocalFilterQnmRecallGate:
         assert stats.index_match_fail == 1
 
     def test_imdb_id_passthrough_preserved(self):
-        """imdb_id 判等驱动的 skip_tmdb=True（ID 直通，合法证据）必须保留"""
+        """imdb_id 判等驱动的 identity_anchored=True（ID 直通，合法证据）必须保留"""
         rf = _make_filter()
         match = _gits_2026()
         match.imdb_id = "tt1234567"
@@ -205,10 +205,10 @@ class TestLocalFilterQnmRecallGate:
             match_media=match,
         )
         assert len(candidates) == 1
-        assert candidates[0].skip_tmdb is True
+        assert candidates[0].identity_anchored is True
 
     def test_no_match_media_goes_to_direct_results(self):
-        """无 match_media 分支不变：直接产出 direct_results，不查 TMDB"""
+        """无 match_media 分支不变：直接产出 direct_results，不做外部识别"""
         rf = _make_filter()
         candidates, direct_results, stats = rf.local_filter(
             [_item("THE.GHOST.IN.THE.SHELL.S01E03.2026.1080p.AMZN.WEB-DL.H264.DDP-CMCTV")],
