@@ -19,13 +19,13 @@ depends_on = None
 
 def upgrade() -> None:
     op.add_column("SUBSCRIBE_MOVIES", sa.Column("STATE_UPDATED_AT", sa.String(length=255), nullable=True))
-    op.create_index("IX_SUBSCRIBE_MOVIES_STATE_UPDATED_AT", "SUBSCRIBE_MOVIES", ["STATE_UPDATED_AT"])
+    op.create_index("ix_SUBSCRIBE_MOVIES_STATE_UPDATED_AT", "SUBSCRIBE_MOVIES", ["STATE_UPDATED_AT"])
     op.add_column("SUBSCRIBE_TVS", sa.Column("STATE_UPDATED_AT", sa.String(length=255), nullable=True))
-    op.create_index("IX_SUBSCRIBE_TVS_STATE_UPDATED_AT", "SUBSCRIBE_TVS", ["STATE_UPDATED_AT"])
+    op.create_index("ix_SUBSCRIBE_TVS_STATE_UPDATED_AT", "SUBSCRIBE_TVS", ["STATE_UPDATED_AT"])
 
 
 def downgrade() -> None:
-    op.drop_index("IX_SUBSCRIBE_TVS_STATE_UPDATED_AT", table_name="SUBSCRIBE_TVS")
+    op.drop_index("ix_SUBSCRIBE_TVS_STATE_UPDATED_AT", table_name="SUBSCRIBE_TVS")
     op.drop_column("SUBSCRIBE_TVS", "STATE_UPDATED_AT")
-    op.drop_index("IX_SUBSCRIBE_MOVIES_STATE_UPDATED_AT", table_name="SUBSCRIBE_MOVIES")
+    op.drop_index("ix_SUBSCRIBE_MOVIES_STATE_UPDATED_AT", table_name="SUBSCRIBE_MOVIES")
     op.drop_column("SUBSCRIBE_MOVIES", "STATE_UPDATED_AT")
