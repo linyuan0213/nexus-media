@@ -1091,6 +1091,8 @@ class ResultFilter:
                 upload_volume_factor=uploadvolumefactor,
                 download_volume_factor=downloadvolumefactor,
             )
+            if match_media is not None and getattr(match_media, "series_key", None):
+                media_info.series_key = match_media.series_key
             if media_info not in ret_array:
                 stats.index_sucess += 1
                 ret_array.append(media_info)

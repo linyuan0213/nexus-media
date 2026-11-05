@@ -6,7 +6,7 @@ from typing import Any
 import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.domain.enums import SearchType, UserRssTaskUseType
-from app.domain.media_ref import media_identity_key
+from app.domain.media_ref import media_series_scope_key
 from app.domain.mediatypes import MediaType
 from app.services.rss_automation.executor import _parse_userrss_result
 from app.utils import ExceptionUtils, StringUtils
@@ -95,15 +95,15 @@ def _test_rss_articles(service, taskid: int | None, title: str) -> tuple[Any, bo
         else:
             exist_flag, no_exists, _ = service.downloader.check_exists_medias(meta_info=media_info, no_exists=no_exists)
             if exist_flag:
-                if not no_exists or not no_exists.get(media_identity_key(media_info)):
+                if not no_exists or not no_exists.get(media_series_scope_key(media_info)):
                     log.info(
                         f"[RssTaskService]电视剧 {media_info.get_title_string()} "
                         f"{media_info.get_season_episode_string()} 已存在"
                     )
-            if no_exists.get(media_identity_key(media_info)):
+            if no_exists.get(media_series_scope_key(media_info)):
                 log.info(
                     f"[RssTaskService]{media_info.get_title_string()} "
-                    f"缺失季集：{no_exists.get(media_identity_key(media_info))}"
+                    f"缺失季集：{no_exists.get(media_series_scope_key(media_info))}"
                 )
     return media_info, match_flag, exist_flag
 

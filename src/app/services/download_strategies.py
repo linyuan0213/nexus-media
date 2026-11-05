@@ -13,7 +13,7 @@ DownloadStrategies - 批量下载策略
 import contextlib
 
 import log
-from app.domain.media_ref import identity_keys_match, media_identity_key
+from app.domain.media_ref import identity_keys_match, media_series_scope_key
 from app.domain.mediatypes import MediaType
 
 _DOWNLOAD_FAILED_FLAG = "_download_failed"
@@ -55,7 +55,7 @@ class MovieDownloadStrategy:
                 item.get_title_string() if hasattr(item, "get_title_string") else (getattr(item, "title", "") or "")
             )
             # 同一电影只下载一个候选：身份相同即可，年份/标题不同不能当成不同电影
-            movie_key = media_identity_key(item)
+            movie_key = media_series_scope_key(item)
             movie_name = movie_key or movie_title
             if movie_name in downloaded_names:
                 continue
@@ -108,7 +108,7 @@ class SeasonPackStrategy:
                 item_season = item.get_season_list()
                 if item.get_episode_list():
                     continue
-                if not identity_keys_match(need_tmdbid, media_identity_key(item)):
+                if not identity_keys_match(need_tmdbid, media_series_scope_key(item)):
                     continue
                 if not item.enclosure:
                     item.enclosure = get_download_url_callback(item.page_url)
@@ -246,7 +246,7 @@ class EpisodeStrategy:
                 for item in download_list:
                     if item.type == MediaType.MOVIE:
                         continue
-                    if not identity_keys_match(need_tmdbid, media_identity_key(item)):
+                    if not identity_keys_match(need_tmdbid, media_series_scope_key(item)):
                         continue
                     if item in return_items or is_download_failed(item):
                         continue
@@ -326,7 +326,7 @@ class EpisodeStrategy:
                     # 选中单季整季的或单季包括需要的所有集的
                     item_season = item.get_season_list()
                     item_episodes = item.get_episode_list()
-                    if not identity_keys_match(need_tmdbid, media_identity_key(item)):
+                    if not identity_keys_match(need_tmdbid, media_series_scope_key(item)):
                         continue
                     if not item_episodes:
                         # 无集数信息但属于单季整季的也考虑

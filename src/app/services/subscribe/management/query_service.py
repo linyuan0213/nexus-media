@@ -370,6 +370,7 @@ class SubscribeQueryService:
                 "season": rss_tv.SEASON,
                 "tmdbid": rss_tv.TMDBID if metadata_ref.startswith("tmdb:") else "",
                 "identity_id": rss_tv.IDENTITY_ID,
+                "series_key": getattr(rss_tv, "SERIES_KEY", None),
                 "anchor_provider": anchor_provider,
                 "anchor_external_id": anchor_external_id,
                 "provider": getattr(rss_tv, "PROVIDER", None),

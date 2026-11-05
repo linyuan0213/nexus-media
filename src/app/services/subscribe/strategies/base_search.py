@@ -32,7 +32,7 @@ from app.domain.interfaces.rss_repo import (
     ISubscribeTvRepository,
 )
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
-from app.domain.media_ref import media_identity_key
+from app.domain.media_ref import media_series_scope_key
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import get_cache_manager
 from app.media import MediaCache, MediaService, meta_info
@@ -282,6 +282,7 @@ class BaseSearchStrategy:
                     media_info.anchor_provider = rss_info.get("anchor_provider")
                     media_info.anchor_external_id = rss_info.get("anchor_external_id")
                     media_info.identity_id = rss_info.get("identity_id")
+                    media_info.series_key = rss_info.get("series_key")
                     media_info.provider = rss_info.get("provider")
                     media_info.metadata_ref = rss_info.get("metadata_ref")
                 if not media_info or (not media_info.provider_data and not is_external):
@@ -454,6 +455,7 @@ class BaseSearchStrategy:
                 media_info.anchor_provider = rss_info.get("anchor_provider")
                 media_info.anchor_external_id = rss_info.get("anchor_external_id")
                 media_info.identity_id = rss_info.get("identity_id")
+                media_info.series_key = rss_info.get("series_key")
                 media_info.provider = rss_info.get("provider")
                 media_info.metadata_ref = rss_info.get("metadata_ref")
                 media_info.set_download_info(
@@ -510,7 +512,7 @@ class BaseSearchStrategy:
                 else:
                     episodes_list = episodes
 
-                media_key = media_identity_key(media_info) or media_info.tmdb_id
+                media_key = media_series_scope_key(media_info) or media_info.tmdb_id
                 rss_no_exists_local = {
                     media_key: [{"season": season, "episodes": episodes_list, "total_episodes": total_ep}]
                 }

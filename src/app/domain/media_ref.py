@@ -132,3 +132,23 @@ class MediaSubject:
         if self.douban_id:
             return MediaRef(provider="douban", external_id=str(self.douban_id), media_type=self.media_type)
         return None
+
+
+def media_series_scope_key(media: Any) -> str:
+    """订阅/下载去重键：优先内部 series_key + 季，其次回退现有身份键."""
+    raw_series_key = getattr(media, "series_key", "")
+    series_key = raw_series_key.strip() if isinstance(raw_series_key, str) else ""
+    if not series_key:
+        return media_identity_key(media)
+    season = getattr(media, "begin_season", None)
+    if season is None and hasattr(media, "get_season_seq"):
+        try:
+            season = media.get_season_seq()
+        except (TypeError, ValueError):
+            season = None
+    if season is None:
+        return series_key
+    try:
+        return f"{series_key}:S{int(season):02d}"
+    except (TypeError, ValueError):
+        return series_key
