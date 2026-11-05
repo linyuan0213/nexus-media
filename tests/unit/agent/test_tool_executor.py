@@ -92,13 +92,13 @@ class TestLevelsAndConfirm:
         result = executor.execute("subscribe_delete", {"sub_id": 1})
         assert result.success
         assert result.need_confirm
-        executor._ctx.subscribe_service.delete_subscribe.assert_not_called()
+        executor._ctx.subscribe_service.cancel_subscribe.assert_not_called()
 
     def test_dangerous_confirmed_executes(self, executor):
         result = executor.execute("subscribe_delete", {"sub_id": 1}, confirmed=True)
         assert result.success
         assert not result.need_confirm
-        executor._ctx.subscribe_service.delete_subscribe.assert_called_once()
+        executor._ctx.subscribe_service.cancel_subscribe.assert_called_once()
 
     def test_download_remove_needs_confirm_inline(self, executor):
         result = executor.execute("download_control", {"action": "remove", "ids": ["h1"]})
@@ -115,7 +115,7 @@ class TestLevelsAndConfirm:
         result = executor.execute("subscribe_delete", {"sub_id": 1}, confirmed=True, user_permissions=["agent:view"])
         assert not result.success
         assert "无权限" in result.error
-        executor._ctx.subscribe_service.delete_subscribe.assert_not_called()
+        executor._ctx.subscribe_service.cancel_subscribe.assert_not_called()
 
     def test_permission_granted_executes(self, executor):
         result = executor.execute(
@@ -125,7 +125,7 @@ class TestLevelsAndConfirm:
             user_permissions=["agent:view", "subscription:manage"],
         )
         assert result.success
-        executor._ctx.subscribe_service.delete_subscribe.assert_called_once()
+        executor._ctx.subscribe_service.cancel_subscribe.assert_called_once()
 
     def test_permission_skipped_when_not_provided(self, executor):
         """消息渠道等未传权限列表时不做拦截（兼容旧路径）"""

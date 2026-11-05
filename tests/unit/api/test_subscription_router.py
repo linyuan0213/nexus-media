@@ -30,7 +30,7 @@ def mock_subscribe_service():
     svc.add_rss_subscribe.return_value = (0, "ok", _MockMediaInfo())
     svc.update_rss_subscribe.return_value = (0, "ok", _MockMediaInfo())
     svc.get_subscribe_id.return_value = 42
-    svc.delete_subscribe.return_value = None
+    svc.cancel_subscribe.return_value = None
     svc.get_subscribe_movies.return_value = {"1": {"title": "Movie"}}
     svc.get_subscribe_tvs.return_value = {"1": {"title": "TV"}}
     svc.default_subscribe_setting_tv = {"restype": "1080p"}
@@ -187,7 +187,7 @@ class TestSubscriptionRouter:
             json={"name": "Movie", "type": "movie", "rssid": "1", "tmdbid": "123"},
         )
         assert resp.status_code == 200
-        mock_subscribe_service.delete_subscribe.assert_called_once()
+        mock_subscribe_service.cancel_subscribe.assert_called_once()
 
     def test_remove_rss_media_tv(self, client, mock_subscribe_service):
         resp = client.post(
@@ -195,14 +195,14 @@ class TestSubscriptionRouter:
             json={"name": "TV", "type": "tv", "season": "S01", "rssid": "1"},
         )
         assert resp.status_code == 200
-        args = mock_subscribe_service.delete_subscribe.call_args
+        args = mock_subscribe_service.cancel_subscribe.call_args
         assert args.kwargs["mtype"].value == "tv"
 
     def test_remove_rss_media_rssid_only(self, client, mock_subscribe_service):
         resp = client.post("/api/v1/subscription/remove", json={"rssid": "1"})
         assert resp.status_code == 200
-        assert mock_subscribe_service.delete_subscribe.call_count == 2
-        mtypes = {c.kwargs["mtype"] for c in mock_subscribe_service.delete_subscribe.call_args_list}
+        assert mock_subscribe_service.cancel_subscribe.call_count == 2
+        mtypes = {c.kwargs["mtype"] for c in mock_subscribe_service.cancel_subscribe.call_args_list}
         assert MediaType.MOVIE in mtypes
         assert MediaType.TV in mtypes
 

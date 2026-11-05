@@ -170,6 +170,56 @@ class LifecycleProjector:
             log.warn(f"[Lifecycle]写入生命周期事件失败: {exc}")
             return False
 
+    def record_subscription_outcome(
+        self,
+        *,
+        identity_id: str,
+        status: LifecycleStatus | str,
+        event_type: str,
+        media_type: str = "tv",
+        season: int = 0,
+        title: str | None = None,
+        year: str | None = None,
+        poster: str | None = None,
+        series_key: str | None = None,
+        source_provider: str | None = None,
+        content_profile: str | None = None,
+        user_id: int | None = None,
+        message: str | None = None,
+        payload: dict[str, Any] | None = None,
+        event_key: str | None = None,
+    ) -> bool:
+        """记录订阅取消/完成结果；沿用当前阶段，避免被单调阶段规则吞掉."""
+        current = self._repo.get_current(identity_id, season=season, episode=0)
+        current_stage = str(getattr(current, "STAGE", "") or "")
+        if str(status) == LifecycleStatus.CANCELLED.value and current_stage == LifecycleStage.IN_LIBRARY.value:
+            return False
+        stage = current_stage or (
+            LifecycleStage.SUBSCRIBED.value
+            if str(status) == LifecycleStatus.CANCELLED.value
+            else LifecycleStage.DOWNLOADED.value
+        )
+        return self.record(
+            identity_id=identity_id,
+            series_key=series_key,
+            stage=stage,
+            status=status,
+            event_type=event_type,
+            media_type=media_type,
+            season=season,
+            episode=0,
+            title=title,
+            year=year,
+            poster=poster,
+            progress=100 if str(status) == LifecycleStatus.SUCCEEDED.value else None,
+            source_provider=source_provider,
+            content_profile=content_profile,
+            user_id=user_id,
+            message=message,
+            payload=payload,
+            event_key=event_key,
+        )
+
     def record_media(
         self,
         media: Any,

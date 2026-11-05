@@ -505,14 +505,14 @@ def remove_rss_media(
         )
     deleted = 0
     if rssid:
-        deleted = int(svc.delete_subscribe(mtype=mtype, rssid=rssid, user=user) or 0)
+        deleted = int(svc.cancel_subscribe(mtype=mtype, rssid=rssid, user=user) or 0)
         if deleted == 0 and not str(req.type or "").strip() and not str(req.content_profile or "").strip():
             # 只有调用方未指定类型时，才尝试另一张表。
             other = MediaType.TV if mtype == MediaType.MOVIE else MediaType.MOVIE
-            deleted = int(svc.delete_subscribe(mtype=other, rssid=rssid, user=user) or 0)
+            deleted = int(svc.cancel_subscribe(mtype=other, rssid=rssid, user=user) or 0)
     elif mtype == MediaType.MOVIE:
         deleted = int(
-            svc.delete_subscribe(
+            svc.cancel_subscribe(
                 mtype=MediaType.MOVIE,
                 title=name or "",
                 year=req.year,
@@ -525,7 +525,7 @@ def remove_rss_media(
     elif mtype in (MediaType.TV, MediaType.ANIME):
         # 动漫订阅存于电视剧表，删除同样走 TV
         deleted = int(
-            svc.delete_subscribe(
+            svc.cancel_subscribe(
                 mtype=MediaType.TV,
                 title=name or "",
                 season=_normalize_season(req.season),

@@ -1,8 +1,10 @@
 """Subscribe finish service - 完成订阅."""
 
+import re
 from typing import Any
 
 import log
+from app.domain.lifecycle import LifecycleStatus
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
 from app.events import Event
@@ -10,6 +12,7 @@ from app.events.constants import SUBSCRIBE_FINISHED
 from app.events.payloads import SubscribeFinishedPayload
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.media import MediaInfo
+from app.services.lifecycle_service import LifecycleProjector
 from app.services.subscribe.management.utils import tv_filter_signature
 
 
@@ -39,6 +42,37 @@ def _history_scope(row: Any) -> dict[str, Any]:
         "metadata_policy": getattr(row, "METADATA_POLICY", None),
         "naming_profile": getattr(row, "NAMING_PROFILE", None),
     }
+
+
+def _record_subscription_completed(row: Any, rssid: int, media_type: str = "tv") -> None:
+    identity_id = str(getattr(row, "IDENTITY_ID", "") or "")
+    if not identity_id:
+        return
+    profile = str(getattr(row, "CONTENT_PROFILE", "") or "default")
+    if profile == "anime":
+        media_type = "anime"
+    match = re.search(r"\d+", str(getattr(row, "SEASON", "") or ""))
+    season = int(match.group()) if match else 0
+    try:
+        LifecycleProjector().record_subscription_outcome(
+            identity_id=identity_id,
+            series_key=getattr(row, "SERIES_KEY", None),
+            status=LifecycleStatus.SUCCEEDED,
+            event_type="subscribe.completed",
+            media_type=media_type,
+            season=season,
+            title=getattr(row, "NAME", None),
+            year=getattr(row, "YEAR", None),
+            poster=getattr(row, "IMAGE", None),
+            source_provider=getattr(row, "ANCHOR_PROVIDER", None) or getattr(row, "PROVIDER", None),
+            content_profile=profile,
+            user_id=getattr(row, "USER_ID", None),
+            message="订阅已完成",
+            payload={"source": "SUBSCRIBE", "rssid": rssid},
+            event_key=f"subscribe-completed:{rssid}",
+        )
+    except Exception as exc:  # noqa: BLE001 - 事件写入失败不应阻断完成流程
+        log.warn(f"[Subscribe]记录订阅完成事件失败 rssid={rssid}: {exc}")
 
 
 class SubscribeFinishService:
@@ -75,6 +109,7 @@ class SubscribeFinishService:
             if tv_filter_signature(row) != primary_sig:
                 continue
             log.info(f"[Subscribe]联动完成兄弟订阅 rssid={sid}（同一媒体共享下载）")
+            _record_subscription_completed(row, int(sid), "tv")
             delete_subscribe_fn(mtype=MediaType.TV, rssid=sid)
 
     def finish_rss_subscribe(self, rssid: int | None, media: Any, delete_subscribe_fn) -> None:
@@ -108,6 +143,7 @@ class SubscribeFinishService:
                 user_id=owner_user_id,
                 **_history_scope(row),
             )
+            _record_subscription_completed(row, rssid, "movie")
             delete_subscribe_fn(mtype=MediaType.MOVIE, rssid=rssid)
         else:
             rss = self._tv_repo.get_all(rssid=rssid)
@@ -141,6 +177,7 @@ class SubscribeFinishService:
                 user_id=owner_user_id,
                 **_history_scope(row),
             )
+            _record_subscription_completed(row, rssid, "tv")
             delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
             self._finish_sibling_tvs(row, media, delete_subscribe_fn)
 
@@ -236,6 +273,7 @@ class SubscribeFinishService:
                 user_id=owner_user_id,
                 **scope,
             )
+            _record_subscription_completed(row, rssid, resolved_type.value)
             delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
             self._finish_sibling_tvs(row, media, delete_subscribe_fn)
             if self._download_repo and media.over_edition:
@@ -309,6 +347,7 @@ class SubscribeFinishService:
                 user_id=owner_user_id,
                 **_history_scope(row),
             )
+            _record_subscription_completed(row, rssid, "movie")
             delete_subscribe_fn(mtype=MediaType.MOVIE, rssid=rssid)
             # 仅洗版电影完成后清理下载历史（允许后续升级重下），优先按多元身份清理。
             if self._download_repo and over_edition:

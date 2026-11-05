@@ -238,7 +238,7 @@ def subscribe_delete(
     ctx: ToolContext, sub_id: int, media_type: str = "movie", user_id: str | None = None
 ) -> ToolResult:
     mtype = MediaType.MOVIE if media_type == "movie" else MediaType.TV
-    ctx.subscribe_service.delete_subscribe(mtype=mtype, rssid=sub_id, user=ctx.user_context(user_id))
+    ctx.subscribe_service.cancel_subscribe(mtype=mtype, rssid=sub_id, user=ctx.user_context(user_id))
     return ToolResult(success=True, data={"sub_id": sub_id, "deleted": True})
 
 

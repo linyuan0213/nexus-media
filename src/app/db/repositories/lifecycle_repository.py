@@ -298,12 +298,15 @@ class LifecycleRepository(BaseRepository):
             subscription_map = _subscription_map(db, identities)
             active_identities = _active_subscription_identities(db, identities)
             completed_identities = _completed_subscription_identities(db, identities)
-        grouped = _group_lifecycle_rows(rows)
-        for item in grouped:
-            item["ACTIVITY_AT"] = activity.get(str(item.get("IDENTITY_ID")), datetime.min)
-        _apply_subscription_state(grouped, subscription_map, active_identities, completed_identities)
-        existing = {str(item.get("IDENTITY_ID") or "") for item in grouped}
-        synthetic = _active_subscription_items(db, user, existing)
+            cancelled_identities = _cancelled_subscription_identities(db, identities)
+            grouped = _group_lifecycle_rows(rows)
+            for item in grouped:
+                item["ACTIVITY_AT"] = activity.get(str(item.get("IDENTITY_ID")), datetime.min)
+            _apply_subscription_state(
+                grouped, subscription_map, active_identities, completed_identities, cancelled_identities
+            )
+            existing = {str(item.get("IDENTITY_ID") or "") for item in grouped}
+            synthetic = _active_subscription_items(db, user, existing)
         if keyword:
             key = keyword.strip().lower()
             synthetic = [item for item in synthetic if key in str(item.get("TITLE") or "").lower()]
@@ -367,6 +370,7 @@ class LifecycleRepository(BaseRepository):
                 _subscription_map(db, [identity_id]),
                 _active_subscription_identities(db, [identity_id]),
                 _completed_subscription_identities(db, [identity_id]),
+                _cancelled_subscription_identities(db, [identity_id]),
             )
             return grouped[0]
 
@@ -507,6 +511,7 @@ class LifecycleRepository(BaseRepository):
                 _subscription_map(db, identities),
                 _active_subscription_identities(db, identities),
                 _completed_subscription_identities(db, identities),
+                _cancelled_subscription_identities(db, identities),
             )
             existing = {str(item.get("IDENTITY_ID") or "") for item in grouped}
             grouped.extend(_active_subscription_items(db, user, existing))
@@ -617,6 +622,26 @@ def _completed_subscription_identities(db, identities: list[str]) -> set[str]:
     return {str(row[0]) for row in rows if row[0]}
 
 
+def _cancelled_subscription_identities(db, identities: list[str]) -> set[str]:
+    """根据最新订阅事件判断取消状态；后续 search.started 表示重新订阅."""
+    if not identities:
+        return set()
+    rows = (
+        db.query(MediaLifecycleEvent.IDENTITY_ID, MediaLifecycleEvent.EVENT_TYPE)
+        .filter(
+            MediaLifecycleEvent.IDENTITY_ID.in_(identities),
+            MediaLifecycleEvent.EVENT_TYPE.in_(["search.started", "subscribe.cancelled", "subscribe.completed"]),
+        )
+        .order_by(MediaLifecycleEvent.ID.asc())
+        .all()
+    )
+    latest: dict[str, str] = {}
+    for identity, event_type in rows:
+        if identity:
+            latest[str(identity)] = str(event_type)
+    return {identity for identity, event_type in latest.items() if event_type == "subscribe.cancelled"}
+
+
 def _subscription_map(db, identities: list[str]) -> dict[str, tuple[int, str, int]]:
     if not identities:
         return {}
@@ -654,13 +679,22 @@ def _apply_subscription_state(
     subscription_map: dict[str, tuple[int, str, int]],
     active_identities: set[str] | None = None,
     completed_identities: set[str] | None = None,
+    cancelled_identities: set[str] | None = None,
 ) -> None:
     """用订阅总集数约束整季状态，避免只统计已产生生命周期记录的分集。"""
     active_identities = active_identities or set()
     completed_identities = completed_identities or set()
+    cancelled_identities = cancelled_identities or set()
     for item in grouped:
         identity = str(item.get("IDENTITY_ID") or "")
         sub = subscription_map.get(identity)
+        if (
+            identity not in active_identities
+            and identity in cancelled_identities
+            and str(item.get("STAGE") or "") != LifecycleStage.IN_LIBRARY.value
+        ):
+            item["STATUS"] = LifecycleStatus.CANCELLED.value
+            continue
         if not sub:
             # 订阅已取消/删除但生命周期仍停在订阅中：投影为已取消，不保留“进行中”假象。
             if (

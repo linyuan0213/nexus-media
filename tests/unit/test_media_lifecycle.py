@@ -10,6 +10,7 @@ from app.db.engine import get_engine
 from app.db.models import Base
 from app.db.models.lifecycle import MediaLifecycle
 from app.db.models.subscribe import SubscribeTvs
+from app.db.repositories import lifecycle_repository as lifecycle_repo_module
 from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.lifecycle import (
     LifecycleStage,
@@ -367,6 +368,19 @@ def test_duplicate_background_event_does_not_restart_library_stage():
     assert current.LAST_EVENT_AT == library_at
 
 
+def test_grouped_reads_active_subscriptions_inside_open_session(monkeypatch):
+    seen: dict[str, bool] = {}
+    original = lifecycle_repo_module._active_subscription_items
+
+    def spy(db, user, existing):
+        seen["in_transaction"] = db.in_transaction()
+        return original(db, user, existing)
+
+    monkeypatch.setattr(lifecycle_repo_module, "_active_subscription_items", spy)
+    LifecycleRepository().list_grouped(pagenum=10)
+    assert seen["in_transaction"] is True
+
+
 def test_grouped_cancelled_subscription_projects_cancelled_status():
     repo = LifecycleRepository()
     projector = LifecycleProjector(repo)
@@ -402,6 +416,33 @@ def test_grouped_cancelled_subscription_projects_cancelled_status():
     rows, total = repo.list_grouped(pagenum=10)
     assert total == 1
     assert rows[0]["STATUS"] == LifecycleStatus.RUNNING.value
+
+
+def test_grouped_cancel_event_overrides_downloaded_stage():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    projector.record(
+        identity_id="identity-cancel-downloaded",
+        stage=LifecycleStage.DOWNLOADED,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="download.completed",
+        title="Downloaded Cancel Demo",
+        media_type="movie",
+        event_key="downloaded-cancel",
+    )
+    projector.record_subscription_outcome(
+        identity_id="identity-cancel-downloaded",
+        status=LifecycleStatus.CANCELLED,
+        event_type="subscribe.cancelled",
+        media_type="movie",
+        title="Downloaded Cancel Demo",
+        event_key="cancel-downloaded",
+    )
+
+    rows, total = repo.list_grouped(pagenum=10)
+    assert total == 1
+    assert rows[0]["STAGE"] == LifecycleStage.DOWNLOADED.value
+    assert rows[0]["STATUS"] == LifecycleStatus.CANCELLED.value
 
 
 def test_grouped_stage_uses_furthest_episode():

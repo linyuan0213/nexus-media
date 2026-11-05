@@ -11,9 +11,11 @@ from app.db.repositories.rbac.rbac_user_repo_adapter import RBACUserRepositoryAd
 from app.db.repositories.transfer_repository import TransferRepository
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SystemConfigKey
+from app.domain.lifecycle import LifecycleStatus
 from app.domain.mediatypes import MediaType
 from app.media import MediaInfo
 from app.media.external.bangumi import Bangumi
+from app.services.lifecycle_service import LifecycleProjector
 from app.services.subscribe.management.add_service import SubscribeAddService
 from app.services.subscribe.management.finish_service import SubscribeFinishService
 from app.services.subscribe.management.query_service import SubscribeQueryService, _normalized_anchor
@@ -343,6 +345,72 @@ class SubscribeService:
 
     def check_history(self, type_str, name, year=None, season=None):
         return self._query_svc.check_history(type_str, name, year, season)
+
+    def cancel_subscribe(
+        self,
+        mtype,
+        title=None,
+        year=None,
+        season=None,
+        rssid=None,
+        tmdbid=None,
+        user=None,
+        reason: str = "user_removed",
+    ):
+        """用户取消订阅：先快照订阅行，删除成功后投影 cancel 事件."""
+        rows = self._subscription_snapshot(mtype, rssid, title, year, season, tmdbid, user)
+        deleted = self.delete_subscribe(mtype, title, year, season, rssid, tmdbid, user=user)
+        if deleted:
+            self._record_cancelled(rows, reason)
+        return deleted
+
+    def _subscription_snapshot(self, mtype, rssid, title, year, season, tmdbid, user) -> list[dict]:
+        data: dict = {}
+        if not rssid:
+            rssid = self.get_subscribe_id(
+                mtype,
+                title or "",
+                year,
+                season,
+                tmdbid,
+                user_id=user.user_id if user is not None else None,
+            )
+        if not rssid:
+            return []
+        if mtype == MediaType.MOVIE:
+            data = self.get_subscribe_movies(rid=int(rssid), user=user)
+        else:
+            data = self.get_subscribe_tvs(rid=int(rssid), user=user)
+        return list((data or {}).values())
+
+    @staticmethod
+    def _record_cancelled(rows: list[dict], reason: str) -> None:
+        if not rows:
+            return
+        projector = LifecycleProjector()
+        for row in rows:
+            identity_id = str(row.get("identity_id") or "")
+            if not identity_id:
+                continue
+            media_type = str(row.get("type") or "")
+            season = _parse_season_number(row.get("season")) if media_type in {"tv", "anime"} else 0
+            projector.record_subscription_outcome(
+                identity_id=identity_id,
+                series_key=row.get("series_key"),
+                status=LifecycleStatus.CANCELLED,
+                event_type="subscribe.cancelled",
+                media_type=media_type or "movie",
+                season=season,
+                title=row.get("name"),
+                year=row.get("year"),
+                poster=row.get("poster") or row.get("image"),
+                source_provider=row.get("anchor_provider") or row.get("provider"),
+                content_profile=row.get("content_profile"),
+                user_id=row.get("user_id"),
+                message="订阅已取消",
+                payload={"source": "SUBSCRIBE", "rssid": row.get("id"), "reason": reason},
+                event_key=f"subscribe-cancelled:{row.get('id')}",
+            )
 
     def delete_subscribe(self, mtype, title=None, year=None, season=None, rssid=None, tmdbid=None, user=None):
         return self._query_svc.delete_subscribe(mtype, title, year, season, rssid, tmdbid, user=user)
