@@ -52,6 +52,9 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
         session_id: str | None = None,
         user_id: int | None = None,
     ) -> tuple[int, str]:
+        # 前端可能把未选择的类型序列化为空串；空串进入 SearchQuery 会触发枚举校验失败，
+        # 导致锚点元数据在发起请求前就被判失败。此处统一归一为 None。
+        media_type = media_type or None
         filter_args = dict(filters or {})
         if content_profile:
             filter_args["content_profile"] = content_profile

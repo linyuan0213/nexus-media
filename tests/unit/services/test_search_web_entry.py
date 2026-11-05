@@ -125,6 +125,22 @@ class TestMakeWebSearchFn:
         assert ctx.match_media.anchor_provider == "content_id"
         assert ctx.match_media.anchor_external_id == "DEMO-4025269"
 
+    def test_empty_media_type_is_normalized_for_metadata_lookup(self):
+        """未选择类型时前端可能传空串，SearchQuery 枚举不接受空串."""
+        orchestrator = MagicMock()
+        orchestrator.resolve_content_id_media.return_value = None
+        orchestrator.orchestrate.return_value = (None, {}, 1, 0)
+        fn = make_web_search_fn(orchestrator, system_config=None)
+        fn(
+            "DEMO-4025269",
+            anchor_provider="content_id",
+            anchor_external_id="DEMO-4025269",
+            content_profile="demo",
+            media_type="",
+        )
+        kwargs = orchestrator.resolve_content_id_media.call_args.kwargs
+        assert kwargs["media_type"] is None
+
     def test_default_sites_applied(self):
         orchestrator = MagicMock()
         orchestrator.orchestrate.return_value = (None, {}, 1, 0)
