@@ -6,6 +6,7 @@ from typing import Any
 
 import log
 from app.core.constants import ANIME_GENREIDS
+from app.db.repositories.media_series_repository import MediaSeriesRepository
 from app.domain.entities.custom_rss import custom_rss_id
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system.caches import TMDBCache
@@ -289,6 +290,10 @@ class SubscribeQueryService:
     ) -> dict:
         """获取电视剧订阅（user 非空时按数据归属过滤）"""
         ret_dict = {}
+        try:
+            series_map = {row.SERIES_KEY: row for row in MediaSeriesRepository().list_series(limit=500)}
+        except Exception:
+            series_map = {}
         rss_tvs = self._tv_repo.get_all(rssid=rid, state=state, user=user)
         usernames = self._usernames(rss_tvs)
         rss_sites_valid = self._sites.get_site_names(rss=True)
@@ -361,6 +366,7 @@ class SubscribeQueryService:
                     anchor_provider == "bangumi" and keyword_text.isdigit()
                 ):
                     keyword = rss_tv.NAME
+            series_row = series_map.get(getattr(rss_tv, "SERIES_KEY", None) or "")
             ret_dict[str(rss_tv.ID)] = {
                 "id": rss_tv.ID,
                 "user_id": rss_tv.USER_ID,
@@ -371,6 +377,8 @@ class SubscribeQueryService:
                 "tmdbid": rss_tv.TMDBID if metadata_ref.startswith("tmdb:") else "",
                 "identity_id": rss_tv.IDENTITY_ID,
                 "series_key": getattr(rss_tv, "SERIES_KEY", None),
+                "series_title": series_row.TITLE if series_row else None,
+                "series_total_seasons": series_row.TOTAL_SEASONS if series_row else None,
                 "anchor_provider": anchor_provider,
                 "anchor_external_id": anchor_external_id,
                 "provider": getattr(rss_tv, "PROVIDER", None),
