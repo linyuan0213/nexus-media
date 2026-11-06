@@ -110,6 +110,7 @@ class SubscribeService:
         )
         if user_repo is None:
             user_repo = RBACUserRepositoryAdapter()
+        self._user_repo = user_repo
         self._query_svc = SubscribeQueryService(
             self._movie_repo,
             self._tv_repo,
@@ -135,6 +136,11 @@ class SubscribeService:
         return self._update_svc.update_rss_subscribe(*args, **kwargs)
 
     def add_rss_subscribe(self, *args, **kwargs):
+        # 插件/系统创建订阅未带用户时，归属首个超级管理员，避免订阅用户为空。
+        if kwargs.get("user_id") is None:
+            admin_ids = self._user_repo.get_user_ids_by_role_code("superadmin")
+            if admin_ids:
+                kwargs["user_id"] = admin_ids[0]
         return self._add_svc.add_rss_subscribe(*args, **kwargs)
 
     def finish_rss_subscribe(self, rssid, media):
