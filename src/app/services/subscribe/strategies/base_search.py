@@ -42,6 +42,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.services.lifecycle_service import LifecycleProjector
 from app.services.search_service import Searcher
+from app.services.series_service import SeriesService
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.retry_policy import backoff_seconds, is_rate_limited
@@ -500,6 +501,20 @@ class BaseSearchStrategy:
                     season = int(str(rss_info.get("season")).replace("S", ""))
                 media_info.begin_season = season
                 media_info.rssid = rid
+                if not media_info.series_key and media_info.anchor_provider and media_info.anchor_external_id:
+                    # 旧订阅/缓存行可能缺少 SERIES_KEY；按锚点解析，保证与候选资源的系列键一致。
+                    try:
+                        resolution = SeriesService().resolve(
+                            provider=media_info.anchor_provider,
+                            external_id=media_info.anchor_external_id,
+                            title=name_val or media_info.title or "",
+                            year=year_val or media_info.year or None,
+                            season_number=season,
+                            scope=str(media_info.content_profile or "default"),
+                        )
+                        media_info.series_key = resolution.series_key
+                    except Exception as exc:  # noqa: BLE001
+                        log.debug(f"[Subscribe]解析订阅系列键失败: {exc}")
                 total_ep = rss_info.get("total")
                 current_ep = rss_info.get("current_ep")
 
