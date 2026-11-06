@@ -202,6 +202,12 @@ class MetadataService:
         self._detail_cache = get_cache_manager().get_or_create(
             "metadata_detail", cache_type="tiered", maxsize=500, ttl=600
         )
+        self._search_cache = get_cache_manager().get_or_create(
+            "metadata_search", cache_type="tiered", maxsize=300, ttl=60
+        )
+        self._episodes_cache = get_cache_manager().get_or_create(
+            "metadata_episodes", cache_type="tiered", maxsize=500, ttl=300
+        )
         self._detail_version_lock = threading.Lock()
         self._anchor_cache: dict[tuple, tuple[float, str, str]] = {}
         self._anchor_locks: dict[tuple, threading.Lock] = {}
@@ -1123,6 +1129,14 @@ class MetadataService:
         self._ensure_builtin()
         if not query.strip():
             return []
+        perm_key = ",".join(sorted(permissions or ()))
+        cache_key = (
+            f"{provider or 'all'}:{query.strip()}:{media_type.value if media_type else 'auto'}:"
+            f"{content_profile}:{limit}:{int(allow_private)}:{perm_key}"
+        )
+        cached = self._search_cache.get(cache_key)
+        if isinstance(cached, list):
+            return cached
         providers = self._registry.list_providers(capability=ProviderCapability.SEARCH)
         if provider:
             providers = [item for item in providers if item.descriptor.provider_key == provider]
@@ -1197,7 +1211,9 @@ class MetadataService:
                     continue
                 seen.add(key)
             deduped.append(hit)
-        return deduped[:limit]
+        result = deduped[:limit]
+        self._search_cache.set(cache_key, result, ttl=60 if result else 20)
+        return result
 
     def compose_for_ref(
         self,
@@ -1482,6 +1498,11 @@ class MetadataService:
     ) -> list[dict]:
         """获取非 TMDB 来源的分集（含播出日期），供订阅日历使用."""
         self._ensure_builtin()
+        perm_key = ",".join(sorted(permissions or ()))
+        cache_key = f"{provider}:{external_id}:{int(season or 1)}:{int(allow_private)}:{perm_key}"
+        cached = self._episodes_cache.get(cache_key)
+        if isinstance(cached, list):
+            return cached
         target = self._registry.get_provider(provider)
         if target is None:
             return []
@@ -1504,7 +1525,9 @@ class MetadataService:
             log.warn(f"[Metadata]分集获取失败 {provider}:{external_id}: {exc}")
             return []
         runtime.record_success()
-        return [record.model_dump(mode="json") for record in records]
+        result = [record.model_dump(mode="json") for record in records]
+        self._episodes_cache.set(cache_key, result, ttl=300 if result else 60)
+        return result
 
     def lookup(
         self,
@@ -1689,6 +1712,8 @@ class MetadataService:
 
     def clear_cache(self) -> None:
         self._orchestrator.clear_cache()
+        self._search_cache.clear()
+        self._episodes_cache.clear()
 
     def save_snapshot(self, identity_id: str, metadata: MediaMetadata, policy_key: str) -> None:
         """保存合成快照（调用方负责 identity 已存在）."""
