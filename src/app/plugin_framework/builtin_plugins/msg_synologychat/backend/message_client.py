@@ -39,6 +39,15 @@ class SynologyChat(_IMessageClient):
                 placeholder="",
             ),
             ConfigField(
+                id="verify_ssl",
+                required=False,
+                title="校验证书",
+                tooltip="Synology 常用自签名证书或 IP 访问，默认跳过校验；使用可信证书时可开启",
+                type="switch",
+                default=False,
+                advanced=True,
+            ),
+            ConfigField(
                 id="webhook_ipv4",
                 required=False,
                 title="Webhook IPv4 白名单",
@@ -85,6 +94,13 @@ class SynologyChat(_IMessageClient):
         if self._webhook_url:
             self._domain = StringUtils.get_base_url(self._webhook_url)
         self._token = cfg.get("token")
+        self._verify_ssl = bool(cfg.get("verify_ssl", False))
+        self._req = HttpClient(
+            config=HttpClientConfig(
+                default_headers={"Content-Type": "application/x-www-form-urlencoded"},
+                verify_ssl=self._verify_ssl,
+            )
+        )
 
     def setup(self):
         # Synology 传入 Webhook 仅用于“发送”，不支持轮询取消息；高频 GET 会触发 autoblock(105)。
