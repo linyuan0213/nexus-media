@@ -53,9 +53,9 @@ class _FakeSubscribeService:
 
 
 class _FakeContext:
-    def __init__(self, service, permissions=None, metadata_service=None):
+    def __init__(self, service, permissions=None, metadata_gateway=None):
         self.subscribe_service = service
-        self.metadata_service = metadata_service
+        self.metadata_gateway = metadata_gateway
         self._user = UserContext(
             user_id=1,
             username="tester",
