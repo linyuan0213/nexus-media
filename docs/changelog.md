@@ -8,6 +8,7 @@
 - 元数据：统一 `metadata` 缓存命名空间，移除 TMDBCache 与 TMDB 专用缓存入口；订阅、下载、转移、刮削及插件搜索统一经 MetadataGateway。
 - 权限：超级管理员使用显式不受限上下文，普通用户空权限不再视为管理员；修复私有元数据 provider 搜索与详情被误拒。
 - 详情：自定义内容画像补齐 provider 详情链接，Bangumi 等来源不再缺失详情入口。
+- 搜索：搜索结果卡片从多元数据 provider 的 `ratings` 补全评分，修复豆瓣等来源评分显示为 0。
 - 识别黑名单：改为 `provider + external_id` 模型，新增来源选择与迁移，旧 TMDB 黑名单数据自动归入 tmdb provider。
 
 ## v5.7.5 (2026-11-06)

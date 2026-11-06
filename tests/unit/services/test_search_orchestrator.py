@@ -316,3 +316,20 @@ class TestSeasonSuffix:
 
         assert _strip_season_suffix("赛博朋克：边缘行者 第二季") == "赛博朋克：边缘行者"
         assert _strip_season_suffix("Cyberpunk Edgerunners Season 2") == "Cyberpunk Edgerunners"
+
+
+def test_anchor_media_carries_provider_rating():
+    orchestrator = object.__new__(SearchOrchestrator)
+    service = MagicMock()
+    service.lookup.return_value = {
+        "title": "FX战士久留美",
+        "original_title": "FX戦士くるみちゃん",
+        "year": "2026",
+        "ratings": {"douban": 8.1},
+    }
+    orchestrator._metadata_gateway = service
+
+    media = orchestrator.resolve_anchor_media("douban", "37923549", media_type=MediaType.ANIME)
+
+    assert media is not None
+    assert media.vote_average == 8.1

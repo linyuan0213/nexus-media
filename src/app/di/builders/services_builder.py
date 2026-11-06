@@ -561,6 +561,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     search_result_service = SearchResultService(
         media_server=media_server,
         subscribe=subscribe_service,
+        metadata_gateway=metadata_gateway,
     )
 
     def _history_poster_resolver(type_value: str, tmdbid: int) -> str:

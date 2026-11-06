@@ -6,6 +6,7 @@ from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media import meta_info
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.models import MediaInfo
 from app.mediaserver.media_server import MediaServer
 from app.schemas.media import MediaSearchResultDTO
@@ -19,9 +20,48 @@ class SearchResultService:
     搜索结果分组业务服务
     """
 
-    def __init__(self, media_server: MediaServer, subscribe: Subscribe):
+    def __init__(
+        self,
+        media_server: MediaServer,
+        subscribe: Subscribe,
+        metadata_gateway: MetadataGateway | None = None,
+    ):
         self._media_server = media_server
         self._subscribe = subscribe
+        self._metadata_gateway = metadata_gateway
+
+    def _resolve_vote(self, item, rating_cache: dict[tuple[str, str, str], str]) -> str:
+        vote = str(getattr(item, "VOTE", "") or "").strip()
+        if vote and vote not in {"0", "0.0"}:
+            return vote
+        provider = str(getattr(item, "ANCHOR_PROVIDER", "") or "")
+        external_id = str(getattr(item, "ANCHOR_EXTERNAL_ID", "") or "")
+        if not provider or not external_id or self._metadata_gateway is None:
+            return vote or "0"
+        media_type = MediaType.from_string(str(getattr(item, "TYPE", "") or ""))
+        cache_key = (provider, external_id, media_type.value)
+        if cache_key in rating_cache:
+            return rating_cache[cache_key]
+        try:
+            record = (
+                self._metadata_gateway.lookup(
+                    provider,
+                    external_id,
+                    media_type=media_type,
+                    context=MetadataContext(purpose="search.result", allow_private=True),
+                )
+                or {}
+            )
+            ratings = record.get("ratings") or {}
+            rating = ratings.get(provider) if hasattr(ratings, "get") else None
+            if rating is None and isinstance(ratings, dict) and ratings:
+                rating = max(ratings.values())
+            resolved = str(round(float(rating), 1)) if rating else "0"
+        except Exception as exc:  # noqa: BLE001 - 评分补全失败不影响结果展示
+            log.debug(f"[Search]评分补全失败 {provider}:{external_id}: {exc}")
+            resolved = vote or "0"
+        rating_cache[cache_key] = resolved
+        return resolved
 
     def group_search_results(self, search_results: list) -> MediaSearchResultDTO:
         """
@@ -29,6 +69,7 @@ class SearchResultService:
         """
         search_results_dict = {}
         total = len(search_results)
+        rating_cache: dict[tuple[str, str, str], str] = {}
 
         for item in search_results:
             restype, respix, reseffect, video_encode = self._parse_res_type(item.RES_TYPE)
@@ -145,7 +186,7 @@ class SearchResultService:
                     "content_profile": getattr(item, "CONTENT_PROFILE", None) or "default",
                     "image": poster_url,
                     "type": media_type,
-                    "vote": item.VOTE,
+                    "vote": self._resolve_vote(item, rating_cache),
                     "tmdbid": item.TMDBID,
                     "backdrop": poster_url,
                     "poster": poster_url,

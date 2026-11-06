@@ -262,6 +262,14 @@ class SearchOrchestrator:
         raw_year = str(record.get("year") or "").strip()
         info.year = "" if raw_year in ("", "0", "0000") else raw_year
         info.overview = str(record.get("overview") or "")
+        ratings = record.get("ratings") or {}
+        rating = ratings.get(anchor_provider) if hasattr(ratings, "get") else None
+        if rating is None and isinstance(ratings, dict) and ratings:
+            rating = max(ratings.values())
+        try:
+            info.vote_average = round(float(rating or 0), 1)
+        except (TypeError, ValueError):
+            info.vote_average = 0.0
         info.anchor_provider = anchor_provider
         info.anchor_external_id = str(anchor_external_id)
         info.content_profile = content_profile or str(record.get("content_profile") or "default")
