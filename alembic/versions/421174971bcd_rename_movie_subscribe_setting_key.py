@@ -24,28 +24,19 @@ def _rename_prefix(source: str, target: str) -> None:
     conn = op.get_bind()
     if not sa.inspect(conn).has_table("SYSTEM_DICT"):
         return
-    keys = [
-        row[0]
-        for row in conn.execute(
-            sa.text("SELECT `KEY` FROM `SYSTEM_DICT` WHERE `TYPE` = 'SystemConfig'")
-        ).fetchall()
-    ]
+    table = sa.Table("SYSTEM_DICT", sa.MetaData(), autoload_with=conn)
+    keys = [row[0] for row in conn.execute(sa.select(table.c.KEY).where(table.c.TYPE == "SystemConfig")).fetchall()]
     existing = set(keys)
     # SQLite 的 LIKE 对 ASCII 大小写不敏感，必须在 Python 中做区分大小写的前缀匹配
     for key in keys:
         if not key.startswith(source):
             continue
         new_key = target + key[len(source) :]
+        condition = sa.and_(table.c.TYPE == "SystemConfig", table.c.KEY == key)
         if new_key in existing:
-            conn.execute(
-                sa.text("DELETE FROM `SYSTEM_DICT` WHERE `TYPE` = 'SystemConfig' AND `KEY` = :key"),
-                {"key": key},
-            )
+            conn.execute(sa.delete(table).where(condition))
         else:
-            conn.execute(
-                sa.text("UPDATE `SYSTEM_DICT` SET `KEY` = :new_key WHERE `TYPE` = 'SystemConfig' AND `KEY` = :key"),
-                {"new_key": new_key, "key": key},
-            )
+            conn.execute(sa.update(table).where(condition).values(KEY=new_key))
 
 
 def upgrade() -> None:
