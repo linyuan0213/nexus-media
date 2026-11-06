@@ -61,9 +61,9 @@ class SearchQueryBuilder:
         根据媒体信息构建多语言搜索词列表
         :return: (搜索词列表, 建议最大并发数)
         """
-        # 自定义内容画像（如 AV）只用番号/关键词搜索，避免标题带来噪声
+        # 仅内容编号型画像（如插件内容库）只用编号搜索；anime/tv/movie 仍按标题召回。
         profile = str(getattr(media_info, "content_profile", "") or "").strip()
-        if profile and profile != "default":
+        if profile and profile not in {"default", "anime", "tv", "movie"}:
             keyword = (
                 media_info.keyword
                 or getattr(media_info, "anchor_external_id", "")
@@ -73,8 +73,13 @@ class SearchQueryBuilder:
                 return [str(keyword)], 1
 
         search_name_list = []
-        if media_info.keyword:
-            search_name_list.append(media_info.keyword)
+        keyword = str(media_info.keyword or "").strip()
+        identity_values = {
+            str(getattr(media_info, "anchor_external_id", "") or ""),
+            str(getattr(media_info, "tmdb_id", "") or "").split(":")[-1],
+        }
+        if keyword and not (profile in {"anime", "tv"} and keyword in identity_values):
+            search_name_list.append(keyword)
 
         # 中文名
         if media_info.cn_name:

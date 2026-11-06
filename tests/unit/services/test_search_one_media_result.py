@@ -61,7 +61,7 @@ class TestSearchOneMediaReturn:
 
 
 class TestCustomProfileSearchNames:
-    """自定义画像只用番号搜索，不叠加标题."""
+    """自定义画像只用内容编号搜索，不叠加标题."""
 
     def test_custom_profile_returns_keyword_only(self):
         media = MediaInfo(
@@ -77,3 +77,17 @@ class TestCustomProfileSearchNames:
 
         assert names == ["START-660"]
         assert workers == 1
+
+    def test_anime_profile_ignores_numeric_tmdb_keyword(self):
+        media = MediaInfo(
+            title="学生会也有洞！",
+            cn_name="学生会也有洞！",
+            type=MediaType.ANIME,
+            content_profile="anime",
+            keyword="283938",
+            tmdb_id=283938,
+        )
+        names, _ = SearchQueryBuilder.build_search_names(media, MagicMock())
+
+        assert "283938" not in names
+        assert "学生会也有洞！" in names
