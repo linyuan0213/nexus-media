@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, Sequence, String, Text, UniqueConstraint
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -80,7 +81,7 @@ class MediaMetadataSnapshot(Base):
     CONTENT_PROFILE: Mapped[str] = mapped_column(String(64), nullable=False, default="default")
     SCOPE: Mapped[str] = mapped_column(String(64), nullable=False, default="default")
     SNAPSHOT_HASH: Mapped[str] = mapped_column(String(64), nullable=False)
-    PAYLOAD: Mapped[str] = mapped_column(Text, nullable=False)
+    PAYLOAD: Mapped[str] = mapped_column(Text().with_variant(LONGTEXT, "mysql"), nullable=False)
     PROVIDERS: Mapped[str | None] = mapped_column(Text, nullable=True)
     STATUS: Mapped[str] = mapped_column(String(32), nullable=False, default="ok")
     CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
