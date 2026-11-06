@@ -1,10 +1,10 @@
 # 版本历史
 
-## 未发布
+## v5.8.1 (2026-11-06)
 
 ### 修复
 
-- PostgreSQL：修复 `421174971bcd` 迁移使用 MySQL 反引号导致的语法错误，改用 SQLAlchemy Core 兼容各数据库。
+- PostgreSQL：修复 `421174971bcd` 历史迁移使用 MySQL 反引号导致的语法错误，改用 SQLAlchemy Core 兼容各数据库。
 
 ## v5.8.0 (2026-11-06)
 
