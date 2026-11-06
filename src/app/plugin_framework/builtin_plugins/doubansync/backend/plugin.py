@@ -262,24 +262,51 @@ class DoubanSyncPlugin:
         cache_key = self._cache_key("detail", str(doubanid))
         douban_info = self._cache.get(cache_key)
         if douban_info is None:
-            douban_info = self._douban.get_douban_detail(doubanid=doubanid, wait=True)
-            if not douban_info:
-                douban_info = self._douban.get_media_detail_from_web(doubanid)
-            if douban_info:
-                self._cache.set(cache_key, douban_info, ttl=self._cache_ttl)
+            gateway = getattr(self.ctx, "metadata_gateway", None)
+            if gateway is not None:
+                try:
+                    record = gateway.lookup("douban", str(doubanid))
+                except Exception as exc:  # noqa: BLE001 - 详情失败按无权限处理
+                    self.ctx.warn(f"{doubanid} 豆瓣详情查询失败: {exc}")
+                    record = None
+                if record:
+                    douban_info = {
+                        "title": record.get("title"),
+                        "year": record.get("year"),
+                        "intro": record.get("overview"),
+                        "cover_url": next(
+                            (item.get("url") for item in (record.get("images") or {}).get("poster", [])),
+                            "",
+                        ),
+                        "rating": record.get("ratings") or {},
+                        "episodes_count": next(
+                            (
+                                int(item.get("episode_count") or 0)
+                                for item in (record.get("seasons") or [])
+                                if int(item.get("episode_count") or 0) > 0
+                            ),
+                            0,
+                        ),
+                        "imdbid": (record.get("extra") or {}).get("douban.imdb"),
+                        "media_type": record.get("media_type"),
+                    }
+                    self._cache.set(cache_key, douban_info, ttl=self._cache_ttl)
         if not douban_info:
             self.ctx.warn(f"{doubanid} 无权限访问，需要配置豆瓣Cookie")
             return
 
-        media_type = MediaType.TV if douban_info.get("episodes_count") else MediaType.MOVIE
+        resolved_type = MediaType.from_string(str(douban_info.get("media_type") or ""))
+        if resolved_type == MediaType.UNKNOWN:
+            resolved_type = MediaType.TV if douban_info.get("episodes_count") else MediaType.MOVIE
+        media_type = resolved_type
         mi = meta_info(title="{} {}".format(douban_info.get("title"), douban_info.get("year") or ""))
         mi.douban_id = doubanid
         mi.type = media_type
         mi.overview = douban_info.get("intro")
         mi.poster_path = douban_info.get("cover_url")
         rating = douban_info.get("rating", {}) or {}
-        mi.vote_average = float(rating.get("value") or 0)
-        mi.imdb_id = douban_info.get("imdbid")
+        mi.vote_average = float(rating.get("douban") or rating.get("value") or 0)
+        mi.imdb_id = str(douban_info.get("imdbid") or "")
         mi.user_name = info.get("user_name")
 
         history = history_data.get(str(doubanid))

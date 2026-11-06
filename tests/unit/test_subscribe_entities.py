@@ -73,16 +73,18 @@ def test_web_utils_douban_fallback_does_not_supplement_tmdb():
 
     media_service = MagicMock()
     media_service.get_media_info.return_value = None
-    douban = MagicMock()
-    douban.get_douban_detail.return_value = {
+    gateway = MagicMock()
+    gateway.lookup.return_value = {
         "title": "最后生还者 第一季",
         "original_title": "The Last of Us Season 1",
         "year": "2023",
-        "cover_url": "https://img/poster.jpg",
-        "episodes_count": 9,
+        "media_type": "tv",
+        "content_profile": "default",
+        "images": {"poster": [{"url": "https://img/poster.jpg"}]},
+        "seasons": [{"season_number": 1, "episode_count": 9}],
     }
     media_service.get_media_info.return_value = None
-    utils = WebUtils(media_service=media_service, douban=douban, bangumi=MagicMock())
+    utils = WebUtils(media_service=media_service, metadata_gateway=gateway)
 
     info = utils.get_mediainfo_from_id(MediaType.TV, "DB:25848328")
 

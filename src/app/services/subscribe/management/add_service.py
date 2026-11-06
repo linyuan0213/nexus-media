@@ -170,8 +170,7 @@ def _preferred_profile_poster(
 class SubscribeAddService:
     """添加订阅服务"""
 
-    _metadata_gateway = None
-    _metadata_service = None
+    _metadata_gateway: MetadataGateway | None = None
 
     def __init__(
         self,
@@ -184,7 +183,6 @@ class SubscribeAddService:
         web_utils: WebUtils,
         download_repo=None,
         transfer_history_manager=None,
-        metadata_service=None,
         site_cache=None,
         indexer_service=None,
         series_service=None,
@@ -199,7 +197,6 @@ class SubscribeAddService:
         self._web_utils = web_utils
         self._download_repo = download_repo
         self._transfer_history_manager = transfer_history_manager
-        self._metadata_service = metadata_service
         self._metadata_gateway = metadata_gateway
         self._site_cache = site_cache
         self._indexer_service = indexer_service
@@ -207,7 +204,7 @@ class SubscribeAddService:
 
     @property
     def _metadata(self):
-        return self._metadata_gateway or self._metadata_service
+        return self._metadata_gateway
 
     @staticmethod
     def _context(*, content_profile: str | None, allow_private: bool, permissions: set[str] | None) -> MetadataContext:
@@ -228,28 +225,18 @@ class SubscribeAddService:
         permissions: set[str] | None,
         media_type: MediaType | None = None,
     ):
-        if self._metadata_gateway is not None:
-            return self._metadata_gateway.lookup(
-                provider,
-                external_id,
-                context=self._context(
-                    content_profile=content_profile,
-                    allow_private=allow_private,
-                    permissions=permissions,
-                ),
-                media_type=media_type,
-                content_profile=content_profile,
-            )
-        target = self._metadata_service
-        if target is None:
+        if self._metadata_gateway is None:
             return None
-        return target.lookup(
+        return self._metadata_gateway.lookup(
             provider,
             external_id,
+            context=self._context(
+                content_profile=content_profile,
+                allow_private=allow_private,
+                permissions=permissions,
+            ),
             media_type=media_type,
             content_profile=content_profile,
-            allow_private=allow_private,
-            permissions=permissions,
         )
 
     def _season_episode_count(
@@ -265,25 +252,14 @@ class SubscribeAddService:
         allow_private: bool,
         permissions: set[str] | None,
     ) -> int:
-        if self._metadata_gateway is not None:
-            return self._metadata_gateway.resolve_season_episode_count(
-                context=self._context(
-                    content_profile=content_profile,
-                    allow_private=allow_private,
-                    permissions=permissions,
-                ),
-                provider=provider,
-                external_id=external_id,
-                title=title,
-                year=year,
-                media_type=media_type,
-                season=season,
-                content_profile=content_profile,
-            )
-        target = self._metadata_service
-        if target is None:
+        if self._metadata_gateway is None:
             return 0
-        return target.resolve_season_episode_count(
+        return self._metadata_gateway.resolve_season_episode_count(
+            context=self._context(
+                content_profile=content_profile,
+                allow_private=allow_private,
+                permissions=permissions,
+            ),
             provider=provider,
             external_id=external_id,
             title=title,
@@ -291,8 +267,6 @@ class SubscribeAddService:
             media_type=media_type,
             season=season,
             content_profile=content_profile,
-            allow_private=allow_private,
-            permissions=permissions,
         )
 
     @property
@@ -312,9 +286,9 @@ class SubscribeAddService:
         content_profile=None,
         naming_profile=None,
     ) -> dict:
-        if self._metadata_service is None:
+        if self._metadata_gateway is None:
             return {}
-        return self._metadata_service.link_subscription(
+        return self._metadata_gateway.link_subscription(
             media_info,
             media_type=mtype,
             mediaid=mediaid,

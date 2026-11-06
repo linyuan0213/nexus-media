@@ -30,7 +30,6 @@ class LibraryScraperPlugin:
         self.ctx = ctx
         self._scraper = Scraper(
             media_service=ctx.media_service,
-            metadata_service=getattr(ctx, "metadata_service", None),
             metadata_gateway=getattr(ctx, "metadata_gateway", None),
         )
         self._event = Event()

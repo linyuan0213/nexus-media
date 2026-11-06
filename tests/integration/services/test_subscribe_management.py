@@ -21,7 +21,6 @@ def _make_subscribe_service(**kwargs):
         "media_service": MagicMock(),
         "downloader": MagicMock(),
         "sites": MagicMock(),
-        "douban": MagicMock(),
         "indexer_service": MagicMock(),
         "filter_service": MagicMock(),
         "event_bus": MagicMock(),

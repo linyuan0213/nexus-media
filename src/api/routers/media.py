@@ -1,5 +1,6 @@
 import os
 import urllib.parse
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import StreamingResponse
@@ -16,8 +17,8 @@ from api.deps import (
     get_media_info_service,
     get_media_library_service,
     get_media_recommendation_service,
+    get_metadata_admin_service,
     get_metadata_gateway,
-    get_metadata_service,
     get_search_result_service,
     get_searcher_service,
     get_subscribe_service,
@@ -52,12 +53,10 @@ from app.services.media_service import (
     SearchResultService,
     TransferHistoryService,
 )
-from app.services.metadata_service import MetadataService
 from app.services.search_service import Searcher
 from app.services.series_service import SeriesService
 from app.services.transfer.filetransfer_service import FileTransferService
 from app.services.transfer.name_format import FIELD_CATALOG, field_groups, render_path, validate
-from app.services.web.utils import get_mediainfo_from_id
 from app.utils import StringUtils
 from app.utils.response import fail, success
 from app.utils.timeout import run_with_timeout
@@ -82,10 +81,6 @@ def _metadata_context(current_user, *, purpose: str, content_profile: str = "def
         purpose=purpose,
         allow_private=allow_private,
     )
-
-
-def _gateway_for(gateway: MetadataGateway | None, svc: MetadataService) -> MetadataGateway:
-    return gateway or MetadataGateway(svc)
 
 
 # ---------- Request Models ----------
@@ -965,8 +960,7 @@ def media_detail(
 def _minimal_detail_record(
     req: "MediaDetailByRefRequest",
     media_type: MediaType | None,
-    svc: MetadataService,
-    gateway: MetadataGateway | None = None,
+    gateway: MetadataGateway,
     context: MetadataContext | None = None,
 ) -> dict:
     """来源详情不可用时，用锚点/前端标题构造最小记录，并补齐豆瓣分集数."""
@@ -987,34 +981,8 @@ def _minimal_detail_record(
         "genres": [],
         "credits": [],
     }
-    try:
-        legacy = run_with_timeout(
-            lambda: get_mediainfo_from_id(mtype, f"{req.provider}:{req.external_id}"),
-            3.0,
-            name="media-detail-legacy",
-        )
-    except Exception:  # noqa: BLE001 - 详情兜底不能再抛错
-        legacy = None
-    if legacy is not None:
-        record["title"] = str(getattr(legacy, "title", None) or record["title"])
-        record["year"] = str(getattr(legacy, "year", None) or record["year"])
-        record["overview"] = str(getattr(legacy, "overview", None) or "")
-        poster = getattr(legacy, "get_poster_image", lambda: "")()
-        if poster:
-            record["images"] = {"poster": [{"url": poster}]}
-        total = getattr(legacy, "total_episodes", None)
-        if total:
-            record["episode_count"] = int(total)
-            record["seasons"] = [
-                {
-                    "season_number": int(season_number),
-                    "episode_count": int(total),
-                    "name": f"第{season_number}季",
-                }
-            ]
     if not record.get("seasons") and base_title:
-        resolver = gateway or MetadataGateway(svc)
-        total = resolver.resolve_season_episode_count(
+        total = gateway.resolve_season_episode_count(
             context=context,
             provider=req.provider,
             external_id=req.external_id,
@@ -1039,15 +1007,13 @@ def _minimal_detail_record(
 def media_detail_by_ref(
     req: MediaDetailByRefRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
-    gateway: MetadataGateway | None = Depends(get_metadata_gateway),
+    gateway: MetadataGateway = Depends(get_metadata_gateway),
     sub_svc=Depends(get_subscribe_service),
 ):
     request_type, content_profile = normalize_media_type_input(req.media_type, req.content_profile)
     media_type = MediaType.from_string(request_type) if request_type else None
     if media_type == MediaType.UNKNOWN:
         media_type = None
-    gateway = _gateway_for(gateway, svc)
     context = _metadata_context(current_user, purpose="api.detail_by_ref", content_profile=content_profile)
     record = None
     is_custom_profile = content_profile != "default"
@@ -1061,7 +1027,7 @@ def media_detail_by_ref(
                 content_profile=content_profile,
             )
         except Exception:  # noqa: BLE001 - 上游抓取/熔断时仍可用前端已有标题展示
-            record = _minimal_detail_record(req, media_type, svc, gateway, context)
+            record = _minimal_detail_record(req, media_type, gateway, context)
             if record is None:
                 return fail(code=ErrorCode.OPERATION_FAILED, msg="无法获取媒体详情")
     if is_custom_profile and req.content_id:
@@ -1151,7 +1117,7 @@ def media_detail_by_ref(
             except Exception:  # noqa: BLE001
                 record = None
         if not record:
-            record = _minimal_detail_record(req, media_type, svc, gateway, context)
+            record = _minimal_detail_record(req, media_type, gateway, context)
         if not record:
             return fail(msg="无法获取媒体详情")
         status = sub_svc.get_subscribe_by_anchor(
@@ -1345,13 +1311,12 @@ def media_detail_by_ref(
         "seasons": seasons,
         "links": links,
         "link": links[0]["url"] if links else "",
-        "similar": svc.similar_for_ref(
+        "similar": gateway.similar_for_ref(
             provider,
             external_id,
+            context=context,
             media_type=media_type or MediaType.MOVIE,
             title=str(_field_value(fields, "title") or record.get("title") or ""),
-            allow_private=context.allow_private,
-            permissions=set(context.permissions) or None,
         ),
         "fav": (status or {}).get("fav", "0"),
         "rssid": (status or {}).get("rssid", ""),
@@ -1376,14 +1341,12 @@ def search_media_infos(
 def metadata_search(
     req: MetadataSearchRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
-    gateway: MetadataGateway | None = Depends(get_metadata_gateway),
+    gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
     request_type, content_profile = normalize_media_type_input(req.media_type, req.content_profile)
     media_type = MediaType.from_string(request_type) if request_type else None
     if media_type == MediaType.UNKNOWN:
         media_type = None
-    gateway = _gateway_for(gateway, svc)
     context = _metadata_context(current_user, purpose="api.search", content_profile=content_profile)
     return success(
         data=gateway.search(
@@ -1406,14 +1369,12 @@ def metadata_lookup(
     scope: str = "default",
     allow_missing: bool = False,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
-    gateway: MetadataGateway | None = Depends(get_metadata_gateway),
+    gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
     request_type, profile = normalize_media_type_input(media_type, scope)
     ref_type = MediaType.from_string(request_type) if request_type else None
     if ref_type == MediaType.UNKNOWN:
         ref_type = None
-    gateway = _gateway_for(gateway, svc)
     context = _metadata_context(current_user, purpose="api.lookup", content_profile=profile)
     try:
         data = gateway.lookup(
@@ -1452,10 +1413,10 @@ def metadata_lookup(
 @router.get("/metadata/metrics", response_model=CommonResponse, summary="元数据链路指标")
 def metadata_metrics(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
+    admin: Any = Depends(get_metadata_admin_service),
     gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
-    data = svc.metrics()
+    data = admin.metrics()
     data["gateway"] = gateway.metrics()
     return success(data=data)
 
@@ -1465,11 +1426,12 @@ def metadata_providers(
     include_health: bool = Query(True),
     provider: str | None = Query(None),
     current_user=Depends(require_any_permission("library:view", "library:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
+    gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
     allow_private, permissions = _private_scope(current_user)
     return success(
-        data=svc.list_providers(
+        data=gateway.list_providers(
+            context=_metadata_context(current_user, purpose="api.providers"),
             allow_private=allow_private,
             permissions=permissions,
             probe_health=include_health,
@@ -1482,9 +1444,9 @@ def metadata_providers(
 def person_detail(
     person_id: str,
     current_user=Depends(require_permission("metadata:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
+    gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
-    data = svc.person_detail(person_id)
+    data = gateway.person_detail(person_id)
     return success(data=data) if data else fail(msg="人员不存在")
 
 
@@ -1492,28 +1454,28 @@ def person_detail(
 def identity_merge(
     req: IdentityMergeRequest,
     current_user=Depends(require_permission("metadata:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
+    admin=Depends(get_metadata_admin_service),
 ):
-    return success(data={"merged": svc.merge_identity(req.source_id, req.target_id)})
+    return success(data={"merged": admin.merge_identity(req.source_id, req.target_id)})
 
 
 @router.get("/identity/conflicts", response_model=CommonResponse, summary="待审核的跨源链接")
 def identity_conflicts(
     limit: int = 100,
     current_user=Depends(require_permission("metadata:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
+    gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
-    return success(data=svc.pending_links(limit=limit))
+    return success(data=gateway.pending_links(limit=limit))
 
 
 @router.get("/identity/{identity_id}", response_model=CommonResponse, summary="作品身份详情")
 def identity_detail(
     identity_id: str,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
+    gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
     allow_private, _permissions = _private_scope(current_user)
-    data = svc.identity_detail(identity_id, allow_private=allow_private)
+    data = gateway.identity_detail(identity_id, allow_private=allow_private)
     return success(data=data) if data else fail(msg="身份不存在")
 
 
@@ -1521,9 +1483,9 @@ def identity_detail(
 def identity_review_link(
     req: IdentityReviewRequest,
     current_user=Depends(require_permission("metadata:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
+    admin=Depends(get_metadata_admin_service),
 ):
-    result = svc.review_link(
+    result = admin.review_link(
         req.identity_id,
         provider=req.provider,
         external_id=req.external_id,
@@ -1568,11 +1530,10 @@ def discovery_items(
 def metadata_preview(
     req: MetadataPreviewRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
-    svc: MetadataService = Depends(get_metadata_service),
+    gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
     if not req.refs:
         return fail(msg="未指定元数据引用")
-    private_allowed, permissions = _private_scope(current_user)
     request_type, content_profile = normalize_media_type_input(req.media_type, req.content_profile)
     refs = []
     for item in req.refs:
@@ -1592,14 +1553,13 @@ def metadata_preview(
     if media_type == MediaType.UNKNOWN:
         media_type = None
     try:
-        result = svc.preview(
+        result = gateway.preview(
             refs,
+            context=_metadata_context(current_user, purpose="api.preview", content_profile=content_profile),
             policy=req.policy,
             anchor_provider=req.anchor_provider,
             content_profile=content_profile,
             media_type=media_type,
-            allow_private=private_allowed,
-            permissions=permissions,
         )
     except ValidationError as exc:
         return fail(msg=exc.message)

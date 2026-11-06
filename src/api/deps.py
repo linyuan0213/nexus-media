@@ -252,9 +252,9 @@ def get_media_service(app_context: AppContext = Depends(get_app_context)):
     return app_context.media_service
 
 
-def get_metadata_service(app_context: AppContext = Depends(get_app_context)):
-    """获取多源元数据服务实例"""
-    return app_context.metadata_service
+def get_metadata_admin_service(app_context: AppContext = Depends(get_app_context)):
+    """获取元数据管理服务实例（仅身份写操作）"""
+    return app_context.metadata_admin_service
 
 
 def get_metadata_gateway(app_context: AppContext = Depends(get_app_context)):

@@ -57,23 +57,18 @@ class MediaInfoService:
     负责 TMDB/豆瓣 媒体信息查询、订阅信息回退、季列表等
     """
 
-    _metadata_gateway = None
-    _metadata_service = None
+    _metadata_gateway: MetadataGateway | None = None
 
     def __init__(
         self,
         media_service: MediaService,
         subscribe: Subscribe,
         media_server: MediaServer,
-        douban,
-        metadata_service=None,
         metadata_gateway: MetadataGateway | None = None,
     ):
         self._media = media_service
         self._subscribe = subscribe
         self._media_server = media_server
-        self._douban = douban
-        self._metadata_service = metadata_service
         self._metadata_gateway = metadata_gateway
 
     def get_season_episodes(self, tmdbid, title, year, season, content_profile=None) -> SeasonEpisodesResultDTO:
@@ -96,6 +91,33 @@ class MediaInfoService:
                 }
             )
         return SeasonEpisodesResultDTO(episodes=episodes)
+
+    def _douban_record(self, external_id: str, media_type: MediaType) -> dict[str, Any] | None:
+        if self._metadata_gateway is None:
+            return None
+        try:
+            return self._metadata_gateway.lookup(
+                "douban",
+                str(external_id),
+                context=MetadataContext(purpose="media.info", allow_private=True),
+                media_type=media_type,
+            )
+        except Exception:  # noqa: BLE001 - 详情失败由调用方决定兜底
+            return None
+
+    @staticmethod
+    def _record_poster(record: dict[str, Any]) -> str:
+        images = record.get("images") or {}
+        posters = images.get("poster") or []
+        if posters and isinstance(posters[0], dict):
+            return str(posters[0].get("url") or "")
+        return str(record.get("poster") or "")
+
+    @staticmethod
+    def _record_rating(record: dict[str, Any]) -> float | None:
+        ratings = record.get("ratings") or {}
+        value = ratings.get("douban")
+        return float(value) if isinstance(value, (int, float)) else None
 
     def get_tvseason_list(self, tmdbid, title) -> list[dict]:
         """获取剧集季列表"""
@@ -307,8 +329,7 @@ class MediaInfoService:
         parsed_profile: str | None = None,
     ):
         """并行查询所有可用元数据源；优先来源排序."""
-        metadata_service = self._metadata_service
-        if metadata_service is None and self._metadata_gateway is None:
+        if self._metadata_gateway is None:
             return [], None
         allow_private = bool(user and user.has_permission("metadata:private:view"))
         permissions = set(user.permissions) if user else None
@@ -319,11 +340,9 @@ class MediaInfoService:
             purpose="media.identify",
             allow_private=allow_private,
         )
-        provider_client = self._metadata_gateway or metadata_service
-        assert provider_client is not None
-        providers = provider_client.list_providers(
-            allow_private=allow_private, permissions=permissions, probe_health=False
-        )
+        gateway = self._metadata_gateway
+        assert gateway is not None
+        providers = gateway.list_providers(allow_private=allow_private, permissions=permissions, probe_health=False)
         searchable = [
             item for item in providers if any("search" in str(cap).lower() for cap in item.get("capabilities", []))
         ]
@@ -426,24 +445,13 @@ class MediaInfoService:
         def search_one(item):
             key = item["provider"]
             try:
-                if self._metadata_gateway is not None:
-                    return key, self._metadata_gateway.search(
-                        query=str(title),
-                        context=context,
-                        provider=key,
-                        media_type=media_type,
-                        content_profile=profile,
-                        limit=10 if code else 3,
-                    )
-                assert metadata_service is not None
-                return key, metadata_service.search(
+                return key, gateway.search(
                     query=str(title),
+                    context=context,
                     provider=key,
                     media_type=media_type,
                     content_profile=profile,
                     limit=10 if code else 3,
-                    allow_private=allow_private,
-                    permissions=permissions,
                 )
             except Exception:  # noqa: BLE001 - 单源失败不影响其他源
                 return key, []
@@ -452,24 +460,13 @@ class MediaInfoService:
             if item is None:
                 return None
             try:
-                if self._metadata_gateway is not None:
-                    return self._metadata_gateway.lookup(
-                        item["provider"],
-                        code,
-                        context=context,
-                        media_type=media_type,
-                        scope="release",
-                        content_profile=profile,
-                    )
-                assert metadata_service is not None
-                return metadata_service.lookup(
+                return gateway.lookup(
                     item["provider"],
                     code,
+                    context=context,
                     media_type=media_type,
                     scope="release",
-                    allow_private=allow_private,
                     content_profile=profile,
-                    permissions=permissions,
                 )
             except Exception:  # noqa: BLE001 - 聚合详情失败不影响搜索结果
                 return None
@@ -630,27 +627,20 @@ class MediaInfoService:
     def get_movie_calendar(self, tid, rssid) -> dict | None:
         """查询电影上映日期"""
         if tid and tid.startswith("DB:"):
-            doubanid = tid.replace("DB:", "")
-            douban_info = self._douban.get_douban_detail(doubanid=doubanid, mtype=MediaType.MOVIE)
-            if not douban_info:
+            record = self._douban_record(tid.replace("DB:", ""), MediaType.MOVIE)
+            if not record:
                 return None
-            poster_path = douban_info.get("cover_url") or ""
-            title = douban_info.get("title")
-            rating = douban_info.get("rating", {}) or {}
-            vote_average = rating.get("value") or "无"
-            release_date = douban_info.get("pubdate")
-            if release_date:
-                release_date = re.sub(r"\(.*\)", "", douban_info.get("pubdate")[0])
+            release_date = str(record.get("release_date") or "")
             if not release_date:
                 return None
             return {
                 "type": MediaType.MOVIE.value,
-                "title": title,
+                "title": record.get("title"),
                 "start": release_date,
                 "id": tid,
                 "year": release_date[0:4] if release_date else "",
-                "poster": poster_path,
-                "vote_average": vote_average,
+                "poster": self._record_poster(record),
+                "vote_average": self._record_rating(record) or "无",
                 "rssid": rssid,
             }
         else:
@@ -682,26 +672,21 @@ class MediaInfoService:
     def get_tv_calendar(self, tid, season, name, rssid) -> list | None:
         """查询电视剧上映日期"""
         if tid and tid.startswith("DB:"):
-            doubanid = tid.replace("DB:", "")
-            douban_info = self._douban.get_douban_detail(doubanid=doubanid, mtype=MediaType.TV)
-            if not douban_info:
+            record = self._douban_record(tid.replace("DB:", ""), MediaType.TV)
+            if not record:
                 return None
-            poster_path = douban_info.get("cover_url") or ""
-            title = douban_info.get("title")
-            rating = douban_info.get("rating", {}) or {}
-            vote_average = rating.get("value") or "无"
-            release_date = re.sub(r"\(.*\)", "", douban_info.get("pubdate")[0])
+            release_date = str(record.get("release_date") or "")
             if not release_date:
                 return None
             return [
                 {
                     "type": MediaType.TV.value,
-                    "title": title,
+                    "title": record.get("title"),
                     "start": release_date,
                     "id": tid,
                     "year": release_date[0:4] if release_date else "",
-                    "poster": poster_path,
-                    "vote_average": vote_average,
+                    "poster": self._record_poster(record),
+                    "vote_average": self._record_rating(record) or "无",
                     "rssid": rssid,
                 }
             ]

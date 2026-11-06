@@ -13,8 +13,7 @@ from app.services.subscribe.management.utils import gen_rss_note
 class SubscribeRefreshService:
     """刷新订阅服务"""
 
-    _metadata_gateway = None
-    _metadata_service = None
+    _metadata_gateway: MetadataGateway | None = None
 
     def __init__(
         self,
@@ -22,14 +21,12 @@ class SubscribeRefreshService:
         tv_repo,
         tv_episode_repo,
         media_service,
-        metadata_service=None,
         metadata_gateway: MetadataGateway | None = None,
     ):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
         self._tv_episode_repo = tv_episode_repo
         self._media = media_service
-        self._metadata_service = metadata_service
         self._metadata_gateway = metadata_gateway
 
     def refresh_rss_metainfo(self, get_subscribe_movies_fn, get_subscribe_tvs_fn) -> None:
@@ -151,7 +148,7 @@ class SubscribeRefreshService:
         return ""
 
     def _snapshot_for(self, rss_info: dict, media_type: MediaType) -> dict | None:
-        if self._metadata_service is None and self._metadata_gateway is None:
+        if self._metadata_gateway is None:
             return None
         provider = str(rss_info.get("anchor_provider") or "").strip()
         external = str(rss_info.get("anchor_external_id") or "").strip()
@@ -159,30 +156,19 @@ class SubscribeRefreshService:
             return None
         content_profile = str(rss_info.get("content_profile") or "default")
         try:
-            if self._metadata_gateway is not None:
-                envelope = self._metadata_gateway.resolve(
-                    provider,
-                    external,
-                    context=MetadataContext(
-                        user_id=rss_info.get("user_id"),
-                        purpose="subscribe.refresh",
-                        allow_private=True,
-                        content_profile=content_profile,
-                    ),
-                    media_type=media_type,
-                    max_age_seconds=300,
-                )
-                return envelope.metadata if envelope is not None else None
-            target = self._metadata_service
-            if target is None:
-                return None
-            return target.compose_for_ref(
+            envelope = self._metadata_gateway.resolve(
                 provider,
                 external,
+                context=MetadataContext(
+                    user_id=rss_info.get("user_id"),
+                    purpose="subscribe.refresh",
+                    allow_private=True,
+                    content_profile=content_profile,
+                ),
                 media_type=media_type,
-                content_profile=content_profile,
                 max_age_seconds=300,
             )
+            return envelope.metadata if envelope is not None else None
         except Exception as exc:  # noqa: BLE001
             log.debug(f"[Subscribe]统一身份刷新失败 {provider}:{external}: {exc}")
             return None

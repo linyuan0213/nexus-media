@@ -565,6 +565,72 @@ class MetadataGateway:
             )
         )
 
+    def similar_for_ref(
+        self,
+        provider: str,
+        external_id: str,
+        *,
+        context: MetadataContext | None = None,
+        media_type: MediaType = MediaType.MOVIE,
+        title: str | None = None,
+        content_profile: str = "default",
+        limit: int = 12,
+    ) -> list[dict[str, Any]]:
+        ctx = context or MetadataContext(content_profile=content_profile)
+        return self._service.similar_for_ref(
+            provider,
+            str(external_id),
+            media_type=media_type,
+            title=title,
+            content_profile=content_profile or ctx.content_profile,
+            limit=limit,
+            allow_private=ctx.allow_private,
+            permissions=set(ctx.permissions),
+        )
+
+    def preview(
+        self,
+        refs: list[Any],
+        *,
+        context: MetadataContext | None = None,
+        policy: str | None = None,
+        anchor_provider: str | None = None,
+        content_profile: str = "default",
+        media_type: MediaType | None = None,
+    ) -> Any:
+        ctx = context or MetadataContext(content_profile=content_profile)
+        return self._service.preview(
+            refs,
+            policy=policy,
+            anchor_provider=anchor_provider,
+            content_profile=content_profile or ctx.content_profile,
+            media_type=media_type,
+            allow_private=ctx.allow_private,
+            permissions=set(ctx.permissions),
+        )
+
+    def link_subscription(self, media_info: Any, **kwargs: Any) -> Any:
+        """订阅身份映射由网关委托内部服务，业务层不直接持有实现。"""
+        return self._service.link_subscription(media_info, **kwargs)
+
+    def person_detail(self, person_id: str) -> dict[str, Any] | None:
+        return self._service.person_detail(person_id)
+
+    def identity_detail(self, identity_id: str, *, allow_private: bool = False) -> dict[str, Any] | None:
+        return self._service.identity_detail(identity_id, allow_private=allow_private)
+
+    def pending_links(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        return self._service.pending_links(limit=limit)
+
+    def list_overrides(self, identity_id: str, *, user_id: int | None = None) -> list[dict[str, Any]]:
+        return self._service.list_overrides(identity_id, user_id=user_id)
+
+    def service_metrics(self) -> dict[str, Any]:
+        return self._service.metrics()
+
+    def bump_detail_cache_version(self) -> int:
+        return int(self._service.bump_detail_cache_version())
+
     def _ensure_visible(self, media_info: Any, context: MetadataContext) -> None:
         descriptor_of = getattr(self._service, "provider_descriptor", None)
         if not callable(descriptor_of):

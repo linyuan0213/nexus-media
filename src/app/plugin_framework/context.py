@@ -48,7 +48,6 @@ class PluginContext:
         hook_system: Any = None,
         site_engine: Any = None,
         media_service: Any = None,
-        metadata_service: Any = None,
         metadata_gateway: Any = None,
         manifest_metadata: Any = None,
         filter_service: Any = None,
@@ -66,7 +65,6 @@ class PluginContext:
         self._hook_system = hook_system
         self._site_engine = site_engine
         self._media_service = media_service
-        self._metadata_service = metadata_service
         self._metadata_gateway = metadata_gateway
         self._metadata_manifest = manifest_metadata
         self._filter_service = filter_service
@@ -264,11 +262,6 @@ class PluginContext:
     def media_service(self) -> Any:
         """获取媒体服务"""
         return self._media_service
-
-    @property
-    def metadata_service(self) -> Any:
-        """获取元数据快照服务"""
-        return self._metadata_service
 
     @property
     def metadata_gateway(self) -> Any:

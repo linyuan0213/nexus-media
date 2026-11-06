@@ -14,7 +14,6 @@ from app.domain.enums import SystemConfigKey
 from app.domain.lifecycle import LifecycleStatus
 from app.domain.mediatypes import MediaType
 from app.media import MediaInfo
-from app.media.external.bangumi import Bangumi
 from app.services.lifecycle_service import LifecycleProjector
 from app.services.subscribe.management.add_service import SubscribeAddService
 from app.services.subscribe.management.finish_service import SubscribeFinishService
@@ -54,7 +53,6 @@ class SubscribeService:
         media_service: Any,
         downloader: Any,
         sites: Any,
-        douban: Any,
         indexer_service: Any,
         filter_service: Any,
         event_bus: Any,
@@ -62,7 +60,6 @@ class SubscribeService:
         download_repo: Any = None,
         transfer_history_manager: Any = None,
         user_repo: Any = None,
-        metadata_service: Any = None,
         metadata_gateway: Any = None,
     ):
         self._movie_repo = movie_repo
@@ -73,7 +70,6 @@ class SubscribeService:
         self._media = media_service
         self._downloader = downloader
         self._sites = sites
-        self._douban = douban
         self._indexer_service = indexer_service
         self._filter = filter_service
         self._event_bus = event_bus
@@ -83,10 +79,7 @@ class SubscribeService:
 
         self._web_utils = WebUtils(
             media_service=media_service,
-            douban=douban,
-            bangumi=Bangumi(),
             metadata_gateway=metadata_gateway,
-            metadata_service=metadata_service,
         )
 
         self._update_svc = SubscribeUpdateService(
@@ -108,7 +101,6 @@ class SubscribeService:
             self._web_utils,
             self._download_repo,
             self._transfer_history_manager,
-            metadata_service,
             self._sites,
             self._indexer_service,
             metadata_gateway=metadata_gateway,
@@ -133,7 +125,6 @@ class SubscribeService:
             self._tv_repo,
             self._tv_episode_repo,
             self._media,
-            metadata_service,
             metadata_gateway=metadata_gateway,
         )
 

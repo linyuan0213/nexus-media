@@ -99,8 +99,7 @@ _PARALLEL_WAIT_TIMEOUT = 1800
 class FileTransferService:
     """文件转移业务 Facade."""
 
-    _metadata_gateway = None
-    _metadata_service = None
+    _metadata_gateway: MetadataGateway | None = None
 
     def __init__(
         self,
@@ -118,7 +117,6 @@ class FileTransferService:
         cleanup_service: TransferCleanupService,
         download_repo=None,
         subscribe_repo=None,
-        metadata_service=None,
         metadata_gateway: MetadataGateway | None = None,
     ):
         self.media = media_service
@@ -143,7 +141,6 @@ class FileTransferService:
         self._download_repo = download_repo or DownloadHistoryRepositoryAdapter()
         self._subscribe_repo = subscribe_repo or SubscribeRepository()
         self._cleanup = cleanup_service
-        self._metadata_service = metadata_service
         self._metadata_gateway = metadata_gateway
 
         # 从配置读取媒体处理参数
@@ -168,7 +165,7 @@ class FileTransferService:
 
     @property
     def _metadata(self):
-        return self._metadata_gateway or self._metadata_service
+        return self._metadata_gateway
 
     def _metadata_context(self, media=None) -> MetadataContext:
         return MetadataContext(
@@ -179,18 +176,16 @@ class FileTransferService:
         )
 
     def _metadata_lookup(self, provider: str, external_id: str, **kwargs):
-        target = self._metadata
-        if target is None:
+        if self._metadata_gateway is None:
             return None
-        if self._metadata_gateway is not None:
-            kwargs.pop("allow_private", None)
-            kwargs.pop("permissions", None)
-            kwargs["context"] = MetadataContext(
-                purpose="transfer",
-                allow_private=True,
-                content_profile=str(kwargs.get("content_profile") or "default"),
-            )
-        return target.lookup(provider, external_id, **kwargs)
+        kwargs.pop("allow_private", None)
+        kwargs.pop("permissions", None)
+        kwargs["context"] = MetadataContext(
+            purpose="transfer",
+            allow_private=True,
+            content_profile=str(kwargs.get("content_profile") or "default"),
+        )
+        return self._metadata_gateway.lookup(provider, external_id, **kwargs)
 
     # ---------- 路径相关委托方法（公共 API 兼容） ----------
 
@@ -793,7 +788,7 @@ class FileTransferService:
             (value for key, value in extra.items() if str(key).endswith(".source_provider")),
             None,
         )
-        if not poster and self._metadata_service is not None:
+        if not poster and self._metadata_gateway is not None:
             # 部分插件快照只带字段，图片在单独 lookup 中；用 refs 找一张真实海报。
             for ref in getattr(snapshot, "refs", []) or []:
                 provider = str(getattr(ref, "provider", "") or "")
@@ -820,7 +815,7 @@ class FileTransferService:
                         break
                 except Exception:
                     continue
-        if not poster and self._metadata_service is not None:
+        if not poster and self._metadata_gateway is not None:
             source_ref = str(
                 extra.get("source_ref")
                 or next(

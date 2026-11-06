@@ -20,8 +20,7 @@ class TransferHistoryService:
     转移历史业务服务
     """
 
-    _metadata_gateway = None
-    _metadata_service = None
+    _metadata_gateway: MetadataGateway | None = None
 
     def __init__(
         self,
@@ -29,7 +28,6 @@ class TransferHistoryService:
         sync_service: SyncService,
         cache_ttl: int = 30,
         poster_resolver: Callable[[str, int], str] | None = None,
-        metadata_service=None,
         subscribe_repo=None,
         metadata_gateway: MetadataGateway | None = None,
     ):
@@ -39,7 +37,6 @@ class TransferHistoryService:
         self._cache_ttl = cache_ttl
         # (type, tmdbid) -> 海报 URL；None 表示不富化海报
         self._poster_resolver = poster_resolver
-        self._metadata_service = metadata_service
         self._metadata_gateway = metadata_gateway
         self._subscribe_repo = subscribe_repo
         # 进程级 memo：同一身份只回源一次，跨页复用
@@ -47,7 +44,7 @@ class TransferHistoryService:
 
     @property
     def _metadata(self):
-        return self._metadata_gateway or self._metadata_service
+        return self._metadata_gateway
 
     @staticmethod
     def _context(content_profile: str | None = None) -> MetadataContext:
@@ -58,27 +55,14 @@ class TransferHistoryService:
         )
 
     def _latest_snapshot(self, media, context: MetadataContext):
-        if self._metadata_gateway is not None:
-            return self._metadata_gateway.latest_snapshot_for_media(media, context=context)
-        target = self._metadata_service
-        if target is None:
+        if self._metadata_gateway is None:
             return None
-        return target.latest_snapshot_for_media(media)
+        return self._metadata_gateway.latest_snapshot_for_media(media, context=context)
 
     def _lookup(self, provider: str, external_id: str, *, context: MetadataContext, **kwargs):
-        if self._metadata_gateway is not None:
-            return self._metadata_gateway.lookup(provider, external_id, context=context, **kwargs)
-        target = self._metadata_service
-        if target is None:
+        if self._metadata_gateway is None:
             return None
-        return target.lookup(
-            provider,
-            external_id,
-            media_type=kwargs.get("media_type"),
-            scope=str(kwargs.get("scope") or "default"),
-            content_profile=kwargs.get("content_profile"),
-            allow_private=context.allow_private,
-        )
+        return self._metadata_gateway.lookup(provider, external_id, context=context, **kwargs)
 
     def _resolve_poster(self, history: dict) -> str:
         local_poster = self._local_poster(history)

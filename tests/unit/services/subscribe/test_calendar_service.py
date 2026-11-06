@@ -68,7 +68,7 @@ def _service(metadata=None):
         media_info_service=cast(Any, _FakeMediaInfo()),
         subscribe=cast(Any, _FakeSubscribe()),
         rss_task_service=cast(Any, _FakeRssTasks()),
-        metadata_service=cast(Any, metadata or _FakeMetadata()),
+        metadata_gateway=cast(Any, metadata or _FakeMetadata()),
     )
 
 

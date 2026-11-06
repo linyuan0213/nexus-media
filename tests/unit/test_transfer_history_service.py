@@ -161,12 +161,12 @@ class TestTransferHistoryService:
             "image": "https://img.example/poster.jpg",
             "content_profile": "demo",
         }
-        metadata_service = MagicMock()
+        metadata_gateway = MagicMock()
         service = TransferHistoryService(
             filetransfer=mock_filetransfer,
             sync_service=mock_sync_service,
             cache_ttl=30,
-            metadata_service=metadata_service,
+            metadata_gateway=metadata_gateway,
             subscribe_repo=subscribe_repo,
         )
 
@@ -192,7 +192,7 @@ class TestTransferHistoryService:
         subscribe_repo.get_movie_subscription_hint.assert_called_once_with(
             "content_id", "ABC-123", "ABC-123", identity_id=""
         )
-        metadata_service.latest_snapshot_for_media.assert_not_called()
+        metadata_gateway.latest_snapshot_for_media.assert_not_called()
 
     def test_get_transfer_statistics(self, service, mock_filetransfer):
         mock_filetransfer.get_transfer_statistics.return_value = [

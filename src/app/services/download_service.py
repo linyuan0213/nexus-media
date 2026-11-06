@@ -43,8 +43,7 @@ class DownloadService:
     - 索引器统计数据格式化
     """
 
-    _metadata_gateway = None
-    _metadata_service = None
+    _metadata_gateway: MetadataGateway | None = None
 
     def __init__(
         self,

@@ -174,13 +174,15 @@ class TestGenericAnchorRefresh:
 
     def test_non_tmdb_movie_uses_metadata_snapshot(self):
         metadata = MagicMock()
-        metadata.compose_for_ref.return_value = self._snapshot()
+        envelope = MagicMock()
+        envelope.metadata = self._snapshot()
+        metadata.resolve.return_value = envelope
         svc = SubscribeRefreshService(
             movie_repo=MagicMock(),
             tv_repo=MagicMock(),
             tv_episode_repo=MagicMock(),
             media_service=MagicMock(),
-            metadata_service=metadata,
+            metadata_gateway=metadata,
         )
         with patch("app.services.subscribe.management.refresh_service.meta_info") as mock_meta:
             mock_meta.return_value = MediaInfo()
@@ -196,7 +198,7 @@ class TestGenericAnchorRefresh:
                 },
                 get_subscribe_tvs_fn=lambda state: {},
             )
-        metadata.compose_for_ref.assert_called_once()
+        metadata.resolve.assert_called_once()
         kwargs = svc._movie_repo.update.call_args.kwargs
         assert kwargs["name"] == "统一标题"
         assert kwargs["anchor_provider"] == "douban"
@@ -215,13 +217,15 @@ class TestGenericAnchorRefresh:
                 "first_air_date": {"value": "2024-01-01"},
             },
         )
-        metadata.compose_for_ref.return_value = snapshot
+        envelope = MagicMock()
+        envelope.metadata = snapshot
+        metadata.resolve.return_value = envelope
         svc = SubscribeRefreshService(
             movie_repo=MagicMock(),
             tv_repo=MagicMock(),
             tv_episode_repo=MagicMock(),
             media_service=MagicMock(),
-            metadata_service=metadata,
+            metadata_gateway=metadata,
         )
         with patch("app.services.subscribe.management.refresh_service.meta_info") as mock_meta:
             mock_meta.return_value = MediaInfo()

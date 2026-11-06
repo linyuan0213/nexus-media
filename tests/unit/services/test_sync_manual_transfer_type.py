@@ -81,7 +81,7 @@ def test_provider_payload_is_injected_from_plugin():
         "images": {"poster": [{"url": "https://example.com/poster.jpg"}]},
         "genres": ["剧情"],
     }
-    setattr(svc, "_metadata_service", metadata)
+    setattr(svc, "_metadata_gateway", metadata)
 
     payload, mtype = svc._resolve_manual_provider_info(MediaType.MOVIE, "custom", "demo", "ABC-001")
 
@@ -93,21 +93,18 @@ def test_provider_payload_is_injected_from_plugin():
     assert payload["provider"] == "demo"
     assert payload["title"] == "示例番号"
     assert payload["poster_path"] == "https://example.com/poster.jpg"
-    metadata.lookup.assert_called_once_with(
-        "demo",
-        "ABC-001",
-        media_type=MediaType.MOVIE,
-        content_profile="custom",
-        allow_private=False,
-        permissions=None,
-    )
+    args, kwargs = metadata.lookup.call_args
+    assert args == ("demo", "ABC-001")
+    assert kwargs["media_type"] == MediaType.MOVIE
+    assert kwargs["content_profile"] == "custom"
+    assert kwargs["context"].allow_private is False
 
 
 def test_provider_payload_missing_returns_none():
     svc = SyncService.__new__(SyncService)
     metadata = MagicMock()
     metadata.lookup.return_value = None
-    setattr(svc, "_metadata_service", metadata)
+    setattr(svc, "_metadata_gateway", metadata)
 
     payload, mtype = svc._resolve_manual_provider_info(MediaType.MOVIE, "custom", "demo", "ABC-001")
 

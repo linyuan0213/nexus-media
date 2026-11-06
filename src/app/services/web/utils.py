@@ -7,8 +7,6 @@ from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.security import generate_password_hash
 from app.media import meta_info
-from app.media.external.bangumi import Bangumi
-from app.media.external.douban import DouBan
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.service import MediaService
 from app.utils import ExceptionUtils, IpUtils, StringUtils
@@ -20,16 +18,10 @@ class WebUtils:
     def __init__(
         self,
         media_service: MediaService,
-        douban: DouBan | None = None,
-        bangumi: Bangumi | None = None,
         metadata_gateway: MetadataGateway | None = None,
-        metadata_service: Any = None,
     ):
-        self._douban = douban or DouBan()
         self._media_service = media_service
-        self._bangumi = bangumi or Bangumi()
         self._metadata_gateway = metadata_gateway
-        self._metadata_service = metadata_service
 
         global _default_web_utils
         if _default_web_utils is None:
@@ -87,129 +79,101 @@ class WebUtils:
             ExceptionUtils.exception_traceback(e)
         return None, None, False
 
+    def _lookup_record(self, provider: str, external_id: str, media_type) -> dict[str, Any] | None:
+        if self._metadata_gateway is None:
+            return None
+        try:
+            return self._metadata_gateway.lookup(
+                provider,
+                external_id,
+                context=MetadataContext(
+                    purpose="legacy_ref",
+                    allow_private=True,
+                    content_profile="default",
+                ),
+                media_type=media_type,
+            )
+        except Exception:  # noqa: BLE001 - 旧入口失败返回空，由调用方兜底
+            return None
+
+    @staticmethod
+    def _media_info_from_record(record: dict[str, Any], provider: str, external_id: str, media_type):
+        title = str(record.get("title") or "").strip()
+        if not title:
+            return None
+        resolved_type = MediaType.from_string(str(record.get("media_type") or ""))
+        if resolved_type == MediaType.UNKNOWN:
+            resolved_type = media_type or (MediaType.TV if provider == "bangumi" else MediaType.MOVIE)
+        info = meta_info(title=title, mtype=resolved_type)
+        info.title = title
+        has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in title)
+        info.cn_name = title if has_cjk else None
+        info.en_name = None if has_cjk else title
+        info.original_title = str(record.get("original_title") or title)
+        info.year = str(record.get("year") or "")
+        info.type = resolved_type
+        info.overview = str(record.get("overview") or "")
+        info.anchor_provider = provider
+        info.anchor_external_id = str(external_id)
+        info.content_profile = str(record.get("content_profile") or ("anime" if provider == "bangumi" else "default"))
+        info.tmdb_id = str(external_id) if provider == "tmdb" else ""
+        if provider == "douban":
+            info.douban_id = str(external_id)
+        ratings = record.get("ratings") or {}
+        value = ratings.get("douban") or ratings.get("bangumi")
+        if isinstance(value, (int, float)):
+            info.vote_average = float(value)
+        seasons = record.get("seasons") or []
+        if seasons and isinstance(seasons[0], dict):
+            info.total_episodes = int(seasons[0].get("episode_count") or 0)
+        extra = record.get("extra") or {}
+        if not info.total_episodes:
+            for key in ("episodes_count", "total_episodes", "douban.episodes_count"):
+                value = extra.get(key) or record.get(key)
+                if str(value or "").isdigit():
+                    info.total_episodes = int(str(value))
+                    break
+        if resolved_type in (MediaType.TV, MediaType.ANIME) and not info.begin_season:
+            info.begin_season = 1
+        images = record.get("images") or {}
+        posters = images.get("poster") or []
+        poster = posters[0].get("url") if posters and isinstance(posters[0], dict) else ""
+        if poster:
+            info.poster_path = str(poster)
+            info.backdrop_path = str(poster)
+        return info
+
     def get_mediainfo_from_id(self, mtype, mediaid, wait=False):
         """
-        根据TMDB/豆瓣/BANGUMI获取媒体信息
+        根据TMDB/豆瓣/BANGUMI获取媒体信息；非 TMDB 详情统一走元数据网关。
         """
         if not mediaid:
             return None
-        media_info = None
         raw_id = str(mediaid)
+        if raw_id.startswith("DB:"):
+            douban_id = raw_id[3:]
+            record = self._lookup_record("douban", douban_id, mtype)
+            return self._media_info_from_record(record, "douban", douban_id, mtype) if record else None
+        if raw_id.startswith("BG:"):
+            bangumi_id = raw_id[3:]
+            record = self._lookup_record("bangumi", bangumi_id, mtype or MediaType.TV)
+            if not record:
+                return None
+            return self._media_info_from_record(record, "bangumi", bangumi_id, mtype or MediaType.TV)
         if ":" in raw_id:
             provider_key, external_id = raw_id.split(":", 1)
             provider_key = provider_key.strip().lower()
             if provider_key not in ("db", "bg", "tmdb") and external_id:
-                record_data = None
-                if self._metadata_gateway is not None:
-                    record_data = self._metadata_gateway.lookup(
-                        provider_key,
-                        external_id,
-                        context=MetadataContext(
-                            purpose="legacy_ref",
-                            allow_private=True,
-                            content_profile="default",
-                        ),
-                        media_type=mtype,
-                    )
-                elif self._metadata_service is not None:
-                    record_data = self._metadata_service.lookup(
-                        provider_key,
-                        external_id,
-                        media_type=mtype,
-                        allow_private=True,
-                    )
-                if record_data:
-                    title = str(record_data.get("title") or "").strip()
-                    if title:
-                        media_info = meta_info(title=title, mtype=mtype or MediaType.MOVIE)
-                        media_info.title = title
-                        has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in title)
-                        media_info.cn_name = title if has_cjk else None
-                        media_info.en_name = None if has_cjk else title
-                        media_info.original_title = str(record_data.get("original_title") or title)
-                        media_info.year = str(record_data.get("year") or "")
-                        media_info.overview = str(record_data.get("overview") or "")
-                        media_info.anchor_provider = provider_key
-                        media_info.anchor_external_id = external_id
-                        return media_info
-        if str(mediaid).startswith("DB:"):
-            # 豆瓣锚点：只用豆瓣数据，不再为“补 TMDB”做标题重映射
-            doubanid = mediaid[3:]
-            info = self._douban.get_douban_detail(doubanid=doubanid, mtype=mtype, wait=wait)
-            if not info:
-                return None
-            title = str(info.get("title") or "").strip()
-            if not title:
-                return None
-            original_title = info.get("original_title")
-            year = str(info.get("year") or "")
-            if not mtype:
-                mtype = MediaType.TV if info.get("episodes_count") else MediaType.MOVIE
-            media_info = meta_info(title=title, mtype=mtype)
-            media_info.title = title
-            media_info.cn_name = title
-            media_info.original_title = original_title or title
-            media_info.year = year
-            media_info.type = mtype
-            media_info.douban_id = doubanid
-            media_info.tmdb_id = ""
-            media_info.anchor_provider = "douban"
-            media_info.anchor_external_id = str(doubanid)
-            media_info.overview = info.get("intro") or info.get("card_subtitle") or ""
-            rating = info.get("rating") or {}
-            if isinstance(rating, dict):
-                media_info.vote_average = float(rating.get("value") or 0.0)
-            elif isinstance(rating, (int, float)):
-                media_info.vote_average = float(rating)
-            media_info.total_episodes = int(info.get("episodes_count") or 0)
-            if mtype in (MediaType.TV, MediaType.ANIME):
-                media_info.begin_season = 1
-            cover = str(info.get("cover_url") or "").strip()
-            if cover:
-                media_info.poster_path = cover
-                media_info.backdrop_path = cover
-            # 豆瓣是独立元数据源：不补 TMDB、不生成 TMDB 映射，搜索和展示只用豆瓣身份。
-            return media_info
-        elif str(mediaid).startswith("BG:"):
-            # Bangumi 直连：不再要求映射到 TMDB
-            bangumiid = str(mediaid)[3:]
-            info = self._bangumi.detail(bid=bangumiid)
-            if not info:
-                return None
-            title = str(info.get("name_cn") or info.get("name") or "").strip()
-            if not title:
-                return None
-            original_title = str(info.get("name") or title).strip()
-            air_date = str(info.get("date") or "")
-            year = air_date[:4]
-            media_info = meta_info(title=title, mtype=MediaType.TV)
-            media_info.title = title
-            media_info.cn_name = title
-            media_info.original_title = original_title
-            media_info.year = year
-            media_info.type = MediaType.TV
-            media_info.overview = info.get("summary") or ""
-            media_info.anchor_provider = "bangumi"
-            media_info.anchor_external_id = str(bangumiid)
-            media_info.content_profile = "anime"
-            media_info.tmdb_id = ""
-            media_info.total_episodes = int(info.get("eps") or info.get("total_episodes") or 0)
-            rating = info.get("rating") or {}
-            media_info.vote_average = float(rating.get("score") or 0.0)
-            images = info.get("images") or {}
-            poster = images.get("large") or images.get("common") or ""
-            if poster:
-                media_info.poster_path = poster
-                media_info.backdrop_path = poster
-        else:
-            # TMDB
-            info = self._media_service.get_tmdb_info(tmdbid=mediaid, mtype=mtype, append_to_response="all")
-            if not info:
-                return None
-            title = str(info.get("title") if mtype == MediaType.MOVIE else info.get("name") or "")
-            media_info = meta_info(title=title)
-            media_info.set_provider_data(info)
-
+                record = self._lookup_record(provider_key, external_id, mtype)
+                if record and str(record.get("title") or "").strip():
+                    return self._media_info_from_record(record, provider_key, external_id, mtype)
+        # TMDB
+        info = self._media_service.get_tmdb_info(tmdbid=mediaid, mtype=mtype, append_to_response="all")
+        if not info:
+            return None
+        title = str(info.get("title") if mtype == MediaType.MOVIE else info.get("name") or "")
+        media_info = meta_info(title=title)
+        media_info.set_provider_data(info)
         return media_info
 
     def search_media_infos(self, keyword, source=None, page=1):
@@ -244,9 +208,39 @@ class WebUtils:
             return results
 
         def _search_douban():
-            return self._douban.search_douban_medias(
-                keyword=key_word, mtype=mtype, season=season_num, episode=episode_num, page=page
-            )
+            if self._metadata_gateway is None:
+                return []
+            try:
+                hits = self._metadata_gateway.search(
+                    query=key_word,
+                    context=MetadataContext(purpose="legacy_search", allow_private=True),
+                    provider="douban",
+                    media_type=mtype,
+                    content_profile="default",
+                    limit=max(page * 20, 20),
+                )
+            except Exception:  # noqa: BLE001 - 豆瓣搜索失败只影响该来源
+                return []
+            results = []
+            for hit in hits[(page - 1) * 20 : page * 20]:
+                ref = hit.get("ref") or {}
+                external_id = str(ref.get("external_id") or hit.get("external_id") or "")
+                if not external_id:
+                    continue
+                title = str(hit.get("title") or "").strip()
+                if not title:
+                    continue
+                hit_type = MediaType.from_string(str(hit.get("media_type") or ""))
+                info = meta_info(title=title, mtype=hit_type if hit_type != MediaType.UNKNOWN else mtype)
+                info.title = title
+                info.cn_name = title
+                info.year = str(hit.get("year") or "")
+                info.anchor_provider = "douban"
+                info.anchor_external_id = external_id
+                info.douban_id = external_id
+                info.poster_path = str(hit.get("poster") or "")
+                results.append(info)
+            return results
 
         if source == "tmdb":
             medias = _search_tmdb()

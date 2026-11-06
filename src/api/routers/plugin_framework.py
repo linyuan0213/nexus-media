@@ -19,7 +19,6 @@ from starlette.concurrency import run_in_threadpool
 import log
 from api.deps import (
     get_hook_system,
-    get_metadata_service,
     get_plugin_framework_service,
     require_any_permission,
     require_permission,
@@ -30,7 +29,6 @@ from app.core.settings import settings
 from app.plugin_framework import api_registry
 from app.plugin_framework.hook_system import HookSystem
 from app.schemas.common import CommonResponse
-from app.services.metadata_service import MetadataService
 from app.services.plugin_framework_service import PluginFrameworkService
 from app.utils.response import fail, success
 
@@ -112,14 +110,12 @@ def save_plugin_config(
     req: PluginConfigRequest,
     user: str = Depends(require_permission("plugin:manage")),
     svc: PluginFrameworkService = Depends(get_plugin_framework_service),
-    metadata_svc: MetadataService = Depends(get_metadata_service),
 ):
     """保存插件配置"""
     if not svc.get_manifest(plugin_id):
         return fail(code=ErrorCode.PLUGIN_NOT_FOUND, msg="插件未找到")
     _assert_private_plugin_access(svc, plugin_id, user)
     svc.save_config(plugin_id, req.config)
-    metadata_svc.bump_detail_cache_version()
     return success(message="保存成功")
 
 

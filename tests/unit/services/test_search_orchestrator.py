@@ -35,11 +35,11 @@ class TestHydrateTimeout:
         release = threading.Event()
 
         class _SlowMetadata:
-            def hydrate_media(self, media):
+            def hydrate_media(self, media, **kwargs):
                 release.wait(3)
 
         orch = _make_orchestrator()
-        orch._metadata_service = _SlowMetadata()
+        orch._metadata_gateway = cast(Any, _SlowMetadata())
         started = time.monotonic()
         orch._hydrate_with_timeout(MediaInfo(org_string="SONE-028"), timeout=0.2)
         elapsed = time.monotonic() - started
@@ -232,7 +232,7 @@ class TestContentIdSource:
         orchestrator = object.__new__(SearchOrchestrator)
         service = MagicMock()
         service.search.return_value = [{"ref": {"provider": "javdb", "external_id": "P0dyv"}}]
-        orchestrator._metadata_service = service
+        orchestrator._metadata_gateway = service
         resolved = MediaInfo(title="SSIS-522", type=MediaType.MOVIE)
         orchestrator.resolve_anchor_media = MagicMock(return_value=resolved)
 
@@ -255,7 +255,7 @@ class TestAnchorMediaTitle:
             "year": "2026",
             "aliases": ["Resident Evil 0", "生化危机0"],
         }
-        orchestrator._metadata_service = service
+        orchestrator._metadata_gateway = service
 
         media = orchestrator.resolve_anchor_media("douban", "37068446", media_type=MediaType.MOVIE)
 
@@ -268,7 +268,7 @@ class TestAnchorMediaTitle:
         orchestrator = object.__new__(SearchOrchestrator)
         service = MagicMock()
         service.lookup.return_value = {"title": "Demo", "original_title": "Demo", "year": "0"}
-        orchestrator._metadata_service = service
+        orchestrator._metadata_gateway = service
 
         media = orchestrator.resolve_anchor_media("douban", "1", media_type=MediaType.MOVIE)
 
@@ -285,7 +285,7 @@ class TestSeasonSuffix:
             "original_title": "Cyberpunk: Edgerunners",
             "year": "2026",
         }
-        orchestrator._metadata_service = service
+        orchestrator._metadata_gateway = service
 
         media = orchestrator.resolve_anchor_media("douban", "1", media_type=MediaType.TV)
 

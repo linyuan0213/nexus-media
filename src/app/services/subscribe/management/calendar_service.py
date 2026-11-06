@@ -15,7 +15,6 @@ from app.schemas.auth import UserContext
 
 if TYPE_CHECKING:
     from app.services.media_info_service import MediaInfoService
-    from app.services.metadata_service import MetadataService
     from app.services.rss_automation.task_service import RssTaskService
     from app.services.subscribe.management.service import SubscribeService
 
@@ -44,21 +43,18 @@ def _provider_label(provider: str) -> str:
 class SubscribeCalendarService:
     """订阅日历服务 — 聚合电影/电视剧的日历事件."""
 
-    _metadata_gateway = None
-    _metadata_service = None
+    _metadata_gateway: MetadataGateway | None = None
 
     def __init__(
         self,
         media_info_service: MediaInfoService,
         subscribe: SubscribeService,
         rss_task_service: RssTaskService,
-        metadata_service: MetadataService | None = None,
         metadata_gateway: MetadataGateway | None = None,
     ):
         self._media_info_service = media_info_service
         self._subscribe = subscribe
         self._rss_task_service = rss_task_service
-        self._metadata_service = metadata_service
         self._metadata_gateway = metadata_gateway
         self._episode_cache: dict[tuple[str, str, int], tuple[float, list[dict]]] = {}
         self._episode_cache_ttl = 600.0
@@ -79,19 +75,16 @@ class SubscribeCalendarService:
         )
 
     def _lookup(self, provider: str, external_id: str, user: UserContext | None, **kwargs):
-        if self._metadata_gateway is not None:
-            kwargs.pop("allow_private", None)
-            kwargs.pop("permissions", None)
-            kwargs["context"] = self._context(
-                user,
-                content_profile=str(kwargs.get("content_profile") or "default"),
-                purpose="subscribe.calendar",
-            )
-            return self._metadata_gateway.lookup(provider, external_id, **kwargs)
-        target = self._metadata_service
-        if target is None:
+        if self._metadata_gateway is None:
             return None
-        return target.lookup(provider, external_id, **kwargs)
+        kwargs.pop("allow_private", None)
+        kwargs.pop("permissions", None)
+        kwargs["context"] = self._context(
+            user,
+            content_profile=str(kwargs.get("content_profile") or "default"),
+            purpose="subscribe.calendar",
+        )
+        return self._metadata_gateway.lookup(provider, external_id, **kwargs)
 
     def get_movie_items(self, user: UserContext | None = None) -> list[dict]:
         """获取电影订阅项目（含非 TMDB 的插件内容画像）."""
@@ -203,32 +196,19 @@ class SubscribeCalendarService:
         season: int,
         user: UserContext | None,
     ) -> list[dict]:
-        if self._metadata_service is None and self._metadata_gateway is None:
+        if self._metadata_gateway is None:
             return []
         key = (provider, external_id, season)
         cached = self._episode_cache.get(key)
         if cached and time.monotonic() - cached[0] < self._episode_cache_ttl:
             return cached[1]
         try:
-            if self._metadata_gateway is not None:
-                episodes = self._metadata_gateway.episodes(
-                    provider,
-                    external_id,
-                    season,
-                    context=self._context(user, content_profile="default", purpose="subscribe.calendar"),
-                )
-            else:
-                target = self._metadata_service
-                if target is None:
-                    return []
-                allow_private = bool(user and user.has_permission("metadata:private:view"))
-                episodes = target.episodes(
-                    provider,
-                    external_id,
-                    season,
-                    allow_private=allow_private,
-                    permissions=set(user.permissions) if user else None,
-                )
+            episodes = self._metadata_gateway.episodes(
+                provider,
+                external_id,
+                season,
+                context=self._context(user, content_profile="default", purpose="subscribe.calendar"),
+            )
         except Exception:  # noqa: BLE001 - 单个来源失败不影响其余日历事件
             episodes = []
         self._episode_cache[key] = (time.monotonic(), episodes)
@@ -369,12 +349,13 @@ class SubscribeCalendarService:
 
     def _detail_provider_key(self, profile: str, user: UserContext | None = None) -> str:
         """按内容画像选择能提供详情的能力源（优先键名与画像一致）。"""
-        if self._metadata_service is None or not profile or profile == "default":
+        if self._metadata_gateway is None or not profile or profile == "default":
             return ""
         allow_private = bool(user and user.has_permission("metadata:private:view"))
         permissions = set(user.permissions) if user else None
         try:
-            providers = self._metadata_service.list_providers(
+            providers = self._metadata_gateway.list_providers(
+                context=self._context(user, content_profile=profile, purpose="subscribe.calendar"),
                 allow_private=allow_private,
                 permissions=permissions,
                 probe_health=False,
@@ -394,7 +375,7 @@ class SubscribeCalendarService:
         )
 
     def _plugin_movie_event(self, movie: dict, user: UserContext | None = None) -> dict | None:
-        if self._metadata_service is None and self._metadata_gateway is None:
+        if self._metadata_gateway is None:
             return None
         key = str(movie.get("external_id") or movie.get("metadata_ref") or "")
         if not key:
@@ -485,7 +466,7 @@ class SubscribeCalendarService:
         return event
 
     def _tmdb_fallback_events(self, tv: dict, user: UserContext | None = None) -> list[dict]:
-        if self._metadata_service is None and self._metadata_gateway is None:
+        if self._metadata_gateway is None:
             return []
         name = str(tv.get("name") or "").strip()
         if not name:
@@ -493,26 +474,14 @@ class SubscribeCalendarService:
         profile = str(tv.get("content_profile") or "default")
         media_type = MediaType.ANIME if profile == "anime" else MediaType.TV
         try:
-            if self._metadata_gateway is not None:
-                hits = self._metadata_gateway.search(
-                    query=name,
-                    context=self._context(user, content_profile=profile, purpose="subscribe.calendar"),
-                    provider="tmdb",
-                    media_type=media_type,
-                    content_profile=profile,
-                    limit=5,
-                )
-            else:
-                target = self._metadata_service
-                if target is None:
-                    return []
-                hits = target.search(
-                    query=name,
-                    provider="tmdb",
-                    media_type=media_type,
-                    content_profile=profile,
-                    limit=5,
-                )
+            hits = self._metadata_gateway.search(
+                query=name,
+                context=self._context(user, content_profile=profile, purpose="subscribe.calendar"),
+                provider="tmdb",
+                media_type=media_type,
+                content_profile=profile,
+                limit=5,
+            )
         except Exception:  # noqa: BLE001 - TMDB 兜底失败不影响其他来源
             return []
         target = _normalized_title(name)

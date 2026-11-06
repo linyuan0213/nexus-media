@@ -64,8 +64,7 @@ def _service() -> MediaInfoService:
         media_service=cast(Any, None),
         subscribe=cast(Any, _FakeSubscribe()),
         media_server=cast(Any, None),
-        douban=None,
-        metadata_service=_FakeMetadata(),
+        metadata_gateway=cast(Any, _FakeMetadata()),
     )
 
 

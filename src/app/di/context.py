@@ -83,7 +83,7 @@ class AppContext:
     site_resolver: Any
     site_favicon_service: Any
     media_info_service: Any
-    metadata_service: Any
+    metadata_admin_service: Any
     discovery_service: Any
     media_config_service: Any
     media_file_service: Any

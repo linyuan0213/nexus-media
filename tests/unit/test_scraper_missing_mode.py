@@ -94,11 +94,11 @@ def test_has_scraped_metadata_requires_poster_when_only_fanart_exists(tmp_path):
 
 
 def test_ensure_snapshot_images_fills_missing_poster_and_keeps_fanart():
-    metadata_service = MagicMock()
-    metadata_service.lookup.return_value = {
+    metadata_gateway = MagicMock()
+    metadata_gateway.lookup.return_value = {
         "images": {"poster": [{"type": "poster", "url": "https://example.com/p.jpg"}]}
     }
-    scraper = Scraper(media_service=MagicMock(), system_config=MagicMock(), metadata_service=metadata_service)
+    scraper = Scraper(media_service=MagicMock(), system_config=MagicMock(), metadata_gateway=metadata_gateway)
     snapshot = MediaMetadata(
         identity_id="x",
         media_type=MediaType.MOVIE,
@@ -115,7 +115,7 @@ def test_ensure_snapshot_images_fills_missing_poster_and_keeps_fanart():
 
 
 def test_ensure_snapshot_images_builds_credits_from_actor_fallback():
-    scraper = Scraper(media_service=MagicMock(), system_config=MagicMock(), metadata_service=MagicMock())
+    scraper = Scraper(media_service=MagicMock(), system_config=MagicMock(), metadata_gateway=MagicMock())
     snapshot = MediaMetadata(
         identity_id="x",
         media_type=MediaType.MOVIE,

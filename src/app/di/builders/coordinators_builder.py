@@ -170,7 +170,6 @@ def build_coordinators(
         message_client_service=services.message_client_service,
         rbac_service=services.rbac_service,
         site_grant_service=services.site_grant_service,
-        metadata_service=services.metadata_service,
         metadata_gateway=services.metadata_gateway,
         media_server_config_service=services.media_server_config_service,
         indexer_config_service=services.indexer_config_service,

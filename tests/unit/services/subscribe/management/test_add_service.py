@@ -45,7 +45,7 @@ def _build_service(transfer_contiguous=0, download_contiguous=0):
     svc._web_utils = MagicMock()
     svc._transfer_history_manager = _FakeTransferHistory(transfer_contiguous)
     svc._download_repo = _FakeDownloadRepo(download_contiguous)
-    svc._metadata_service = None
+    svc._metadata_gateway = None
     svc._tv_repo.insert.return_value = 999
     svc._tv_repo.insert_movies.return_value = 999
     return svc
@@ -144,8 +144,8 @@ class TestNonTmdbEpisodeCount:
         media.anchor_provider = "douban"
         media.anchor_external_id = "38396475"
         svc._media.get_media_info.return_value = media
-        svc._metadata_service = MagicMock()
-        svc._metadata_service.resolve_season_episode_count.return_value = 24
+        svc._metadata_gateway = MagicMock()
+        svc._metadata_gateway.resolve_season_episode_count.return_value = 24
 
         code, _, _ = svc.add_rss_subscribe(
             name="乱马1/2",
@@ -157,7 +157,7 @@ class TestNonTmdbEpisodeCount:
         )
 
         assert code == 0
-        svc._metadata_service.resolve_season_episode_count.assert_called_once()
+        svc._metadata_gateway.resolve_season_episode_count.assert_called_once()
         inserted = svc._tv_repo.insert.call_args.kwargs
         assert inserted["total"] == 24
         assert inserted["total_ep"] == 24
@@ -243,8 +243,8 @@ def test_identity_fields_are_passed_to_insert():
         "metadata_policy": None,
         "naming_profile": None,
     }
-    svc._metadata_service = MagicMock()
-    svc._metadata_service.link_subscription.return_value.as_kwargs.return_value = identity_fields
+    svc._metadata_gateway = MagicMock()
+    svc._metadata_gateway.link_subscription.return_value.as_kwargs.return_value = identity_fields
 
     code, _, _ = svc.add_rss_subscribe(
         name="测试", year="2023", mtype=MediaType.TV, season=1, total_ep=48, current_ep=1
@@ -278,8 +278,8 @@ def test_douban_only_tv_subscription_without_tmdb():
         "metadata_policy": None,
         "naming_profile": None,
     }
-    svc._metadata_service = MagicMock()
-    svc._metadata_service.link_subscription.return_value.as_kwargs.return_value = identity_fields
+    svc._metadata_gateway = MagicMock()
+    svc._metadata_gateway.link_subscription.return_value.as_kwargs.return_value = identity_fields
     svc._tv_repo.insert.return_value = 999
 
     code, msg, result = svc.add_rss_subscribe(
@@ -302,15 +302,15 @@ def test_douban_only_tv_subscription_without_tmdb():
 def test_provider_ref_subscribes_demo_movie():
     """演示卡片用 content_id 作锚点、demo_meta ref 取详情，按单片订阅."""
     svc = _build_service()
-    svc._metadata_service = MagicMock()
-    svc._metadata_service.lookup.return_value = {
+    svc._metadata_gateway = MagicMock()
+    svc._metadata_gateway.lookup.return_value = {
         "title": "START-649",
         "year": "2026",
         "poster": "https://example.com/start-649.jpg",
         "overview": "demo",
         "content_profile": "demo",
     }
-    svc._metadata_service.link_subscription.return_value.as_kwargs.return_value = {
+    svc._metadata_gateway.link_subscription.return_value.as_kwargs.return_value = {
         "identity_id": "01J00000000000000000000002",
         "anchor_provider": "content_id",
         "anchor_external_id": "START-649",
@@ -332,14 +332,11 @@ def test_provider_ref_subscribes_demo_movie():
     )
 
     assert code == 0
-    svc._metadata_service.lookup.assert_called_once_with(
-        "demo_meta",
-        "qAZBWN",
-        media_type=MediaType.MOVIE,
-        content_profile="demo",
-        allow_private=True,
-        permissions=None,
-    )
+    _args, _kwargs = svc._metadata_gateway.lookup.call_args
+    assert _args == ("demo_meta", "qAZBWN")
+    assert _kwargs["media_type"] == MediaType.MOVIE
+    assert _kwargs["content_profile"] == "demo"
+    assert _kwargs["context"].allow_private is True
     inserted_kw = svc._movie_repo.insert.call_args.kwargs
     assert inserted_kw["anchor_provider"] == "content_id"
     assert inserted_kw["anchor_external_id"] == "START-649"
@@ -354,8 +351,8 @@ def test_provider_ref_subscribes_demo_movie():
 def test_provider_ref_subscribes_bangumi_tv():
     """Bangumi provider 的 TV/番剧必须进入电视剧订阅，而不是电影订阅."""
     svc = _build_service()
-    svc._metadata_service = MagicMock()
-    svc._metadata_service.lookup.return_value = {
+    svc._metadata_gateway = MagicMock()
+    svc._metadata_gateway.lookup.return_value = {
         "title": "测试番剧",
         "year": "2026",
         "media_type": "tv",
@@ -363,7 +360,7 @@ def test_provider_ref_subscribes_bangumi_tv():
         "overview": "anime",
         "content_profile": "anime",
     }
-    svc._metadata_service.link_subscription.return_value.as_kwargs.return_value = {
+    svc._metadata_gateway.link_subscription.return_value.as_kwargs.return_value = {
         "identity_id": "01J00000000000000000000003",
         "anchor_provider": "bangumi",
         "anchor_external_id": "456",
@@ -395,15 +392,15 @@ def test_provider_ref_subscribes_bangumi_tv():
 def test_provider_ref_tmdb_tv_passes_media_type_to_lookup():
     """TMDB 同名数字 ID 可能对应另一部电影，必须带 media_type 查询."""
     svc = _build_service()
-    svc._metadata_service = MagicMock()
-    svc._metadata_service.lookup.return_value = {
+    svc._metadata_gateway = MagicMock()
+    svc._metadata_gateway.lookup.return_value = {
         "title": "权力的游戏",
         "year": "2011",
         "media_type": "tv",
         "content_profile": "default",
         "seasons": [{"season_number": 1, "episode_count": 10}],
     }
-    svc._metadata_service.link_subscription.return_value.as_kwargs.return_value = {
+    svc._metadata_gateway.link_subscription.return_value.as_kwargs.return_value = {
         "identity_id": "01J00000000000000000000004",
         "anchor_provider": "tmdb",
         "anchor_external_id": "1399",
@@ -423,14 +420,11 @@ def test_provider_ref_tmdb_tv_passes_media_type_to_lookup():
     )
 
     assert code == 0
-    svc._metadata_service.lookup.assert_called_once_with(
-        "tmdb",
-        "1399",
-        media_type=MediaType.TV,
-        content_profile=None,
-        allow_private=False,
-        permissions=None,
-    )
+    _args, _kwargs = svc._metadata_gateway.lookup.call_args
+    assert _args == ("tmdb", "1399")
+    assert _kwargs["media_type"] == MediaType.TV
+    assert _kwargs["content_profile"] is None
+    assert _kwargs["context"].allow_private is False
     inserted = svc._tv_repo.insert.call_args.kwargs
     assert inserted["media_info"].type == MediaType.TV
     assert inserted["total"] == 10

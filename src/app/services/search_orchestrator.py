@@ -38,8 +38,7 @@ SITE_TIER_BOOST = 100_000
 
 
 class SearchOrchestrator:
-    _metadata_gateway = None
-    _metadata_service = None
+    _metadata_gateway: MetadataGateway | None = None
 
     def __init__(
         self,
@@ -52,7 +51,6 @@ class SearchOrchestrator:
         progress_helper: ProgressTracker,
         event_bus: EventBus,
         intent_resolver: IntentResolver | None = None,
-        metadata_service=None,
         metadata_gateway: MetadataGateway | None = None,
     ):
         self._searcher = searcher
@@ -64,13 +62,12 @@ class SearchOrchestrator:
         self._progress = progress_helper
         self._event_bus = event_bus
         self._intent_resolver = intent_resolver
-        self._metadata_service = metadata_service
         self._metadata_gateway = metadata_gateway
         self._search_auto = settings.get("pt").get("search_auto", True)
 
     @property
     def _metadata(self):
-        return self._metadata_gateway or self._metadata_service
+        return self._metadata_gateway
 
     @staticmethod
     def _metadata_context(content_profile: str | None = None, allow_private: bool = True) -> MetadataContext:
@@ -81,30 +78,22 @@ class SearchOrchestrator:
         )
 
     def _metadata_lookup(self, provider: str, external_id: str, *, context=None, **kwargs):
-        target = self._metadata
-        if target is None:
+        if self._metadata_gateway is None:
             return None
-        if self._metadata_gateway is not None:
-            allow_private = bool(kwargs.pop("allow_private", True))
-            kwargs["context"] = context or self._metadata_context(kwargs.get("content_profile"), allow_private)
-        return target.lookup(provider, external_id, **kwargs)
+        allow_private = bool(kwargs.pop("allow_private", True))
+        kwargs["context"] = context or self._metadata_context(kwargs.get("content_profile"), allow_private)
+        return self._metadata_gateway.lookup(provider, external_id, **kwargs)
 
     def _metadata_search(self, *, context=None, **kwargs):
-        target = self._metadata
-        if target is None:
+        if self._metadata_gateway is None:
             return []
-        if self._metadata_gateway is not None:
-            allow_private = bool(kwargs.pop("allow_private", True))
-            kwargs["context"] = context or self._metadata_context(kwargs.get("content_profile"), allow_private)
-        return target.search(**kwargs)
+        allow_private = bool(kwargs.pop("allow_private", True))
+        kwargs["context"] = context or self._metadata_context(kwargs.get("content_profile"), allow_private)
+        return self._metadata_gateway.search(**kwargs)
 
     def _metadata_hydrate(self, media_info) -> None:
         if self._metadata_gateway is not None:
             self._metadata_gateway.hydrate_media(media_info, context=self._metadata_context())
-            return
-        target = self._metadata_service
-        if target is not None:
-            target.hydrate_media(media_info)
 
     def begin_search(self, session_id: str, keyword: str = "") -> None:
         """解析锚点元数据前先建立进度，避免 SSE 因长时间无记录提前断开."""

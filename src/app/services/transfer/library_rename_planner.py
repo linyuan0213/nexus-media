@@ -55,10 +55,8 @@ class LibraryRenamePlanner:
         metadata_resolver: LibraryMetadataResolver,
         media_service,
         category_repo,
-        metadata_service=None,
         metadata_gateway=None,
     ):
-        self._metadata_service = metadata_service
         self._metadata_gateway = metadata_gateway
         self._media_config_service = media_config_service
         self._storage_repo = storage_repo
@@ -369,8 +367,6 @@ class LibraryRenamePlanner:
         snapshot = (
             self._metadata_gateway.latest_snapshot_for_media(meta, context=None)
             if self._metadata_gateway is not None
-            else self._metadata_service.latest_snapshot_for_media(meta)
-            if self._metadata_service
             else None
         )
         ext = os.path.splitext(old_path)[1]

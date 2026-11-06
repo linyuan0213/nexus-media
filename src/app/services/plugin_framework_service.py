@@ -59,7 +59,7 @@ class PluginFrameworkService:
         plugin_registry: PluginRegistry,
         plugin_sandbox: PluginSandbox,
         hook_system=None,
-        metadata_service=None,
+        metadata_gateway=None,
     ):
         self._repo = repo
         self._menu_repo = menu_repo
@@ -67,7 +67,7 @@ class PluginFrameworkService:
         self._plugin_registry = plugin_registry
         self._plugin_sandbox = plugin_sandbox
         self._hook_system = hook_system
-        self._metadata_service = metadata_service
+        self._metadata_gateway = metadata_gateway
         self._plugins_dir = os.path.join(settings.data_path, "plugins")
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)
@@ -78,10 +78,10 @@ class PluginFrameworkService:
         return self._hook_system
 
     def _invalidate_metadata_cache(self) -> None:
-        service = self._metadata_service
-        if service is not None:
+        gateway = self._metadata_gateway
+        if gateway is not None:
             try:
-                service.bump_detail_cache_version()
+                gateway.bump_detail_cache_version()
             except Exception as exc:  # noqa: BLE001 - 缓存失效失败不影响插件生命周期
                 log.warn(f"[Plugin]刷新元数据缓存版本失败: {exc}")
 
@@ -491,6 +491,7 @@ class PluginFrameworkService:
         if manifest is not None and manifest.backend.metadata.indexer_providers:
             # 索引器 provider 在启用时由 Sandbox 构造，配置变更后需要重新实例化。
             self.reload_plugin(plugin_id)
+        self._invalidate_metadata_cache()
 
     def install(self, zip_path: str, expected_sha256: str | None = None) -> PluginManifest:
         """安装插件包（多实例部署时通过分布式锁保证只有一个实例执行安装）"""
