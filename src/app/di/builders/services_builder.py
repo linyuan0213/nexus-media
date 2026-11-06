@@ -602,6 +602,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         thread_executor=thread_executor,
         transfer_history_service=transfer_history_service,
         metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
     )
 
     # 回填 PluginSandbox 的服务依赖（供动态加载插件使用）

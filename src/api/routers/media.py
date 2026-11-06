@@ -1453,8 +1453,11 @@ def metadata_lookup(
 def metadata_metrics(
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MetadataService = Depends(get_metadata_service),
+    gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
-    return success(data=svc.metrics())
+    data = svc.metrics()
+    data["gateway"] = gateway.metrics()
+    return success(data=data)
 
 
 @router.get("/providers", response_model=CommonResponse, summary="元数据 provider 能力与健康状态")

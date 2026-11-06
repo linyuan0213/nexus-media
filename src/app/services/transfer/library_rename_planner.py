@@ -56,8 +56,10 @@ class LibraryRenamePlanner:
         media_service,
         category_repo,
         metadata_service=None,
+        metadata_gateway=None,
     ):
         self._metadata_service = metadata_service
+        self._metadata_gateway = metadata_gateway
         self._media_config_service = media_config_service
         self._storage_repo = storage_repo
         self._metadata = metadata_resolver
@@ -364,7 +366,13 @@ class LibraryRenamePlanner:
             return None, "planner_not_ready"
         meta = resolved.media
         adapter = _FormatMetaService(resolved.episode_title, resolved.en_title)
-        snapshot = self._metadata_service.latest_snapshot_for_media(meta) if self._metadata_service else None
+        snapshot = (
+            self._metadata_gateway.latest_snapshot_for_media(meta, context=None)
+            if self._metadata_gateway is not None
+            else self._metadata_service.latest_snapshot_for_media(meta)
+            if self._metadata_service
+            else None
+        )
         ext = os.path.splitext(old_path)[1]
         if scope.layout_mode == "filename_only":
             if meta.type == MediaType.MOVIE:

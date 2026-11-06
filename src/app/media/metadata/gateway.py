@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import threading
 import time
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import Any, Literal
 
+import log
 from app.domain.mediatypes import MediaType
+from app.infrastructure.cache_system import get_cache_manager
 
 
 @dataclass(frozen=True)
@@ -77,6 +81,11 @@ class MetadataGateway:
         self._cache: dict[str, tuple[float, MetadataEnvelope]] = {}
         self._locks: dict[str, threading.Lock] = {}
         self._guard = threading.Lock()
+        self._l2 = get_cache_manager().get_or_create(
+            "metadata_gateway", cache_type="tiered", maxsize=1000, ttl=default_ttl
+        )
+        self._refreshing: set[str] = set()
+        self._metrics: Counter[str] = Counter()
 
     def _lock_for(self, key: str) -> threading.Lock:
         with self._guard:
@@ -145,15 +154,43 @@ class MetadataGateway:
 
     def _cached(self, key: str) -> MetadataEnvelope | None:
         cached = self._cache.get(key)
-        if cached and cached[0] > time.monotonic():
+        if cached and cached[0] > time.monotonic() and cached[1].expires_at > datetime.now():
+            self._metrics["l1_hit"] += 1
             return replace(cached[1], cache_hit=True)
+        try:
+            value = self._l2.get(key)
+        except Exception:  # noqa: BLE001
+            value = None
+        if isinstance(value, MetadataEnvelope) and value.expires_at > datetime.now():
+            self._metrics["l2_hit"] += 1
+            self._cache[key] = (time.monotonic() + self._default_ttl * 4, value)
+            return replace(value, cache_hit=True)
+        self._metrics["miss"] += 1
         return None
 
     def _stale(self, key: str) -> MetadataEnvelope | None:
         cached = self._cache.get(key)
         if cached:
+            self._metrics["stale"] += 1
             return replace(cached[1], cache_hit=True, stale=True, degraded=True)
+        try:
+            value = self._l2.get(key)
+        except Exception:  # noqa: BLE001
+            value = None
+        if isinstance(value, MetadataEnvelope):
+            self._metrics["stale"] += 1
+            return replace(value, cache_hit=True, stale=True, degraded=True)
         return None
+
+    def _remember(self, key: str, envelope: MetadataEnvelope, ttl: int) -> None:
+        self._cache[key] = (time.monotonic() + max(ttl * 4, 60), envelope)
+        try:
+            self._l2.set(key, envelope, ttl=max(ttl * 4, 60))
+        except Exception as exc:  # noqa: BLE001
+            log.debug(f"[MetadataGateway]写入 L2 失败: {exc}")
+
+    def metrics(self) -> dict[str, int]:
+        return dict(self._metrics)
 
     def resolve(
         self,
@@ -183,6 +220,20 @@ class MetadataGateway:
                 cached = self._cached(key)
                 if cached is not None:
                     return cached
+                stale = self._stale(key)
+                if stale is not None:
+                    self._refresh_async(
+                        key,
+                        provider,
+                        external_id,
+                        media_type=media_type,
+                        context=ctx,
+                        season=season,
+                        scope=scope,
+                        ttl=ttl or self._default_ttl,
+                        with_episodes=with_episodes,
+                    )
+                    return stale
             try:
                 data = self._service.compose_for_ref(
                     provider,
@@ -227,7 +278,8 @@ class MetadataGateway:
                 identity_id=identity_id,
                 snapshot_id=snapshot_id,
             )
-            self._cache[key] = (time.monotonic() + (ttl or self._default_ttl), envelope)
+            self._remember(key, envelope, ttl or self._default_ttl)
+            self._metrics["provider_call"] += 1
             return envelope
 
     def lookup(
@@ -295,8 +347,67 @@ class MetadataGateway:
                 identity_id=identity_id,
                 snapshot_id=snapshot_id,
             )
-            self._cache[key] = (time.monotonic() + (ttl or self._default_ttl), envelope)
+            self._remember(key, envelope, ttl or self._default_ttl)
+            self._metrics["provider_call"] += 1
             return data
+
+    def _refresh_async(
+        self,
+        key: str,
+        provider: str,
+        external_id: str,
+        *,
+        media_type: MediaType | None,
+        context: MetadataContext,
+        season: int,
+        scope: str | None,
+        ttl: int,
+        with_episodes: bool,
+    ) -> None:
+        with self._guard:
+            if key in self._refreshing:
+                return
+            self._refreshing.add(key)
+
+        def refresh() -> None:
+            try:
+                with self._lock_for(key):
+                    data = self._service.compose_for_ref(
+                        provider,
+                        external_id,
+                        media_type=media_type or MediaType.UNKNOWN,
+                        content_profile=context.content_profile,
+                        allow_private=context.allow_private,
+                        permissions=set(context.permissions),
+                        user_id=context.user_id,
+                        max_age_seconds=0,
+                        with_episodes=with_episodes,
+                    )
+                    if isinstance(data, dict):
+                        now = datetime.now()
+                        identity_id, snapshot_id, _ = self._identity_fields(
+                            provider, external_id, media_type=media_type, scope=self._scope(season, scope)
+                        )
+                        envelope = MetadataEnvelope(
+                            provider=provider,
+                            external_id=str(external_id),
+                            media_type=media_type,
+                            metadata=data,
+                            fetched_at=now,
+                            expires_at=now + timedelta(seconds=ttl),
+                            identity_id=identity_id,
+                            snapshot_id=snapshot_id,
+                        )
+                        self._remember(key, envelope, ttl)
+                        self._metrics["provider_call"] += 1
+                        self._metrics["refresh"] += 1
+            except Exception:  # noqa: BLE001 - 后台刷新失败保留 stale
+                self._metrics["refresh_failed"] += 1
+            finally:
+                with self._guard:
+                    self._refreshing.discard(key)
+
+        threading.Thread(target=refresh, daemon=True, name="metadata-refresh").start()
 
     def resolve_many(
         self,
@@ -307,17 +418,22 @@ class MetadataGateway:
         season: int = 0,
         scope: str | None = None,
     ) -> dict[tuple[str, str], MetadataEnvelope | None]:
-        out: dict[tuple[str, str], MetadataEnvelope | None] = {}
-        for provider, external_id in dict.fromkeys(refs):
-            out[(provider, external_id)] = self.resolve(
-                provider,
-                external_id,
-                context=context,
-                media_type=media_type,
-                season=season,
-                scope=scope,
+        unique = list(dict.fromkeys(refs))
+        if not unique:
+            return {}
+        with ThreadPoolExecutor(max_workers=min(4, len(unique)), thread_name_prefix="metadata-resolve") as pool:
+            values = pool.map(
+                lambda ref: self.resolve(
+                    ref[0],
+                    ref[1],
+                    context=context,
+                    media_type=media_type,
+                    season=season,
+                    scope=scope,
+                ),
+                unique,
             )
-        return out
+            return dict(zip(unique, values, strict=False))
 
     def search(
         self,
@@ -419,8 +535,7 @@ class MetadataGateway:
         )
 
     def latest_snapshot_for_media(self, media_info: Any, *, context: MetadataContext | None = None) -> Any:
-        ctx = context or MetadataContext(purpose="snapshot")
-        self._ensure_visible(media_info, ctx)
+        # 本地快照读取，不触发 provider；可见性由上层 API/任务授权负责。
         return self._service.latest_snapshot_for_media(media_info)
 
     def resolve_season_episode_count(
@@ -468,3 +583,7 @@ class MetadataGateway:
 
     def clear(self) -> None:
         self._cache.clear()
+        try:
+            self._l2.clear()
+        except Exception as exc:  # noqa: BLE001
+            log.debug(f"[MetadataGateway]清理 L2 失败: {exc}")

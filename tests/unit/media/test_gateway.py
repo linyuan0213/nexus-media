@@ -38,7 +38,7 @@ def test_resolve_singleflight_for_same_ref():
     results = []
 
     def worker():
-        results.append(gateway.resolve("tmdb", "1", context=ctx, media_type=MediaType.MOVIE))
+        results.append(gateway.resolve("tmdb", "singleflight", context=ctx, media_type=MediaType.MOVIE))
 
     threads = [threading.Thread(target=worker) for _ in range(4)]
     for thread in threads:
@@ -150,3 +150,18 @@ def test_private_metadata_requires_permission():
             permissions=frozenset({"metadata:private:view"}),
         ),
     )
+
+
+def test_l2_cache_is_shared_between_gateway_instances():
+    service = MagicMock()
+    service.compose_for_ref.return_value = {"title": "L2 Demo"}
+    first = MetadataGateway(service)
+    second = MetadataGateway(service)
+    first.clear()
+    ctx = MetadataContext()
+
+    first.resolve("tmdb", "l2-demo", context=ctx, media_type=MediaType.MOVIE)
+    second.resolve("tmdb", "l2-demo", context=ctx, media_type=MediaType.MOVIE)
+
+    assert service.compose_for_ref.call_count == 1
+    assert second.metrics()["l2_hit"] >= 1
