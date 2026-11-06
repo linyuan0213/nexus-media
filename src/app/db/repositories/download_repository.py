@@ -14,6 +14,7 @@ from sqlalchemy import Integer, and_, case, cast, func, or_, tuple_
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.episode_progress import contiguous_episodes
+from app.domain.episode_utils import infer_episode_key
 from app.domain.media_ref import is_tmdb_media
 from app.services.identity_resolver import IdentityResolver
 
@@ -315,7 +316,10 @@ class DownloadRepository(BaseRepository):
                         DOWNLOADER=downloader,
                         DOWNLOAD_ID=download_id,
                         SAVE_PATH=save_dir,
-                        SE=media_info.get_season_episode_string() or "",
+                        SE=infer_episode_key(
+                            media_info.get_season_episode_string() or "",
+                            media_info.org_string or media_info.title or "",
+                        ),
                         STATE=state,
                         IDENTITY_ID=self._identity_for_media(media_info),
                         SERIES_KEY=series_key,
@@ -559,7 +563,10 @@ class DownloadRepository(BaseRepository):
                 row.TORRENT = media_info.org_string
                 row.ENCLOSURE = media_info.enclosure or ""
                 row.DESC = media_info.description or ""
-                row.SE = media_info.get_season_episode_string() or ""
+                row.SE = infer_episode_key(
+                    media_info.get_season_episode_string() or "",
+                    media_info.org_string or media_info.title or "",
+                )
                 row.IDENTITY_ID = self._identity_for_media(media_info)
                 row.ANCHOR_PROVIDER = getattr(media_info, "anchor_provider", None)
                 row.ANCHOR_EXTERNAL_ID = getattr(media_info, "anchor_external_id", None)
