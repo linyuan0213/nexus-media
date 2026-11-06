@@ -2,7 +2,7 @@
 
 from app.db.models import PLUGINMARKETSOURCE
 from app.db.repositories.base_repository import BaseRepository
-from app.services.plugin_market_service import MarketSource, PluginMarketStore
+from app.domain.plugin_market import MarketSource, PluginMarketStore
 
 
 class PluginMarketRepository(BaseRepository, PluginMarketStore):

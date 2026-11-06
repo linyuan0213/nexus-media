@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 
 from app.core.settings import settings
-from app.infrastructure.http.config import BrowserModeConfig
+from app.domain.browser_mode import BrowserModeConfig
 
 
 def make_session_key(site_key: str, browser: BrowserModeConfig) -> str:

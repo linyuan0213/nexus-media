@@ -14,9 +14,9 @@ from sqlalchemy import Integer, and_, case, cast, func, or_, tuple_
 from app.db.models import DOWNLOADHISTORY, DOWNLOADSETTING, INDEXERSTATISTICS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.episode_progress import contiguous_episodes
+from app.db.repositories.identity_resolver import IdentityResolver
 from app.domain.episode_utils import infer_episode_key
 from app.domain.media_ref import is_tmdb_media
-from app.services.identity_resolver import IdentityResolver
 
 
 class DownloadRepository(BaseRepository):

@@ -10,13 +10,12 @@ import log
 from app.db.models import SITEUSERINFOSTATS as _S
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.db.repositories.site_repository import SiteRepository
+from app.domain.interfaces.site_notification import ISiteNotifier
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.infrastructure.rate_limiter import MemoryTokenBucketBackend, RateLimitEngine
 from app.infrastructure.thread import ThreadExecutor
-from app.message import Message
-from app.message.web_store import WebMessageStore
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.site_favicon_service import SiteFaviconService
@@ -47,7 +46,7 @@ class SiteUserInfo:
         site_repository: SiteRepository,
         site_favicon_service: SiteFaviconService,
         site_engine: SiteEngine,
-        message: Message | None = None,
+        message: ISiteNotifier | None = None,
         thread_executor: ThreadExecutor | None = None,
         rate_limiter: RateLimitEngine | None = None,
     ):
@@ -365,7 +364,7 @@ class SiteUserInfo:
     def _stats_message_unchanged(self, msg_text: str) -> bool:
         """统计消息内容是否与最近一次已发送（持久化）的一致"""
         try:
-            items = WebMessageStore.instance().history(user_id="", limit=20)
+            items = self.message.recent_web_messages(user_id="", limit=20) if self.message is not None else []
             for item in reversed(items):
                 if (item.get("title") or "").strip() == "站点数据统计":
                     return (item.get("content") or "").strip() == msg_text.strip()

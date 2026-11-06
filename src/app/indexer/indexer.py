@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING
 
 import log
 from app.core.constants import site_priority_order
-from app.core.system_config import SystemConfig
 from app.db.repositories.download_repository import DownloadRepository
 from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
@@ -34,12 +33,13 @@ from app.indexer.contract.site_catalog import external_indexer_sites
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.registry import get_all_clients, get_client_class
 from app.infrastructure.progress import ProgressTracker
+from app.infrastructure.system_config import SystemConfig
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.utils import ExceptionUtils, StringUtils
 
 if TYPE_CHECKING:
-    from app.services.site_grant_service import SiteGrantService
+    from app.domain.interfaces.site_grant import ISiteGrantService
 
 
 def resolve_indexer_priority(
@@ -94,7 +94,7 @@ class Indexer:
         self._site_config_repo = site_config_repo or IndexerSiteConfigRepositoryAdapter()
         self._idx_config_repo = idx_config_repo or IndexerConfigRepositoryAdapter()
         # 站点授权服务（L3 资源访问控制），由 DI 装配后注入；None 表示不过滤
-        self.site_grant_service: SiteGrantService | None = None
+        self.site_grant_service: ISiteGrantService | None = None
         self._client = None
         self._client_type = None
         self._clients: dict[str, IndexerClientBase] = {}

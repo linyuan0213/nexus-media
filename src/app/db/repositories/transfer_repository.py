@@ -14,9 +14,9 @@ from sqlalchemy import and_, func, or_
 from app.db.models import SYNCHISTORY, TRANSFERBLACKLIST, TRANSFERHISTORY, TRANSFERUNKNOWN
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.episode_progress import contiguous_episodes
+from app.db.repositories.identity_resolver import IdentityResolver
 from app.domain.mediatypes import MediaType
 from app.schemas.media import TransferMediaDTO
-from app.services.identity_resolver import IdentityResolver
 from app.utils.string_utils import StringUtils
 
 

@@ -18,37 +18,12 @@ from urllib.parse import urljoin, urlparse, urlsplit
 import httpx
 
 import log
+from app.domain.plugin_market import MarketSource, PluginMarketStore
 from app.services.plugin_package_auditor import PluginPackageAuditor
 
 # 目录式市场索引（catalog.json）的最小必需字段
 _CATALOG_REQUIRED = ("market_version", "id", "plugins")
 _PLUGIN_ENTRY_REQUIRED = ("id", "path")
-
-
-@dataclass
-class MarketSource:
-    """市场源"""
-
-    name: str
-    url: str
-    enabled: bool = True
-    auto_update: bool = False
-    public_key: str = ""
-    last_sync_at: str = ""
-    last_error: str = ""
-    source_id: str = ""
-
-    def to_dict(self) -> dict:
-        return {
-            "source_id": self.source_id or self.name,
-            "name": self.name,
-            "url": self.url,
-            "enabled": self.enabled,
-            "auto_update": self.auto_update,
-            "public_key": self.public_key,
-            "last_sync_at": self.last_sync_at,
-            "last_error": self.last_error,
-        }
 
 
 @dataclass
@@ -60,22 +35,6 @@ class MarketCatalog:
     plugins: list[dict] = field(default_factory=list)  # [{id, path, updated_at}]
     synced_at: float = 0.0
     error: str = ""
-
-
-class PluginMarketStore:
-    """市场源存储抽象（DB 仓库或内存实现）"""
-
-    def list(self) -> list[MarketSource]:
-        raise NotImplementedError
-
-    def add(self, source: MarketSource) -> MarketSource:
-        raise NotImplementedError
-
-    def update(self, source: MarketSource) -> MarketSource:
-        raise NotImplementedError
-
-    def delete(self, source_id: str) -> bool:
-        raise NotImplementedError
 
 
 class PluginMarketService:

@@ -9,7 +9,7 @@ import datetime
 import difflib
 import re
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 from typing import cast as type_cast
 
 from sqlalchemy import Integer, and_, cast, or_
@@ -25,12 +25,12 @@ from app.db.models import (
 )
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.data_scope import apply_owner_scope
+from app.db.repositories.identity_resolver import IdentityResolver
 from app.domain.entities.rss import SubscribeState
+from app.domain.legacy_ref import parse_legacy_ref
 from app.domain.mediatypes import MediaType
-from app.media.metadata.legacy import parse_legacy_ref
-from app.media.metadata.policy import ANCHOR_POLICY
+from app.domain.metadata_policy import ANCHOR_POLICY
 from app.schemas.auth import UserContext
-from app.services.identity_resolver import IdentityResolver
 from app.utils.json_utils import JsonUtils
 
 _SEASON_PATTERN = re.compile(r"^S?(\d+)$", re.IGNORECASE)
@@ -46,7 +46,18 @@ def _normalize_tv_season(value: object) -> str:
 
 
 if TYPE_CHECKING:
-    from app.media.models import MediaInfo
+
+    class MediaInfo(Protocol):
+        """仓储写入所需的媒体信息最小接口."""
+
+        title: Any
+        year: Any
+        tmdb_id: Any
+        begin_season: Any
+
+        def get_poster_image(self) -> str: ...
+
+        def get_season_string(self) -> str: ...
 
 
 # DESC 列为 varchar(255)，存的是 TMDB 简介（可能超长）；SQLite 不校验长度，

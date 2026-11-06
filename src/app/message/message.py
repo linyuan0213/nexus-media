@@ -16,6 +16,7 @@ from app.message.core.governor_store import build_governor_store
 from app.message.core.message_builder import MessageBuilder
 from app.message.core.template_engine import TemplateEngine
 from app.message.message_center import MessageCenter
+from app.message.web_store import WebMessageStore
 from app.services.apikey_service import APIKeyService
 from app.utils.config_tools import get_domain
 
@@ -272,6 +273,10 @@ class Message:
 
     def send_user_statistics_message(self, msgs: list) -> None:
         self._builder.send_user_statistics_message(msgs)
+
+    def recent_web_messages(self, *, user_id: str = "", limit: int = 20) -> list[dict]:
+        """最近的内置 Web 消息，供站点统计去重等只读判断使用."""
+        return WebMessageStore.instance().history(user_id=user_id, limit=limit)
 
     # ---------- 其他委托 ----------
 

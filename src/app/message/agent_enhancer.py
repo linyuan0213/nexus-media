@@ -7,7 +7,6 @@
 """
 
 import log
-from app.agent.config import get_notify_config
 
 _ENHANCE_PROMPT = """你是 NAS 媒体管理系统的通知助手。将以下消息改写成简洁的中文用户通知。
 
@@ -24,9 +23,9 @@ _ENHANCE_PROMPT = """你是 NAS 媒体管理系统的通知助手。将以下消
 class AgentMessageEnhancer:
     """按 msg_type 决定是否增强；LLM 生成失败返回 None（调用方回退原模板）"""
 
-    def __init__(self, agent_service):
+    def __init__(self, agent_service, config: dict | None = None):
         self._agent = agent_service
-        self._config = get_notify_config()
+        self._config = config or {}
         self._msg_types = set(self._config.get("msg_types") or [])
 
     @property

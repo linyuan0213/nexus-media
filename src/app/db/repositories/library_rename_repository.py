@@ -11,8 +11,8 @@ from app.db.models import (
     TRANSFERHISTORY,
 )
 from app.db.repositories.base_repository import BaseRepository
-from app.media.metadata.policy import ANCHOR_POLICY
-from app.services.identity_resolver import IdentityResolver
+from app.db.repositories.identity_resolver import IdentityResolver
+from app.domain.metadata_policy import ANCHOR_POLICY
 from app.utils.json_utils import JsonUtils
 
 

@@ -10,7 +10,7 @@ from sqlalchemy import and_, or_
 
 from app.db.models import MEDIASYNCITEMS, MEDIASYNCSTATISTIC
 from app.db.repositories.base_repository import BaseRepository
-from app.services.identity_resolver import IdentityResolver
+from app.db.repositories.identity_resolver import IdentityResolver
 from app.utils.json_utils import JsonUtils
 
 
