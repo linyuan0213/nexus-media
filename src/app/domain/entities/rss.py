@@ -65,6 +65,7 @@ class SubscribeHistoryEntity:
     metadata_ref: str | None = None
     metadata_policy: str | None = None
     naming_profile: str | None = None
+    series_key: str | None = None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["SubscribeHistoryEntity"]:
@@ -93,6 +94,7 @@ class SubscribeHistoryEntity:
             metadata_ref=getattr(orm_model, "METADATA_REF", None),
             metadata_policy=getattr(orm_model, "METADATA_POLICY", None),
             naming_profile=getattr(orm_model, "NAMING_PROFILE", None),
+            series_key=getattr(orm_model, "SERIES_KEY", None),
         )
 
     # 从 ORM 列名到 dataclass 字段名的映射
@@ -134,6 +136,7 @@ class SubscribeHistoryEntity:
             "metadata_ref": canonical_metadata_ref(self),
             "metadata_policy": self.metadata_policy,
             "naming_profile": self.naming_profile,
+            "series_key": self.series_key,
         }
 
 
@@ -174,6 +177,7 @@ class SubscribeMovieEntity:
     metadata_ref: str | None = None
     metadata_policy: str | None = None
     naming_profile: str | None = None
+    series_key: str | None = None
 
     @property
     def state_enum(self) -> SubscribeState:
@@ -281,6 +285,7 @@ class SubscribeMovieEntity:
             metadata_ref=getattr(orm_model, "METADATA_REF", None),
             metadata_policy=getattr(orm_model, "METADATA_POLICY", None),
             naming_profile=getattr(orm_model, "NAMING_PROFILE", None),
+            series_key=getattr(orm_model, "SERIES_KEY", None),
         )
 
     # 从 ORM 列名到 dataclass 字段名的映射
@@ -333,6 +338,7 @@ class SubscribeMovieEntity:
             "metadata_ref": canonical_metadata_ref(self),
             "metadata_policy": self.metadata_policy,
             "naming_profile": self.naming_profile,
+            "series_key": self.series_key,
         }
 
 
@@ -433,6 +439,7 @@ class SubscribeTvEntity:
     metadata_ref: str | None = None
     metadata_policy: str | None = None
     naming_profile: str | None = None
+    series_key: str | None = None
 
     @property
     def state_enum(self) -> SubscribeState:
@@ -560,6 +567,7 @@ class SubscribeTvEntity:
             metadata_ref=getattr(orm_model, "METADATA_REF", None),
             metadata_policy=getattr(orm_model, "METADATA_POLICY", None),
             naming_profile=getattr(orm_model, "NAMING_PROFILE", None),
+            series_key=getattr(orm_model, "SERIES_KEY", None),
         )
 
     # 从 ORM 列名到 dataclass 字段名的映射
@@ -617,6 +625,7 @@ class SubscribeTvEntity:
             "metadata_ref": canonical_metadata_ref(self),
             "metadata_policy": self.metadata_policy,
             "naming_profile": self.naming_profile,
+            "series_key": self.series_key,
         }
 
 

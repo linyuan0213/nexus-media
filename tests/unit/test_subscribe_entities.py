@@ -155,6 +155,22 @@ def test_history_entity_maps_identity_fields():
     assert entity.to_dict()["metadata_policy"] == "douban_primary"
 
 
+class _SeriesRow:
+    SERIES_KEY = "series:demo"
+
+    def __getattr__(self, name):
+        return None
+
+
+def test_subscription_entities_keep_series_key():
+    from app.domain.entities.rss import SubscribeMovieEntity, SubscribeTvEntity
+
+    tv = SubscribeTvEntity.from_orm(_SeriesRow())
+    movie = SubscribeMovieEntity.from_orm(_SeriesRow())
+    assert tv is not None and tv.series_key == "series:demo"
+    assert movie is not None and movie.series_key == "series:demo"
+
+
 def test_media_ref_and_identity_key_legacy_prefixes():
     from app.domain.media_ref import identity_keys_match, media_identity_key
     from app.media.models import MediaInfo
