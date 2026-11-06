@@ -53,7 +53,6 @@ class LibraryPresenceService:
                 return provider, external
         return "", ""
 
-
     @staticmethod
     def _library_aliases(item: Any) -> list[str]:
         extra = getattr(item, "extra", None) or {}
@@ -95,12 +94,8 @@ class LibraryPresenceService:
                 for alias in self._library_aliases(item):
                     alias_pairs.append((item, (provider, alias)))
         if alias_pairs:
-            alias_present = self._batch_query(
-                self._transfer_repo, [pair for _, pair in alias_pairs], "转移历史别名"
-            )
-            alias_hit_ids = {
-                id(item) for item, pair in alias_pairs if pair in alias_present
-            }
+            alias_present = self._batch_query(self._transfer_repo, [pair for _, pair in alias_pairs], "转移历史别名")
+            alias_hit_ids = {id(item) for item, pair in alias_pairs if pair in alias_present}
             for item, _pair in remaining:
                 if id(item) in alias_hit_ids:
                     self._set(item)

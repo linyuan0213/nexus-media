@@ -9,9 +9,8 @@ from app.core.constants import ANIME_GENREIDS
 from app.db.repositories.media_series_repository import MediaSeriesRepository
 from app.domain.entities.custom_rss import custom_rss_id
 from app.domain.mediatypes import MediaType
-from app.infrastructure.cache_system.caches import TMDBCache
 from app.media.display_image_policy import transform_display_image
-from app.media.metadata.registry import registry as metadata_registry
+from app.media.metadata.gateway import MetadataGateway
 from app.schemas.auth import UserContext
 from app.services.search_subject import SearchSubject
 from app.services.subscribe.management.utils import parse_rss_desc
@@ -31,7 +30,7 @@ def _genres_are_anime(genres) -> bool:
     return False
 
 
-def _resolve_subscribe_type(value, tmdbid=None, genres=None) -> str:
+def _resolve_subscribe_type(value, tmdbid=None, genres=None, metadata_gateway: MetadataGateway | None = None) -> str:
     """订阅媒体类型归一化：movie/tv/anime.
 
     历史订阅未把 media_type 写入 NOTE 时，回退用 TMDB 缓存 genres 判断是否为动漫，
@@ -47,31 +46,24 @@ def _resolve_subscribe_type(value, tmdbid=None, genres=None) -> str:
         return MediaType.ANIME.value
     # TV 或缺失类型都继续用 TMDB genres 判定：历史动漫订阅通常 media_type=tv，
     # 但实际是动画，不能因为 NOTE 里有 media_type 就直接当成电视剧。
-    if tmdbid:
+    if tmdbid and metadata_gateway is None:
+        log.warn(f"[Subscribe]缺少 MetadataGateway，无法推断订阅类型: {tmdbid}")
+        return MediaType.UNKNOWN.value
+    if tmdbid and metadata_gateway is not None:
         try:
             # TMDB 详情缓存可能带不同 append_to_response 后缀，逐一尝试已知形态，
             # 否则会误判为缓存未命中并把动漫降级成电视剧。
-            info = None
-            cache = TMDBCache()
-            for extra in (
-                "",
-                "credits,images,external_ids",
-                "all",
-                "alternative_titles,translations",
-            ):
-                info = cache.get_tmdb_info(mtype=MediaType.TV, tmdbid=tmdbid, extra=extra)
-                if info is not None:
-                    break
-            # 缓存值可能是 tmdbv3api 的 AsObj（非 dict 但支持 .get）
-            genres = None
-            if info is not None:
-                genres = info.get("genres") if hasattr(info, "get") else getattr(info, "genres", None)
-            # genres 元素也可能是 tmdbv3api 的 AsObj，需兼容 .get / 属性访问
-            genre_ids = set()
-            for genre in genres or []:
-                genre_id = genre.get("id") if hasattr(genre, "get") else getattr(genre, "id", None)
-                if genre_id:
-                    genre_ids.add(str(genre_id))
+            genre_ids = metadata_gateway.genres(
+                "tmdb",
+                tmdbid,
+                media_type=MediaType.TV,
+                extras=(
+                    "",
+                    "credits,images,external_ids",
+                    "all",
+                    "alternative_titles,translations",
+                ),
+            )
             if genre_ids.intersection(ANIME_GENREIDS):
                 return MediaType.ANIME.value
         except Exception as e:  # noqa: BLE001
@@ -94,6 +86,7 @@ def _source_label(
     raw_id: str | None = None,
     metadata_ref: str | None = None,
     source_provider: str | None = None,
+    metadata_gateway: MetadataGateway | None = None,
 ) -> str:
     """来源展示名：优先真实订阅来源，虚拟元数据 provider 不作为来源。"""
     value = str(provider or "").strip().lower()
@@ -103,15 +96,13 @@ def _source_label(
         value = _REF_PREFIX_ALIASES.get(prefix, prefix)
     if value == "content_id":
         return "插件"
-    item = metadata_registry.get_provider(value) if value else None
-    desc = getattr(item, "descriptor", None)
-    if getattr(desc, "virtual", False) and source_provider:
-        real = metadata_registry.get_provider(str(source_provider).strip().lower())
-        real_desc = getattr(real, "descriptor", None)
-        return str(getattr(real_desc, "display_name", "") or source_provider)
-    if getattr(desc, "virtual", False):
+    is_virtual = metadata_gateway is not None and metadata_gateway.provider_is_virtual(value)
+    if is_virtual and source_provider and metadata_gateway is not None:
+        real = str(source_provider).strip().lower()
+        return metadata_gateway.provider_display_name(real) or source_provider
+    if is_virtual:
         return "未知来源"
-    return str(getattr(desc, "display_name", "") or value or "未知")
+    return metadata_gateway.provider_display_name(value) if metadata_gateway is not None else (value or "未知")
 
 
 def _normalized_anchor(provider, external_id) -> tuple[str | None, str | None]:
@@ -144,7 +135,18 @@ def _canonical_ref(row) -> str:
 class SubscribeQueryService:
     """订阅查询服务"""
 
-    def __init__(self, movie_repo, tv_repo, tv_episode_repo, history_repo, sites, indexer_service, user_repo=None):
+    def __init__(
+        self,
+        movie_repo,
+        tv_repo,
+        tv_episode_repo,
+        history_repo,
+        sites,
+        indexer_service,
+        user_repo=None,
+        *,
+        metadata_gateway: MetadataGateway,
+    ):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
         self._tv_episode_repo = tv_episode_repo
@@ -152,6 +154,7 @@ class SubscribeQueryService:
         self._sites = sites
         self._indexer_service = indexer_service
         self._user_repo = user_repo
+        self._metadata_gateway = metadata_gateway
 
     def _usernames(self, rows) -> dict[int, str]:
         """批量解析订阅归属用户名（无 user_repo 时返回空映射）"""
@@ -254,6 +257,7 @@ class SubscribeQueryService:
                     rss_movie.TMDBID,
                     getattr(rss_movie, "METADATA_REF", None),
                     note_info.get("source_provider"),
+                    metadata_gateway=self._metadata_gateway,
                 ),
                 "content_profile": rss_movie.CONTENT_PROFILE,
                 "metadata_policy": rss_movie.METADATA_POLICY,
@@ -363,7 +367,12 @@ class SubscribeQueryService:
             resolved_type = (
                 subject.display_type.value
                 if subject.display_type
-                else _resolve_subscribe_type(note_info.get("media_type"), tmdbid, note_info.get("genres"))
+                else _resolve_subscribe_type(
+                    note_info.get("media_type"),
+                    tmdbid,
+                    note_info.get("genres"),
+                    metadata_gateway=self._metadata_gateway,
+                )
             )
             # 历史动漫订阅可能仍是 default 画像；序列化时按实际类型归到 anime 画像，
             # 列表 tab 才能同时满足“展示为动漫”和“出现在动漫 tab”。
@@ -397,6 +406,7 @@ class SubscribeQueryService:
                     rss_tv.TMDBID,
                     getattr(rss_tv, "METADATA_REF", None),
                     note_info.get("source_provider"),
+                    metadata_gateway=self._metadata_gateway,
                 ),
                 "content_profile": effective_profile,
                 "metadata_policy": rss_tv.METADATA_POLICY,

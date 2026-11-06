@@ -14,7 +14,6 @@ def _make_strategy():
         service=service,
         searcher=MagicMock(),
         media_service=MagicMock(),
-        media_cache=MagicMock(),
         downloader=MagicMock(),
         filter_service=MagicMock(),
         message=MagicMock(),

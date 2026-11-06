@@ -4,7 +4,7 @@
 这个模块提供了对旧版缓存API的兼容支持，方便逐步迁移
 """
 
-from .adapters import MemoryCacheAdapter, RedisCacheAdapter
+from .adapters import MemoryCacheAdapter
 from .caches import (
     CategoryLoadCache as NewCategoryLoadCache,
 )
@@ -13,9 +13,6 @@ from .caches import (
 )
 from .caches import (
     OpenAISessionCache as NewOpenAISessionCache,
-)
-from .caches import (
-    TMDBCache as NewTMDBCache,
 )
 from .caches import (
     TokenCache as NewTokenCache,
@@ -34,8 +31,6 @@ class CacheManagerCompat:
 
     def _init_default_caches(self):
         """初始化默认缓存"""
-        # tmdb_supply 缓存
-        self._adapters["tmdb_supply"] = MemoryCacheAdapter(maxsize=500, name="tmdb_supply")
 
     def __getitem__(self, name: str):
         """支持 cacheman['name'] 访问"""
@@ -61,24 +56,6 @@ OpenAISessionCache = NewOpenAISessionCache()
 MediaInfoCache = None  # 在 utils/__init__.py 中初始化
 SearchResultCache = None
 SiteInfoCache = None
-
-
-# 兼容旧的 TMDBCache 接口
-class TMDBCacheCompat(NewTMDBCache):
-    """
-    兼容旧的 TMDBCache 接口
-
-    保持与旧版 app.utils.tmdb_cache.TMDBCache 相同的API
-    """
-
-    def __init__(self):
-        # 使用Redis适配器
-        adapter = RedisCacheAdapter(name="tmdb_compat")
-        super().__init__(adapter)
-
-
-# 创建兼容实例
-TMDBCache = TMDBCacheCompat()
 
 
 # 兼容旧的装饰器

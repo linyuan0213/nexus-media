@@ -43,9 +43,9 @@
 4. 选择转移方式
 5. 确认执行
 
-## TMDB 黑名单
+## 识别黑名单
 
-识别错误时，可将错误的 TMDB ID 加入黑名单（`/rename/blacklist`），避免再次误匹配。
+识别错误时，可将对应 provider 的外部 ID 加入黑名单（`/rename/blacklist`），避免再次误匹配。当前默认支持 TMDB，数据结构已按 `provider + external_id` 预留。
 
 ## 识别相关设置
 

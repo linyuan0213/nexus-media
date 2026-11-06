@@ -61,7 +61,6 @@ class _FakeSubscribe:
 
 def _service() -> MediaInfoService:
     return MediaInfoService(
-        media_service=cast(Any, None),
         subscribe=cast(Any, _FakeSubscribe()),
         media_server=cast(Any, None),
         metadata_gateway=cast(Any, _FakeMetadata()),

@@ -12,17 +12,36 @@ from app.services.search_context import SearchContext
 from app.services.search_orchestrator import SearchOrchestrator
 
 
+class _MediaGatewayAdapter:
+    def __init__(self, media):
+        self.media = media
+
+    def resolve_by_title(self, title, *, media_type=None, cache=True, **kwargs):
+        return self.media.get_media_info(mtype=media_type, title=title, cache=cache)
+
+    def hydrate_media(self, media, **kwargs):
+        return None
+
+    def en_title(self, media):
+        return ""
+
+    def zhtw_title(self, media):
+        return ""
+
+
 def _make_orchestrator() -> SearchOrchestrator:
+    media = MagicMock()
     return SearchOrchestrator(
         searcher=MagicMock(),
         search_repo=MagicMock(),
         download_repo=MagicMock(),
         downloader=MagicMock(),
-        media_service=MagicMock(),
+        media_service=media,
         message=MagicMock(),
         progress_helper=MagicMock(),
         event_bus=MagicMock(),
         intent_resolver=None,
+        metadata_gateway=cast(Any, _MediaGatewayAdapter(media)),
     )
 
 

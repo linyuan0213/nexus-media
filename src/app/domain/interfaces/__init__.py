@@ -19,8 +19,8 @@ from app.domain.interfaces.download_repo import (
 )
 from app.domain.interfaces.intent import IntentResolver, SearchIntent
 from app.domain.interfaces.plugin_repo import (
+    IMetadataBlacklistRepository,
     IPluginHistoryRepository,
-    ITmdbBlacklistRepository,
 )
 from app.domain.interfaces.rbac_repo import (
     IRBACLogRepository,

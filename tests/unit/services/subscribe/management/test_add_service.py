@@ -33,6 +33,40 @@ class _FakeDownloadRepo:
         raise AssertionError("不应再按 TMDB 专用接口查询下载历史")
 
 
+class _MediaGatewayAdapter:
+    """测试替身：把旧 MediaService mock 映射到网关读接口."""
+
+    def __init__(self, media):
+        self.media = media
+
+    def resolve_by_title(self, title, *, media_type=None, cache=True, **kwargs):
+        return self.media.get_media_info(
+            title=title,
+            mtype=media_type,
+            strict=kwargs.get("strict"),
+            cache=cache,
+        )
+
+    def season_summaries(self, tv_info):
+        return self.media.get_tmdb_tv_seasons(tv_info=tv_info)
+
+    def resolve_season_episode_count(self, **kwargs):
+        provider_data = kwargs.get("provider_data") or {}
+        return self.media.get_tmdb_season_episodes_num(tv_info=provider_data, season=kwargs.get("season", 1))
+
+    def lookup(self, *args, **kwargs):
+        return self.media.lookup(*args, **kwargs)
+
+    def link_subscription(self, media_info, **kwargs):
+        return self.media.link_subscription(media_info, **kwargs)
+
+    def provider_descriptor(self, provider):
+        return None
+
+    def provider_is_virtual(self, provider):
+        return False
+
+
 def _build_service(transfer_contiguous=0, download_contiguous=0):
     svc = SubscribeAddService.__new__(SubscribeAddService)
     svc._movie_repo = MagicMock()
@@ -45,7 +79,7 @@ def _build_service(transfer_contiguous=0, download_contiguous=0):
     svc._web_utils = MagicMock()
     svc._transfer_history_manager = _FakeTransferHistory(transfer_contiguous)
     svc._download_repo = _FakeDownloadRepo(download_contiguous)
-    svc._metadata_gateway = None
+    svc._metadata_gateway = cast(Any, _MediaGatewayAdapter(svc._media))
     svc._tv_repo.insert.return_value = 999
     svc._tv_repo.insert_movies.return_value = 999
     return svc
@@ -145,6 +179,7 @@ class TestNonTmdbEpisodeCount:
         media.anchor_external_id = "38396475"
         svc._media.get_media_info.return_value = media
         svc._metadata_gateway = MagicMock()
+        svc._metadata_gateway.resolve_by_title.return_value = media
         svc._metadata_gateway.resolve_season_episode_count.return_value = 24
 
         code, _, _ = svc.add_rss_subscribe(
@@ -244,6 +279,7 @@ def test_identity_fields_are_passed_to_insert():
         "naming_profile": None,
     }
     svc._metadata_gateway = MagicMock()
+    svc._metadata_gateway.resolve_by_title.return_value = svc._media.get_media_info.return_value
     svc._metadata_gateway.link_subscription.return_value.as_kwargs.return_value = identity_fields
 
     code, _, _ = svc.add_rss_subscribe(

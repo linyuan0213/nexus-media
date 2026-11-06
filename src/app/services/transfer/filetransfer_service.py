@@ -48,7 +48,6 @@ from app.media.category_matcher import get_category
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.metadata.parsing import ParserChain
 from app.media.metadata.refs import parse_media_ref
-from app.media.metadata.registry import registry as metadata_registry
 from app.media.parser import RegexParser
 from app.message import Message
 from app.schemas.media import TransferMediaDTO
@@ -747,10 +746,10 @@ class FileTransferService:
             log.debug(f"[Rmt]蓝光目录检测失败: {e}")
         return None
 
-    @staticmethod
-    def _is_virtual_provider(provider: str) -> bool:
-        desc = getattr(metadata_registry.get_provider(provider), "descriptor", None)
-        return bool(getattr(desc, "virtual", False)) or provider == "content_id"
+    def _is_virtual_provider(self, provider: str) -> bool:
+        if provider == "content_id":
+            return True
+        return self._metadata_gateway is not None and self._metadata_gateway.provider_is_virtual(provider)
 
     def _apply_snapshot_to_media(self, media_info, snapshot) -> None:
         """把快照结果回填到 MediaInfo，供转移通知与命名使用."""
@@ -1140,12 +1139,12 @@ class FileTransferService:
                     dl_episode = se_parsed.episode
             if str(download_info.TMDBID or ""):
                 log.info(f"[Rmt]{in_path} 找到下载记录，TMDBID：{download_info.TMDBID}")
-                return (
-                    self.media.get_tmdb_info(mtype=parsed_type, tmdbid=download_info.TMDBID),
-                    parsed_type,
-                    dl_season,
-                    dl_episode,
+                tmdb_info = (
+                    self._metadata_gateway.details("tmdb", download_info.TMDBID, media_type=parsed_type)
+                    if self._metadata_gateway is not None
+                    else {}
                 )
+                return (tmdb_info, parsed_type, dl_season, dl_episode)
             if getattr(download_info, "ANCHOR_PROVIDER", None) and getattr(download_info, "ANCHOR_EXTERNAL_ID", None):
                 # 非 TMDB 记录仍需回传画像/季集，供 ParserProfile 之外的识别兜底。
                 return None, parsed_type, dl_season, dl_episode
@@ -2073,11 +2072,12 @@ class FileTransferService:
     ) -> None:
         """记录转移结果。新转移与目标已存在（重复转移）都必须落历史。"""
         raw_tmdb_id = str(media.tmdb_id or "").strip()
-        if raw_tmdb_id.isdigit():
+        if raw_tmdb_id.isdigit() and self._metadata_gateway is not None:
             media.set_provider_data(
-                self.media.get_tmdb_info(
-                    mtype=media.type,
-                    tmdbid=raw_tmdb_id,
+                self._metadata_gateway.details(
+                    "tmdb",
+                    raw_tmdb_id,
+                    media_type=media.type,
                     append_to_response="all",
                 )
             )

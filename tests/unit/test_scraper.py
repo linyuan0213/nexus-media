@@ -67,14 +67,18 @@ class TestImageDownloaderExtension:
 class TestChineseCredits:
     def test_match_no_douban_info(self):
         svc = MagicMock()
-        credits = ChineseCredits(svc)
+        gateway = MagicMock()
+        gateway.person_aka_names = svc.get_tmdbperson_aka_names
+        credits = ChineseCredits(gateway)
         directors, actors = credits.match([{"name": "John"}], [{"name": "Jane"}], None)
         assert directors == [{"name": "John"}]
         assert actors == [{"name": "Jane"}]
 
     def test_match_empty_douban_info(self):
         svc = MagicMock()
-        credits = ChineseCredits(svc)
+        gateway = MagicMock()
+        gateway.person_aka_names = svc.get_tmdbperson_aka_names
+        credits = ChineseCredits(gateway)
         directors, actors = credits.match([{"name": "John"}], [{"name": "Jane"}], {})
         assert directors == [{"name": "John"}]
         assert actors == [{"name": "Jane"}]
@@ -82,7 +86,9 @@ class TestChineseCredits:
     def test_match_director_by_latin_name(self):
         svc = MagicMock()
         svc.get_tmdbperson_aka_names.return_value = ["Christopher Nolan"]
-        credits = ChineseCredits(svc)
+        gateway = MagicMock()
+        gateway.person_aka_names = svc.get_tmdbperson_aka_names
+        credits = ChineseCredits(gateway)
 
         douban = {
             "directors": [{"name": "克里斯托弗·诺兰", "latin_name": "Christopher Nolan"}],
@@ -94,7 +100,9 @@ class TestChineseCredits:
     def test_match_actor_by_aka_name(self):
         svc = MagicMock()
         svc.get_tmdbperson_aka_names.return_value = ["Leonardo DiCaprio", "Leo"]
-        credits = ChineseCredits(svc)
+        gateway = MagicMock()
+        gateway.person_aka_names = svc.get_tmdbperson_aka_names
+        credits = ChineseCredits(gateway)
 
         douban = {
             "directors": [],
@@ -106,7 +114,9 @@ class TestChineseCredits:
     def test_match_no_latin_name_fallback_to_name(self):
         svc = MagicMock()
         svc.get_tmdbperson_aka_names.return_value = []
-        credits = ChineseCredits(svc)
+        gateway = MagicMock()
+        gateway.person_aka_names = svc.get_tmdbperson_aka_names
+        credits = ChineseCredits(gateway)
 
         douban = {"directors": [{"name": "王家卫", "latin_name": ""}], "actors": []}
         directors, _ = credits.match([{"name": "王家卫", "id": 3}], [], douban)
@@ -115,7 +125,9 @@ class TestChineseCredits:
     def test_match_character_cleaning(self):
         svc = MagicMock()
         svc.get_tmdbperson_aka_names.return_value = ["Tom Hanks"]
-        credits = ChineseCredits(svc)
+        gateway = MagicMock()
+        gateway.person_aka_names = svc.get_tmdbperson_aka_names
+        credits = ChineseCredits(gateway)
 
         douban = {
             "directors": [],

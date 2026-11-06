@@ -21,7 +21,7 @@ from app.db.repositories.media_identity_repository import MediaIdentityRepositor
 from app.db.repositories.person_identity_repository import PersonIdentityRepository
 from app.domain.media_ref import MediaSubject
 from app.domain.mediatypes import MediaType
-from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.cache_system.metadata_cache import MetadataCache
 from app.media.display_image_policy import transform_display_image
 from app.media.metadata import (
     ANCHOR_POLICY,
@@ -199,15 +199,9 @@ class MetadataService:
         # 同一条目详情并发去重：详情页反复刷新时只允许一个浏览器抓取。
         self._inflight_lock = threading.Lock()
         self._inflight: dict[str, Future[Any]] = {}
-        self._detail_cache = get_cache_manager().get_or_create(
-            "metadata_detail", cache_type="tiered", maxsize=500, ttl=600
-        )
-        self._search_cache = get_cache_manager().get_or_create(
-            "metadata_search", cache_type="tiered", maxsize=300, ttl=60
-        )
-        self._episodes_cache = get_cache_manager().get_or_create(
-            "metadata_episodes", cache_type="tiered", maxsize=500, ttl=300
-        )
+        self._detail_cache = MetadataCache(prefix="detail")
+        self._search_cache = MetadataCache(prefix="search")
+        self._episodes_cache = MetadataCache(prefix="episodes")
         self._detail_version_lock = threading.Lock()
         self._anchor_cache: dict[tuple, tuple[float, str, str]] = {}
         self._anchor_locks: dict[tuple, threading.Lock] = {}
@@ -1145,9 +1139,11 @@ class MetadataService:
             descriptor = item.descriptor
             if descriptor.visibility == "private":
                 required = descriptor.required_permission or "metadata:private:view"
-                if not allow_private or (
-                    permissions is not None and "*" not in permissions and required not in permissions
-                ):
+                if not allow_private:
+                    continue
+                # 超级管理员的权限集为空表示不受细粒度权限限制；
+                # 只有显式携带权限集时才继续检查 provider 专属权限。
+                if permissions is not None and "*" not in permissions and required not in permissions:
                     continue
             selected.append(item)
 
@@ -1369,9 +1365,11 @@ class MetadataService:
                 continue
             if item.descriptor.visibility == "private":
                 required = item.descriptor.required_permission or "metadata:private:view"
-                if not allow_private or (
-                    permissions is not None and "*" not in permissions and required not in permissions
-                ):
+                if not allow_private:
+                    continue
+                # 超级管理员的权限集为空表示不受细粒度权限限制；
+                # 只有显式携带权限集时才继续检查 provider 专属权限。
+                if permissions is not None and "*" not in permissions and required not in permissions:
                     continue
             hits = []
             try:
@@ -1659,8 +1657,49 @@ class MetadataService:
         return self._identity_repo.latest_snapshot(identity_id, policy_key=policy_key, scope=scope)
 
     def provider_descriptor(self, provider_key: str) -> Any:
+        self._ensure_builtin()
         provider = self._registry.get_provider(provider_key)
         return getattr(provider, "descriptor", None)
+
+    def cached_details(
+        self,
+        provider: str,
+        external_id: str | int | None,
+        *,
+        media_type: MediaType | str | None = None,
+        extra: str = "",
+        extras: tuple[str, ...] | None = None,
+        scope: str = "default",
+    ) -> Any | None:
+        """只读 provider 详情缓存，不发起网络请求."""
+        if external_id in (None, ""):
+            return None
+        type_key = getattr(media_type, "value", str(media_type or "auto"))
+        own_key = f"v{self._detail_cache_version()}:{provider}:{external_id}:{scope}:{type_key}"
+        own_cached = self._detail_cache.get(own_key)
+        if own_cached is not None:
+            return own_cached
+        try:
+            cache = MetadataCache()
+        except Exception as exc:  # noqa: BLE001 - 缓存不可用不影响主流程
+            log.debug(f"[Metadata]详情缓存不可用: {exc}")
+            return None
+        candidates = extras if extras is not None else (extra,)
+        for candidate in candidates:
+            try:
+                info = cache.get_detail(
+                    provider,
+                    str(external_id),
+                    media_type or MediaType.UNKNOWN,
+                    extra=candidate,
+                    scope=scope,
+                )
+            except Exception as exc:  # noqa: BLE001
+                log.debug(f"[Metadata]读取详情缓存失败 {provider}:{external_id}: {exc}")
+                return None
+            if info is not None:
+                return info
+        return None
 
     def list_providers(
         self,
@@ -1679,9 +1718,11 @@ class MetadataService:
                 continue
             if descriptor.visibility == "private":
                 required = descriptor.required_permission or "metadata:private:view"
-                if not allow_private or (
-                    permissions is not None and "*" not in permissions and required not in permissions
-                ):
+                if not allow_private:
+                    continue
+                # 超级管理员的权限集为空表示不受细粒度权限限制；
+                # 只有显式携带权限集时才继续检查 provider 专属权限。
+                if permissions is not None and "*" not in permissions and required not in permissions:
                     continue
             visible.append(provider)
         # 内置 provider 置顶，插件保持注册顺序；来源由注册表动态判定

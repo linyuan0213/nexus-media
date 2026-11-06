@@ -178,14 +178,16 @@ class MessageSearchService:
 
         mtype = MediaType.from_string(item.TYPE)
 
-        tmdb_info = None
-        if item.TMDBID:
-            tmdb_info = self._media_service.get_tmdb_info(mtype=mtype, tmdbid=item.TMDBID)
-        else:
-            tmdb_info = self._media_service.get_media_info(title=f"{title} {year or ''}".strip(), mtype=mtype)
-
+        if self._metadata_gateway is None:
+            self._message.send_channel_msg(channel=in_from, title="元数据网关不可用", user_id=user_id)
+            return
         media_info = meta_info(title=f"{title} {year}".strip(), mtype=mtype)
-        media_info.set_provider_data(tmdb_info)
+        if item.TMDBID:
+            media_info.set_provider_data(self._metadata_gateway.details("tmdb", item.TMDBID, media_type=mtype))
+        else:
+            resolved = self._metadata_gateway.resolve_by_title(f"{title} {year or ''}".strip(), media_type=mtype)
+            if resolved is not None:
+                media_info = resolved
 
         if not media_info or not media_info.provider_data:
             self._message.send_channel_msg(channel=in_from, title=f"无法识别媒体信息: {title}", user_id=user_id)
@@ -435,7 +437,10 @@ class MessageSearchService:
             return
 
         filename = os.path.basename(filepath)
-        meta_info = self._media_service.get_media_info(title=filename)
+        if self._metadata_gateway is None:
+            self._message.send_channel_msg(channel=in_from, title="元数据网关不可用", user_id=user_id)
+            return
+        meta_info = self._metadata_gateway.resolve_by_title(filename)
         if not meta_info:
             self._message.send_channel_msg(channel=in_from, title="无法识别种子文件名！", user_id=user_id)
             return
@@ -525,8 +530,11 @@ class MessageSearchService:
             else:
                 if media_info.douban_id:
                     title = media_info.get_title_string()
-                    media_info = self._media_service.get_media_info(
-                        title=f"{media_info.title} {media_info.year}", mtype=media_info.type, strict=True
+                    if self._metadata_gateway is None:
+                        self._message.send_channel_msg(channel=in_from, title="元数据网关不可用", user_id=user_id)
+                        return
+                    media_info = self._metadata_gateway.resolve_by_title(
+                        f"{media_info.title} {media_info.year}", media_type=media_info.type, strict=True
                     )
                     if not media_info or not media_info.provider_data:
                         self._message.send_channel_msg(

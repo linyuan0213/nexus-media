@@ -14,7 +14,6 @@ from .caches import (
     RBACSnapshotCache,
     SearchResultCache,
     SiteInfoCache,
-    TMDBCache,
     TokenCache,
 )
 from .compat import cacheman
@@ -40,7 +39,6 @@ __all__ = [
     "cached_with_lock",
     "lru_cache_with_ttl",
     # 专用缓存类
-    "TMDBCache",
     "MediaInfoCache",
     "SearchResultCache",
     "TokenCache",
@@ -72,7 +70,6 @@ __all__ = [
 
 # 初始化全局缓存管理器并创建默认缓存
 _cache_manager = get_cache_manager()
-_cache_manager.create_memory_cache("tmdb_supply", maxsize=500)
 _cache_manager.create_memory_cache("media_info", maxsize=1000)
 _cache_manager.create_memory_cache("search_result", maxsize=500)
 _cache_manager.create_memory_cache("token", maxsize=512)
@@ -82,7 +79,6 @@ _cache_manager.create_memory_cache("site_info", maxsize=100)
 _cache_manager.create_memory_cache("rbac_auth_snapshot", maxsize=1024, ttl=60)
 # 下载器种子平均上传速度缓存：up_speed_avg 为长期平均值，避免 completed 种子多时逐种拉取 properties
 _cache_manager.create_memory_cache("downloader_up_avg", maxsize=10000, ttl=600)
-_cache_manager.create_redis_cache("tmdb")
 
 # OpenAI 会话缓存使用分层缓存：L1 内存 + L2 Redis
 # 重启后对话历史不会丢失

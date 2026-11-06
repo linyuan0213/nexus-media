@@ -4,8 +4,8 @@ Plugin 领域 Repository 适配器
 """
 
 from app.db.repositories.plugin_repository import PluginRepository
-from app.domain.entities.plugin import PluginHistoryEntity, TmdbBlacklistEntity
-from app.domain.interfaces.plugin_repo import IPluginHistoryRepository, ITmdbBlacklistRepository
+from app.domain.entities.plugin import MetadataBlacklistEntity, PluginHistoryEntity
+from app.domain.interfaces.plugin_repo import IMetadataBlacklistRepository, IPluginHistoryRepository
 
 
 class PluginHistoryRepositoryAdapter(IPluginHistoryRepository):
@@ -32,22 +32,23 @@ class PluginHistoryRepositoryAdapter(IPluginHistoryRepository):
         return bool(self._repo.delete_plugin_history(plugin_id, key))
 
 
-class TmdbBlacklistRepositoryAdapter(ITmdbBlacklistRepository):
-    """TMDB黑名单仓储适配器"""
+class MetadataBlacklistRepositoryAdapter(IMetadataBlacklistRepository):
+    """识别黑名单仓储适配器"""
 
     def __init__(self, repo: PluginRepository | None = None):
         self._repo = repo or PluginRepository()
 
-    def is_tmdb_blacklisted(self, tmdb_id: str, media_type: str | None = None) -> bool:
-        return bool(self._repo.is_tmdb_blacklisted(tmdb_id, media_type))
+    def is_blacklisted(self, provider: str, external_id: str, media_type: str | None = None) -> bool:
+        return bool(self._repo.is_blacklisted(provider, external_id, media_type))
 
-    def get_tmdb_blacklist(self) -> list[TmdbBlacklistEntity]:
-        rows = self._repo.get_tmdb_blacklist()
-        return [e for e in [TmdbBlacklistEntity.from_orm(r) for r in rows] if e is not None]
+    def get_blacklist(self, provider: str | None = None) -> list[MetadataBlacklistEntity]:
+        rows = self._repo.get_blacklist(provider)
+        return [e for e in [MetadataBlacklistEntity.from_orm(r) for r in rows] if e is not None]
 
-    def insert_tmdb_blacklist(
+    def insert_blacklist(
         self,
-        tmdb_id: str,
+        provider: str,
+        external_id: str,
         title: str | None = None,
         year: str | None = None,
         media_type: str | None = None,
@@ -56,11 +57,13 @@ class TmdbBlacklistRepositoryAdapter(ITmdbBlacklistRepository):
         note: str | None = None,
     ) -> bool:
         return bool(
-            self._repo.insert_tmdb_blacklist(tmdb_id, title, year, media_type, poster_path, backdrop_path, note)
+            self._repo.insert_blacklist(
+                provider, external_id, title, year, media_type, poster_path, backdrop_path, note
+            )
         )
 
-    def delete_tmdb_blacklist(self, tmdb_id: str, media_type: str | None = None) -> bool:
-        return bool(self._repo.delete_tmdb_blacklist(tmdb_id, media_type))
+    def delete_blacklist(self, provider: str, external_id: str, media_type: str | None = None) -> bool:
+        return bool(self._repo.delete_blacklist(provider, external_id, media_type))
 
-    def clear_tmdb_blacklist(self) -> bool:
-        return bool(self._repo.clear_tmdb_blacklist())
+    def clear_blacklist(self, provider: str | None = None) -> bool:
+        return bool(self._repo.clear_blacklist(provider))

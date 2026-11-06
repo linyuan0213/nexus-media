@@ -84,7 +84,7 @@ def test_web_utils_douban_fallback_does_not_supplement_tmdb():
         "seasons": [{"season_number": 1, "episode_count": 9}],
     }
     media_service.get_media_info.return_value = None
-    utils = WebUtils(media_service=media_service, metadata_gateway=gateway)
+    utils = WebUtils(metadata_gateway=gateway)
 
     info = utils.get_mediainfo_from_id(MediaType.TV, "DB:25848328")
 

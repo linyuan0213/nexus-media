@@ -12,7 +12,6 @@ from app.domain.enums import IdentifyStatus, MatchMode
 from app.domain.mediatypes import MediaType
 from app.domain.validators.media_title import is_valid_media_title
 from app.domain.word_processor import get_words_info, process_title
-from app.infrastructure.cache_system import cacheman
 from app.infrastructure.http.exceptions import HttpRateLimitError
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.identity import get_identity_builder
@@ -267,8 +266,8 @@ class MediaService:
 
         # 尝试从缓存获取
         if cache:
-            cached = self._lookup.client.redis_cache.get_media_info(
-                title=search_name, year=parsed.year or "", mtype=parsed.type
+            cached = self._lookup.client.redis_cache.get_media(
+                title=search_name, year=parsed.year or "", media_type=parsed.type
             )
             if cached and isinstance(cached, MediaInfo):
                 # 验证缓存的季集是否与当前解析结果匹配（避免不同集数标题的缓存碰撞）
@@ -330,7 +329,6 @@ class MediaService:
         if not result and self._search_keyword:
             keyword, is_movie = self._search_engine(search_name)
             if keyword:
-                cacheman["tmdb_supply"].set(search_name, keyword)
                 if is_movie:
                     search_result = self._lookup.search.search_movie(keyword)
                 else:
@@ -458,8 +456,8 @@ class MediaService:
 
         # 保存到缓存
         if cache:
-            self._lookup.client.redis_cache.set_media_info(
-                title=search_name, info=info, year=parsed.year or "", mtype=parsed.type
+            self._lookup.client.redis_cache.set_media(
+                title=search_name, info=info, year=parsed.year or "", media_type=parsed.type
             )
 
         # 重置语言
@@ -1218,6 +1216,10 @@ class MediaService:
             return {}
         return self._lookup.get_tmdb_info(mtype, tmdbid, language, append_to_response, chinese)
 
+    def tmdb_info(self, mtype, tmdbid, language=None, append_to_response=None, chinese=True):
+        """兼容只读入口，供已持有 MediaService 的旧调用方使用."""
+        return self.get_tmdb_info(mtype, tmdbid, language, append_to_response, chinese)
+
     def get_tmdb_infos(self, title, year=None, mtype=None, language=None, page=1):
         return self._lookup.get_tmdb_infos(title, year, mtype, language, page)
 
@@ -1271,6 +1273,10 @@ class MediaService:
 
     def get_tmdb_en_title(self, media_info):
         return self._lookup.get_tmdb_en_title(media_info)
+
+    def en_title(self, media_info) -> str:
+        """命名/格式化只读入口，避免业务层直接依赖 TMDB 方法名."""
+        return str(self.get_tmdb_en_title(media_info) or "")
 
     def enrich_en_name(self, media_info) -> None:
         """补全英文名：en_name 为空或非拉丁（日/韩/中文原名）时取 TMDB 英文标题用于搜索与匹配."""

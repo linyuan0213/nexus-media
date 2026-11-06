@@ -4,7 +4,6 @@ import os
 import log
 from app.core.root_path import get_script_path
 from app.core.settings import settings
-from app.core.system_config import SystemConfig
 from app.db.repositories.apikey_repo_adapter import APIKeyLogRepositoryAdapter, APIKeyRepositoryAdapter
 from app.db.repositories.channel_binding_repository import ChannelBindingRepository
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter
@@ -16,6 +15,7 @@ from app.db.sql_adapter import adapt_sql_for_engine
 from app.domain.enums import SystemConfigKey
 from app.infrastructure.cache_system.events import init_event_bridge
 from app.infrastructure.redis import RedisStore
+from app.infrastructure.system_config import SystemConfig
 from app.services.apikey_service import APIKeyService
 from app.services.category_init import CategoryInitializer
 from app.services.rbac.service import RBACService

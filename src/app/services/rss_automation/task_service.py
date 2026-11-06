@@ -5,7 +5,6 @@ from typing import Any, cast
 import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.db.repositories.config_repo_adapter import UserRssConfigRepositoryAdapter
-from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.domain.enums import UserRssTaskUseType
 from app.events.bus import EventBus
 from app.media import MediaService
@@ -22,6 +21,7 @@ from app.services.rss_automation.articles import (
 from app.services.rss_automation.executor import _check_task_rss
 from app.services.rss_processor import RssHelper
 from app.services.search_service import Searcher
+from app.services.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.sites.engine import SiteEngine
 from app.utils.json_utils import JsonUtils
 
@@ -63,6 +63,7 @@ class RssTaskService:
         scheduler_core: Any,
         site_engine: SiteEngine,
         event_bus: EventBus | None = None,
+        metadata_gateway=None,
     ):
         self.config_repo = config_repo
         self.rss_repo = rss_repo
@@ -73,6 +74,7 @@ class RssTaskService:
         self.media = media
         self.downloader = downloader
         self._scheduler_core = scheduler_core
+        self.metadata_gateway = metadata_gateway
         self.site_engine = site_engine
         self.event_bus = event_bus
 

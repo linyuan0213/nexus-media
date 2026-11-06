@@ -207,9 +207,17 @@ def from_filename(path: str, hint: MediaType) -> ResolvedMetadata | None:
     return ResolvedMetadata(media=parsed, source="filename", confidence="medium")
 
 
-def from_online(path: str, backend: StorageBackend, hint: MediaType, media_service: Any) -> ResolvedMetadata | None:
+def from_online(
+    path: str,
+    backend: StorageBackend,
+    hint: MediaType,
+    metadata_gateway: Any,
+) -> ResolvedMetadata | None:
+    if metadata_gateway is None:
+        log.warn(f"[LibraryRename]缺少 MetadataGateway，跳过在线识别: {path}")
+        return None
     try:
-        result = media_service.get_media_info_on_files([path], media_type=hint, backend=backend)
+        result = metadata_gateway.media_info_on_files([path], media_type=hint, backend=backend)
     except Exception as e:  # noqa: BLE001
         log.debug(f"[LibraryRename]在线识别失败 {path}: {e}")
         return None
@@ -297,14 +305,17 @@ def finalize_media(meta: MediaInfo, hint: MediaType) -> None:
 
 def apply_online(
     resolved: ResolvedMetadata,
-    media_service: Any,
+    metadata_gateway: Any,
 ) -> None:
+    if metadata_gateway is None:
+        log.warn("[LibraryRename]缺少 MetadataGateway，跳过在线元数据补全")
+        return
     meta = resolved.media
     tmdbid = _to_int(meta.tmdb_id)
     if not tmdbid or not meta.type or meta.type == MediaType.UNKNOWN:
         return
     try:
-        info = media_service.get_tmdb_info(meta.type, tmdbid, append_to_response="all")
+        info = metadata_gateway.details_for_media(meta, append_to_response="all")
         if info:
             meta.set_provider_data(info)
     except Exception as e:  # noqa: BLE001
@@ -320,14 +331,14 @@ def apply_online(
         and meta.begin_episode is not None
     ):
         try:
-            episode_title = media_service.get_episode_title(meta)
+            episode_title = metadata_gateway.episode_title(meta)
             if episode_title:
                 resolved.episode_title = episode_title
                 resolved.online_fields.append("episode_title")
         except Exception as e:  # noqa: BLE001
             log.debug(f"[LibraryRename]获取集标题失败: {e}")
     try:
-        en_title = media_service.get_tmdb_en_title(meta)
+        en_title = metadata_gateway.en_title(meta)
         if en_title:
             resolved.en_title = en_title
             resolved.online_fields.append("en_title")

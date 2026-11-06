@@ -93,7 +93,6 @@ def test_planner_generates_rename_item_from_filename(tmp_path, monkeypatch):
     video.write_bytes(b"video")
 
     resolver = LibraryMetadataResolver(
-        media_service=SimpleNamespace(),
         media_server=_FakeMediaServer(),
         rename_repo=_FakeRepo(),
         download_repo=_FakeDownloadRepo(),
@@ -132,7 +131,6 @@ class _FakeRemoteBackend:
 
 def test_remote_scan_walks_directories():
     resolver = LibraryMetadataResolver(
-        media_service=SimpleNamespace(),
         media_server=_FakeMediaServer(),
         rename_repo=_FakeRepo(),
         download_repo=_FakeDownloadRepo(),

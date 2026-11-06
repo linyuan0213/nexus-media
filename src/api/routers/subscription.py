@@ -19,10 +19,10 @@ from api.deps import (
     require_permission,
 )
 from app.core.error_codes import ErrorCode
-from app.core.system_config import SystemConfig
 from app.domain.entities.custom_rss import custom_rss_id
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType, normalize_media_type_input
+from app.infrastructure.system_config import SystemConfig
 from app.media import meta_info
 from app.schemas.auth import UserContext
 from app.schemas.common import CommonResponse

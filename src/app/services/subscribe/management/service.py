@@ -68,6 +68,7 @@ class SubscribeService:
         self._history_repo = history_repo
         self._message = message
         self._media = media_service
+        self._metadata_gateway = metadata_gateway
         self._downloader = downloader
         self._sites = sites
         self._indexer_service = indexer_service
@@ -77,10 +78,7 @@ class SubscribeService:
         self._download_repo = download_repo
         self._transfer_history_manager = transfer_history_manager
 
-        self._web_utils = WebUtils(
-            media_service=media_service,
-            metadata_gateway=metadata_gateway,
-        )
+        self._web_utils = WebUtils(metadata_gateway=metadata_gateway)
 
         self._update_svc = SubscribeUpdateService(
             self._movie_repo,
@@ -90,6 +88,7 @@ class SubscribeService:
             self._event_bus,
             self._system_config,
             self._web_utils,
+            metadata_gateway=metadata_gateway,
         )
         self._add_svc = SubscribeAddService(
             self._movie_repo,
@@ -119,6 +118,7 @@ class SubscribeService:
             self._sites,
             self._indexer_service,
             user_repo,
+            metadata_gateway=metadata_gateway,
         )
         self._refresh_svc = SubscribeRefreshService(
             self._movie_repo,
@@ -456,7 +456,11 @@ class SubscribeService:
             if not tmdbid or not str(tmdbid).isdigit():
                 continue
             try:
-                names = self._media.get_all_names(int(tmdbid), mtype) or []
+                names = (
+                    self._metadata_gateway.all_names("tmdb", int(tmdbid), mtype)
+                    if self._metadata_gateway is not None
+                    else []
+                )
             except Exception as e:  # noqa: BLE001
                 log.debug(f"[Subscribe]获取 TMDB 别名失败 {tmdbid}: {e!s}")
                 continue

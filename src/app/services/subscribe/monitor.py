@@ -10,8 +10,8 @@ import pytz
 import log
 from app.core.exceptions import DownloadError, IndexerError, MediaError, NetworkError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.core.system_config import SystemConfig
 from app.domain.mediatypes import MediaType
+from app.infrastructure.system_config import SystemConfig
 from app.infrastructure.thread import ThreadExecutor
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.services.subscribe.search_engine import SubscribeSearchEngine

@@ -1,5 +1,6 @@
 """SubscribeRefreshService 单元测试."""
 
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -28,13 +29,36 @@ class _MediaInfo:
         self.provider_data = info
 
 
+class _MediaGatewayAdapter:
+    def __init__(self, media):
+        self.media = media
+
+    def details(self, provider, external_id, *, media_type=None, **kwargs):
+        return self.media.get_tmdb_info(mtype=media_type, tmdbid=external_id, **kwargs)
+
+    def resolve_by_title(self, title, *, media_type=None, cache=True, **kwargs):
+        return self.media.get_media_info(
+            title=title,
+            mtype=media_type,
+            strict=kwargs.get("strict"),
+            cache=cache,
+        )
+
+    def resolve_season_episode_count(self, **kwargs):
+        return self.media.get_tmdb_season_episodes_num(
+            tv_info=kwargs.get("provider_data") or {}, season=kwargs.get("season", 1)
+        )
+
+
 @pytest.fixture
 def service():
+    media = MagicMock()
     return SubscribeRefreshService(
         movie_repo=MagicMock(),
         tv_repo=MagicMock(),
         tv_episode_repo=MagicMock(),
-        media_service=MagicMock(),
+        media_service=media,
+        metadata_gateway=cast(Any, _MediaGatewayAdapter(media)),
     )
 
 

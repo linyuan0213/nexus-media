@@ -7,12 +7,12 @@ from typing import Any
 
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.db.repositories.subscribe_repo_adapter import SubscribeMovieRepositoryAdapter, SubscribeTvRepositoryAdapter
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.domain.entities.brush import BrushTaskState
 from app.media import MediaService
 from app.services.brush.helpers import cached_torrent_attr, store_torrent_attr
 from app.services.rss_processor import RssHelper
+from app.services.subscribe_repo_adapter import SubscribeMovieRepositoryAdapter, SubscribeTvRepositoryAdapter
 from app.sites import SiteConf
 from app.sites.engine import TorrentAttrFetchError
 from app.utils import ExceptionUtils, JsonUtils

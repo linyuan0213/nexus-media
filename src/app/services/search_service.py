@@ -69,7 +69,7 @@ class SearchQueryBuilder:
     """
 
     @staticmethod
-    def build_search_names(media_info, media_helper: MediaService) -> tuple[list[str], int]:
+    def build_search_names(media_info, metadata_gateway: Any) -> tuple[list[str], int]:
         """
         根据媒体信息构建多语言搜索词列表
         :return: (搜索词列表, 建议最大并发数)
@@ -114,7 +114,7 @@ class SearchQueryBuilder:
             if media_info.original_language == "en":
                 search_en_name = media_info.original_title
             else:
-                en_title = media_helper.get_tmdb_en_title(media_info)
+                en_title = metadata_gateway.en_title(media_info) if metadata_gateway is not None else ""
                 if en_title:
                     search_en_name = en_title
 
@@ -146,7 +146,7 @@ class SearchQueryBuilder:
         except Exception:
             multi_lang = False
         if multi_lang:
-            search_zhtw_name = media_helper.get_tmdb_zhtw_title(media_info)
+            search_zhtw_name = metadata_gateway.zhtw_title(media_info) if metadata_gateway is not None else ""
             if search_zhtw_name and search_zhtw_name != search_cn_name:
                 search_name_list.append(search_zhtw_name)
             if media_info.original_language != "cn" and search_en_name != media_info.original_title:
@@ -424,6 +424,7 @@ class Searcher:
         progress_helper: ProgressTracker,
         indexer_service: IndexerService,
         event_bus: EventBus,
+        metadata_gateway: Any = None,
     ):
         self._download_repo = download_repo
         self._search_repo = search_repo
@@ -434,6 +435,7 @@ class Searcher:
         self.search_repo = self._search_repo
         self.indexer_service = indexer_service
         self._event_bus = event_bus
+        self._metadata_gateway = metadata_gateway
         self._search_auto = settings.get("pt").get("search_auto", True)
         self._subscription_guard = SubscriptionDownloadGuard(self._download_repo)
 
@@ -509,7 +511,7 @@ class Searcher:
             filter_args["user_id"] = user_id
 
         # 1. 构建搜索词（含关键词 + 多语言名，build_search_names 内已去重）
-        search_name_list, max_workers = SearchQueryBuilder.build_search_names(media_info, self.media)
+        search_name_list, max_workers = SearchQueryBuilder.build_search_names(media_info, self._metadata_gateway)
 
         search_started = time.time()
         log.info(f"[Searcher]开始搜索 {search_name_list} ...")
@@ -629,10 +631,12 @@ class SearchService:
         searcher: Searcher,
         downloader: Downloader,
         media_service: MediaService,
+        metadata_gateway: Any = None,
     ):
         self._searcher = searcher
         self._downloader = downloader
         self._media = media_service
+        self._metadata_gateway = metadata_gateway
 
     def search_medias(
         self, key_word: Any, filter_args: dict, match_media=None, in_from: SearchType | None = None
@@ -690,5 +694,5 @@ class SearchService:
         self._searcher.insert_search_results(media_items, title, ident_flag, session_id)
 
     def build_search_names(self, media_info) -> list[str]:
-        names, _ = SearchQueryBuilder.build_search_names(media_info, self._media)
+        names, _ = SearchQueryBuilder.build_search_names(media_info, self._metadata_gateway)
         return names

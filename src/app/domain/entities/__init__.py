@@ -20,8 +20,8 @@ from app.domain.entities.download import (
     IndexerStatisticsEntity,
 )
 from app.domain.entities.plugin import (
+    MetadataBlacklistEntity,
     PluginHistoryEntity,
-    TmdbBlacklistEntity,
 )
 from app.domain.entities.rbac import (
     RBACMenuEntity,
@@ -88,5 +88,5 @@ __all__ = [
     "CustomWordEntity",
     "CustomWordGroupEntity",
     "PluginHistoryEntity",
-    "TmdbBlacklistEntity",
+    "MetadataBlacklistEntity",
 ]

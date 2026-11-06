@@ -14,7 +14,6 @@ from app.domain.enums import SearchType
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.mediatypes import MediaType
 from app.infrastructure.temp import temp_manager
-from app.media import MediaService
 from app.media.display_image_policy import transform_display_image, unwrap_display_image_url
 from app.media.metadata.gateway import MetadataGateway
 from app.media.models import MediaInfo
@@ -49,7 +48,6 @@ class DownloadService:
         self,
         downloader: Downloader,
         searcher: Searcher,
-        media_service: MediaService,
         sites: SiteCache,
         site_engine: SiteEngine,
         indexer_service: IndexerService,
@@ -61,7 +59,6 @@ class DownloadService:
     ):
         self._downloader = downloader
         self._searcher = searcher
-        self._media = media_service
         self._sites = sites
         self._site_engine = site_engine
         self._indexer_service = indexer_service
@@ -71,6 +68,11 @@ class DownloadService:
         self._lifecycle = lifecycle
         self._metadata_gateway = metadata_gateway
         self._progress_reported: dict[str, int] = {}
+
+    def _gw(self) -> MetadataGateway:
+        if self._metadata_gateway is None:
+            raise ServiceError("元数据网关不可用")
+        return self._metadata_gateway
 
     # ---------- 下载编排 ----------
 
@@ -96,8 +98,8 @@ class DownloadService:
         fail_messages = []
         for res in results:
             enclosure = self._resolve_download_url(res.PAGEURL, res.ENCLOSURE)
-            media = self._media.get_media_info(
-                title=res.TITLE or res.TORRENT_NAME,
+            media = self._gw().resolve_by_title(
+                res.TITLE or res.TORRENT_NAME,
                 subtitle=res.DESCRIPTION,
             )
             if not media:
@@ -188,7 +190,7 @@ class DownloadService:
         if not title or not enclosure:
             return DownloadResultDTO(success=False, message="种子信息有误")
 
-        media = self._media.get_media_info(title=title, subtitle=description)
+        media = self._gw().resolve_by_title(title, subtitle=description)
         if not media:
             # 识别完全失败时，用原始资源名创建最小 MediaInfo
             media = MediaInfo()
@@ -250,7 +252,7 @@ class DownloadService:
                 file_name = file_item.get("upload", {}).get("filename")
                 file_path = temp_manager.get_temp_path(file_name)
                 uploaded_files.append(file_path)
-                media_info = self._media.get_media_info(title=file_name)
+                media_info = self._gw().resolve_by_title(file_name)
                 if not media_info:
                     media_info = MediaInfo()
                     media_info.title = file_name
@@ -300,7 +302,7 @@ class DownloadService:
                     if not file_path:
                         return DownloadResultDTO(success=False, message=f"下载种子文件失败： {retmsg}")
                     identify_title = title or os.path.basename(file_path)
-                    media_info = self._media.get_media_info(title=identify_title, subtitle=description)
+                    media_info = self._gw().resolve_by_title(identify_title, subtitle=description)
                     if not media_info:
                         media_info = MediaInfo()
                         media_info.title = identify_title
@@ -310,7 +312,7 @@ class DownloadService:
                 else:
                     # magnet 链接：用前端传入的 title/description 识别
                     identify_title = title or url
-                    media_info = self._media.get_media_info(title=identify_title, subtitle=description)
+                    media_info = self._gw().resolve_by_title(identify_title, subtitle=description)
                     if not media_info:
                         media_info = MediaInfo()
                         media_info.title = identify_title

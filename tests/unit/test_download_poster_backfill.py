@@ -10,7 +10,6 @@ def test_downloading_poster_backfills_from_subscription():
     service = DownloadService(
         downloader=MagicMock(),
         searcher=MagicMock(),
-        media_service=MagicMock(),
         sites=MagicMock(),
         site_engine=MagicMock(),
         indexer_service=MagicMock(),

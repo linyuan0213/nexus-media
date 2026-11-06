@@ -418,7 +418,12 @@ class TransferPathResolver:
                 "但未传入 media_service，这两项将渲染为空，请检查 DI 配置"
             )
         episode_title = media_service.get_episode_title(media) if media_service else ""
-        en_title = media_service.get_tmdb_en_title(media) if media_service else ""
+        en_title = ""
+        if media_service is not None:
+            getter = getattr(media_service, "en_title", None)
+            if callable(getter):
+                value = getter(media)
+                en_title = value if isinstance(value, str) else ""
         provider, provider_id = _snapshot_provider(snapshot) if snapshot else _media_provider(media)
         media_format_dict = render_naming_fields(media, snapshot)
         media_format_dict.update(

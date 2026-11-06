@@ -291,10 +291,9 @@ def load_default_jobs(
     log.info("站点解析健康自检任务已注册（每日 03:20）")
 
     # 生命周期读模型对账（事件丢失/重启/历史数据补投影）
-    reconcile_seconds = _parse_interval(
-        (settings.get("queue") or {}).get("lifecycle_reconcile_seconds"), default=300
-    )
+    reconcile_seconds = _parse_interval((settings.get("queue") or {}).get("lifecycle_reconcile_seconds"), default=300)
     if reconcile_seconds > 0:
+
         def _reconcile_lifecycle() -> None:
             try:
                 result = LifecycleReconciler().reconcile_recent(limit=500)

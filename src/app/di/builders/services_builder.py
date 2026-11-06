@@ -2,7 +2,6 @@
 
 from app import utils as string_utils_module
 from app.core.settings import settings
-from app.core.system_config import SystemConfig
 from app.db.repositories.brush_repo_adapter import BrushRuleRepositoryAdapter, BrushTaskRepositoryAdapter
 from app.db.repositories.channel_binding_repository import ChannelBindingRepository
 from app.db.repositories.config_repo_adapter import (
@@ -30,12 +29,6 @@ from app.db.repositories.site_grant_repository import SiteGrantRepository
 from app.db.repositories.site_repo_adapter import SiteRepositoryAdapter
 from app.db.repositories.site_repository import SiteRepository
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
-from app.db.repositories.subscribe_repo_adapter import (
-    SubscribeHistoryRepositoryAdapter,
-    SubscribeMovieRepositoryAdapter,
-    SubscribeTvEpisodeRepositoryAdapter,
-    SubscribeTvRepositoryAdapter,
-)
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
@@ -47,6 +40,7 @@ from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.indexer import Indexer
 from app.infrastructure.image_proxy import ImageProxy
 from app.infrastructure.progress.tracker import ProgressTracker
+from app.infrastructure.system_config import SystemConfig
 from app.media import MediaCache
 from app.media.external.bangumi import Bangumi
 from app.media.external.douban import DouBan
@@ -73,6 +67,7 @@ from app.services.media_info_service import MediaInfoService
 from app.services.media_library_service import MediaLibraryService
 from app.services.media_recommendation_service import MediaRecommendationService
 from app.services.metadata_admin_service import MetadataAdminService
+from app.services.metadata_blacklist_service import MetadataBlacklistService
 from app.services.metadata_service import MetadataService
 from app.services.plugin_framework_service import PluginFrameworkService
 from app.services.plugin_market_service import PluginMarketService
@@ -93,6 +88,12 @@ from app.services.site_service import SiteService
 from app.services.storage_backend_service import StorageBackendService
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
 from app.services.subscribe.management.history_service import SubscribeHistoryService
+from app.services.subscribe_repo_adapter import (
+    SubscribeHistoryRepositoryAdapter,
+    SubscribeMovieRepositoryAdapter,
+    SubscribeTvEpisodeRepositoryAdapter,
+    SubscribeTvRepositoryAdapter,
+)
 from app.services.subscribe_service import SubscribeService
 from app.services.sync_engine import SyncEngine
 from app.services.sync_service import SyncService
@@ -106,7 +107,6 @@ from app.services.system.info import (
     WebSearchService,
 )
 from app.services.system.message import MessageClientService, MessageSenderService
-from app.services.tmdb_blacklist_service import TmdbBlacklistService
 from app.services.torrentremover_core import TorrentRemoverRepository, TorrentRemoverService
 from app.services.transfer.cleanup_service import TransferCleanupService
 from app.services.transfer.existence_checker import MediaExistenceChecker
@@ -162,7 +162,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     )
 
     metadata_service = MetadataService(identity_repo=MediaIdentityRepository(), media_service=media_service)
-    metadata_gateway = MetadataGateway(metadata_service)
+    metadata_gateway = MetadataGateway(metadata_service, media_service=media_service)
     metadata_admin_service = MetadataAdminService(metadata_service)
     discovery_service = DiscoveryService(
         media_service=media_service,
@@ -228,6 +228,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         media_cache=MediaCache(),
         sync_path_repo=SyncPathRepositoryAdapter(),
         transfer_queue_service=transfer_queue_service,
+        metadata_gateway=metadata_gateway,
     )
 
     download_core = DownloadCore(
@@ -312,6 +313,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         progress_helper=ProgressTracker(),
         indexer_service=indexer_service,
         event_bus=event_bus,
+        metadata_gateway=metadata_gateway,
     )
 
     # 目录同步使用由连接预算推导的独立线程池，避免共享池放大并发。
@@ -327,10 +329,8 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     sync_service = SyncService(
         sync=sync_engine,
         filetransfer=filetransfer_service,
-        media_cache=MediaCache(),
         thread_executor=thread_executor,
         storage_backend_repo=StorageBackendRepositoryAdapter(),
-        media_service=media_service,
         metadata_gateway=metadata_gateway,
     )
 
@@ -355,6 +355,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         scheduler_core=scheduler_core,
         site_engine=site_engine,
         event_bus=event_bus,
+        metadata_gateway=metadata_gateway,
     )
 
     config_service = ConfigService()
@@ -400,7 +401,6 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
 
     douban = DouBan()
     media_info_service = MediaInfoService(
-        media_service=media_service,
         subscribe=subscribe_service,
         media_server=media_server,
         metadata_gateway=metadata_gateway,
@@ -409,7 +409,6 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     download_service = DownloadService(
         downloader=downloader_core,
         searcher=searcher,
-        media_service=media_service,
         sites=site_cache,
         site_engine=site_engine,
         indexer_service=indexer_service,
@@ -450,7 +449,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
 
     scheduler_service = SchedulerService(scheduler_core=scheduler_core)
 
-    tmdb_blacklist_service = TmdbBlacklistService(media_service=media_service)
+    metadata_blacklist_service = MetadataBlacklistService(metadata_gateway=metadata_gateway)
 
     media_server_config_service = MediaServerConfigService(
         config_repo=MediaServerRepositoryAdapter(),
@@ -466,6 +465,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
             metadata_gateway=metadata_gateway,
         ),
         route_repo=MediaLibraryRouteRepositoryAdapter(),
+        metadata_gateway=metadata_gateway,
     )
     media_library_service = MediaLibraryService(
         media_server=media_server,
@@ -475,13 +475,13 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         media_config_service=media_config_service,
     )
     media_recommendation_service = MediaRecommendationService(
-        media_service=media_service,
         douban=douban,
         bangumi=Bangumi(),
         media_server=media_server,
         subscribe=subscribe_service,
         media_info_service=media_info_service,
         downloader_core=downloader_core,
+        metadata_gateway=metadata_gateway,
     )
 
     system_config_service = SystemConfigService()
@@ -542,7 +542,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
 
     # 需要在数据库初始化后构造的服务
     words_service = WordsService(
-        media_cache=MediaCache(),
+        metadata_gateway=metadata_gateway,
         word_repo=CustomWordRepositoryAdapter(),
         group_repo=CustomWordGroupRepositoryAdapter(),
     )
@@ -556,6 +556,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         history_repo=SubscribeHistoryRepositoryAdapter(),
         subscribe=subscribe_service,
         rss_helper=RssHelper(site_engine=site_engine),
+        metadata_gateway=metadata_gateway,
     )
     search_result_service = SearchResultService(
         media_server=media_server,
@@ -568,9 +569,9 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
             mtype = MediaType.from_string(type_value)
             if mtype not in (MediaType.MOVIE, MediaType.TV, MediaType.ANIME) or not tmdbid:
                 return ""
-            info = MediaCache().get_tmdb_info(mtype, tmdbid)
+            info = metadata_gateway.cached_details("tmdb", tmdbid, media_type=mtype)
             if not info:
-                info = media_service.get_tmdb_info(mtype, str(tmdbid), chinese=True)  # type: ignore[union-attr]
+                info = metadata_gateway.details("tmdb", tmdbid, media_type=mtype, chinese=True)
             poster_path = (info or {}).get("poster_path") or ""
             return ImageProxy.get_tmdbimage_url(poster_path) if poster_path else ""
         except Exception:
@@ -659,7 +660,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         search_orchestrator=search_orchestrator,
         backup_restore_service=backup_restore_service,
         user_manage_service=user_manage_service,
-        tmdb_blacklist_service=tmdb_blacklist_service,
+        metadata_blacklist_service=metadata_blacklist_service,
         download_service=download_service,
         plugin_framework_service=plugin_framework_service,
         plugin_market_service=plugin_market_service,

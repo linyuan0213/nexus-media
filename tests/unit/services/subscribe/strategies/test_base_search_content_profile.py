@@ -30,14 +30,12 @@ def _make_strategy(tmdb_info=None):
     """构造仅含 _get_media_info 所需依赖的策略实例（绕开 __init__ 的仓储初始化）。
 
     返回 (strategy, media_cache, media_service)，便于用局部变量做 mock 断言
-    （直接访问 strategy._media_cache 会触发 pyright 的 MethodType 误报）。
     """
     s = object.__new__(BaseSearchStrategy)
     s._ident_cache = MagicMock()
     s._ident_cache.get.return_value = None
     media_cache = MagicMock()
     media_cache.get_tmdb_info.return_value = tmdb_info
-    s._media_cache = media_cache
     media_service = MagicMock()
     # identify 兜底在缺少海报时触发；返回 None 表示无需替换，保持被测路径纯净
     media_service.identify.return_value = None
@@ -45,6 +43,11 @@ def _make_strategy(tmdb_info=None):
         mi, "en_name", mi.en_name or "A Record Of A Mortals Journey To Immortality"
     )
     s._media_service = media_service
+    gateway = MagicMock()
+    gateway.cached_details.side_effect = lambda provider, external_id, **kwargs: media_cache.get_tmdb_info(
+        mtype=kwargs.get("media_type"), tmdbid=external_id
+    )
+    s._metadata_gateway = gateway
     return s, media_cache, media_service
 
 

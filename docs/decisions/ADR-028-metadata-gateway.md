@@ -1,7 +1,7 @@
 # ADR-028 元数据网关：统一入口与请求复用
 
 ## 状态
-设计阶段
+已实施（缓存统一与 TMDB 兼容路径下沉完成）
 
 ## 背景
 元数据调用分散在 API、搜索、订阅、下载、转移、刮削和消息层。同一个 provider/ref 在不同阶段重复查询，缓存键和权限策略不一致，provider 限流容易被绕过。
@@ -13,6 +13,8 @@
 4. 网关负责 L1/L2 缓存、singleflight、provider 限流、stale-while-revalidate 和指标。
 5. 业务流程只消费 envelope 或 snapshot_id，不再自行调用 provider 或重复 lookup。
 6. `metadata_registry.get_provider` 仅允许网关内部和管理端 descriptor 使用。
+7. 所有元数据缓存统一使用 `metadata` 命名空间，按 `kind/provider/external_id/media_type/scope/language/extra` 隔离；禁止为单一 provider 建独立缓存实例。
+8. TMDB 只是普通 provider：业务层不得出现 `cached_tmdb_info`、`tmdb_info`、`TMDBCache` 等专用入口。
 
 ## 迁移
 - 第一阶段：网关模型和门面，旧调用保持兼容。
@@ -25,3 +27,5 @@
 - 并发相同 ref 只产生一次 provider 请求。
 - 限流或熔断时优先返回 stale 或延迟，不穿透 provider。
 - 电影、电视剧、动漫、插件编号内容矩阵测试通过。
+- 运行时只存在一个 `metadata` 缓存命名空间，不出现 `tmdb` / `metadata_detail` / `metadata_search` / `metadata_episodes` / `metadata_gateway` 等旧命名空间。
+- 网关与下层 provider 缓存可互相读取：`details()` 写入后 `cached_details()` 命中同一 key。

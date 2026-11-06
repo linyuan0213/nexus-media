@@ -18,12 +18,12 @@ from api.deps import (
     get_media_library_service,
     get_media_recommendation_service,
     get_metadata_admin_service,
+    get_metadata_blacklist_service,
     get_metadata_gateway,
     get_search_result_service,
     get_searcher_service,
     get_subscribe_service,
     get_sync_service,
-    get_tmdb_blacklist_service,
     get_transfer_history_service,
     require_any_permission,
     require_permission,
@@ -76,7 +76,7 @@ def _metadata_context(current_user, *, purpose: str, content_profile: str = "def
     allow_private, permissions = _private_scope(current_user)
     return MetadataContext(
         user_id=getattr(current_user, "user_id", None),
-        permissions=frozenset(permissions or ()),
+        permissions=None if permissions is None else frozenset(permissions),
         content_profile=content_profile or "default",
         purpose=purpose,
         allow_private=allow_private,
@@ -323,8 +323,9 @@ class FileBatchRequest(BaseModel):
     backend_id: str = "local"
 
 
-class TmdbBlacklistRequest(BaseModel):
-    tmdb_id: str | None = None
+class MetadataBlacklistRequest(BaseModel):
+    provider: str = "tmdb"
+    external_id: str | None = None
     media_type: str | None = None
 
 
@@ -333,7 +334,9 @@ def _field_value(fields: dict, name: str):
     return item.get("value") if isinstance(item, dict) else None
 
 
-def _record_detail_data(record: dict, media_type: MediaType, status: dict | None) -> dict:
+def _record_detail_data(
+    record: dict, media_type: MediaType, status: dict | None, gateway: MetadataGateway | None = None
+) -> dict:
     """非默认画像直接使用 provider 记录，避免通用合成丢失私有来源图片."""
     provider = str(record.get("provider") or "")
     external_id = str(record.get("external_id") or "")
@@ -372,14 +375,49 @@ def _record_detail_data(record: dict, media_type: MediaType, status: dict | None
     ):
         if value:
             facts.append({label: value})
+
+    refs = [
+        item
+        for item in (record.get("refs") or [])
+        if isinstance(item, dict) and item.get("provider") and item.get("external_id")
+    ]
+    if (
+        provider
+        and external_id
+        and not any(
+            str(item.get("provider")) == provider and str(item.get("external_id")) == external_id for item in refs
+        )
+    ):
+        refs.insert(0, {"provider": provider, "external_id": external_id})
+    links = []
+    seen_providers: set[str] = set()
+    for ref in refs:
+        ref_provider = str(ref.get("provider") or "")
+        ref_external_id = str(ref.get("external_id") or "")
+        if not ref_provider or not ref_external_id or ref_provider in seen_providers:
+            continue
+        seen_providers.add(ref_provider)
+        if gateway is not None:
+            url = gateway.provider_detail_url(ref_provider, ref_external_id, media_type)
+            label = gateway.provider_display_name(ref_provider)
+        else:
+            url = metadata_registry.provider_detail_url(ref_provider, ref_external_id, media_type)
+            ref_entry = metadata_registry.get_provider(ref_provider)
+            descriptor = getattr(ref_entry, "descriptor", None)
+            label = str(getattr(descriptor, "display_name", "") or ref_provider)
+        if not url:
+            continue
+        links.append({"provider": ref_provider, "label": label, "url": url})
+    tmdb_ref = next((item for item in refs if item.get("provider") == "tmdb"), None)
+    douban_ref = next((item for item in refs if item.get("provider") == "douban"), None)
     return {
         "id": external_id,
         "mediaid": external_id,
-        "tmdbid": "",
+        "tmdbid": str(tmdb_ref.get("external_id")) if tmdb_ref else "",
         "provider": provider,
         "anchor_provider": provider,
         "anchor_external_id": external_id,
-        "douban_id": "",
+        "douban_id": str(douban_ref.get("external_id")) if douban_ref else "",
         "title": record.get("title") or "",
         "original_title": record.get("original_title") or "",
         "year": record.get("year") or "",
@@ -397,8 +435,8 @@ def _record_detail_data(record: dict, media_type: MediaType, status: dict | None
         "fact": facts,
         "seasons": record.get("seasons") or [],
         "episode_count": record.get("episode_count"),
-        "links": [],
-        "link": "",
+        "links": links,
+        "link": links[0]["url"] if links else "",
         "similar": [],
         "fav": (status or {}).get("fav", "0"),
         "rssid": (status or {}).get("rssid", ""),
@@ -1087,7 +1125,7 @@ def media_detail_by_ref(
             media_type or MediaType.MOVIE,
             user=current_user,
         )
-        return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status))
+        return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status, gateway))
     record = record or {}
     try:
         envelope = run_with_timeout(
@@ -1126,7 +1164,7 @@ def media_detail_by_ref(
             media_type or MediaType.MOVIE,
             user=current_user,
         )
-        return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status))
+        return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status, gateway))
     fields = snapshot.get("fields") or {}
     images = snapshot.get("images") or {}
     poster = next(
@@ -1267,11 +1305,9 @@ def media_detail_by_ref(
     provider = str(record.get("provider") or req.provider)
     external_id = str(record.get("external_id") or req.external_id)
     links = []
-    provider_url = metadata_registry.provider_detail_url(provider, external_id, media_type or MediaType.MOVIE)
-    provider_item = metadata_registry.get_provider(provider)
-    provider_desc = getattr(provider_item, "descriptor", None)
+    provider_url = gateway.provider_detail_url(provider, external_id, media_type or MediaType.MOVIE)
     if provider_url:
-        label = str(getattr(provider_desc, "display_name", "") or provider)
+        label = gateway.provider_display_name(provider)
         links.append({"provider": provider, "label": label, "url": provider_url})
     tmdb_ref = (
         next((item for item in snapshot.get("refs", []) if item.get("provider") == "tmdb"), None)
@@ -1717,15 +1753,16 @@ def get_library_paths(
     return success(data=result)
 
 
-@router.get("/tmdb_blacklist/list", response_model=CommonResponse, summary="获取 TMDB 黑名单")
-def get_tmdb_blacklist(
+@router.get("/metadata_blacklist/list", response_model=CommonResponse, summary="获取识别黑名单")
+def get_metadata_blacklist(
     page: int = Query(1, ge=1),
     count: int = Query(30, ge=1, le=100),
     s: str | None = Query(""),
+    provider: str | None = Query(None),
     current_user=Depends(require_permission("library:manage")),
-    tmdb_svc=Depends(get_tmdb_blacklist_service),
+    metadata_svc=Depends(get_metadata_blacklist_service),
 ):
-    items, total = tmdb_svc.get_blacklist(tmdb_id=s if s else None, page=page, count=count)
+    items, total = metadata_svc.get_blacklist(external_id=s if s else None, page=page, count=count, provider=provider)
     return success(
         data={
             "items": items,
@@ -1736,35 +1773,37 @@ def get_tmdb_blacklist(
     )
 
 
-@router.post("/tmdb_blacklist/add", response_model=CommonResponse, summary="添加 TMDB 黑名单")
-def add_tmdb_blacklist(
-    req: TmdbBlacklistRequest,
+@router.post("/metadata_blacklist/add", response_model=CommonResponse, summary="添加识别黑名单")
+def add_metadata_blacklist(
+    req: MetadataBlacklistRequest,
     current_user=Depends(require_permission("library:manage")),
-    tmdb_svc=Depends(get_tmdb_blacklist_service),
+    metadata_svc=Depends(get_metadata_blacklist_service),
 ):
-    if not tmdb_svc.is_blacklisted(req.tmdb_id, req.media_type):
-        tmdb_svc.add_to_blacklist(tmdb_id=req.tmdb_id, media_type=req.media_type)
+    if not metadata_svc.is_blacklisted(req.external_id, req.media_type, provider=req.provider):
+        metadata_svc.add_to_blacklist(external_id=req.external_id, media_type=req.media_type, provider=req.provider)
     return success()
 
 
-@router.post("/tmdb_blacklist/delete", response_model=CommonResponse, summary="删除 TMDB 黑名单")
-def delete_tmdb_blacklist(
-    req: TmdbBlacklistRequest,
+@router.post("/metadata_blacklist/delete", response_model=CommonResponse, summary="删除识别黑名单")
+def delete_metadata_blacklist(
+    req: MetadataBlacklistRequest,
     current_user=Depends(require_permission("library:manage")),
-    tmdb_svc=Depends(get_tmdb_blacklist_service),
+    metadata_svc=Depends(get_metadata_blacklist_service),
 ):
-    if tmdb_svc.is_blacklisted(req.tmdb_id, req.media_type):
-        tmdb_svc.remove_from_blacklist(tmdb_id=req.tmdb_id, media_type=req.media_type)
+    if metadata_svc.is_blacklisted(req.external_id, req.media_type, provider=req.provider):
+        metadata_svc.remove_from_blacklist(
+            external_id=req.external_id, media_type=req.media_type, provider=req.provider
+        )
     return success()
 
 
-@router.post("/tmdb_blacklist/clear", response_model=CommonResponse, summary="清空 TMDB 黑名单")
-def clear_tmdb_blacklist(
+@router.post("/metadata_blacklist/clear", response_model=CommonResponse, summary="清空识别黑名单")
+def clear_metadata_blacklist(
     current_user=Depends(require_permission("library:manage")),
-    tmdb_svc=Depends(get_tmdb_blacklist_service),
+    metadata_svc=Depends(get_metadata_blacklist_service),
 ):
-    if tmdb_svc.get_blacklist():
-        tmdb_svc.clear_blacklist()
+    if metadata_svc.get_blacklist():
+        metadata_svc.clear_blacklist()
     return success()
 
 

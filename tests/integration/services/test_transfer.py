@@ -2,6 +2,7 @@
 
 import re
 import uuid
+from typing import Any, cast
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -13,6 +14,35 @@ from app.services.transfer.existence_checker import MediaExistenceChecker
 from app.services.transfer.filetransfer_service import FileTransferService
 from app.services.transfer.history_manager import TransferHistoryManager
 from app.services.transfer.path_resolver import TransferPathResolver
+
+
+class _MediaGatewayAdapter:
+    def __init__(self, media):
+        self.media = media
+
+    def details(self, provider, external_id, *, media_type=None, **kwargs):
+        return self.media.get_tmdb_info(mtype=media_type, tmdbid=external_id, **kwargs)
+
+    def cached_details(self, provider, external_id, *, media_type=None, **kwargs):
+        return self.media.get_tmdb_info(mtype=media_type, tmdbid=external_id)
+
+    def provider_is_virtual(self, provider):
+        return provider == "content_id"
+
+    def provider_descriptor(self, provider):
+        return None
+
+    def latest_snapshot_for_media(self, media, **kwargs):
+        return None
+
+    def compose_for_media(self, media, **kwargs):
+        return None
+
+    def identify_anchor(self, media, **kwargs):
+        return False
+
+    def lookup(self, *args, **kwargs):
+        return self.media.lookup(*args, **kwargs)
 
 
 class TestTransferPathResolver:
@@ -526,8 +556,10 @@ class TestFileTransferService:
 
             mock_engine = MagicMock()
 
+            media_service = MagicMock()
             service = FileTransferService(
-                media_service=MagicMock(),
+                media_service=media_service,
+                metadata_gateway=cast(Any, _MediaGatewayAdapter(media_service)),
                 message=MagicMock(),
                 scrape_queue_service=MagicMock(),
                 thread_executor=MagicMock(),
@@ -1075,8 +1107,10 @@ class TestTransferReplicateToBackends:
             mock_resolver.unknown_path = []
             mock_res_cls.from_settings.return_value = mock_resolver
 
+            media_service = MagicMock()
             service = FileTransferService(
-                media_service=MagicMock(),
+                media_service=media_service,
+                metadata_gateway=cast(Any, _MediaGatewayAdapter(media_service)),
                 message=MagicMock(),
                 scrape_queue_service=MagicMock(),
                 thread_executor=MagicMock(),

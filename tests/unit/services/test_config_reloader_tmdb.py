@@ -5,7 +5,7 @@ from typing import cast
 from unittest.mock import patch
 
 from app.di.context import AppContext
-from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.cache_system.metadata_cache import MetadataCache
 from app.media.lookup import tmdb_client as tmdb_client_module
 from app.media.lookup.tmdb_client import TmdbClient
 from app.services.config_reloader import ConfigReloader
@@ -61,11 +61,11 @@ class TestTmdbClientReload:
 
     def test_reset_clears_lookup_negative_cache(self):
         """Key 缺失期间写入的"未找到"负缓存必须随重载清理"""
-        lookup_cache = get_cache_manager().get_or_create("tmdb_lookup", "tiered", maxsize=100, ttl=3600)
-        lookup_cache.set("lookup:some title||||", False, ttl=3600)
-        assert lookup_cache.get("lookup:some title||||") is False
+        lookup_cache = MetadataCache(prefix="lookup")
+        lookup_cache.set("some title||||", False, ttl=3600)
+        assert lookup_cache.get("some title||||") is False
 
         with patch.object(tmdb_client_module, "settings", _FakeSettings({"rmt_tmdbkey": "test-key"})):
             TmdbClient().reset()
 
-        assert lookup_cache.get("lookup:some title||||") is None
+        assert lookup_cache.get("some title||||") is None

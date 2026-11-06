@@ -6,6 +6,7 @@
 import os
 import tempfile
 import xml.etree.ElementTree as ET
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -116,12 +117,63 @@ def mock_media_service() -> MagicMock:
     return svc
 
 
+class _MediaGatewayAdapter:
+    def __init__(self, media):
+        self.media = media
+
+    def details(self, provider, external_id, *, media_type=None, **kwargs):
+        return self.media.get_tmdb_info(mtype=media_type, tmdbid=external_id, **kwargs)
+
+    def media_info_on_files(self, file_list, **kwargs):
+        return self.media.get_media_info_on_files(file_list=file_list, **kwargs)
+
+    def season_episodes(self, provider, external_id, season, **kwargs):
+        return self.media.get_tmdb_tv_season_detail(tmdbid=external_id, season=season)
+
+    def episode_images(self, tv_id, season_id, episode_id, original=False):
+        return self.media.get_episode_images(tv_id=tv_id, season_id=season_id, episode_id=episode_id, orginal=original)
+
+    def directors_actors(self, tmdbinfo):
+        return self.media.get_tmdb_directors_actors(tmdbinfo=tmdbinfo)
+
+    def provider_descriptor(self, provider):
+        return None
+
+    def provider_is_virtual(self, provider):
+        return False
+
+    def provider_rating_max(self, provider):
+        return 10
+
+    def provider_uniqueid_fallback(self, provider):
+        return ""
+
+    def latest_snapshot_for_media(self, media, **kwargs):
+        return None
+
+    def compose_for_media(self, media, **kwargs):
+        return None
+
+    def identify_anchor(self, media, **kwargs):
+        return False
+
+    def lookup(self, *args, **kwargs):
+        return self.media.lookup(*args, **kwargs)
+
+    def search(self, **kwargs):
+        return self.media.search(**kwargs)
+
+
 @pytest.fixture
 def scraper(mock_media_service) -> Scraper:
     mock_config = MagicMock()
     mock_config.get.return_value = None
     mock_config.get_user_local_language = MagicMock(return_value="chinese")
-    scraper = Scraper(media_service=mock_media_service, system_config=mock_config)
+    scraper = Scraper(
+        media_service=mock_media_service,
+        system_config=mock_config,
+        metadata_gateway=cast(Any, _MediaGatewayAdapter(mock_media_service)),
+    )
     scraper._scraper_flag = True
     scraper._scraper_nfo = {
         "movie": {"basic": True, "credits": True},

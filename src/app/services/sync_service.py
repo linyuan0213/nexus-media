@@ -24,7 +24,6 @@ from app.domain.enums import SyncType
 from app.domain.mediatypes import MediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.thread import ThreadExecutor
-from app.media import MediaCache
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.schemas.sync import (
     ManualTransferResultDTO,
@@ -54,20 +53,14 @@ class SyncService:
         self,
         sync: Sync,
         filetransfer: FileTransfer,
-        media_cache: MediaCache,
         thread_executor: ThreadExecutor,
         storage_backend_repo: StorageBackendRepositoryAdapter,
-        media_service=None,
         metadata_gateway: MetadataGateway | None = None,
     ):
         self._sync = sync
         self._filetransfer = filetransfer
-        self._media_cache = media_cache
         self._thread_executor = thread_executor
         self._storage_backend_repo = storage_backend_repo
-        # 手动转移需实时按 TMDB ID 查询详情（媒体服务会实时请求并回写缓存），
-        # 不能只依赖只读缓存，否则缓存未命中时报「识别失败，无法查询到TMDB信息」
-        self._media_service = media_service
         self._metadata_gateway = metadata_gateway
 
     # ---------- 同步目录校验 ----------
@@ -350,15 +343,15 @@ class SyncService:
         return None, primary
 
     def _fetch_tmdb_info(self, mtype, tmdbid):
-        """按 TMDB ID 查询详情：媒体服务实时查询优先，回退只读缓存"""
-        media_service = getattr(self, "_media_service", None)
-        if media_service is not None:
-            try:
-                return media_service.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
-            except Exception as err:
-                log.warn(f"[Rmt]查询TMDB详情失败：{str(err)}")
-                return None
-        return self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
+        """按 provider 引用查询详情；TMDB 兼容路径仅在网关内部处理."""
+        if self._metadata_gateway is None:
+            log.warn("[Rmt]元数据网关不可用，无法查询详情")
+            return None
+        try:
+            return self._metadata_gateway.details("tmdb", tmdbid, media_type=mtype)
+        except Exception as err:
+            log.warn(f"[Rmt]查询详情失败：{str(err)}")
+            return None
 
     @staticmethod
     def _media_type_from_info(info, fallback):

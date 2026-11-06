@@ -1,15 +1,15 @@
 """
-插件历史 / TMDB黑名单仓储接口 / 插件框架v2仓储接口
+插件历史 / 识别黑名单仓储接口 / 插件框架v2仓储接口
 """
 
 from typing import Protocol
 
 from app.domain.entities.plugin import (
+    MetadataBlacklistEntity,
     PluginConfigEntity,
     PluginHistoryEntity,
     PluginLogEntity,
     PluginManifestEntity,
-    TmdbBlacklistEntity,
 )
 
 
@@ -33,20 +33,21 @@ class IPluginHistoryRepository(Protocol):
         ...
 
 
-class ITmdbBlacklistRepository(Protocol):
-    """TMDB黑名单仓储接口"""
+class IMetadataBlacklistRepository(Protocol):
+    """识别黑名单仓储接口."""
 
-    def is_tmdb_blacklisted(self, tmdb_id: str, media_type: str | None = None) -> bool:
-        """检查TMDB ID是否在黑名单中"""
+    def is_blacklisted(self, provider: str, external_id: str, media_type: str | None = None) -> bool:
+        """检查 provider 引用是否在黑名单中."""
         ...
 
-    def get_tmdb_blacklist(self) -> list[TmdbBlacklistEntity]:
-        """获取所有TMDB黑名单记录"""
+    def get_blacklist(self, provider: str | None = None) -> list[MetadataBlacklistEntity]:
+        """获取识别黑名单记录."""
         ...
 
-    def insert_tmdb_blacklist(
+    def insert_blacklist(
         self,
-        tmdb_id: str,
+        provider: str,
+        external_id: str,
         title: str | None = None,
         year: str | None = None,
         media_type: str | None = None,
@@ -54,15 +55,15 @@ class ITmdbBlacklistRepository(Protocol):
         backdrop_path: str | None = None,
         note: str | None = None,
     ) -> bool:
-        """添加到TMDB黑名单"""
+        """添加到识别黑名单."""
         ...
 
-    def delete_tmdb_blacklist(self, tmdb_id: str, media_type: str | None = None) -> bool:
-        """从TMDB黑名单删除"""
+    def delete_blacklist(self, provider: str, external_id: str, media_type: str | None = None) -> bool:
+        """从识别黑名单删除."""
         ...
 
-    def clear_tmdb_blacklist(self) -> bool:
-        """清空所有TMDB黑名单记录"""
+    def clear_blacklist(self, provider: str | None = None) -> bool:
+        """清空识别黑名单记录."""
         ...
 
 

@@ -65,7 +65,7 @@ def test_app_context_fields():
         web_search_service=MagicMock(),
         backup_restore_service=MagicMock(),
         user_manage_service=MagicMock(),
-        tmdb_blacklist_service=MagicMock(),
+        metadata_blacklist_service=MagicMock(),
         download_service=MagicMock(),
         plugin_framework_service=MagicMock(),
         storage_backend_service=MagicMock(),

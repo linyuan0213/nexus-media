@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.domain.mediatypes import MediaType
-from app.media.metadata.registry import registry as metadata_registry
+from app.media.metadata.gateway import MetadataGateway
 from app.schemas.auth import UserContext
 from app.services.rss_processor import RssHelper
+from app.services.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 
 if TYPE_CHECKING:
     from app.services.subscribe_service import SubscribeService
@@ -22,10 +22,12 @@ class SubscribeHistoryService:
         history_repo: SubscribeHistoryRepositoryAdapter,
         subscribe: SubscribeService,
         rss_helper: RssHelper,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self._history_repo = history_repo
         self._subscribe = subscribe
         self._rss_helper = rss_helper
+        self._metadata_gateway = metadata_gateway
 
     def get_history(
         self,
@@ -41,12 +43,12 @@ class SubscribeHistoryService:
             actual_provider = str(item.get("provider") or "").strip()
             if provider in ("", "content_id"):
                 provider = actual_provider
-            descriptor = getattr(metadata_registry.get_provider(provider), "descriptor", None) if provider else None
-            item["provider_label"] = (
-                str(getattr(descriptor, "display_name", "") or provider or "")
-                if provider not in ("", "content_id")
-                else ""
+            label = (
+                self._metadata_gateway.provider_display_name(provider)
+                if provider and provider not in ("", "content_id") and self._metadata_gateway is not None
+                else provider
             )
+            item["provider_label"] = str(label or "") if provider not in ("", "content_id") else ""
             rows.append(item)
         return rows
 

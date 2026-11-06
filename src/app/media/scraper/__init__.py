@@ -20,12 +20,12 @@ from PIL import Image
 import log
 from app.core.module_config import ModuleConf
 from app.core.settings import settings
-from app.core.system_config import SystemConfig
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.domain.enums import SystemConfigKey
 from app.domain.mediatypes import MediaType
 from app.infrastructure.ffmpeg import FfmpegProcessor
 from app.infrastructure.image_proxy import ImageProxy
+from app.infrastructure.system_config import SystemConfig
 from app.infrastructure.temp import temp_manager
 from app.media.display_image_policy import unwrap_display_image_url
 from app.media.fanart import Fanart
@@ -78,9 +78,9 @@ class Scraper:
         self._temp_path = temp_manager.create_subdir("scraper")
         self._init_config()
         self._downloader = ImageDownloader(self._temp_path)
-        self._nfo_gen = NfoGenerator(self._downloader)
+        self._nfo_gen = NfoGenerator(self._downloader, metadata_gateway=self._metadata_gateway)
         self._images = ImageResolver()
-        self._credits = ChineseCredits(self.media)
+        self._credits = ChineseCredits(self._metadata_gateway)
 
     @property
     def _metadata(self):
@@ -358,8 +358,11 @@ class Scraper:
                 tmdbid = self._extract_tmdbid(file, mi, dst_backend)
                 if tmdbid and not force_nfo:
                     log.info(f"[Scraper]读取到本地nfo文件的tmdbid：{tmdbid}")
+                    if self._metadata_gateway is None:
+                        log.warn(f"[Scraper]{file} 元数据网关不可用，legacy TMDB 兜底失败")
+                        continue
                     mi.set_provider_data(
-                        self.media.get_tmdb_info(mtype=mi.type, tmdbid=tmdbid, append_to_response="all")
+                        self._metadata_gateway.details("tmdb", tmdbid, media_type=mi.type, append_to_response="all")
                     )
                     media_info = mi
                 else:
@@ -387,30 +390,38 @@ class Scraper:
                             media_info.type = dl_mtype
                             log.info(f"[Scraper]豆瓣订阅刮削使用豆瓣元数据：{dl_anchor_external}")
                         else:
-                            tmdb_details = self.media.get_tmdb_info(
-                                mtype=dl_mtype, tmdbid=dl_tmdbid, append_to_response="all"
-                            )
-                            if tmdb_details:
-                                mi.set_provider_data(tmdb_details)
-                                # 再用 identify_files 解析季/集（有 tmdb_info 时跳过网络查询，仅做本地解析）
-                                medias = self.media.get_media_info_on_files(
-                                    file_list=[file],
-                                    tmdb_info=tmdb_details,
-                                    media_type=dl_mtype,
-                                    append_to_response="all",
-                                    backend=dst_backend,
-                                )
-                                if medias:
-                                    media_info = next(iter(medias.values()), mi)
-                                else:
-                                    media_info = mi
-                            else:
+                            if self._metadata_gateway is None:
+                                log.warn(f"[Scraper]{file} 元数据网关不可用，legacy TMDB 兜底失败")
                                 media_info = mi
+                            else:
+                                tmdb_details = self._metadata_gateway.details(
+                                    "tmdb", dl_tmdbid, media_type=dl_mtype, append_to_response="all"
+                                )
+                                if tmdb_details:
+                                    mi.set_provider_data(tmdb_details)
+                                    # 再用 identify_files 解析季/集（有 tmdb_info 时跳过网络查询，仅做本地解析）
+                                    medias = self._metadata_gateway.media_info_on_files(
+                                        file_list=[file],
+                                        tmdb_info=tmdb_details,
+                                        media_type=dl_mtype,
+                                        append_to_response="all",
+                                        backend=dst_backend,
+                                    )
+                                    if medias:
+                                        media_info = next(iter(medias.values()), mi)
+                                    else:
+                                        media_info = mi
+                                else:
+                                    log.warn(f"[Scraper]{file} 网关未返回下载历史 TMDB 详情，保留本地识别结果")
+                                    media_info = mi
                         media_info.anchor_provider = dl_anchor_provider or media_info.anchor_provider
                         media_info.anchor_external_id = dl_anchor_external or media_info.anchor_external_id
                         media_info.content_profile = dl_content_profile or media_info.content_profile or "default"
                     else:
-                        medias = self.media.get_media_info_on_files(
+                        if self._metadata_gateway is None:
+                            log.warn(f"[Scraper]{file} 元数据网关不可用，无法识别媒体信息")
+                            continue
+                        medias = self._metadata_gateway.media_info_on_files(
                             file_list=[file], append_to_response="all", backend=dst_backend
                         )
                         if not medias:
@@ -1419,12 +1430,15 @@ class Scraper:
         )
         seasoninfo = None
         if need_season_detail and str(getattr(media, "tmdb_id", "") or "").isdigit():
-            try:
-                seasoninfo = self.media.get_tmdb_tv_season_detail(
-                    tmdbid=media.tmdb_id, season=int(media.get_season_seq())
-                )
-            except Exception as e:
-                log.error(f"[Scraper]获取季详情失败：{e}")
+            if self._metadata_gateway is None:
+                log.warn("[Scraper]元数据网关不可用，跳过季详情")
+            else:
+                try:
+                    seasoninfo = self._metadata_gateway.season_episodes(
+                        "tmdb", media.tmdb_id, int(media.get_season_seq())
+                    )
+                except Exception as e:
+                    log.error(f"[Scraper]获取季详情失败：{e}")
 
         # ---- season.nfo ----
         if scraper_tv_nfo.get("season_basic"):
@@ -1507,11 +1521,15 @@ class Scraper:
             try:
                 episode_thumb = os.path.join(dir_path, file_name + "-thumb.jpg")
                 if force_pic or not self._exists(episode_thumb):
-                    episode_image = self.media.get_episode_images(
-                        tv_id=media.tmdb_id,
-                        season_id=media.get_season_seq(),
-                        episode_id=media.get_episode_seq(),
-                        orginal=True,
+                    episode_image = (
+                        self._metadata_gateway.episode_images(
+                            tv_id=media.tmdb_id,
+                            season_id=media.get_season_seq(),
+                            episode_id=media.get_episode_seq(),
+                            original=True,
+                        )
+                        if self._metadata_gateway is not None
+                        else ""
                     )
                     if episode_image:
                         self._downloader.download(episode_image, episode_thumb, "", force_pic)
@@ -1582,7 +1600,10 @@ class Scraper:
         """获取导演/演员列表，可选中文匹配"""
         if not scraper_nfo.get("credits"):
             return [], []
-        directors, actors = self.media.get_tmdb_directors_actors(tmdbinfo=tmdbinfo)
+        if self._metadata_gateway is None:
+            log.warn("[Scraper]元数据网关不可用，跳过演职人员")
+            return [], []
+        directors, actors = self._metadata_gateway.directors_actors(tmdbinfo=tmdbinfo)
         if scraper_nfo.get("credits_chinese") and doubaninfo:
             directors, actors = self._credits.match(directors, actors, doubaninfo)
         return directors, actors

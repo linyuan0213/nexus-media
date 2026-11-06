@@ -8,7 +8,6 @@ from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.security import generate_password_hash
 from app.media import meta_info
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
-from app.media.service import MediaService
 from app.utils import ExceptionUtils, IpUtils, StringUtils
 from app.utils.config_tools import get_proxies
 from version import APP_VERSION
@@ -17,10 +16,8 @@ from version import APP_VERSION
 class WebUtils:
     def __init__(
         self,
-        media_service: MediaService,
         metadata_gateway: MetadataGateway | None = None,
     ):
-        self._media_service = media_service
         self._metadata_gateway = metadata_gateway
 
         global _default_web_utils
@@ -167,8 +164,10 @@ class WebUtils:
                 record = self._lookup_record(provider_key, external_id, mtype)
                 if record and str(record.get("title") or "").strip():
                     return self._media_info_from_record(record, provider_key, external_id, mtype)
-        # TMDB
-        info = self._media_service.get_tmdb_info(tmdbid=mediaid, mtype=mtype, append_to_response="all")
+        # TMDB 兼容路径统一经网关
+        if self._metadata_gateway is None:
+            return None
+        info = self._metadata_gateway.details("tmdb", mediaid, media_type=mtype, append_to_response="all")
         if not info:
             return None
         title = str(info.get("title") if mtype == MediaType.MOVIE else info.get("name") or "")
@@ -193,7 +192,15 @@ class WebUtils:
 
         def _search_tmdb():
             mi = meta_info(title=content)
-            tmdbinfos = self._media_service.get_tmdb_infos(title=mi.get_name(), year=mi.year, mtype=mtype, page=page)
+            if self._metadata_gateway is None:
+                return []
+            tmdbinfos = self._metadata_gateway.search_page(
+                mi.get_name(),
+                provider="tmdb",
+                media_type=mtype,
+                year=mi.year,
+                page=page,
+            )
             results = []
             for tmdbinfo in tmdbinfos:
                 tmp_info = meta_info(title=keyword)

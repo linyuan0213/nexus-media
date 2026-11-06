@@ -15,10 +15,16 @@ from app.services.sync_service import SyncService
 def service():
     sync = MagicMock()
     filetransfer = MagicMock()
-    media_cache = MagicMock()
     thread_executor = MagicMock()
     storage_repo = MagicMock()
-    return SyncService(sync, filetransfer, media_cache, thread_executor, storage_repo)
+    gateway = MagicMock()
+    return SyncService(
+        sync,
+        filetransfer,
+        thread_executor,
+        storage_repo,
+        metadata_gateway=gateway,
+    )
 
 
 class TestSyncServiceValidate:
@@ -78,7 +84,7 @@ class TestSyncServiceTransfer:
     @patch("os.path.exists", return_value=True)
     @patch("os.path.normpath", side_effect=lambda x: x)
     def test_manual_transfer_submit(self, mock_norm, mock_exists, service):
-        service._media_cache.get_tmdb_info.return_value = {"title": "Test"}
+        service._metadata_gateway.details.return_value = {"title": "Test"}
         service._filetransfer.get_sync_backend_by_dest.return_value = "local"
         result = service.manual_transfer(
             "/src/movie.mkv",
@@ -93,7 +99,7 @@ class TestSyncServiceTransfer:
     @patch("os.path.exists", return_value=True)
     @patch("os.path.normpath", side_effect=lambda x: x)
     def test_manual_transfer_no_tmdb(self, mock_norm, mock_exists, service):
-        service._media_cache.get_tmdb_info.return_value = None
+        service._metadata_gateway.details.return_value = None
         result = service.manual_transfer("/src/movie.mkv", "copy", tmdbid=123)
         assert not result.success
 

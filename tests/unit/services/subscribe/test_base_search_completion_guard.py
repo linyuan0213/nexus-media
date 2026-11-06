@@ -72,7 +72,6 @@ def _build(check_result, monkeypatch):
         service=svc,
         searcher=searcher,
         media_service=media_service,
-        media_cache=MagicMock(),
         downloader=downloader,
         filter_service=MagicMock(),
         message=MagicMock(),

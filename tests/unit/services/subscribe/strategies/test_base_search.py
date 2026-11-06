@@ -39,12 +39,12 @@ def strategy():
         service=MagicMock(),
         searcher=MagicMock(),
         media_service=MagicMock(),
-        media_cache=MagicMock(),
         downloader=MagicMock(),
         filter_service=MagicMock(),
         message=MagicMock(),
     )
     s._ident_cache.clear()
+    s._metadata_gateway = MagicMock()
     return s
 
 
@@ -163,7 +163,7 @@ class TestBaseSearchStrategy:
 
     def test_get_media_info_with_tmdbid(self, strategy):
         media = _MediaInfo()
-        strategy._media_cache.get_tmdb_info.return_value = {"id": 123}
+        strategy._metadata_gateway.cached_details.return_value = {"id": 123}
         with patch("app.services.subscribe.strategies.base_search.meta_info") as mock_meta:
             mock_meta.return_value = media
             result = strategy._get_media_info(123, "Name", "2024", MediaType.MOVIE)
@@ -182,12 +182,12 @@ class TestBaseSearchStrategy:
 
     def test_get_media_info_with_tmdbid_caches(self, strategy):
         media = _MediaInfo()
-        strategy._media_cache.get_tmdb_info.return_value = {"id": 123}
+        strategy._metadata_gateway.cached_details.return_value = {"id": 123}
         with patch("app.services.subscribe.strategies.base_search.meta_info") as mock_meta:
             mock_meta.return_value = media
             result = strategy._get_media_info(123, "Name", "2024", MediaType.MOVIE)
             assert result.tmdb_id == media.tmdb_id
-            strategy._media_cache.get_tmdb_info.assert_called_once()
+            strategy._metadata_gateway.cached_details.assert_called_once()
             result2 = strategy._get_media_info(123, "Name", "2024", MediaType.MOVIE)
             assert result2.tmdb_id == media.tmdb_id
 
@@ -359,7 +359,7 @@ class TestProviderRefSearch:
 
 def test_plugin_anchor_never_queries_tmdb(strategy):
     """DemoMeta 等插件来源只用自己的锚点，不借用 TMDB 识别."""
-    strategy._media_cache.get_tmdb_info = MagicMock()
+    strategy._metadata_gateway.cached_details = MagicMock()
 
     result = strategy._get_media_info(
         "123",
@@ -376,12 +376,12 @@ def test_plugin_anchor_never_queries_tmdb(strategy):
     assert result.anchor_external_id == "JUR-897"
     assert result.tmdb_id == ""
     assert not result.provider_data
-    strategy._media_cache.get_tmdb_info.assert_not_called()
+    strategy._metadata_gateway.cached_details.assert_not_called()
 
 
 def test_douban_anchor_can_use_tmdb_supplement(strategy):
     """豆瓣锚点是独立来源，不应补 TMDB."""
-    strategy._media_cache.get_tmdb_info = MagicMock(return_value={"id": 123})
+    strategy._metadata_gateway.cached_details = MagicMock(return_value={"id": 123})
 
     result = strategy._get_media_info(
         123,
@@ -396,7 +396,7 @@ def test_douban_anchor_can_use_tmdb_supplement(strategy):
     assert result.anchor_provider == "douban"
     assert result.anchor_external_id == "38221205"
     assert result.tmdb_id == ""
-    strategy._media_cache.get_tmdb_info.assert_not_called()
+    strategy._metadata_gateway.cached_details.assert_not_called()
 
 
 def test_external_movie_anchor_without_provider_data_is_not_error(strategy):

@@ -19,11 +19,6 @@ from app.core.exceptions import (
 )
 from app.core.settings import settings
 from app.db.engine import background_engine_context
-from app.db.repositories.subscribe_repo_adapter import (
-    SubscribeMovieRepositoryAdapter,
-    SubscribeTvEpisodeRepositoryAdapter,
-    SubscribeTvRepositoryAdapter,
-)
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SearchType
@@ -36,7 +31,8 @@ from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.media_ref import media_series_scope_key
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import get_cache_manager
-from app.media import MediaCache, MediaService, meta_info
+from app.media import MediaService, meta_info
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
@@ -47,6 +43,11 @@ from app.services.series_service import SeriesService
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.retry_policy import backoff_seconds, is_rate_limited
+from app.services.subscribe_repo_adapter import (
+    SubscribeMovieRepositoryAdapter,
+    SubscribeTvEpisodeRepositoryAdapter,
+    SubscribeTvRepositoryAdapter,
+)
 from app.sites.torrent import Torrent
 
 # 订阅搜索每轮处理上限（subscribe.batch_limit 可覆盖）
@@ -82,6 +83,7 @@ def _in_background(func):
 
 class BaseSearchStrategy:
     _batch_cursors: dict[str, int] = {}
+    _metadata_gateway: MetadataGateway | None = None
 
     def _load_batch_cursor(self, kind: str, size: int) -> int:
         position = self._batch_cursors.get(kind, 0)
@@ -135,7 +137,6 @@ class BaseSearchStrategy:
         service: Any,
         searcher: Searcher,
         media_service: MediaService,
-        media_cache: MediaCache,
         downloader: Downloader,
         filter_service: Filter,
         message: Message,
@@ -145,9 +146,11 @@ class BaseSearchStrategy:
         tv_episode_repo: ISubscribeTvEpisodeRepository | None = None,
         coordinator: DownloadCoordinator | None = None,
         system_config=None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self._service = service
         self._system_config = system_config
+        self._metadata_gateway = metadata_gateway
         self._rss_repo = rss_repo or SubscribeRepository()
         if movie_repo is None:
             movie_repo = SubscribeMovieRepositoryAdapter(self._rss_repo)
@@ -162,7 +165,6 @@ class BaseSearchStrategy:
         self._searcher = searcher
         self._coordinator = coordinator
         self._media_service = media_service
-        self._media_cache = media_cache
         self._downloader = downloader
         self._filter = filter_service
         self._message = message
@@ -174,6 +176,14 @@ class BaseSearchStrategy:
     def set_coordinator(self, coordinator: DownloadCoordinator | None) -> None:
         """设置下载协调器（用于 SubscriptionMonitor 注入）."""
         self._coordinator = coordinator
+
+    @staticmethod
+    def _metadata_context(media_info: Any) -> MetadataContext:
+        return MetadataContext(
+            purpose="subscribe.search",
+            allow_private=True,
+            content_profile=str(getattr(media_info, "content_profile", "") or "default"),
+        )
 
     @staticmethod
     def _get_batch_limit() -> int:
@@ -535,22 +545,21 @@ class BaseSearchStrategy:
                     try:
                         new_total = 0
                         try:
-                            if media_info.provider_data:
-                                season_detail = self._media_service.get_tmdb_tv_season_detail(
-                                    media_info.tmdb_id, season
+                            if media_info.provider_data and self._metadata_gateway is not None:
+                                new_total = self._metadata_gateway.resolve_season_episode_count(
+                                    context=self._metadata_context(media_info),
+                                    provider="tmdb",
+                                    external_id=str(media_info.tmdb_id or ""),
+                                    title=str(name_val or media_info.title or ""),
+                                    year=str(media_info.year or year_val or "") or None,
+                                    media_type=media_info.type or MediaType.TV,
+                                    season=season,
+                                    content_profile=str(media_info.content_profile or "default"),
+                                    provider_data=media_info.provider_data,
+                                    prefer_detail=True,
                                 )
-                                season_eps = season_detail.get("episodes") if isinstance(season_detail, dict) else None
-                                if isinstance(season_eps, list):
-                                    new_total = len(season_eps)
                         except Exception:  # noqa: BLE001
                             new_total = 0
-                        if new_total <= 0 and media_info.provider_data:
-                            new_total = int(
-                                self._media_service.get_tmdb_season_episodes_num(
-                                    tv_info=media_info.provider_data, season=season
-                                )
-                                or 0
-                            )
                         if new_total > 0 and (total_ep is None or new_total > total_ep):
                             log.info(f"[Subscribe]{name_val} S{season} TMDB 总集数更新: {total_ep or 0} -> {new_total}")
                             old_total = int(total_ep or 0)
@@ -810,7 +819,11 @@ class BaseSearchStrategy:
                 and not anchor_provider
                 and str(content_profile or "").strip().lower() in ("", "default", "anime")
             ):
-                tmdb_info = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=raw_tmdb) or {}
+                tmdb_info = (
+                    self._metadata_gateway.cached_details("tmdb", raw_tmdb, media_type=mtype)
+                    if self._metadata_gateway is not None
+                    else None
+                ) or {}
                 if self._tmdb_name_matches(tmdb_info, str(name or "")):
                     media_info.tmdb_id = raw_tmdb
                     media_info.provider_data = tmdb_info
@@ -840,7 +853,11 @@ class BaseSearchStrategy:
             media_info.year = year or media_info.year
         elif tmdbid and not str(tmdbid).startswith("DB:"):
             media_info = meta_info(title=("%s %s" % (name, year)).strip())
-            tmdb_info = self._media_cache.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
+            tmdb_info = (
+                self._metadata_gateway.cached_details("tmdb", tmdbid, media_type=mtype)
+                if self._metadata_gateway is not None
+                else None
+            )
             if self._tmdb_name_matches(tmdb_info, str(name or "")):
                 media_info.set_provider_data(tmdb_info)
             else:

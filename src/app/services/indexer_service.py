@@ -10,7 +10,6 @@ IndexerService - 索引器业务服务层
 
 from typing import Any
 
-from app.core.system_config import SystemConfig
 from app.db.repositories.download_repo_adapter import IndexerStatisticsRepositoryAdapter
 from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
@@ -19,6 +18,7 @@ from app.indexer import Indexer
 from app.indexer.client import BuiltinIndexer
 from app.indexer.configuration import IndexerHelper
 from app.indexer.contract.site_catalog import external_indexer_sites
+from app.infrastructure.system_config import SystemConfig
 from app.schemas.download import IndexerStatisticsDTO
 from app.schemas.indexer import (
     IndexerClientInfoDTO,

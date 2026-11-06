@@ -783,3 +783,80 @@ def test_compose_for_media_recomposes_cached_snapshot_missing_poster():
     assert snapshot is not None
     assert snapshot.fields["title"].value == "TMDB 标题"
     assert repo.saved
+
+
+class _PrivateSearchProvider:
+    def __init__(self):
+        self.called = False
+        self.descriptor = ProviderDescriptor(
+            provider_key="private_demo",
+            display_name="Private Demo",
+            capabilities=frozenset({ProviderCapability.SEARCH}),
+            media_types=frozenset({MediaType.MOVIE}),
+            visibility="private",
+        )
+
+    def search(self, query, ctx):
+        self.called = True
+        return []
+
+
+def test_private_search_provider_allowed_for_unrestricted_scope():
+    """permissions=None 表示系统/超级管理员上下文."""
+    provider = _PrivateSearchProvider()
+    registry = MetadataRegistry()
+    registry.register_provider(provider)
+    svc = MetadataService(
+        registry=registry,
+        identity_repo=_FakeSnapshotRepo(),
+        register_builtins=False,
+    )
+    assert svc.search(query="demo", provider="private_demo", allow_private=True, permissions=None) == []
+    assert provider.called is True
+
+
+def test_private_search_provider_blocked_for_empty_permission_set():
+    provider = _PrivateSearchProvider()
+    registry = MetadataRegistry()
+    registry.register_provider(provider)
+    svc = MetadataService(
+        registry=registry,
+        identity_repo=_FakeSnapshotRepo(),
+        register_builtins=False,
+    )
+    assert svc.search(query="demo-empty", provider="private_demo", allow_private=True, permissions=set()) == []
+    assert provider.called is False
+
+
+def test_private_search_provider_blocked_without_private_scope():
+    provider = _PrivateSearchProvider()
+    registry = MetadataRegistry()
+    registry.register_provider(provider)
+    svc = MetadataService(
+        registry=registry,
+        identity_repo=_FakeSnapshotRepo(),
+        register_builtins=False,
+    )
+    assert svc.search(query="demo2", provider="private_demo", allow_private=False, permissions=set()) == []
+    assert provider.called is False
+
+
+def test_private_detail_allowed_for_unrestricted_scope():
+    svc, _ = _service(visibility="private")
+    result = svc.preview(
+        [ProviderRef(provider="tmdb", external_id="1")],
+        allow_private=True,
+        permissions=None,
+    )
+    assert result.metadata is not None
+
+
+def test_metadata_context_superadmin_is_unrestricted():
+    from types import SimpleNamespace
+
+    from app.media.metadata.gateway import MetadataContext
+
+    ctx = MetadataContext.from_user(SimpleNamespace(user_id=1, is_superadmin=True, permissions=[]))
+    assert ctx.allow_private is True
+    assert ctx.permissions is None
+    assert ctx.permission_set() is None

@@ -117,9 +117,9 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
                             f"[RssTaskService]{title} 识别为 {media_info.get_title_string()} "
                             f"{media_info.get_season_episode_string()} 匹配成功"
                         )
-                        if not media_info.provider_data:
+                        if not media_info.provider_data and getattr(service, "metadata_gateway", None):
                             media_info.set_provider_data(
-                                service.media.get_tmdb_info(mtype=media_info.type, tmdbid=media_info.tmdb_id)
+                                service.metadata_gateway.details("tmdb", media_info.tmdb_id, media_type=media_info.type)
                             )
                         if media_info.type != MediaType.MOVIE:
                             service.config_repo.insert_userrss_mediainfos(taskid, media_info)

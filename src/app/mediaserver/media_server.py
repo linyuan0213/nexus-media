@@ -10,7 +10,6 @@ from app.core.settings import settings
 from app.media import MediaService  # 先完成 app.media 初始化，避免 SystemConfig 循环导入
 
 # isort: on
-from app.core.system_config import SystemConfig
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.db.repositories.media_library_route_repo_adapter import MediaLibraryRouteRepositoryAdapter
 from app.db.repositories.media_sync_repo_adapter import MediaSyncRepositoryAdapter
@@ -19,6 +18,7 @@ from app.domain.mediatypes import MediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.message_queue.base import MessageQueue
 from app.infrastructure.progress import ProgressTracker
+from app.infrastructure.system_config import SystemConfig
 from app.mediaserver.registry import get_all_clients
 from app.message import Message
 from app.utils import ExceptionUtils

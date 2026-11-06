@@ -67,7 +67,12 @@ class LibraryRenameService:
 
     def create_plan(self, scope_data: dict[str, Any], user_id: int | None = None) -> dict[str, Any]:
         scope = self._parse_scope(scope_data)
-        resolver = LibraryMetadataResolver(self._media_service, self._media_server, self._repo, self._download_repo)
+        resolver = LibraryMetadataResolver(
+            self._media_server,
+            self._repo,
+            self._download_repo,
+            metadata_gateway=self._metadata_gateway,
+        )
         planner = LibraryRenamePlanner(
             self._media_config_service,
             self._storage_repo,

@@ -48,13 +48,13 @@ from app.agent.providers.openai import OpenAIProvider
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import AuthError, DomainError, PermissionDenied, ResourceNotFoundError, ServiceError
 from app.core.root_path import get_project_root
-from app.core.system_config import SystemConfig
 from app.domain.enums import SystemConfigKey
 from app.indexer.registry import get_all_clients as get_all_indexers
 from app.infrastructure.cache_system import TokenCache
 from app.infrastructure.cache_system.manager import get_cache_manager
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.security import generate_password_hash
+from app.infrastructure.system_config import SystemConfig
 from app.infrastructure.temp import temp_manager
 from app.mediaserver.registry import get_all_clients as get_all_mediaservers
 from app.message.registry import get_all_clients

@@ -397,9 +397,9 @@ def get_searcher_service(app_context: AppContext = Depends(get_app_context)):
     return app_context.searcher
 
 
-def get_tmdb_blacklist_service(app_context: AppContext = Depends(get_app_context)):
-    """获取 TMDB 黑名单服务实例"""
-    return app_context.tmdb_blacklist_service
+def get_metadata_blacklist_service(app_context: AppContext = Depends(get_app_context)):
+    """获取识别黑名单服务实例"""
+    return app_context.metadata_blacklist_service
 
 
 def get_thread_executor(app_context: AppContext = Depends(get_app_context)):

@@ -450,7 +450,7 @@ class SearchOrchestrator:
             ctx.match_media = media_info
 
         if media_info:
-            search_names, max_workers = SearchQueryBuilder.build_search_names(media_info, self._media)
+            search_names, max_workers = SearchQueryBuilder.build_search_names(media_info, self._metadata_gateway)
             search_season = media_info.get_season_list() if media_info.begin_season is not None else None
             search_episode = media_info.get_episode_list()
             if ctx.search_type == SearchType.WEB:
@@ -516,7 +516,16 @@ class SearchOrchestrator:
                 mtype = force_type
             elif ctx.media_type:
                 mtype = ctx.media_type
-            ident = self._media.get_media_info(mtype=mtype, title=keyword, cache=False)
+            ident = (
+                self._metadata_gateway.resolve_by_title(
+                    title=keyword,
+                    media_type=mtype,
+                    cache=False,
+                    context=self._metadata_context(allow_private=True),
+                )
+                if self._metadata_gateway is not None
+                else None
+            )
             if ident and ident.provider_data:
                 if season_num:
                     ident.begin_season = int(season_num)

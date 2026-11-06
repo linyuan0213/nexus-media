@@ -12,7 +12,7 @@ from app.domain.entities.word import CustomWordEntity
 from app.domain.mediatypes import MediaType
 from app.domain.word_processor import process_title, set_words_info
 from app.infrastructure.cache_system import get_cache_manager
-from app.media import MediaCache
+from app.media.metadata.gateway import MetadataGateway
 from app.schemas.words import WordDTO, WordGroupExportDTO
 from app.utils.json_utils import JsonUtils
 
@@ -34,11 +34,11 @@ class WordsService:
 
     def __init__(
         self,
-        media_cache: MediaCache,
+        metadata_gateway: MetadataGateway,
         word_repo: Any,
         group_repo: Any,
     ):
-        self._media_cache = media_cache
+        self._metadata_gateway = metadata_gateway
         self._cache = get_cache_manager().get_or_create("words_process", cache_type="memory", maxsize=1000)
         self._word_repo = word_repo
         self._group_repo = group_repo
@@ -79,7 +79,7 @@ class WordsService:
         if tmdb_type == "tv":
             if self.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=2):
                 raise ResourceAlreadyExistsError("识别词组（TMDB ID）已存在")
-            tmdb_info = self._media_cache.get_tmdb_info(mtype=MediaType.TV, tmdbid=tmdb_id)
+            tmdb_info = self._metadata_gateway.details("tmdb", tmdb_id, media_type=MediaType.TV)
             if not tmdb_info:
                 raise ResourceNotFoundError("添加失败，无法查询到TMDB信息")
             air_date = tmdb_info.get("first_air_date") or ""
@@ -93,7 +93,7 @@ class WordsService:
         elif tmdb_type == "movie":
             if self.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=1):
                 raise ResourceAlreadyExistsError("识别词组（TMDB ID）已存在")
-            tmdb_info = self._media_cache.get_tmdb_info(mtype=MediaType.MOVIE, tmdbid=tmdb_id)
+            tmdb_info = self._metadata_gateway.details("tmdb", tmdb_id, media_type=MediaType.MOVIE)
             if not tmdb_info:
                 raise ResourceNotFoundError("添加失败，无法查询到TMDB信息")
             release_date = tmdb_info.get("release_date") or ""

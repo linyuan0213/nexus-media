@@ -68,7 +68,7 @@ class TmdbDiscover:
         return []
 
     def get_tmdb_hot_movies(self, page):
-        cached = self.client.redis_cache.get_trending("movie", "popular", page)
+        cached = self.client.redis_cache.get_trending("tmdb", "movie", "popular", page)
         if cached:
             log.debug(f"[Meta]从缓存获取热门电影，第 {page} 页")
             return cached
@@ -76,11 +76,11 @@ class TmdbDiscover:
             return []
         result = self._dict_infos(self.client.movie.popular(page), MediaType.MOVIE)
         if result:
-            self.client.redis_cache.set_trending("movie", "popular", page, result)
+            self.client.redis_cache.set_trending("tmdb", "movie", "popular", page, result)
         return result
 
     def get_tmdb_hot_tvs(self, page):
-        cached = self.client.redis_cache.get_trending("tv", "popular", page)
+        cached = self.client.redis_cache.get_trending("tmdb", "tv", "popular", page)
         if cached:
             log.debug(f"[Meta]从缓存获取热门电视剧，第 {page} 页")
             return cached
@@ -88,11 +88,11 @@ class TmdbDiscover:
             return []
         result = self._dict_infos(self.client.tv.popular(page), MediaType.TV)
         if result:
-            self.client.redis_cache.set_trending("tv", "popular", page, result)
+            self.client.redis_cache.set_trending("tmdb", "tv", "popular", page, result)
         return result
 
     def get_tmdb_new_movies(self, page):
-        cached = self.client.redis_cache.get_trending("movie", "now_playing", page)
+        cached = self.client.redis_cache.get_trending("tmdb", "movie", "now_playing", page)
         if cached:
             log.debug(f"[Meta]从缓存获取最新电影，第 {page} 页")
             return cached
@@ -104,11 +104,11 @@ class TmdbDiscover:
             log.warn(f"[TmdbDiscover]获取最新电影失败: {e}")
             return []
         if result:
-            self.client.redis_cache.set_trending("movie", "now_playing", page, result)
+            self.client.redis_cache.set_trending("tmdb", "movie", "now_playing", page, result)
         return result
 
     def get_tmdb_new_tvs(self, page):
-        cached = self.client.redis_cache.get_trending("tv", "on_the_air", page)
+        cached = self.client.redis_cache.get_trending("tmdb", "tv", "on_the_air", page)
         if cached:
             log.debug(f"[Meta]从缓存获取最新电视剧，第 {page} 页")
             return cached
@@ -120,11 +120,11 @@ class TmdbDiscover:
             log.warn(f"[TmdbDiscover]获取最新电视剧失败: {e}")
             return []
         if result:
-            self.client.redis_cache.set_trending("tv", "on_the_air", page, result)
+            self.client.redis_cache.set_trending("tmdb", "tv", "on_the_air", page, result)
         return result
 
     def get_tmdb_upcoming_movies(self, page):
-        cached = self.client.redis_cache.get_trending("movie", "upcoming", page)
+        cached = self.client.redis_cache.get_trending("tmdb", "movie", "upcoming", page)
         if cached:
             log.debug(f"[Meta]从缓存获取即将上映电影，第 {page} 页")
             return cached
@@ -132,11 +132,11 @@ class TmdbDiscover:
             return []
         result = self._dict_infos(self.client.movie.upcoming(page), MediaType.MOVIE)
         if result:
-            self.client.redis_cache.set_trending("movie", "upcoming", page, result)
+            self.client.redis_cache.set_trending("tmdb", "movie", "upcoming", page, result)
         return result
 
     def get_tmdb_trending_all_week(self, page=1):
-        cached = self.client.redis_cache.get_trending("all", "week", page)
+        cached = self.client.redis_cache.get_trending("tmdb", "all", "week", page)
         if cached:
             log.debug(f"[Meta]从缓存获取本周趋势，第 {page} 页")
             return cached
@@ -144,7 +144,7 @@ class TmdbDiscover:
             return []
         result = self._dict_infos(self.client.trending.all_week(page=page))
         if result:
-            self.client.redis_cache.set_trending("all", "week", page, result)
+            self.client.redis_cache.set_trending("tmdb", "all", "week", page, result)
         return result
 
     def get_random_backdrop(self):

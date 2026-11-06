@@ -1,6 +1,6 @@
 """
-插件历史和TMDB黑名单模型
-包含: 插件历史、TMDB黑名单、删种任务、自定义RSS任务历史、插件框架v2模型
+插件历史和识别黑名单模型
+包含: 插件历史、识别黑名单、删种任务、自定义RSS任务历史、插件框架v2模型
 """
 
 from datetime import datetime
@@ -22,11 +22,12 @@ class PLUGINHISTORY(Base):
     DATE: Mapped[str] = mapped_column(String(255))
 
 
-class TMDBBLACKLIST(Base):
-    __tablename__ = "TMDB_BLACKLIST"
+class METADATABLACKLIST(Base):
+    __tablename__ = "METADATA_BLACKLIST"
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
-    TMDB_ID: Mapped[str] = mapped_column(String(50), index=True)
+    PROVIDER: Mapped[str] = mapped_column(String(50), index=True, default="tmdb")
+    EXTERNAL_ID: Mapped[str] = mapped_column(String(50), index=True)
     TITLE: Mapped[str] = mapped_column(String(255))
     YEAR: Mapped[str] = mapped_column(String(255))
     MEDIA_TYPE: Mapped[str] = mapped_column(String(255))

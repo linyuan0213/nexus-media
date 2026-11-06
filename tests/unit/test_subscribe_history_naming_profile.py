@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
+from app.services.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 
 
 def test_history_upsert_accepts_naming_profile():

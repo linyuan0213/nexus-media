@@ -11,6 +11,54 @@ from app.domain.mediatypes import MediaType
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 
 
+def test_resolve_by_title_reuses_cache_for_same_context():
+    service = MagicMock()
+    media_service = MagicMock()
+    media_service.get_media_info.return_value = SimpleNamespace(title="Demo")
+    gateway = MetadataGateway(service, media_service=media_service, default_ttl=60)
+    ctx = MetadataContext(
+        user_id=1,
+        permissions=frozenset({"metadata:private:view"}),
+        content_profile="anime",
+        allow_private=True,
+    )
+
+    first = gateway.resolve_by_title("Demo", media_type=MediaType.TV, year="2024", context=ctx)
+    second = gateway.resolve_by_title("Demo", media_type=MediaType.TV, year="2024", context=ctx)
+
+    assert first is not None and second is not None
+    assert first.title == second.title
+    assert media_service.get_media_info.call_count == 1
+
+
+def test_resolve_by_title_cache_isolated_by_year_and_permissions():
+    service = MagicMock()
+    media_service = MagicMock()
+    media_service.get_media_info.return_value = SimpleNamespace(title="Demo")
+    gateway = MetadataGateway(service, media_service=media_service, default_ttl=60)
+
+    gateway.resolve_by_title(
+        "Demo",
+        media_type=MediaType.TV,
+        year="2024",
+        context=MetadataContext(content_profile="default", permissions=frozenset({"a"})),
+    )
+    gateway.resolve_by_title(
+        "Demo",
+        media_type=MediaType.TV,
+        year="2025",
+        context=MetadataContext(content_profile="default", permissions=frozenset({"a"})),
+    )
+    gateway.resolve_by_title(
+        "Demo",
+        media_type=MediaType.TV,
+        year="2024",
+        context=MetadataContext(content_profile="anime", permissions=frozenset({"b"})),
+    )
+
+    assert media_service.get_media_info.call_count == 3
+
+
 def test_resolve_reuses_cached_envelope():
     service = MagicMock()
     service.compose_for_ref.return_value = {"title": "Demo"}

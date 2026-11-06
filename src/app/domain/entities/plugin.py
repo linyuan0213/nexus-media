@@ -1,6 +1,6 @@
 """
-插件历史 / TMDB黑名单领域实体 / 插件框架v2实体
-对应 PLUGIN_HISTORY / TMDB_BLACKLIST / PLUGIN_MANIFEST / PLUGIN_CONFIG / PLUGIN_LOGS 表
+插件历史 / 识别黑名单领域实体 / 插件框架v2实体
+对应 PLUGIN_HISTORY / METADATA_BLACKLIST / PLUGIN_MANIFEST / PLUGIN_CONFIG / PLUGIN_LOGS 表
 """
 
 import contextlib
@@ -49,11 +49,12 @@ class PluginHistoryEntity:
 
 
 @dataclass
-class TmdbBlacklistEntity:
-    """TMDB黑名单实体"""
+class MetadataBlacklistEntity:
+    """识别黑名单实体"""
 
     id: int
-    tmdb_id: str
+    provider: str
+    external_id: str
     title: str | None
     year: str | None
     media_type: str | None
@@ -62,12 +63,13 @@ class TmdbBlacklistEntity:
     note: str | None
 
     @classmethod
-    def from_orm(cls, orm_model) -> Optional["TmdbBlacklistEntity"]:
+    def from_orm(cls, orm_model) -> Optional["MetadataBlacklistEntity"]:
         if orm_model is None:
             return None
         return cls(
             id=orm_model.ID,
-            tmdb_id=orm_model.TMDB_ID or "",
+            provider=orm_model.PROVIDER or "tmdb",
+            external_id=orm_model.EXTERNAL_ID or "",
             title=getattr(orm_model, "TITLE", None),
             year=getattr(orm_model, "YEAR", None),
             media_type=getattr(orm_model, "MEDIA_TYPE", None),
@@ -85,7 +87,8 @@ class TmdbBlacklistEntity:
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
-            "tmdb_id": self.tmdb_id,
+            "provider": self.provider,
+            "external_id": self.external_id,
             "title": self.title,
             "year": self.year,
             "media_type": self.media_type,

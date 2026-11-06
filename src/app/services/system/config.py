@@ -7,7 +7,6 @@ from sqlalchemy import text
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.core.system_config import SystemConfig
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.db.repositories.indexer_config_repo_adapter import IndexerConfigRepositoryAdapter
@@ -16,6 +15,7 @@ from app.domain.enums import SystemConfigKey
 from app.indexer.indexer import Indexer
 from app.indexer.registry import get_all_clients
 from app.infrastructure.cache_system import TokenCache
+from app.infrastructure.system_config import SystemConfig
 from app.mediaserver import MediaServer
 from app.mediaserver.registry import get_all_clients as get_all_mediaserver_clients
 from app.schemas.system import (

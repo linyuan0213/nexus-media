@@ -9,8 +9,9 @@ import xml.dom.minidom
 
 import defusedxml.minidom  # type: ignore[import-untyped]  # noqa: F401 — XXE防护副作用导入
 
+import log
+from app.media.metadata.gateway import MetadataGateway
 from app.media.metadata.nfo import render_nfo_extra_tags
-from app.media.metadata.registry import registry as metadata_registry
 from app.utils import DomUtils
 
 
@@ -39,8 +40,21 @@ def _add_tag_once(doc, root, tag: str) -> None:
 class NfoGenerator:
     """NFO 文件生成器 — 负责生成电影/电视剧/季/集的 NFO XML"""
 
-    def __init__(self, image_downloader):
+    def __init__(self, image_downloader, metadata_gateway: MetadataGateway | None = None):
         self._downloader = image_downloader
+        self._metadata_gateway = metadata_gateway
+
+    def _provider_descriptor(self, provider: str | None):
+        if self._metadata_gateway is None:
+            log.warn("[NFO] 缺少 MetadataGateway，无法确定 provider 描述信息")
+            return None
+        return self._metadata_gateway.provider_descriptor(provider)
+
+    def _rating_max(self, provider: str) -> str:
+        if self._metadata_gateway is None:
+            log.warn("[NFO] 缺少 MetadataGateway，无法确定 provider 评分上限")
+            return ""
+        return str(self._metadata_gateway.provider_rating_max(provider) or "")
 
     def gen_movie_nfo(self, tmdbinfo, directors, actors, scraper_nfo, out_path, file_name):
         """生成电影 NFO 文件"""
@@ -343,7 +357,9 @@ class NfoGenerator:
                 for provider_key, provider_value in snapshot.ratings.items():
                     rating_node = DomUtils.add_node(doc, ratings_node, "rating")
                     rating_node.setAttribute("name", str(provider_key))
-                    rating_node.setAttribute("max", _rating_max(provider_key))
+                    rating_max = self._rating_max(provider_key)
+                    if rating_max:
+                        rating_node.setAttribute("max", rating_max)
                     if provider_key == snapshot.primary_provider:
                         rating_node.setAttribute("default", "true")
                     value = float(provider_value)
@@ -405,14 +421,12 @@ class NfoGenerator:
 
     def _write_snapshot_uniqueids(self, snapshot, doc, root):
         primary = snapshot.primary_provider
-        primary_desc = getattr(metadata_registry.get_provider(primary), "descriptor", None)
-        if getattr(primary_desc, "virtual", False):
-            primary = str(getattr(primary_desc, "uniqueid_fallback", "") or "")
+        if self._metadata_gateway is not None and self._metadata_gateway.provider_is_virtual(primary):
+            primary = self._metadata_gateway.provider_uniqueid_fallback(primary)
         refs = []
         seen = set()
         for ref in snapshot.refs:
-            provider_desc = getattr(metadata_registry.get_provider(ref.provider), "descriptor", None)
-            if getattr(provider_desc, "virtual", False):
+            if self._metadata_gateway is not None and self._metadata_gateway.provider_is_virtual(ref.provider):
                 continue
             if ref.provider in seen:
                 continue
@@ -434,11 +448,6 @@ class NfoGenerator:
                 DomUtils.add_node(doc, root, "imdbid", ref.external_id)
             elif ref.provider == "tvdb":
                 DomUtils.add_node(doc, root, "tvdbid", ref.external_id)
-
-
-def _rating_max(provider: object) -> str:
-    item = metadata_registry.get_provider(str(provider))
-    return str(getattr(getattr(item, "descriptor", None), "rating_max", 10) or 10)
 
 
 def _snapshot_value(snapshot, name, default=""):

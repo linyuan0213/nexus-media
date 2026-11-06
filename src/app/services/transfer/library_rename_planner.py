@@ -41,7 +41,7 @@ class _FormatMetaService:
     def get_episode_title(self, media) -> str:
         return self._episode_title
 
-    def get_tmdb_en_title(self, media) -> str:
+    def en_title(self, media) -> str:
         return self._en_title
 
 

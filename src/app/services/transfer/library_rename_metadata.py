@@ -43,11 +43,11 @@ _PRIORITY = {
 class LibraryMetadataResolver:
     """按 ADR-024 的优先级解析库内文件元数据."""
 
-    def __init__(self, media_service, media_server, rename_repo, download_repo):
-        self._media_service = media_service
+    def __init__(self, media_server, rename_repo, download_repo, metadata_gateway=None):
         self._media_server = media_server
         self._repo = rename_repo
         self._download_repo = download_repo
+        self._metadata_gateway = metadata_gateway
         self._ms_exact: dict[str, dict[str, Any]] = {}
         self._ms_series: list[tuple[str, dict[str, Any]]] = []
         self._ms_loaded = False
@@ -116,7 +116,7 @@ class LibraryMetadataResolver:
             candidates.append(filename_candidate)
 
         if scope.reidentify_no_metadata:
-            online_candidate = from_online(path, backend, hint, self._media_service)
+            online_candidate = from_online(path, backend, hint, self._metadata_gateway)
             if online_candidate:
                 candidates.append(online_candidate)
 
@@ -141,7 +141,7 @@ class LibraryMetadataResolver:
         finalize_media(chosen.media, hint)
 
         if scope.allow_online_metadata or chosen.source == "online":
-            apply_online(chosen, self._media_service)
+            apply_online(chosen, self._metadata_gateway)
             finalize_media(chosen.media, hint)
         return chosen
 

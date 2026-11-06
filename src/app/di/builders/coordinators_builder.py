@@ -1,14 +1,13 @@
 """协调器 Builder — 创建 Layer 5 对象。"""
 
+from app.agent.config import get_notify_config
 from app.agent.tool_executor import ToolExecutor
 from app.agent.tools.context import ToolContext
-from app.core.system_config import SystemConfig
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
-from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.di.builders.agent_builder import AgentRagObjects
 from app.di.models import BusinessFacades, CoordinatorObjects, InfrastructureObjects, ServiceObjects
+from app.infrastructure.system_config import SystemConfig
 from app.infrastructure.thread import ThreadExecutor
-from app.media import MediaCache
 from app.message.agent_enhancer import AgentMessageEnhancer
 from app.services.rss_processor import RssHelper
 from app.services.subscribe.coordinator import DownloadCoordinator
@@ -24,6 +23,7 @@ from app.services.subscribe.monitor import SubscriptionMonitor
 from app.services.subscribe.strategies.indexer_search import IndexerSearchStrategy
 from app.services.subscribe.strategies.queue_search import QueueSearchStrategy
 from app.services.subscribe.strategies.rss_feed import RssFeedStrategy
+from app.services.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.services.system.config import SystemConfigService
 from app.services.system.lifecycle import SystemLifecycleService
 from app.services.transfer.kb_ingest_handler import register_kb_ingest_handler
@@ -59,7 +59,6 @@ def build_coordinators(
 
     download_repo = DownloadHistoryRepositoryAdapter()
     rss_repo = SubscribeHistoryRepositoryAdapter()
-    media_cache = MediaCache()
     system_config = SystemConfigService()
 
     matcher = SubscribeMatcher(site_conf=siteconf, site_cache=site_cache)
@@ -67,11 +66,11 @@ def build_coordinators(
         service=subscribe_service,
         searcher=searcher,
         media_service=media_service,
-        media_cache=media_cache,
         downloader=downloader_core,
         filter_service=filter_service,
         message=message,
         system_config=system_config,
+        metadata_gateway=services.metadata_gateway,
     )
     rsshelper = RssHelper(site_engine=site_engine)
     rss_strategy = RssFeedStrategy(
@@ -88,16 +87,17 @@ def build_coordinators(
         system_config=system_config,
         site_grant_service=services.site_grant_service,
         custom_rss=services.custom_rss_service,
+        metadata_gateway=services.metadata_gateway,
     )
     indexer_strategy = IndexerSearchStrategy(
         service=subscribe_service,
         searcher=searcher,
         media_service=media_service,
-        media_cache=media_cache,
         downloader=downloader_core,
         filter_service=filter_service,
         message=message,
         system_config=system_config,
+        metadata_gateway=services.metadata_gateway,
     )
     subscribe_search_executor = ThreadExecutor.named("subscribe_search", max_workers=4)
     subscribe_rss_executor = ThreadExecutor.named("subscribe_rss", max_workers=2)
@@ -197,7 +197,7 @@ def build_coordinators(
 
     # Agent 通知增强（单流替换模板通知，agent 未启用时零开销）
     if facades.agent_service.ready:
-        infra.message.set_agent_enhancer(AgentMessageEnhancer(facades.agent_service))
+        infra.message.set_agent_enhancer(AgentMessageEnhancer(facades.agent_service, get_notify_config()))
 
     # 注册 RSS 自动订阅事件处理器
     build_rss_auto_subscribe_handler(subscribe_service)

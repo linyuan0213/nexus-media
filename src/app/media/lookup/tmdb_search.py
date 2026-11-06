@@ -78,7 +78,7 @@ class TmdbSearch:
             if year:
                 params["year"] = year
             movies: Any = self.client.search.movies(params)
-            blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
+            blacklist = [str(item.EXTERNAL_ID) for item in self.client.get_blacklist()]
             if movies and blacklist:
                 movies = [m for m in movies if not (m.get("id") and str(m.get("id")) in blacklist)]
         except TMDBError as err:
@@ -162,7 +162,7 @@ class TmdbSearch:
             if year:
                 params["first_air_date_year"] = year
             tvs: Any = self.client.search.tv_shows(params)
-            blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
+            blacklist = [str(item.EXTERNAL_ID) for item in self.client.get_blacklist()]
             if tvs and blacklist:
                 tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
         except TMDBError as err:
@@ -312,7 +312,7 @@ class TmdbSearch:
 
         try:
             tvs: Any = self.client.search.tv_shows({"query": name})
-            blacklist = [str(item.TMDB_ID) for item in self.client.get_blacklist()]
+            blacklist = [str(item.EXTERNAL_ID) for item in self.client.get_blacklist()]
             if tvs and blacklist:
                 tvs = [t for t in tvs if not (t.get("id") and str(t.get("id")) in blacklist)]
         except TMDBError as err:

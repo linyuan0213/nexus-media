@@ -14,12 +14,12 @@ from app.core.exceptions import (
 )
 from app.core.settings import settings
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
-from app.db.repositories.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SearchType
 from app.domain.media_ref import media_series_scope_key
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.service import MediaService
 from app.message import Message
 from app.services.downloader_core import DownloaderCore
@@ -30,6 +30,7 @@ from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.matcher import SubscribeMatcher
 from app.services.subscribe.strategy_lock import strategy_lock
+from app.services.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
 from app.sites.site_cache import SiteCache
 from app.sites.siteconf import SiteConf
 from app.sites.torrent import Torrent
@@ -38,6 +39,8 @@ from app.utils import ExceptionUtils, JsonUtils
 
 class RssFeedStrategy:
     """RSS Feed 轮询策略：从站点 RSS Feed 收集资源，识别媒体，匹配订阅，择优下载."""
+
+    _metadata_gateway: MetadataGateway | None = None
 
     def __init__(
         self,
@@ -55,8 +58,10 @@ class RssFeedStrategy:
         system_config=None,
         site_grant_service=None,
         custom_rss: CustomRssSourceService | None = None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self.media = media
+        self._metadata_gateway = metadata_gateway
         self.sites = sites
         self.siteconf = siteconf
         self.downloader = downloader
@@ -73,6 +78,14 @@ class RssFeedStrategy:
         self._series_service = SeriesService()
         # 站点授权缓存：一轮轮询内按归属用户复用，避免逐订阅查库
         self._grant_cache: dict[int, dict | None] = {}
+
+    @staticmethod
+    def _metadata_context(media_info) -> MetadataContext:
+        return MetadataContext(
+            purpose="subscribe.rss",
+            allow_private=True,
+            content_profile=str(getattr(media_info, "content_profile", "") or "default"),
+        )
 
     def _filter_subscriptions_by_site_grant(self, subs: dict, site_name: str) -> dict:
         """执行时站点授权兜底（ADR-021 4.3）：剔除归属用户未获该站点 rss 用途授权的订阅.
@@ -357,9 +370,9 @@ class RssFeedStrategy:
                     continue
 
                 if not match_info.get("fuzzy_match"):
-                    if not media_info.provider_data and media_info.tmdb_id:
+                    if not media_info.provider_data and media_info.tmdb_id and self._metadata_gateway is not None:
                         media_info.set_provider_data(
-                            self.media.get_tmdb_info(mtype=media_info.type, tmdbid=media_info.tmdb_id)
+                            self._metadata_gateway.details("tmdb", media_info.tmdb_id, media_type=media_info.type)
                         )
                     if not media_info.provider_data:
                         # 插件内容画像/非 TMDB 锚点不依赖 TMDB provider_data；
@@ -385,21 +398,18 @@ class RssFeedStrategy:
                             if match_info.get("id") and media_info.tmdb_id:
                                 try:
                                     new_total = 0
-                                    try:
-                                        season_detail = self.media.get_tmdb_tv_season_detail(media_info.tmdb_id, season)
-                                        season_eps = (
-                                            season_detail.get("episodes") if isinstance(season_detail, dict) else None
-                                        )
-                                        if isinstance(season_eps, list):
-                                            new_total = len(season_eps)
-                                    except Exception:  # noqa: BLE001
-                                        new_total = 0
-                                    if new_total <= 0 and media_info.provider_data:
-                                        new_total = int(
-                                            self.media.get_tmdb_season_episodes_num(
-                                                tv_info=media_info.provider_data, season=season
-                                            )
-                                            or 0
+                                    if self._metadata_gateway is not None:
+                                        new_total = self._metadata_gateway.resolve_season_episode_count(
+                                            context=self._metadata_context(media_info),
+                                            provider="tmdb",
+                                            external_id=str(media_info.tmdb_id or ""),
+                                            title=str(media_info.title or ""),
+                                            year=str(media_info.year or "") or None,
+                                            media_type=media_info.type or MediaType.TV,
+                                            season=season,
+                                            content_profile=str(media_info.content_profile or "default"),
+                                            provider_data=media_info.provider_data,
+                                            prefer_detail=True,
                                         )
                                     if new_total > 0 and (total_ep is None or new_total > total_ep):
                                         log.info(

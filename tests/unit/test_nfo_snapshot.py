@@ -198,9 +198,32 @@ def test_movie_nfo_writes_nested_ratings_and_votes(tmp_path):
         registry.unregister_provider("demo_meta", plugin_id="test")
 
 
+class _DescriptorGateway:
+    def __init__(self, descriptors):
+        self._descriptors = descriptors
+
+    def provider_descriptor(self, provider):
+        return self._descriptors.get(provider)
+
+    def provider_is_virtual(self, provider):
+        return False
+
+    def provider_uniqueid_fallback(self, provider):
+        return ""
+
+    def provider_rating_max(self, provider):
+        descriptor = self._descriptors.get(provider)
+        return int(getattr(descriptor, "rating_max", 10) or 10)
+
+
 def _run_movie_nfo_ratings_test(tmp_path):
+    from app.media.metadata import ProviderDescriptor
+
     downloader = _FakeDownloader()
-    generator = NfoGenerator(downloader)
+    gateway = _DescriptorGateway(
+        {"demo_meta": ProviderDescriptor(provider_key="demo_meta", display_name="DemoMeta", rating_max=5)}
+    )
+    generator = NfoGenerator(downloader, metadata_gateway=cast(Any, gateway))
     snapshot = _snapshot(
         primary_provider="demo_meta",
         ratings={"demo_meta": 4.6, "douban": 8.8},
@@ -284,7 +307,7 @@ def test_nfo_primary_provider_is_provider_agnostic(tmp_path, provider, external_
         ratings={provider: 8.0},
     )
 
-    NfoGenerator(downloader).gen_movie_nfo_from_snapshot(
+    NfoGenerator(downloader, metadata_gateway=cast(Any, _DescriptorGateway({}))).gen_movie_nfo_from_snapshot(
         snapshot,
         {"basic": True},
         str(tmp_path),
@@ -294,3 +317,17 @@ def test_nfo_primary_provider_is_provider_agnostic(tmp_path, provider, external_
     xml, _ = downloader.saved[0]
     assert f'<uniqueid type="{provider}" default="true">{external_id}</uniqueid>' in xml
     assert f"<title>{title}</title>" in xml
+
+
+def test_movie_nfo_without_gateway_does_not_fake_rating_max(tmp_path):
+    """缺少网关时不得把 provider 评分上限伪造成 10."""
+    downloader = _FakeDownloader()
+    snapshot = _snapshot(primary_provider="demo_meta", ratings={"demo_meta": 8.0})
+    NfoGenerator(downloader).gen_movie_nfo_from_snapshot(
+        snapshot,
+        {"basic": True},
+        str(tmp_path),
+        "movie",
+    )
+    xml, _ = downloader.saved[0]
+    assert 'max="10"' not in xml

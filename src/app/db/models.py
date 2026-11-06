@@ -15,7 +15,7 @@
 - site.py: 站点统计模型
 - transfer.py: 转移相关模型
 - indexer.py: 索引器统计模型
-- plugin.py: 插件历史和TMDB黑名单
+- plugin.py: 插件历史和识别黑名单
 - media_sync.py: 媒体同步模型
 - search.py: 搜索结果模型
 - sync.py: 同步历史模型
@@ -47,6 +47,7 @@ from app.db.models import (
     MEDIASYNCSTATISTIC,
     # 消息
     MESSAGECLIENT,
+    METADATABLACKLIST,
     # 插件
     PLUGINHISTORY,
     # 搜索
@@ -63,7 +64,6 @@ from app.db.models import (
     SYNCHISTORY,
     # 系统
     SYSTEMDICT,
-    TMDBBLACKLIST,
     TORRENTREMOVETASK,
     # 转移
     TRANSFERBLACKLIST,
@@ -131,7 +131,7 @@ __all__ = [
     "INDEXERSTATISTICS",
     # 插件
     "PLUGINHISTORY",
-    "TMDBBLACKLIST",
+    "METADATABLACKLIST",
     "TORRENTREMOVETASK",
     "USERRSSTASKHISTORY",
     # 媒体同步

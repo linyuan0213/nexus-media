@@ -1,41 +1,53 @@
 """订阅类型推断 / 探索页订阅标识匹配 / 缓存未命中回源识别 测试."""
 
+from typing import Any, cast
 from unittest.mock import MagicMock
 
-import app.services.subscribe.management.query_service as query_service_module
 from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
 from app.services.subscribe.management.query_service import _resolve_subscribe_type
 from app.services.subscribe.strategies.base_search import BaseSearchStrategy
 
 
+class _CachedInfoGateway:
+    def __init__(self, info):
+        self.info = info
+
+    def genres(self, *args, **kwargs):
+        info = self.info
+        raw = info.get("genres") if hasattr(info, "get") else getattr(info, "genres", None)
+        result = set()
+        for genre in raw or []:
+            genre_id = genre.get("id") if hasattr(genre, "get") else getattr(genre, "id", None)
+            if genre_id:
+                result.add(str(genre_id))
+        return result
+
+
 class TestResolveSubscribeType:
     @staticmethod
-    def _patch_cache(monkeypatch, genres):
-        cache = MagicMock()
-        cache.get_tmdb_info.return_value = {"genres": genres} if genres is not None else None
-        monkeypatch.setattr(query_service_module, "TMDBCache", lambda: cache)
+    def _gateway(genres):
+        return _CachedInfoGateway({"genres": genres} if genres is not None else None)
 
-    def test_explicit_types_kept(self, monkeypatch):
-        self._patch_cache(monkeypatch, None)
+    def test_explicit_types_kept(self):
         assert _resolve_subscribe_type("anime") == "anime"
         assert _resolve_subscribe_type("movie") == "movie"
         assert _resolve_subscribe_type("tv") == "tv"
 
-    def test_missing_note_infers_anime_from_tmdb(self, monkeypatch):
+    def test_missing_note_infers_anime_from_tmdb(self):
         """历史订阅 NOTE 无 media_type：按 TMDB genre 16 推断为动漫."""
-        self._patch_cache(monkeypatch, [{"id": 16, "name": "Animation"}])
-        assert _resolve_subscribe_type(None, 258348) == "anime"
+        gateway = self._gateway([{"id": 16, "name": "Animation"}])
+        assert _resolve_subscribe_type(None, 258348, metadata_gateway=cast(Any, gateway)) == "anime"
 
-    def test_missing_note_non_anime_defaults_tv(self, monkeypatch):
-        self._patch_cache(monkeypatch, [{"id": 35, "name": "Comedy"}])
-        assert _resolve_subscribe_type(None, 94664) == "tv"
+    def test_missing_note_non_anime_defaults_tv(self):
+        gateway = self._gateway([{"id": 35, "name": "Comedy"}])
+        assert _resolve_subscribe_type(None, 94664, metadata_gateway=cast(Any, gateway)) == "tv"
 
-    def test_missing_note_without_tmdb_defaults_tv(self, monkeypatch):
-        self._patch_cache(monkeypatch, None)
-        assert _resolve_subscribe_type(None, None) == "tv"
+    def test_missing_note_without_tmdb_defaults_tv(self):
+        gateway = self._gateway(None)
+        assert _resolve_subscribe_type(None, None, metadata_gateway=cast(Any, gateway)) == "tv"
 
-    def test_non_dict_cache_object_supported(self, monkeypatch):
+    def test_non_dict_cache_object_supported(self):
         """缓存值为 tmdbv3api AsObj（支持 .get 的映射对象）时同样能判定动漫."""
 
         class _AsObj:
@@ -52,10 +64,8 @@ class TestResolveSubscribeType:
             def get(self, key, default=None):
                 return self._id if key == "id" else default
 
-        cache = MagicMock()
-        cache.get_tmdb_info.return_value = _AsObj([_Genre(16), _Genre(10759)])
-        monkeypatch.setattr(query_service_module, "TMDBCache", lambda: cache)
-        assert _resolve_subscribe_type(None, 258348) == "anime"
+        gateway = _CachedInfoGateway(_AsObj([_Genre(16), _Genre(10759)]))
+        assert _resolve_subscribe_type(None, 258348, metadata_gateway=cast(Any, gateway)) == "anime"
 
 
 class TestCheckMediaExistsRawTitleFallback:
@@ -89,13 +99,14 @@ class TestGetMediaInfoReidentify:
         strategy = BaseSearchStrategy.__new__(BaseSearchStrategy)
         strategy._ident_cache = MagicMock()
         strategy._ident_cache.get.return_value = None
-        strategy._media_cache = MagicMock()
-        strategy._media_cache.get_tmdb_info.return_value = None
         identified = MagicMock()
         identified.provider_data = {"id": 258348}
         identified.get_poster_image.return_value = "poster.jpg"
         strategy._media_service = MagicMock()
         strategy._media_service.identify.return_value = identified
+        gateway = MagicMock()
+        gateway.cached_details.return_value = None
+        strategy._metadata_gateway = gateway
 
         info = strategy._get_media_info(258348, "克雷瓦提斯", "2025", MediaType.TV)
 
@@ -232,12 +243,12 @@ class TestSubscribeAliasMatch:
         svc_mod._ALIAS_MAP_CACHE.clear()
         svc = svc_mod.SubscribeService.__new__(svc_mod.SubscribeService)
         media = MagicMock()
-        media.get_all_names.side_effect = lambda tmdbid, mtype: alias_map.get(tmdbid, [])
+        media.all_names.side_effect = lambda provider, tmdbid, mtype: alias_map.get(tmdbid, [])
 
         def _tvs(*_a, **_kw):
             return subs
 
-        setattr(svc, "_media", media)
+        setattr(svc, "_metadata_gateway", media)
         setattr(svc, "get_subscribe_tvs", _tvs)
         setattr(svc, "get_subscribe_movies", lambda *_a, **_kw: {})
         return svc, media
@@ -251,7 +262,7 @@ class TestSubscribeAliasMatch:
         assert svc.get_subscribe_id_by_alias("画完这个再去死", MediaType.TV) == 20
         # 二次查询命中缓存，不再请求 TMDB 别名
         assert svc.get_subscribe_id_by_alias("描绘直至生命尽头", MediaType.TV) == 20
-        assert media.get_all_names.call_count == 1
+        assert media.all_names.call_count == 1
 
     def test_alias_returns_none_when_unknown(self):
         svc, _media = self._service({}, {"20": {"tmdbid": "287028"}})

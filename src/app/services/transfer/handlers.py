@@ -55,6 +55,7 @@ def handle_download_completed(
     media_cache: Any = None,
     sync_path_repo: Any = None,
     transfer_queue_service: Any = None,
+    metadata_gateway: Any = None,
 ) -> None:
     """下载完成事件处理器 — 触发文件转移."""
     payload = event.payload
@@ -80,8 +81,8 @@ def handle_download_completed(
             if history and history.tmdb_id:
                 tmdb_id = history.tmdb_id
                 media_type = history.media_type or ""
-                if media_cache:
-                    tmdb_info = media_cache.get_tmdb_info(mtype=media_type, tmdbid=tmdb_id)
+                if metadata_gateway is not None:
+                    tmdb_info = metadata_gateway.cached_details("tmdb", tmdb_id, media_type=media_type)
                 if history.season_episode:
                     parsed = RegexParser().parse(str(history.season_episode))
                     if parsed:
@@ -216,6 +217,7 @@ def register_download_completed_handler(
     media_cache: Any = None,
     sync_path_repo: Any = None,
     transfer_queue_service: Any = None,
+    metadata_gateway: Any = None,
 ) -> None:
     """注册下载完成事件处理器，外部显式注入依赖。"""
 
@@ -228,6 +230,7 @@ def register_download_completed_handler(
             media_cache=media_cache,
             sync_path_repo=sync_path_repo,
             transfer_queue_service=transfer_queue_service,
+            metadata_gateway=metadata_gateway,
         )
 
     event_bus.subscribe(DOWNLOAD_COMPLETED, _handler)

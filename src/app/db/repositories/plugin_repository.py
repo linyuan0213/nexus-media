@@ -5,14 +5,14 @@ Handles plugin history and TMDB blacklist related database operations.
 
 import time
 
-from app.db.models import PLUGINHISTORY, TMDBBLACKLIST
+from app.db.models import METADATABLACKLIST, PLUGINHISTORY
 from app.db.repositories.base_repository import BaseRepository
 
 
 class PluginRepository(BaseRepository):
     """
     插件历史仓储
-    处理插件历史和TMDB黑名单的数据库操作
+    处理插件历史和识别黑名单的数据库操作
     """
 
     # ==================== Plugin History ====================
@@ -83,99 +83,83 @@ class PluginRepository(BaseRepository):
         with self.session() as db:
             db.query(PLUGINHISTORY).filter(plugin_id == PLUGINHISTORY.PLUGIN_ID, key == PLUGINHISTORY.KEY).delete()
 
-    # ==================== TMDB Blacklist ====================
+    # ==================== 识别黑名单 ====================
 
-    def is_tmdb_blacklisted(self, tmdb_id, media_type=None):
-        """
-        检查TMDB ID是否在黑名单中
-
-        Args:
-            tmdb_id: TMDB ID
-            media_type: 媒体类型
-
-        Returns:
-            是否在黑名单中
-        """
-        if not tmdb_id:
+    def is_blacklisted(self, provider, external_id, media_type=None):
+        """检查 provider 引用是否在黑名单中."""
+        if not external_id:
             return False
         with self.session() as db:
+            query = db.query(METADATABLACKLIST).filter(
+                METADATABLACKLIST.PROVIDER == str(provider),
+                METADATABLACKLIST.EXTERNAL_ID == str(external_id),
+            )
             if media_type:
-                count = (
-                    db.query(TMDBBLACKLIST)
-                    .filter(TMDBBLACKLIST.TMDB_ID == str(tmdb_id), TMDBBLACKLIST.MEDIA_TYPE == media_type)
-                    .count()
-                )
-            else:
-                count = db.query(TMDBBLACKLIST).filter(TMDBBLACKLIST.TMDB_ID == str(tmdb_id)).count()
-            return count > 0
+                query = query.filter(METADATABLACKLIST.MEDIA_TYPE == media_type)
+            return query.count() > 0
 
-    def get_tmdb_blacklist(self):
-        """
-        获取所有TMDB黑名单记录
-
-        Returns:
-            黑名单记录列表
-        """
+    def get_blacklist(self, provider=None):
+        """获取识别黑名单记录."""
         with self.session() as db:
-            return db.query(TMDBBLACKLIST).all()
+            query = db.query(METADATABLACKLIST)
+            if provider:
+                query = query.filter(METADATABLACKLIST.PROVIDER == str(provider))
+            return query.all()
 
-    def insert_tmdb_blacklist(
-        self, tmdb_id, title=None, year=None, media_type=None, poster_path=None, backdrop_path=None, note=None
+    def insert_blacklist(
+        self,
+        provider,
+        external_id,
+        title=None,
+        year=None,
+        media_type=None,
+        poster_path=None,
+        backdrop_path=None,
+        note=None,
     ):
-        """
-        添加到TMDB黑名单
-
-        Args:
-            tmdb_id: TMDB ID
-            title: 标题
-            year: 年份
-            media_type: 媒体类型
-            poster_path: 海报路径
-            backdrop_path: 背景图路径
-            note: 备注
-        """
-        if not tmdb_id:
+        """添加到识别黑名单."""
+        if not external_id:
             return
         with self.session() as db:
-            query = db.query(TMDBBLACKLIST).filter(TMDBBLACKLIST.TMDB_ID == str(tmdb_id))
+            query = db.query(METADATABLACKLIST).filter(
+                METADATABLACKLIST.PROVIDER == str(provider),
+                METADATABLACKLIST.EXTERNAL_ID == str(external_id),
+            )
             if media_type:
-                query = query.filter(media_type == TMDBBLACKLIST.MEDIA_TYPE)
+                query = query.filter(METADATABLACKLIST.MEDIA_TYPE == media_type)
             if query.first():
                 return
 
             db.add(
-                TMDBBLACKLIST(
-                    TMDB_ID=str(tmdb_id),
-                    TITLE=title,
-                    YEAR=year,
-                    MEDIA_TYPE=media_type,
-                    POSTER_PATH=poster_path,
-                    BACKDROP_PATH=backdrop_path,
-                    NOTE=note,
+                METADATABLACKLIST(
+                    PROVIDER=str(provider),
+                    EXTERNAL_ID=str(external_id),
+                    TITLE=title or "",
+                    YEAR=year or "",
+                    MEDIA_TYPE=media_type or "",
+                    POSTER_PATH=poster_path or "",
+                    BACKDROP_PATH=backdrop_path or "",
+                    NOTE=note or "",
                 )
             )
 
-    def delete_tmdb_blacklist(self, tmdb_id, media_type=None):
-        """
-        从TMDB黑名单删除
-
-        Args:
-            tmdb_id: TMDB ID
-            media_type: 媒体类型
-        """
-        if not tmdb_id:
+    def delete_blacklist(self, provider, external_id, media_type=None):
+        """从识别黑名单删除."""
+        if not external_id:
             return
         with self.session() as db:
+            query = db.query(METADATABLACKLIST).filter(
+                METADATABLACKLIST.PROVIDER == str(provider),
+                METADATABLACKLIST.EXTERNAL_ID == str(external_id),
+            )
             if media_type:
-                db.query(TMDBBLACKLIST).filter(
-                    TMDBBLACKLIST.TMDB_ID == str(tmdb_id), TMDBBLACKLIST.MEDIA_TYPE == media_type
-                ).delete()
-            else:
-                db.query(TMDBBLACKLIST).filter(TMDBBLACKLIST.TMDB_ID == str(tmdb_id)).delete()
+                query = query.filter(METADATABLACKLIST.MEDIA_TYPE == media_type)
+            query.delete()
 
-    def clear_tmdb_blacklist(self):
-        """
-        清空所有TMDB黑名单记录
-        """
+    def clear_blacklist(self, provider=None):
+        """清空识别黑名单记录."""
         with self.session() as db:
-            db.query(TMDBBLACKLIST).delete()
+            query = db.query(METADATABLACKLIST)
+            if provider:
+                query = query.filter(METADATABLACKLIST.PROVIDER == str(provider))
+            query.delete()

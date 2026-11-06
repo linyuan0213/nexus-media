@@ -5,11 +5,11 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from app.db.repositories.subscribe_repo_adapter import (
+from app.domain.mediatypes import MediaType
+from app.services.subscribe_repo_adapter import (
     SubscribeMovieRepositoryAdapter,
     SubscribeTvRepositoryAdapter,
 )
-from app.domain.mediatypes import MediaType
 
 
 def _value(row: Any, *names: str):

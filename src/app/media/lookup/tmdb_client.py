@@ -1,9 +1,10 @@
 import difflib
 
 from app.core.settings import settings
-from app.db.repositories.plugin_repo_adapter import TmdbBlacklistRepositoryAdapter
+from app.db.repositories.plugin_repo_adapter import MetadataBlacklistRepositoryAdapter
 from app.domain.mediatypes import MediaType
-from app.infrastructure.cache_system import TMDBCache, get_cache_manager
+from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.cache_system.metadata_cache import MetadataCache
 from app.infrastructure.external.tmdbv3api import (
     TV,
     Discover,
@@ -24,7 +25,7 @@ from app.utils.config_tools import get_tmdbapi_url
 class TmdbClient:
     """TMDB API 客户端封装"""
 
-    def __init__(self, tmdb_blacklist_repo: TmdbBlacklistRepositoryAdapter | None = None):
+    def __init__(self, metadata_blacklist_repo: MetadataBlacklistRepositoryAdapter | None = None):
         self.tmdb = None
         self.search = None
         self.movie = None
@@ -36,18 +37,15 @@ class TmdbClient:
         self.discover = None
         self.genre = None
         self._default_language = "zh"
-        self._tmdb_blacklist_repo = tmdb_blacklist_repo or TmdbBlacklistRepositoryAdapter()
+        self._metadata_blacklist_repo = metadata_blacklist_repo or MetadataBlacklistRepositoryAdapter()
         self._init_config()
 
     def reset(self) -> None:
         """重置配置并清除缓存（热重载时由 ConfigReloader 调用）"""
         self._init_config()
-        self.redis_cache.clear()
-        # API Key 缺失期间 TMDB 查询必然失败并被 24h 负缓存（tmdb_lookup 命名空间），
-        # 配置修好后必须一并清理，否则同一标题在 TTL 内仍返回"未找到"
-        lookup_cache = get_cache_manager().get("tmdb_lookup")
-        if lookup_cache is not None:
-            lookup_cache.clear()
+        self.redis_cache.clear_provider("tmdb")
+        # API Key 缺失期间 TMDB 查询必然失败并被负缓存，配置修好后必须一并清理。
+        MetadataCache(prefix="lookup").clear()
 
     def _init_config(self):
         # 先清空再按当前配置重建：否则清空/更换 API Key 后仍会沿用旧客户端（表现为"Key 未设置"依旧）
@@ -80,15 +78,15 @@ class TmdbClient:
             self.trending = Trending()
             self.discover = Discover()
             self.genre = Genre()
-        self.redis_cache = TMDBCache(get_cache_manager().get("tmdb"))
-        self.blacklist = self._tmdb_blacklist_repo
-        self._blacklist_cache = get_cache_manager().get_or_create("tmdb_blacklist", "memory", maxsize=1, ttl=300)
+        self.redis_cache = MetadataCache()
+        self.blacklist = self._metadata_blacklist_repo
+        self._blacklist_cache = get_cache_manager().get_or_create("metadata_blacklist", "memory", maxsize=1, ttl=300)
 
     def get_blacklist(self):
         cached = self._blacklist_cache.get("all")
         if cached is not None:
             return cached
-        all_items = self.blacklist.get_tmdb_blacklist()
+        all_items = self.blacklist.get_blacklist()
         self._blacklist_cache.set("all", all_items)
         return all_items
 

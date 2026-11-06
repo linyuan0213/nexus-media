@@ -111,6 +111,8 @@ class TestNoteMediaType:
         assert _resolve_subscribe_type("tv") == "tv"
         assert _resolve_subscribe_type(None) == "tv"
         assert _resolve_subscribe_type("") == "tv"
+        # 有 TMDB ID 但缺少网关时不能静默降级成 TV
+        assert _resolve_subscribe_type(None, 258348) == "unknown"
 
     def test_anime_maps_to_tv_table(self):
         assert MediaTypeMapper.to_tmdb(MediaType.ANIME) == "tv"

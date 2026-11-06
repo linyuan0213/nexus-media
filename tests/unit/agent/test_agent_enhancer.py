@@ -1,6 +1,6 @@
 """Agent 通知增强（单流替换模板）单元测试"""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from app.message.agent_enhancer import AgentMessageEnhancer
 from app.message.core.agent_dispatcher import AgentEnhancingDispatcher
@@ -20,8 +20,7 @@ class TestAgentMessageEnhancer:
             agent = MagicMock()
             agent.ready = True
             agent.chat.return_value = "《流浪地球2》下载完成，已入库。"
-        with patch("app.message.agent_enhancer.get_notify_config", return_value=cfg or _notify_cfg()):
-            return AgentMessageEnhancer(agent), agent
+        return AgentMessageEnhancer(agent, cfg or _notify_cfg()), agent
 
     def test_should_enhance_only_configured_types(self):
         enhancer, _ = self._enhancer()
@@ -60,9 +59,7 @@ class TestAgentEnhancingDispatcher:
         agent = agent or MagicMock()
         agent.ready = True
         agent.chat.return_value = "智能通知内容"
-        enhancer = AgentMessageEnhancer(agent) if False else None
-        with patch("app.message.agent_enhancer.get_notify_config", return_value=cfg or _notify_cfg()):
-            enhancer = AgentMessageEnhancer(agent)
+        enhancer = AgentMessageEnhancer(agent, cfg or _notify_cfg())
         proxy = AgentEnhancingDispatcher(inner, enhancer)
         return inner, proxy
 

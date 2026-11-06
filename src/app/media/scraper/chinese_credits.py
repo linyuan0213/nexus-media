@@ -6,8 +6,8 @@ import log
 class ChineseCredits:
     """中文演职人员匹配器 — 用豆瓣数据替换 TMDB 演职人员英文名"""
 
-    def __init__(self, media_service):
-        self._media = media_service
+    def __init__(self, metadata_gateway):
+        self._metadata_gateway = metadata_gateway
 
     def match(self, directors, actors, doubaninfo):
         """匹配并返回中文名替换后的导演/演员列表"""
@@ -40,7 +40,9 @@ class ChineseCredits:
 
     def _match_person(self, person, douban_people):
         """用 TMDB 又名 + 姓名匹配豆瓣人员"""
-        aka_names = self._media.get_tmdbperson_aka_names(person.get("id")) or []
+        aka_names = (
+            self._metadata_gateway.person_aka_names(person.get("id")) if self._metadata_gateway is not None else []
+        )
         aka_names.append(person.get("name"))
         for aka_name in aka_names:
             for dp in douban_people:

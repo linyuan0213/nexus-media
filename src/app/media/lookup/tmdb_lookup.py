@@ -4,7 +4,7 @@ import threading
 import log
 from app.domain.media_type_utils import MediaTypeMapper
 from app.domain.mediatypes import MediaType
-from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.cache_system.metadata_cache import MetadataCache
 from app.infrastructure.http.exceptions import HttpRateLimitError
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.base import BaseLookup, LookupResult
@@ -41,9 +41,7 @@ class TmdbLookup(BaseLookup):
         self.season = TmdbSeason(self.client)
         self.person = TmdbPerson(self.client)
         self.discover = TmdbDiscover(self.client)
-        self._lookup_cache = get_cache_manager().get_or_create(
-            "tmdb_lookup", "tiered", maxsize=500, ttl=_LOOKUP_CACHE_TTL
-        )
+        self._lookup_cache = MetadataCache(prefix="lookup")
 
     def lookup(
         self, parsed, hint_type: MediaType | None = None, strict: bool | None = None, language: str | None = None

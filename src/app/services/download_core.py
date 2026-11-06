@@ -22,7 +22,6 @@ import log
 from app.core.constants import PT_TAG, RMT_MEDIAEXT
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.core.system_config import SystemConfig
 from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 from app.db.repositories.download_repo_adapter import (
     DownloadHistoryRepositoryAdapter,
@@ -37,6 +36,7 @@ from app.events.bus import EventBus
 from app.events.registry import EventHandlerRegistry  # noqa: F401
 from app.infrastructure.cache_system import get_cache_manager
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
+from app.infrastructure.system_config import SystemConfig
 from app.infrastructure.task_queue import QueueUnavailableError
 from app.media import meta_info
 from app.mediaserver import MediaServer

@@ -42,6 +42,9 @@ class _FakeMetadata:
     def __init__(self):
         self.calls = []
 
+    def provider_display_name(self, provider):
+        return str(provider or "")
+
     def episodes(self, provider, external_id, season, **kwargs):
         self.calls.append((provider, external_id, season, kwargs))
         return [

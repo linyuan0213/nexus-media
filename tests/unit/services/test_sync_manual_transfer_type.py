@@ -9,14 +9,15 @@ from app.services.sync_service import SyncService
 
 def _svc(results, media_service=True):
     svc = SyncService.__new__(SyncService)
+    gateway = MagicMock()
+    gateway.details.side_effect = results
+    setattr(svc, "_metadata_gateway", gateway)
     if media_service:
         ms = MagicMock()
-        ms.get_tmdb_info.side_effect = results
         setattr(svc, "_media_service", ms)
     else:
         setattr(svc, "_media_service", None)
     cache = MagicMock()
-    cache.get_tmdb_info.side_effect = results
     setattr(svc, "_media_cache", cache)
     return svc, cache
 
@@ -25,7 +26,7 @@ def test_primary_type_hit():
     svc, _cache = _svc([{"id": 1, "title": "电影", "media_type": "movie"}])
     info, mtype = svc._resolve_manual_tmdb_info(MediaType.MOVIE, 1)
     assert info and mtype == MediaType.MOVIE
-    assert cast(Any, svc._media_service).get_tmdb_info.call_count == 1
+    assert cast(Any, svc._metadata_gateway).details.call_count == 1
 
 
 def test_falls_back_to_tv_when_movie_miss():
@@ -62,11 +63,12 @@ def test_live_fetch_used_even_without_cache():
     cache.get_tmdb_info.assert_not_called()
 
 
-def test_fallback_to_cache_when_no_media_service():
+def test_uses_gateway_even_without_media_service():
     svc, cache = _svc([{"id": 7, "title": "电影", "media_type": "movie"}], media_service=False)
     info, mtype = svc._resolve_manual_tmdb_info(MediaType.MOVIE, 7)
     assert info and mtype == MediaType.MOVIE
-    cache.get_tmdb_info.assert_called_once()
+    cache.get_tmdb_info.assert_not_called()
+    assert cast(Any, svc._metadata_gateway).details.call_count == 1
 
 
 def test_provider_payload_is_injected_from_plugin():

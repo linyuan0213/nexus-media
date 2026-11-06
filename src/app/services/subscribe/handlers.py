@@ -7,11 +7,6 @@ from typing import Any
 
 import log
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
-from app.db.repositories.subscribe_repo_adapter import (
-    SubscribeMovieRepositoryAdapter,
-    SubscribeTvEpisodeRepositoryAdapter,
-    SubscribeTvRepositoryAdapter,
-)
 from app.domain.entities.rss import SubscribeState
 from app.domain.mediatypes import MediaType
 from app.events import Event, on_event
@@ -37,6 +32,11 @@ from app.media import MediaInfo
 from app.media.parser import RegexParser
 from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.strategies.queue_search import QueueSearchStrategy
+from app.services.subscribe_repo_adapter import (
+    SubscribeMovieRepositoryAdapter,
+    SubscribeTvEpisodeRepositoryAdapter,
+    SubscribeTvRepositoryAdapter,
+)
 
 
 @on_event(SUBSCRIBE_FINISHED)

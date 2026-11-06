@@ -99,15 +99,15 @@ from app.db.models.message import (
     MESSAGECLIENT,
 )
 
-# 插件历史和TMDB黑名单模型
+# 插件历史和识别黑名单模型
 from app.db.models.plugin import (
+    METADATABLACKLIST,
     PLUGINCONFIG,
     PLUGINHISTORY,
     PLUGINHOOKS,
     PLUGINLOGS,
     PLUGINMANIFEST,
     PLUGINMARKETSOURCE,
-    TMDBBLACKLIST,
     TORRENTREMOVETASK,
     USERRSSTASKHISTORY,
 )
@@ -239,7 +239,7 @@ __all__ = [
     "INDEXERSITECONFIG",
     # 插件
     "PLUGINHISTORY",
-    "TMDBBLACKLIST",
+    "METADATABLACKLIST",
     "TORRENTREMOVETASK",
     "USERRSSTASKHISTORY",
     "PLUGINMANIFEST",

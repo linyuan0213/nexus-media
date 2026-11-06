@@ -10,7 +10,7 @@ def test_metadata_prepare_reads_selected_instance():
     media_server = MagicMock()
     media_server.get_libraries.return_value = [{"id": "lib-demo"}]
     media_server.get_items.return_value = []
-    resolver = LibraryMetadataResolver(MagicMock(), media_server, MagicMock(), MagicMock())
+    resolver = LibraryMetadataResolver(media_server, MagicMock(), MagicMock())
 
     resolver.prepare(True, server_id=2)
 

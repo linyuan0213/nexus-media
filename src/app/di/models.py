@@ -117,7 +117,7 @@ class ServiceObjects:
     search_orchestrator: Any
     backup_restore_service: Any
     user_manage_service: Any
-    tmdb_blacklist_service: Any
+    metadata_blacklist_service: Any
     download_service: Any
     plugin_framework_service: Any
     plugin_market_service: Any

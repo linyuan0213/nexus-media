@@ -452,7 +452,7 @@ DEFAULT_MENUS = [
                 "permission_code": "library:manage",
             },
             {
-                "name": "TMDB 黑名单",
+                "name": "识别黑名单",
                 "code": "RenameBlacklist",
                 "path": "/rename/blacklist",
                 "icon": "lucide:ban",

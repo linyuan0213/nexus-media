@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 
 from app.domain.mediatypes import MediaType
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
-from app.media.metadata.registry import registry as metadata_registry
 from app.schemas.auth import UserContext
 
 if TYPE_CHECKING:
@@ -35,9 +34,10 @@ def _normalized_title(title: str) -> str:
     return "".join(ch for ch in str(title or "").lower() if ch.isalnum())
 
 
-def _provider_label(provider: str) -> str:
-    descriptor = getattr(metadata_registry.get_provider(provider), "descriptor", None)
-    return str(getattr(descriptor, "display_name", "") or provider or "").strip()
+def _provider_label(provider: str, metadata_gateway: MetadataGateway | None = None) -> str:
+    if metadata_gateway is None:
+        return str(provider or "").strip()
+    return metadata_gateway.provider_display_name(provider).strip()
 
 
 class SubscribeCalendarService:
@@ -306,7 +306,7 @@ class SubscribeCalendarService:
         if provider_events:
             return provider_events
         fallback_events = self._tmdb_fallback_events(tv, user)
-        source_label = _provider_label(provider) or provider.upper()
+        source_label = _provider_label(provider, self._metadata_gateway) or provider.upper()
         for event in fallback_events:
             event["source_label"] = source_label
             event["date_source_label"] = "TMDB"
@@ -327,7 +327,7 @@ class SubscribeCalendarService:
                 title = f"{title} 第{number}集"
             if ep_title:
                 title = f"{title} {ep_title}"
-            source_label = _provider_label(provider) or provider.upper()
+            source_label = _provider_label(provider, self._metadata_gateway) or provider.upper()
             events.append(
                 {
                     "id": f"{provider}:{external_id}:{tv.get('season')}:{number}",
@@ -440,11 +440,13 @@ class SubscribeCalendarService:
             poster_list = images.get("poster") or []
             if poster_list:
                 poster = str(poster_list[0].get("url") or "")
-            source_label = str(movie.get("source_label") or "").strip() or _provider_label(provider)
+            source_label = str(movie.get("source_label") or "").strip() or _provider_label(
+                provider, self._metadata_gateway
+            )
             date_source = (
                 "插件聚合"
                 if detail_provider and used_provider == detail_provider
-                else (_provider_label(used_provider) or used_provider)
+                else (_provider_label(used_provider, self._metadata_gateway) or used_provider)
             )
             event = {
                 "id": f"{provider or used_provider}:{external_id}",

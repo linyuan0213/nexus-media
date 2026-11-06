@@ -20,7 +20,9 @@ class TmdbDetail:
         # 与默认语言相同则沿用 default 键，避免跨语言污染
         active_lang = getattr(self.client.tmdb, "language", None) if self.client.tmdb else None
         cache_lang = language or (active_lang if active_lang and active_lang != self.client._default_language else None)
-        cached = self.client.redis_cache.get_tmdb_info(mtype, tmdbid, cache_lang, extra=append_to_response or "")
+        cached = self.client.redis_cache.get_detail(
+            "tmdb", tmdbid, mtype, language=cache_lang, extra=append_to_response or ""
+        )
         if cached:
             log.debug(f"[Meta]从缓存获取TMDB信息: {mtype.value}/{tmdbid}")
             if language:
@@ -45,7 +47,9 @@ class TmdbDetail:
                 info["genre_ids"] = get_genre_ids_from_detail(info.get("genres"))
                 # 以本次实际语言决定是否补中文名：language="en" 时不得覆盖为中文
                 info = update_tmdbinfo_cn_title(info, language or active_lang or self.client._default_language)
-            self.client.redis_cache.set_provider_data(mtype, tmdbid, info, cache_lang, extra=append_to_response or "")
+            self.client.redis_cache.set_detail(
+                "tmdb", tmdbid, info, mtype, language=cache_lang, extra=append_to_response or ""
+            )
             return info
 
         result = deduper.execute(cache_key, _fetch)
@@ -80,7 +84,7 @@ class TmdbDetail:
             return None
 
     def get_season_detail(self, tmdbid, season: int):
-        cached = self.client.redis_cache.get_season_info(tmdbid, season)
+        cached = self.client.redis_cache.get_season("tmdb", tmdbid, season)
         if cached:
             log.debug(f"[Meta]从缓存获取季详情: {tmdbid}, 季: {season}")
             return cached
@@ -91,7 +95,7 @@ class TmdbDetail:
             info = self.client.tv.season_details(tmdbid, season)
             result = info or {}
             if result:
-                self.client.redis_cache.set_season_info(tmdbid, season, result)
+                self.client.redis_cache.set_season("tmdb", tmdbid, season, result)
             return result
         except Exception as e:
             log.warn(f"[TmdbDetail]查询季详情失败: {e}")

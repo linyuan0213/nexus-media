@@ -93,8 +93,13 @@ class SubscribeRefreshService:
                 continue
             media_info = self.__get_media_info(tmdbid=tmdbid, name=name, year=year, mtype=MediaType.TV, cache=True)
             if media_info and media_info.tmdb_id:
-                total_episode = self._media.get_tmdb_season_episodes_num(
-                    tv_info=media_info.provider_data, season=int(str(season).replace("S", ""))
+                total_episode = self._season_episode_count(
+                    media_info=media_info,
+                    title=str(name or media_info.title or ""),
+                    year=str(media_info.year or year or "") or None,
+                    media_type=MediaType.TV,
+                    season=int(str(season).replace("S", "")),
+                    content_profile="default",
                 )
                 if total_ep:
                     total_episode = total_ep
@@ -276,15 +281,55 @@ class SubscribeRefreshService:
             self._tv_repo.update(rss_info.get("id"), **updates)
         return True
 
+    def _season_episode_count(
+        self,
+        *,
+        media_info,
+        title: str,
+        year: str | None,
+        media_type: MediaType,
+        season: int,
+        content_profile: str,
+    ) -> int:
+        if self._metadata_gateway is None:
+            return 0
+        return self._metadata_gateway.resolve_season_episode_count(
+            context=MetadataContext(
+                content_profile=content_profile,
+                purpose="subscribe.refresh",
+                allow_private=True,
+            ),
+            provider="tmdb",
+            external_id=str(getattr(media_info, "tmdb_id", "") or ""),
+            title=title,
+            year=year,
+            media_type=media_type,
+            season=season,
+            content_profile=content_profile,
+            provider_data=getattr(media_info, "provider_data", None),
+        )
+
     def __get_media_info(self, tmdbid, name, year, mtype, cache=True):
         """综合返回媒体信息"""
+        if self._metadata_gateway is None:
+            log.warn("[Subscribe]元数据网关不可用，跳过刷新媒体信息")
+            return None
         if tmdbid and not str(tmdbid).startswith("DB:"):
             media_info = meta_info(title=("%s %s" % (name, year)).strip())
-            tmdb_info = self._media.get_tmdb_info(mtype=mtype, tmdbid=tmdbid)
+            tmdb_info = self._metadata_gateway.details("tmdb", tmdbid, media_type=mtype)
             media_info.set_provider_data(tmdb_info)
         else:
-            media_info = self._media.get_media_info(
-                title=f"{name} {year}".strip(), mtype=mtype, strict=True, cache=cache
+            media_info = self._metadata_gateway.resolve_by_title(
+                title=f"{name} {year}".strip(),
+                media_type=mtype,
+                year=str(year or "") or None,
+                strict=True,
+                cache=cache,
+                context=MetadataContext(
+                    content_profile="default",
+                    purpose="subscribe.refresh",
+                    allow_private=True,
+                ),
             )
         return media_info
 
