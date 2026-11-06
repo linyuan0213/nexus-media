@@ -222,7 +222,10 @@ class WebSearchService:
             if profile != "default":
                 filters = {**(filters or {}), "content_profile": profile}
             parsed_type = MediaType.from_string(request_type or "")
-            if parsed_type == MediaType.ANIME:
+            if profile == "anime":
+                # 动漫画像无论前端是否残留 movie 参数，都必须按 TV 解析锚点。
+                media_type = MediaType.TV
+            elif parsed_type == MediaType.ANIME:
                 media_type = MediaType.TV
             elif parsed_type == MediaType.TV:
                 media_type = MediaType.TV
