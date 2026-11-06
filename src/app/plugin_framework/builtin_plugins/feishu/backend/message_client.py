@@ -16,6 +16,7 @@ from app.message.schema import ConfigField, MessageConfigSchema
 from app.plugin_framework.builtin_plugins.feishu.backend.feishu_api import FeishuApi
 from app.plugin_framework.builtin_plugins.feishu.backend.ws_server import WsServer
 from app.utils import ExceptionUtils
+from app.utils.config_tools import get_domain
 
 
 def build_webhook_payload(title: str, text: str, url: str) -> dict:
@@ -245,8 +246,26 @@ class Feishu(_IMessageClient):
             return state
         return True
 
+    @staticmethod
+    def _normalize_image_url(image_url: str) -> str:
+        value = str(image_url or "").strip()
+        if not value:
+            return ""
+        if value.startswith("//"):
+            return "https:" + value
+        if value.startswith(("http://", "https://")):
+            return value
+        domain = get_domain()
+        if not domain:
+            return ""
+        return f"{domain}/{value.lstrip('/')}"
+
     def _resolve_image(self, image_url: str) -> str:
         """下载远程图片并上传飞书，返回 image_key（失败返回空串，通知降级为无图）"""
+        image_url = self._normalize_image_url(image_url)
+        if not image_url:
+            log.warn("飞书图片地址为空或缺少站点域名，通知降级为无图")
+            return ""
         try:
             resp = HttpClient(config=HttpClientConfig(timeout=20)).get(image_url)
             if not resp.content:
