@@ -307,9 +307,14 @@ class MessageBuilder:
                 )
 
     def send_transfer_tv_message(
-        self, message_medias: dict, in_from: Enum, exist_filenum: int = 0, category_flag: bool = False
+        self,
+        message_medias: dict | list,
+        in_from: Enum,
+        exist_filenum: int = 0,
+        category_flag: bool = False,
     ) -> None:
-        for item_info in message_medias.values():
+        items = message_medias.values() if isinstance(message_medias, dict) else message_medias
+        for item_info in items:
             self._enrich_from_subscription(item_info)
             if item_info.total_episodes == 1:
                 msg_title = f"✅ {item_info.get_title_string()} {item_info.get_season_episode_string()} 已入库"
