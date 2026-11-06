@@ -135,8 +135,13 @@ class RssFeedStrategy:
         """从订阅名称/关键词/系列名提取多关键词，用于识别前的廉价预筛."""
         terms: set[str] = set()
         for info in subscriptions.values():
-            for field in ("name", "keyword", "series_title"):
-                raw = str(info.get(field) or "").strip()
+            raw_values = [info.get("name"), info.get("keyword"), info.get("series_title")]
+            aliases = info.get("aliases") or []
+            if isinstance(aliases, str):
+                aliases = [aliases]
+            raw_values.extend(aliases)
+            for raw_value in raw_values:
+                raw = str(raw_value or "").strip()
                 if not raw:
                     continue
                 for part in re.split(r"[/|,，、;；]+", raw):

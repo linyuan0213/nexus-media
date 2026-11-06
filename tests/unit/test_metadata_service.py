@@ -69,6 +69,9 @@ class _FakeSnapshotRepo:
     def get_overrides(self, identity_id, *, user_id=None):
         return []
 
+    def update_aliases(self, identity_id, aliases):
+        return False
+
     def get_identity(self, identity_id) -> Any:
         for identity, _kwargs in self.identities:
             if identity.IDENTITY_ID == identity_id:
@@ -203,6 +206,9 @@ def test_link_subscription_does_not_block_on_repo_failure():
 
         def get_overrides(self, identity_id, *, user_id=None):
             return []
+
+        def update_aliases(self, identity_id, aliases):
+            return False
 
         def get_identity(self, identity_id):
             return None

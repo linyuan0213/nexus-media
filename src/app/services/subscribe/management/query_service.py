@@ -6,6 +6,7 @@ from typing import Any
 
 import log
 from app.core.constants import ANIME_GENREIDS
+from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.db.repositories.media_series_repository import MediaSeriesRepository
 from app.domain.entities.custom_rss import custom_rss_id
 from app.domain.mediatypes import MediaType
@@ -185,6 +186,20 @@ class SubscribeQueryService:
             "profiles": profiles,
         }
 
+    @staticmethod
+    def _attach_aliases(items: dict) -> dict:
+        identity_ids = {str(item.get("identity_id")) for item in items.values() if item.get("identity_id")}
+        if not identity_ids:
+            return items
+        try:
+            aliases_map = MediaIdentityRepository().get_aliases_map(identity_ids)
+        except Exception as exc:  # noqa: BLE001 - 别名只用于预筛，不影响订阅列表
+            log.debug(f"[Subscribe]读取订阅别名失败: {exc}")
+            return items
+        for item in items.values():
+            item["aliases"] = aliases_map.get(str(item.get("identity_id")), [])
+        return items
+
     def get_subscribe_movies(
         self, rid: int | None = None, state: str | None = None, user: UserContext | None = None
     ) -> dict:
@@ -290,7 +305,7 @@ class SubscribeQueryService:
                 "type": MediaType.MOVIE.value,
                 "add_date": rss_movie.ADD_DATE,
             }
-        return ret_dict
+        return self._attach_aliases(ret_dict)
 
     def get_subscribe_tvs(
         self, rid: int | None = None, state: str | None = None, user: UserContext | None = None
@@ -443,7 +458,7 @@ class SubscribeQueryService:
                 "type": resolved_type,
                 "add_date": rss_tv.ADD_DATE,
             }
-        return ret_dict
+        return self._attach_aliases(ret_dict)
 
     def get_subscribe_tv_episodes(self, rssid: int | None) -> Any:
         """查询数据库中订阅的电视剧缺失集数"""

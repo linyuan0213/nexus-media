@@ -87,6 +87,8 @@ class IdentityRepositoryProtocol(Protocol):
 
     def get_identity(self, identity_id: str) -> Any: ...
 
+    def update_aliases(self, identity_id: str, aliases: list[str] | set[str]) -> bool: ...
+
     def list_refs(self, identity_id: str) -> list[Any]: ...
 
     def list_pending_links(self, *, limit: int = 100) -> list[Any]: ...
@@ -759,6 +761,18 @@ class MetadataService:
                     if episodes:
                         metadata.episodes.extend(episodes)
                         break
+        if identity is not None and metadata is not None:
+            alias_values = list(metadata.aliases or [])
+            for field_name in ("title", "original_title"):
+                field = metadata.fields.get(field_name)
+                value = getattr(field, "value", None)
+                if value:
+                    alias_values.append(str(value))
+            if alias_values:
+                try:
+                    self._identity_repo.update_aliases(identity.IDENTITY_ID, alias_values)
+                except Exception as exc:  # noqa: BLE001 - 别名持久化失败不影响刮削
+                    log.debug(f"[Metadata]别名落库失败 {identity.IDENTITY_ID}: {exc}")
         if persist and identity is not None and metadata is not None and user_id is None:
             try:
                 self._persist_snapshot(identity, metadata, resolved.key, refs, scope=snapshot_scope)
@@ -1553,6 +1567,20 @@ class MetadataService:
         cache_key = f"v{version}:{provider}:{external_id}:{scope}:{type_key}"
         cached = self._detail_cache.get(cache_key)
         if isinstance(cached, dict):
+            identity = self._identity_repo.find_by_ref(
+                provider,
+                str(external_id),
+                scope=scope,
+                media_type=media_type.value if media_type else None,
+            )
+            if identity is not None:
+                aliases = list(cached.get("aliases") or [])
+                for field_name in ("title", "original_title"):
+                    value = cached.get(field_name)
+                    if value:
+                        aliases.append(str(value))
+                if aliases:
+                    self._identity_repo.update_aliases(identity.IDENTITY_ID, aliases)
             return cached
         key = f"{provider}:{external_id}:{scope}:{type_key}"
         with self._inflight_lock:
@@ -1579,6 +1607,20 @@ class MetadataService:
             data = record.model_dump(mode="json") if record is not None else None
             if isinstance(data, dict) and self._has_detail_payload(data):
                 self._detail_cache.set(cache_key, data, ttl=600)
+                identity = self._identity_repo.find_by_ref(
+                    provider,
+                    str(external_id),
+                    scope=scope,
+                    media_type=media_type.value if media_type else None,
+                )
+                if identity is not None:
+                    aliases = list(data.get("aliases") or [])
+                    for field_name in ("title", "original_title"):
+                        value = data.get(field_name)
+                        if value:
+                            aliases.append(str(value))
+                    if aliases:
+                        self._identity_repo.update_aliases(identity.IDENTITY_ID, aliases)
             else:
                 self._detail_cache.delete(cache_key)
             future.set_result(data)

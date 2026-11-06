@@ -8,11 +8,14 @@ def test_subscription_keywords_support_multiple_aliases():
         {
             1: {"name": "Song One", "keyword": "一曲倾情"},
             2: {"name": "葬送的芙莉莲 第二季", "keyword": ""},
+            3: {"name": "Song One", "aliases": ["第一支歌", "纽约情弦"]},
         }
     )
     assert "SONGONE" in terms
     assert "一曲倾情" in terms
     assert "葬送的芙莉莲" in terms
+    assert "第一支歌" in terms
+    assert "纽约情弦" in terms
 
 
 def test_title_matches_any_subscription_keyword():

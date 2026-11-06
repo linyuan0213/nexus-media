@@ -51,6 +51,58 @@ class MediaIdentityRepository(BaseRepository):
         with self.readonly() as db:
             return db.query(MediaIdentity).filter(MediaIdentity.IDENTITY_ID == identity_id).first()
 
+    @staticmethod
+    def _decode_aliases(raw: str | None) -> list[str]:
+        if not raw:
+            return []
+        try:
+            value = json.loads(raw)
+        except (TypeError, ValueError):
+            return []
+        if not isinstance(value, list):
+            return []
+        return [str(item).strip() for item in value if str(item).strip()]
+
+    def get_aliases(self, identity_id: str) -> list[str]:
+        identity = self.get_identity(identity_id)
+        return self._decode_aliases(getattr(identity, "ALIASES", None)) if identity is not None else []
+
+    def get_aliases_map(self, identity_ids: list[str] | set[str]) -> dict[str, list[str]]:
+        ids = [str(item) for item in identity_ids if item]
+        if not ids:
+            return {}
+        with self.readonly() as db:
+            rows = (
+                db.query(MediaIdentity.IDENTITY_ID, MediaIdentity.ALIASES)
+                .filter(MediaIdentity.IDENTITY_ID.in_(ids))
+                .all()
+            )
+        return {str(identity_id): self._decode_aliases(raw) for identity_id, raw in rows}
+
+    def update_aliases(self, identity_id: str, aliases: list[str] | set[str]) -> bool:
+        if not identity_id:
+            return False
+        incoming = [str(item).strip() for item in aliases if str(item).strip()]
+        if not incoming:
+            return False
+        with self.session() as db:
+            row = db.query(MediaIdentity).filter(MediaIdentity.IDENTITY_ID == identity_id).first()
+            if row is None:
+                return False
+            merged = self._decode_aliases(row.ALIASES)
+            seen = {item.casefold() for item in merged}
+            changed = False
+            for alias in incoming:
+                key = alias.casefold()
+                if key not in seen:
+                    seen.add(key)
+                    merged.append(alias)
+                    changed = True
+            if changed:
+                row.ALIASES = json.dumps(merged, ensure_ascii=False)
+                db.commit()
+            return changed
+
     def ensure_identity(
         self,
         *,

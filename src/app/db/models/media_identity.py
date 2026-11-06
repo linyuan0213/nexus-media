@@ -21,6 +21,7 @@ class MediaIdentity(Base):
     CONTENT_PROFILE: Mapped[str] = mapped_column(String(64), nullable=False, default="default")
     CANONICAL_TITLE: Mapped[str | None] = mapped_column(String(255), nullable=True)
     YEAR: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    ALIASES: Mapped[str | None] = mapped_column(Text, nullable=True)
     PARENT_IDENTITY_ID: Mapped[str | None] = mapped_column(String(26), nullable=True)
     SEASON_NUMBER: Mapped[int | None] = mapped_column(Integer, nullable=True)
     CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)

@@ -137,3 +137,16 @@ def test_snapshot_scope_isolated(repo):
     assert latest is not None
     assert latest.SCOPE == "season=1"
     assert latest.SNAPSHOT_HASH == "a" * 64
+
+
+def test_update_and_read_aliases(repo):
+    identity = repo.ensure_identity(title="Alias Demo", media_type="movie")
+    assert repo.update_aliases(identity.IDENTITY_ID, ["别名一", "Alias One", "别名一"]) is True
+    assert repo.get_aliases(identity.IDENTITY_ID) == ["别名一", "Alias One"]
+    assert repo.get_aliases_map([identity.IDENTITY_ID])[identity.IDENTITY_ID] == ["别名一", "Alias One"]
+
+
+def test_update_aliases_is_idempotent(repo):
+    identity = repo.ensure_identity(title="Alias Demo 2", media_type="movie")
+    repo.update_aliases(identity.IDENTITY_ID, ["Same"])
+    assert repo.update_aliases(identity.IDENTITY_ID, ["same"]) is False
