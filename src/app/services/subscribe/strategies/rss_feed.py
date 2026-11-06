@@ -126,6 +126,37 @@ class RssFeedStrategy:
         """设置下载协调器（用于 SubscriptionMonitor 注入）."""
         self._coordinator = coordinator
 
+    @staticmethod
+    def _normalize_keyword(value: str) -> str:
+        return re.sub(r"[^0-9a-zA-Z\u4e00-\u9fff]+", "", str(value or "")).upper()
+
+    @classmethod
+    def _subscription_keywords(cls, subscriptions: dict) -> set[str]:
+        """从订阅名称/关键词/系列名提取多关键词，用于识别前的廉价预筛."""
+        terms: set[str] = set()
+        for info in subscriptions.values():
+            for field in ("name", "keyword", "series_title"):
+                raw = str(info.get(field) or "").strip()
+                if not raw:
+                    continue
+                for part in re.split(r"[/|,，、;；]+", raw):
+                    value = part.strip()
+                    if not value:
+                        continue
+                    base, _ = SeriesService.split_title_season(value)
+                    for candidate in (value, base):
+                        normalized = cls._normalize_keyword(candidate)
+                        if len(normalized) >= 2:
+                            terms.add(normalized)
+        return terms
+
+    @classmethod
+    def _title_matches_keywords(cls, title: str, keywords: set[str]) -> bool:
+        if not keywords:
+            return True
+        normalized_title = cls._normalize_keyword(title)
+        return any(keyword in normalized_title for keyword in keywords)
+
     def run(self) -> None:
         """RSS Feed 轮询入口，由 SubscriptionMonitor 调用，持锁期间自动续期."""
         with strategy_lock("rss:download", ttl_seconds=300) as acquired:
@@ -259,6 +290,8 @@ class RssFeedStrategy:
 
         seen_enclosures = set()
         to_identify = []
+        subscription_keywords = self._subscription_keywords({**rss_movies, **rss_tvs})
+        keyword_filtered = 0
 
         for idx, item in enumerate(all_articles):
             article = item["article"]
@@ -275,7 +308,19 @@ class RssFeedStrategy:
                 continue
             seen_enclosures.add(enclosure or "")
 
+            # 先用订阅关键词做廉价预筛；没有命中任何订阅的资源不调用元数据 API。
+            if not self._title_matches_keywords(title, subscription_keywords):
+                keyword_filtered += 1
+                log.debug(f"[RssFeedStrategy] 关键词预筛跳过：{title}")
+                continue
+
             to_identify.append({"idx": idx, "title": title})
+
+        if keyword_filtered:
+            log.info(
+                f"[RssFeedStrategy] 关键词预筛：{len(all_articles)} 条资源 -> "
+                f"{len(to_identify)} 条进入元数据识别，跳过 {keyword_filtered} 条"
+            )
 
         identify_results = {}
         if to_identify:
