@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
 from app.media.models import MediaInfo
-from app.services.search_service import Searcher, SearchQueryBuilder
+from app.services.search_service import Searcher, SearchQueryBuilder, SearchResultProcessor
 
 
 def _make_searcher() -> Searcher:
@@ -77,6 +77,19 @@ class TestCustomProfileSearchNames:
 
         assert names == ["START-660"]
         assert workers == 1
+
+    def test_fill_missing_episode_from_raw_title(self):
+        media = MediaInfo(
+            title="学生会也有洞！",
+            type=MediaType.ANIME,
+            org_string=(
+                "[绿茶字幕组&LoliHouse] 学生会也有洞！ / Seitokai ni mo Ana wa Aru "
+                "- 01 [WebRip 1080p HEVC-10bit AAC][简繁日内封字幕]"
+            ),
+        )
+        SearchResultProcessor.fill_missing_episode(media)
+        assert media.begin_episode == 1
+        assert media.get_season_episode_string() == "S01 E01"
 
     def test_movie_ignores_numeric_tmdb_keyword(self):
         media = MediaInfo(

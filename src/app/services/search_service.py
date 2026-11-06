@@ -10,6 +10,7 @@ SearchService - 搜索业务层
 - SearchService：Service 层包装
 """
 
+import re
 from concurrent.futures import as_completed
 from typing import Any
 
@@ -298,6 +299,40 @@ class SearchResultProcessor:
 
         return sorted(media_list, key=_sort_key, reverse=True)
 
+    @staticmethod
+    def _episode_from_title(title: str) -> int | None:
+        text = str(title or "")
+        patterns = (
+            r"(?i)\bS\d{1,2}\s*E(?:P)?(\d{1,4})\b",
+            r"(?i)(?:^|[\s\-\[])(?:EP?|第)?0*(\d{1,3})(?:v\d+)?(?=\s*[\]\[\(\s]|$)",
+        )
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                try:
+                    value = int(match.group(1))
+                except (TypeError, ValueError):
+                    continue
+                if 0 < value <= 999:
+                    return value
+        return None
+
+    @staticmethod
+    def fill_missing_episode(media_item) -> None:
+        """种子标题未带季集时从原始标题补全，供下载记录和去重键使用."""
+        if (
+            getattr(media_item, "type", None) == MediaType.MOVIE
+            or getattr(media_item, "begin_episode", None) is not None
+        ):
+            return
+        episode = SearchResultProcessor._episode_from_title(
+            getattr(media_item, "org_string", "") or getattr(media_item, "title", "")
+        )
+        if episode:
+            media_item.begin_episode = episode
+            if getattr(media_item, "begin_season", None) is None:
+                media_item.begin_season = 1
+
     def filter_downloaded(self, media_list: list, force: bool = False, over_edition: bool = False) -> list:
         """过滤已完成/在途下载；电影按整部，剧集动漫按分集，洗版模式放行."""
         if over_edition:
@@ -321,6 +356,7 @@ class SearchResultProcessor:
                     return list(media_list)
         filtered = []
         for media_item in media_list:
+            self.fill_missing_episode(media_item)
             series_key = getattr(media_item, "series_key", None)
             if series_key:
                 season_episode = media_item.get_season_episode_string()
