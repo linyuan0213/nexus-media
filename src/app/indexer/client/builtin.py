@@ -20,6 +20,7 @@ from app.indexer.configuration import IndexerHelper
 from app.indexer.schema import IndexerConfigSchema
 from app.infrastructure.progress import ProgressTracker
 from app.sites.engine import SiteEngine
+from app.sites.search_gate import SiteSearchBusyError, get_site_search_gate
 from app.sites.searcher_factory import create_searcher
 from app.sites.site_cache import SiteCache
 from app.utils import StringUtils
@@ -187,11 +188,6 @@ class BuiltinIndexer(IndexerClientBase):
         if not indexer or not key_word:
             return []
 
-        # 站点流控
-        if self._site_cache.check_ratelimit(indexer.siteid):
-            self._progress.update(ptype=progress_key, text=f"{indexer.name} 触发站点流控，跳过 ...")
-            return []
-
         if filter_args is None:
             _filter_args = {}
         else:
@@ -221,13 +217,18 @@ class BuiltinIndexer(IndexerClientBase):
             else str(_filter_args.get("content_profile") or "")
         )
         try:
-            error_flag, result_array, last_error = self.__search_via_engine(
-                search_word=search_word,
-                indexer=indexer,
-                mtype=mtype,
-                content_profile=content_profile,
-                paginate=True,
-            )
+            with get_site_search_gate().acquire(indexer.siteid, timeout=30.0):
+                error_flag, result_array, last_error = self.__search_via_engine(
+                    search_word=search_word,
+                    indexer=indexer,
+                    mtype=mtype,
+                    content_profile=content_profile,
+                    paginate=True,
+                )
+        except SiteSearchBusyError:
+            log.warn(f"[{self.client_name}]{indexer.name} 搜索排队超时，本轮跳过")
+            self._progress.update(ptype=progress_key, text=f"{indexer.name} 搜索繁忙，本轮跳过")
+            return []
         except Exception as err:
             error_flag = True
             last_error = str(err)

@@ -6,6 +6,8 @@ from typing import Any
 
 import httpx
 
+from app.sites.search_gate import get_site_search_gate
+
 from .models import IndexerHealth, IndexerInfo, IndexerItem, IndexerPage, IndexerQuery, IndexerSite
 
 
@@ -102,7 +104,9 @@ class HttpIndexerProvider:
         self._client.close()
 
     def _page(self, path: str, params: dict[str, Any], query: IndexerQuery) -> IndexerPage:
-        payload = self._request(path, params)
+        gate_key = f"provider:{self.provider_id}:{params.get('site') or 'all'}"
+        with get_site_search_gate().acquire(gate_key, timeout=30.0):
+            payload = self._request(path, params)
         items = [self._to_item(row) for row in payload.get("items", [])]
         return IndexerPage(
             items=[item for item in items if item is not None],
