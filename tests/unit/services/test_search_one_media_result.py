@@ -78,6 +78,20 @@ class TestCustomProfileSearchNames:
         assert names == ["START-660"]
         assert workers == 1
 
+    def test_movie_ignores_numeric_tmdb_keyword(self):
+        media = MediaInfo(
+            title="搏击俱乐部",
+            cn_name="搏击俱乐部",
+            type=MediaType.MOVIE,
+            content_profile="movie",
+            keyword="550",
+            tmdb_id=550,
+        )
+        names, _ = SearchQueryBuilder.build_search_names(media, MagicMock())
+
+        assert "550" not in names
+        assert "搏击俱乐部" in names
+
     def test_anime_profile_ignores_numeric_tmdb_keyword(self):
         media = MediaInfo(
             title="学生会也有洞！",

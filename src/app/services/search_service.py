@@ -56,14 +56,22 @@ class SearchQueryBuilder:
     """
 
     @staticmethod
+    def is_code_identity(media_info) -> bool:
+        """是否为 content_id 编号身份（与画像名称无关）."""
+        provider = str(getattr(media_info, "anchor_provider", "") or "").strip()
+        tmdb_id = str(getattr(media_info, "tmdb_id", "") or "")
+        return provider == "content_id" or tmdb_id.startswith("content_id:")
+
+    @staticmethod
     def build_search_names(media_info, media_helper: MediaService) -> tuple[list[str], int]:
         """
         根据媒体信息构建多语言搜索词列表
         :return: (搜索词列表, 建议最大并发数)
         """
-        # 仅内容编号型画像（如插件内容库）只用编号搜索；anime/tv/movie 仍按标题召回。
+        # 身份是否为内容编号决定搜索策略：编号身份按编号搜索，普通电影/剧集按标题召回。
         profile = str(getattr(media_info, "content_profile", "") or "").strip()
-        if profile and profile not in {"default", "anime", "tv", "movie"}:
+        code_anchored = SearchQueryBuilder.is_code_identity(media_info)
+        if code_anchored and profile and profile != "default":
             keyword = (
                 media_info.keyword
                 or getattr(media_info, "anchor_external_id", "")
@@ -78,7 +86,7 @@ class SearchQueryBuilder:
             str(getattr(media_info, "anchor_external_id", "") or ""),
             str(getattr(media_info, "tmdb_id", "") or "").split(":")[-1],
         }
-        if keyword and not (profile in {"anime", "tv"} and keyword in identity_values):
+        if keyword and keyword not in identity_values:
             search_name_list.append(keyword)
 
         # 中文名
