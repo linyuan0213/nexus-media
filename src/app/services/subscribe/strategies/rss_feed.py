@@ -36,6 +36,9 @@ from app.sites.siteconf import SiteConf
 from app.sites.torrent import Torrent
 from app.utils import ExceptionUtils, JsonUtils
 
+_TITLE_PROFILES = {"default", "anime", "tv", "movie"}
+_CODE_KEYWORD_RE = re.compile(r"^[A-Za-z]{2,12}[-_ ]?\d{2,8}(?:[-_ ]?[A-Za-z0-9]+)?$")
+
 
 class RssFeedStrategy:
     """RSS Feed 轮询策略：从站点 RSS Feed 收集资源，识别媒体，匹配订阅，择优下载."""
@@ -135,6 +138,14 @@ class RssFeedStrategy:
         """从订阅名称/关键词/系列名提取多关键词，用于识别前的廉价预筛."""
         terms: set[str] = set()
         for info in subscriptions.values():
+            profile = str(info.get("content_profile") or "default")
+            keyword_text = str(info.get("keyword") or "").strip()
+            # 编号型订阅以编号为准，不把宽泛的标题别名加入预筛，避免误放行。
+            if profile not in _TITLE_PROFILES and _CODE_KEYWORD_RE.match(keyword_text):
+                normalized = cls._normalize_keyword(keyword_text)
+                if len(normalized) >= 2:
+                    terms.add(normalized)
+                continue
             raw_values = [info.get("name"), info.get("keyword"), info.get("series_title")]
             aliases = info.get("aliases") or []
             if isinstance(aliases, str):

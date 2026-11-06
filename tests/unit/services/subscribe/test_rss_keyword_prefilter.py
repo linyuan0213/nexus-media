@@ -31,3 +31,19 @@ def test_unmatched_title_is_filtered_without_metadata_call():
 
 def test_empty_keywords_does_not_block_identification():
     assert RssFeedStrategy._title_matches_keywords("Anything", set()) is True
+
+
+def test_code_identity_only_uses_number_keyword():
+    terms = RssFeedStrategy._subscription_keywords(
+        {
+            1: {
+                "name": "示例编号条目",
+                "keyword": "SONE-968",
+                "content_profile": "plugin_code",
+                "aliases": ["宽泛标题", "English Title"],
+            }
+        }
+    )
+    assert terms == {"SONE968"}
+    assert RssFeedStrategy._title_matches_keywords("SONE-968-C 1080p", terms) is True
+    assert RssFeedStrategy._title_matches_keywords("宽泛标题 1080p", terms) is False
