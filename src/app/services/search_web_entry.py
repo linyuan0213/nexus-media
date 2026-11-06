@@ -22,14 +22,14 @@ from app.services.subscribe.default_settings import get_default_setting
 ANCHOR_RESOLVE_TIMEOUT = 15.0
 
 
-def _resolve_anchor_with_timeout(fn, *args, **kwargs):
+def _resolve_anchor_with_timeout(fn, *args, timeout: float = ANCHOR_RESOLVE_TIMEOUT, **kwargs):
     """在独立线程内解析锚点，超时/异常一律返回 None 交给调用方回退."""
     executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="anchor_resolve")
     future = executor.submit(fn, *args, **kwargs)
     try:
-        return future.result(timeout=ANCHOR_RESOLVE_TIMEOUT)
+        return future.result(timeout=timeout)
     except FuturesTimeoutError:
-        log.warn(f"[Orchestrator]锚点元数据解析超过 {ANCHOR_RESOLVE_TIMEOUT:.0f}s，回退关键词搜索")
+        log.warn(f"[Orchestrator]锚点元数据解析超过 {timeout:.0f}s，回退关键词搜索")
         return None
     except Exception as exc:  # noqa: BLE001 - 元数据失败不应中断资源搜索
         log.warn(f"[Orchestrator]锚点元数据解析失败: {exc}")
@@ -97,6 +97,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     str(anchor_external_id),
                     media_type=lookup_type,
                     content_profile=resolved_profile,
+                    timeout=45.0,
                 )
                 if match_media:
                     match_media.anchor_provider = anchor_provider

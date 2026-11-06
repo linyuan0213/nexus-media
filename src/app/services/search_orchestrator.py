@@ -256,10 +256,26 @@ class SearchOrchestrator:
                 content_profile=content_profile or "default",
                 limit=5,
                 allow_private=True,
+                wait_timeout=40,
             )
         except Exception as exc:  # noqa: BLE001
             log.warn(f"[Orchestrator]编号搜索失败 {provider}:{content_id}: {exc}")
-            return None
+            hits = []
+        if not hits and provider:
+            # 指定来源临时超时/熔断时，用同编号在全部可用来源中兜底解析。
+            try:
+                hits = service.search(
+                    query=str(content_id),
+                    provider=None,
+                    media_type=media_type,
+                    content_profile=content_profile or "default",
+                    limit=5,
+                    allow_private=True,
+                    wait_timeout=40,
+                )
+            except Exception as exc:  # noqa: BLE001
+                log.warn(f"[Orchestrator]编号跨来源搜索失败 {content_id}: {exc}")
+                hits = []
         for hit in hits or []:
             ref = hit.get("ref") or {}
             hit_provider = str(ref.get("provider") or provider)
