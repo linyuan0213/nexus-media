@@ -11,7 +11,12 @@ def test_select_aliases_keeps_chinese_native_english():
         countries=["JP"],
         original_language="ja",
     )
-    assert values == ["FX战士久留美", "FX戦士くるみちゃん", "FX Fighter KURUMICHAN"]
+    assert values == [
+        "FX战士久留美",
+        "FX戦士くるみちゃん",
+        "FX Fighter KURUMICHAN",
+        "FX 戰士久留美",
+    ]
 
 
 def test_chinese_release_does_not_add_extra_native_alias():
@@ -23,6 +28,17 @@ def test_chinese_release_does_not_add_extra_native_alias():
         original_language="zh",
     )
     assert values == ["流浪地球", "The Wandering Earth"]
+
+
+def test_chinese_release_keeps_traditional_variant():
+    values = select_aliases(
+        "学生会也有洞！",
+        "学生会也有洞！",
+        ["學生會也有洞！", "Seitokai ni mo Ana wa Aru!"],
+        countries=["CN"],
+        original_language="zh",
+    )
+    assert values == ["学生会也有洞！", "Seitokai ni mo Ana wa Aru!", "學生會也有洞！"]
 
 
 def test_select_aliases_dedupes_and_limits_three():

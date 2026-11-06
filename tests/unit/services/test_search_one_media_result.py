@@ -155,3 +155,41 @@ def test_build_search_names_uses_persisted_aliases_without_provider_call():
     assert "學生會也有洞！" in names
     gateway.en_title.assert_not_called()
     gateway.zhtw_title.assert_not_called()
+
+
+def test_build_search_names_keeps_english_alias_with_three_aliases():
+    gateway = MagicMock()
+    media = MediaInfo(
+        title="FX战士久留美",
+        cn_name="FX战士久留美",
+        original_title="FX戦士くるみちゃん",
+        original_language="ja",
+        type=MediaType.ANIME,
+        aliases=["FX战士久留美", "FX戦士くるみちゃん", "FX Fighter KURUMICHAN"],
+    )
+    names, _ = SearchQueryBuilder.build_search_names(media, gateway)
+    assert "FX Fighter KURUMICHAN" in names
+    gateway.en_title.assert_not_called()
+
+
+def test_build_search_names_caps_alias_explosion():
+    gateway = MagicMock()
+    media = MediaInfo(
+        title="学生会也有洞！",
+        cn_name="学生会也有洞！",
+        original_title="生徒会にも穴はある！",
+        original_language="ja",
+        type=MediaType.ANIME,
+        aliases=[
+            "学生会也有洞！",
+            "生徒会にも穴はある！",
+            "Seitokai ni mo Ana wa Aru!",
+            "學生會也有洞！",
+            "Another Translation",
+            "Ещё один перевод",
+            "한국어 제목",
+        ],
+    )
+    names, _ = SearchQueryBuilder.build_search_names(media, gateway)
+    assert len(names) <= 4
+    assert "Seitokai ni mo Ana wa Aru!" in names

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import re
 
-_MAX_ALIASES = 3
+from app.utils.chinese_utils import to_simplified
+
+_MAX_ALIASES = 4
 _LATIN_RE = re.compile(r"[A-Za-z]{3,}")
 _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 _CHINESE_COUNTRIES = {"CN", "TW", "HK", "MO", "SG"}
@@ -52,4 +54,12 @@ def select_aliases(
     if len(result) < _MAX_ALIASES and not any(_LATIN_RE.search(item) for item in result):
         # 没有英文别名时，若英文原名存在则补上。
         add(original_title)
+    # 繁简差异：保留一个确有繁体字形差异的别名（地区译名也算）。
+    for value in values:
+        text = str(value or "").strip()
+        if not text or text in result:
+            continue
+        if _CJK_RE.search(text) and to_simplified(text) != text:
+            add(text)
+            break
     return result[:_MAX_ALIASES]

@@ -30,6 +30,7 @@ from app.events.payloads import SearchStartPayload
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.thread import ThreadExecutor
+from app.media.metadata.aliases import select_aliases
 from app.media.service import MediaService
 from app.message import Message
 from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
@@ -106,7 +107,14 @@ class SearchQueryBuilder:
         else:
             search_cn_name = media_info.title
 
-        aliases = [str(item).strip() for item in (getattr(media_info, "aliases", None) or []) if str(item).strip()]
+        raw_aliases = [str(item).strip() for item in (getattr(media_info, "aliases", None) or []) if str(item).strip()]
+        aliases = select_aliases(
+            search_cn_name,
+            getattr(media_info, "original_title", None),
+            raw_aliases,
+            countries=getattr(media_info, "countries", None),
+            original_language=getattr(media_info, "original_language", None),
+        )
 
         # 英文名优先复用已持久化的多语言别名，避免每次搜索都请求 provider。
         search_en_name = None
@@ -122,19 +130,19 @@ class SearchQueryBuilder:
             if not search_en_name and metadata_gateway is not None:
                 search_en_name = metadata_gateway.en_title(media_info) or None
 
+        def append_name(value: str | None) -> None:
+            text = str(value or "").strip()
+            if text and text not in search_name_list:
+                search_name_list.append(text)
+
         for name in (search_cn_name, search_en_name):
             if not name:
                 continue
-            base_name = _strip_season_suffix(str(name))
-            if base_name:
-                search_name_list.append(base_name)
-            search_name_list.append(str(name))
+            append_name(_strip_season_suffix(str(name)))
+            append_name(str(name))
         for alias_text in aliases:
-            base_alias = _strip_season_suffix(alias_text)
-            if base_alias and base_alias not in search_name_list:
-                search_name_list.append(base_alias)
-            if alias_text not in search_name_list:
-                search_name_list.append(alias_text)
+            append_name(_strip_season_suffix(alias_text))
+            append_name(alias_text)
             if len(search_name_list) >= 6:
                 break
 
