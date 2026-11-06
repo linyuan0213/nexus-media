@@ -35,6 +35,7 @@ from app.media.metadata import (
     SearchQuery,
     resolve_policy,
 )
+from app.media.metadata.aliases import select_aliases
 from app.media.metadata.errors import ProviderError
 from app.media.metadata.legacy import parse_legacy_ref
 from app.media.metadata.metrics import record_degraded, record_event, record_snapshot
@@ -88,6 +89,8 @@ class IdentityRepositoryProtocol(Protocol):
     def get_identity(self, identity_id: str) -> Any: ...
 
     def update_aliases(self, identity_id: str, aliases: list[str] | set[str]) -> bool: ...
+
+    def replace_aliases(self, identity_id: str, aliases: list[str] | set[str]) -> bool: ...
 
     def list_refs(self, identity_id: str) -> list[Any]: ...
 
@@ -765,15 +768,19 @@ class MetadataService:
                         metadata.episodes.extend(episodes)
                         break
         if identity is not None and metadata is not None:
-            alias_values = list(metadata.aliases or [])
-            for field_name in ("title", "original_title"):
-                field = metadata.fields.get(field_name)
-                value = getattr(field, "value", None)
-                if value:
-                    alias_values.append(str(value))
+            title_field = metadata.fields.get("title")
+            original_field = metadata.fields.get("original_title")
+            language_field = metadata.fields.get("original_language")
+            alias_values = select_aliases(
+                getattr(title_field, "value", None),
+                getattr(original_field, "value", None),
+                metadata.aliases,
+                countries=metadata.countries,
+                original_language=getattr(language_field, "value", None),
+            )
             if alias_values:
                 try:
-                    self._identity_repo.update_aliases(identity.IDENTITY_ID, alias_values)
+                    self._identity_repo.replace_aliases(identity.IDENTITY_ID, alias_values)
                 except Exception as exc:  # noqa: BLE001 - 别名持久化失败不影响刮削
                     log.debug(f"[Metadata]别名落库失败 {identity.IDENTITY_ID}: {exc}")
         if persist and identity is not None and metadata is not None and user_id is None:
@@ -1577,13 +1584,15 @@ class MetadataService:
                 media_type=media_type.value if media_type else None,
             )
             if identity is not None:
-                aliases = list(cached.get("aliases") or [])
-                for field_name in ("title", "original_title"):
-                    value = cached.get(field_name)
-                    if value:
-                        aliases.append(str(value))
+                aliases = select_aliases(
+                    cached.get("title"),
+                    cached.get("original_title"),
+                    cached.get("aliases"),
+                    countries=cached.get("countries"),
+                    original_language=cached.get("original_language"),
+                )
                 if aliases:
-                    self._identity_repo.update_aliases(identity.IDENTITY_ID, aliases)
+                    self._identity_repo.replace_aliases(identity.IDENTITY_ID, aliases)
             return cached
         key = f"{provider}:{external_id}:{scope}:{type_key}"
         with self._inflight_lock:
@@ -1617,13 +1626,15 @@ class MetadataService:
                     media_type=media_type.value if media_type else None,
                 )
                 if identity is not None:
-                    aliases = list(data.get("aliases") or [])
-                    for field_name in ("title", "original_title"):
-                        value = data.get(field_name)
-                        if value:
-                            aliases.append(str(value))
+                    aliases = select_aliases(
+                        data.get("title"),
+                        data.get("original_title"),
+                        data.get("aliases"),
+                        countries=data.get("countries"),
+                        original_language=data.get("original_language"),
+                    )
                     if aliases:
-                        self._identity_repo.update_aliases(identity.IDENTITY_ID, aliases)
+                        self._identity_repo.replace_aliases(identity.IDENTITY_ID, aliases)
             else:
                 self._detail_cache.delete(cache_key)
             future.set_result(data)

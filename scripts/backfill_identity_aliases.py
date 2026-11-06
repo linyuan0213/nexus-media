@@ -15,6 +15,7 @@ from app.db.models.subscribe import SubscribeMovies, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.mediatypes import MediaType
+from app.media.metadata.aliases import select_aliases
 from app.media.metadata.gateway import MetadataContext
 from app.media.metadata.models import MediaMetadata
 
@@ -24,13 +25,16 @@ def _aliases_from_payload(payload: str) -> list[str]:
         metadata = MediaMetadata.model_validate_json(payload)
     except Exception:  # noqa: BLE001 - 旧快照不兼容时跳过
         return []
-    values = list(metadata.aliases or [])
-    for field_name in ("title", "original_title"):
-        field = metadata.fields.get(field_name)
-        value = getattr(field, "value", None)
-        if value:
-            values.append(str(value))
-    return values
+    title_field = metadata.fields.get("title")
+    original_field = metadata.fields.get("original_title")
+    language_field = metadata.fields.get("original_language")
+    return select_aliases(
+        getattr(title_field, "value", None),
+        getattr(original_field, "value", None),
+        metadata.aliases,
+        countries=metadata.countries,
+        original_language=getattr(language_field, "value", None),
+    )
 
 
 def main() -> int:
@@ -76,7 +80,7 @@ def main() -> int:
             skipped += 1
             continue
         if args.apply:
-            if repo.update_aliases(identity_id, aliases):
+            if repo.replace_aliases(identity_id, aliases):
                 updated += 1
             else:
                 skipped += 1

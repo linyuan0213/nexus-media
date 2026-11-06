@@ -72,6 +72,9 @@ class _FakeSnapshotRepo:
     def update_aliases(self, identity_id, aliases):
         return False
 
+    def replace_aliases(self, identity_id, aliases):
+        return False
+
     def get_identity(self, identity_id) -> Any:
         for identity, _kwargs in self.identities:
             if identity.IDENTITY_ID == identity_id:
@@ -208,6 +211,9 @@ def test_link_subscription_does_not_block_on_repo_failure():
             return []
 
         def update_aliases(self, identity_id, aliases):
+            return False
+
+        def replace_aliases(self, identity_id, aliases):
             return False
 
         def get_identity(self, identity_id):

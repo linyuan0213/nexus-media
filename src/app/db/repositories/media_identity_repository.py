@@ -79,6 +79,22 @@ class MediaIdentityRepository(BaseRepository):
             )
         return {str(identity_id): self._decode_aliases(raw) for identity_id, raw in rows}
 
+    def replace_aliases(self, identity_id: str, aliases: list[str] | set[str]) -> bool:
+        """用筛选后的别名替换身份别名，避免历史多语言列表持续膨胀."""
+        if not identity_id:
+            return False
+        incoming = [str(item).strip() for item in aliases if str(item).strip()]
+        with self.session() as db:
+            row = db.query(MediaIdentity).filter(MediaIdentity.IDENTITY_ID == identity_id).first()
+            if row is None:
+                return False
+            existing = self._decode_aliases(row.ALIASES)
+            if existing == incoming:
+                return False
+            row.ALIASES = json.dumps(incoming, ensure_ascii=False) if incoming else None
+            db.commit()
+            return True
+
     def update_aliases(self, identity_id: str, aliases: list[str] | set[str]) -> bool:
         if not identity_id:
             return False

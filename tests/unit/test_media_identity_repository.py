@@ -150,3 +150,10 @@ def test_update_aliases_is_idempotent(repo):
     identity = repo.ensure_identity(title="Alias Demo 2", media_type="movie")
     repo.update_aliases(identity.IDENTITY_ID, ["Same"])
     assert repo.update_aliases(identity.IDENTITY_ID, ["same"]) is False
+
+
+def test_replace_aliases_trims_old_values(repo):
+    identity = repo.ensure_identity(title="Alias Replace", media_type="movie")
+    repo.update_aliases(identity.IDENTITY_ID, ["旧1", "旧2", "Old"])
+    assert repo.replace_aliases(identity.IDENTITY_ID, ["中文", "Native", "English"]) is True
+    assert repo.get_aliases(identity.IDENTITY_ID) == ["中文", "Native", "English"]
