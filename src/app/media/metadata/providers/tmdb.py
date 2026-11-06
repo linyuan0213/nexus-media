@@ -102,6 +102,7 @@ def tmdb_detail_to_record(
         locale=locale,
         title=info.get("title") or info.get("name"),
         original_title=info.get("original_title") or info.get("original_name"),
+        aliases=_aliases(info),
         year=(release_date or "")[:4] or None,
         release_date=release_date,
         runtime=runtime,
@@ -125,6 +126,34 @@ def tmdb_detail_to_record(
             "tmdb.homepage": info.get("homepage"),
         },
     )
+
+
+def _aliases(info: dict[str, Any]) -> list[str]:
+    """提取多语言标题：also_known_as + alternative_titles + translations."""
+    values: list[str] = []
+    raw = info.get("also_known_as") or []
+    if isinstance(raw, list):
+        values.extend(str(item) for item in raw if item)
+    alternative = info.get("alternative_titles") or {}
+    for key in ("titles", "results"):
+        for item in alternative.get(key) or []:
+            if isinstance(item, dict) and item.get("title"):
+                values.append(str(item["title"]))
+    translations = (info.get("translations") or {}).get("translations") or []
+    for item in translations:
+        data = item.get("data") if isinstance(item, dict) else None
+        if isinstance(data, dict):
+            value = data.get("name") or data.get("title")
+            if value:
+                values.append(str(value))
+    result: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value).strip()
+        if text and text.casefold() not in seen:
+            seen.add(text.casefold())
+            result.append(text)
+    return result
 
 
 def _images(info: dict[str, Any], image_url: ImageUrlBuilder | None) -> dict[str, list[ImageAsset]]:
@@ -294,7 +323,7 @@ class TmdbProvider:
         info = self._detail.get_detail(
             ref.external_id,
             media_type,
-            append_to_response="credits,images,external_ids",
+            append_to_response="credits,images,external_ids,alternative_titles,translations",
         )
         if not info:
             raise ProviderNotFound("tmdb", f"未找到 {ref.external_id}")

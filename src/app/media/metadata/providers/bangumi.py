@@ -66,7 +66,7 @@ def bangumi_item_to_record(
         value = info.get("value")
         if key in {"动画制作", "製作", "制作"} and isinstance(value, str) and value:
             studios.append(value)
-        if key == "别名":
+        if key == "别名" or "英文" in key or key.lower() in {"english", "en"}:
             aliases.extend(_infobox_names(value))
         role = role_map.get(key)
         if role == "studio" and isinstance(value, str) and value.strip():

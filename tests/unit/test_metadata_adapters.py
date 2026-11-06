@@ -30,6 +30,12 @@ def _tmdb_movie() -> dict:
         "status": "Released",
         "imdb_id": "tt0111161",
         "external_ids": {"wikidata_id": "Q172241"},
+        "alternative_titles": {"titles": [{"iso_3166_1": "HK", "title": "月黑高飛", "type": ""}]},
+        "translations": {
+            "translations": [
+                {"iso_639_1": "en", "data": {"title": "The Shawshank Redemption"}},
+            ]
+        },
         "poster_path": "/poster.jpg",
         "backdrop_path": "/backdrop.jpg",
         "images": {"logos": [{"file_path": "/logo.png", "iso_639_1": "zh"}]},
@@ -80,6 +86,8 @@ def test_tmdb_movie_mapping():
     assert record.year == "1994"
     assert record.runtime == 142
     assert record.ratings == {"tmdb": 8.733}
+    assert "月黑高飛" in record.aliases
+    assert "The Shawshank Redemption" in record.aliases
     assert record.genres == ["剧情", "犯罪"]
     assert record.studios == ["Castle Rock Entertainment"]
     assert record.images["poster"][0].url == "https://image/poster.jpg"
@@ -255,7 +263,10 @@ def test_bangumi_provider_adapter_maps_subject():
         "images": {"large": "https://img/bgm.jpg"},
         "rating": {"score": 8.2, "rank": 100, "total": 500},
         "tags": [{"name": "TV"}, {"name": "奇幻"}],
-        "infobox": [{"key": "动画制作", "value": "某工作室"}],
+        "infobox": [
+            {"key": "动画制作", "value": "某工作室"},
+            {"key": "英文名", "value": "The Witch of the Tenmaku"},
+        ],
     }
     provider = BangumiProvider(client=_FakeBangumi(info))
     record = provider.detail(ProviderRef(provider="bangumi", external_id="400602"), None)
@@ -265,6 +276,7 @@ def test_bangumi_provider_adapter_maps_subject():
     assert record.year == "2025"
     assert record.ratings == {"bangumi": 8.2}
     assert record.studios == ["某工作室"]
+    assert "The Witch of the Tenmaku" in record.aliases
     assert record.images["poster"][0].url == "https://img/bgm.jpg"
 
 

@@ -10,7 +10,7 @@
 - 详情：自定义内容画像补齐 provider 详情链接，Bangumi 等来源不再缺失详情入口。
 - 搜索：搜索结果卡片从多元数据 provider 的 `ratings` 补全评分，修复豆瓣等来源评分显示为 0。
 - 订阅：RSS 轮询先按订阅名称/关键词/系列名/别名做多关键词预筛，未命中的资源不调用元数据 API。
-- 元数据：身份新增 `ALIASES` 字段，TMDB/豆瓣/Bangumi 别名随详情合成落库，订阅预筛直接读本地别名。
+- 元数据：身份新增 `ALIASES` 字段，TMDB `alternative_titles/translations`、豆瓣 `aka`、Bangumi 英文名随详情合成落库，订阅预筛直接读本地别名。
 - 识别黑名单：改为 `provider + external_id` 模型，新增来源选择与迁移，旧 TMDB 黑名单数据自动归入 tmdb provider。
 
 ## v5.7.5 (2026-11-06)

@@ -7,11 +7,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 
 import log
 from app.db.models.media_identity import MediaIdentity, MediaMetadataSnapshot
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
+from app.domain.mediatypes import MediaType
+from app.media.metadata.gateway import MetadataContext
 from app.media.metadata.models import MediaMetadata
 
 
@@ -32,6 +35,8 @@ def _aliases_from_payload(payload: str) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--fetch", action="store_true", help="对缺少英文别名的身份调用一次元数据 provider")
+    parser.add_argument("--limit", type=int, default=50)
     args = parser.parse_args()
 
     latest: dict[str, str] = {}
@@ -67,7 +72,50 @@ def main() -> int:
         else:
             log.info(f"[AliasBackfill] {identity_id}: {aliases[:5]}")
             updated += 1
-    print(json.dumps({"updated": updated, "skipped": skipped, "apply": args.apply}, ensure_ascii=False))
+    fetched = 0
+    if args.fetch:
+        from app.di.builders.context_builder import build_app_context
+
+        context = build_app_context()
+        gateway = context.metadata_gateway
+        repo = MediaIdentityRepository()
+        for identity_id in identities:
+            if fetched >= args.limit:
+                break
+            aliases = repo.get_aliases(identity_id)
+            if any(re.search(r"[A-Za-z]{3,}", item) for item in aliases):
+                continue
+            identity = repo.get_identity(identity_id)
+            if identity is None:
+                continue
+            refs = sorted(
+                repo.list_refs(identity_id),
+                key=lambda item: (not bool(getattr(item, "IS_PRIMARY", 0)), getattr(item, "ID", 0)),
+            )
+            ref = next((item for item in refs if getattr(item, "PROVIDER", "") not in {"local", "content_id"}), None)
+            if ref is None:
+                continue
+            try:
+                gateway.lookup(
+                    str(ref.PROVIDER),
+                    str(ref.EXTERNAL_ID),
+                    media_type=MediaType.from_string(str(getattr(ref, "MEDIA_TYPE", "") or identity.MEDIA_TYPE)),
+                    context=MetadataContext(
+                        purpose="alias-backfill",
+                        allow_private=True,
+                        content_profile=str(identity.CONTENT_PROFILE or "default"),
+                    ),
+                    freshness="force",
+                )
+                fetched += 1
+            except Exception as exc:  # noqa: BLE001
+                log.warn(f"[AliasBackfill]拉取别名失败 {identity_id}: {exc}")
+    print(
+        json.dumps(
+            {"updated": updated, "skipped": skipped, "fetched": fetched, "apply": args.apply},
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 
