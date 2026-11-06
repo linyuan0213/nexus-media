@@ -377,6 +377,14 @@ class DownloadCore:
                 get_torrent_episodes_callback=self.get_torrent_episodes,
             )
 
+        def _update_history_episode(download_id, item):
+            try:
+                update_se = getattr(self._download_repo, "update_download_history_se", None)
+                if update_se:
+                    update_se(download_id, item)
+            except Exception as e:  # noqa: BLE001
+                log.warn(f"[Downloader]回填下载记录季集失败: {e}")
+
         # 3. 电视剧单集匹配
         if need_tvs:
             download_items, need_tvs = EpisodeStrategy.download_episodes(
@@ -409,6 +417,7 @@ class DownloadCore:
                 remove_torrents_callback=lambda ids, downloader_id: self.delete_torrents(
                     downloader_id=downloader_id, ids=ids, delete_file=False
                 ),
+                update_history_callback=_update_history_episode,
             )
 
         left_medias = [item for item in media_list if item not in download_items]

@@ -518,6 +518,19 @@ class DownloadRepository(BaseRepository):
         with self.session() as db:
             return db.query(DOWNLOADHISTORY).filter(DOWNLOADHISTORY.ID == int(history_id)).first()
 
+    def update_download_history_se(self, download_id: str, media_info: Any) -> bool:
+        """整季包解析出实际集号后，回填下载历史的季集显示."""
+        if not download_id or media_info is None:
+            return False
+        with self.session() as db:
+            row = db.query(DOWNLOADHISTORY).filter(DOWNLOADHISTORY.DOWNLOAD_ID == str(download_id)).first()
+            if row is None:
+                return False
+            row.SE = media_info.get_season_episode_string() or row.SE
+            row.TYPE = media_info.type.value if media_info.type else row.TYPE
+            db.commit()
+            return True
+
     def update_download_history_task(
         self,
         history_id: int,

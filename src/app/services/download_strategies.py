@@ -367,6 +367,7 @@ class EpisodeStrategy:
         return_items: list,
         get_torrent_episodes_by_tid_callback=None,
         remove_torrents_callback=None,
+        update_history_callback=None,
     ) -> tuple[list, dict]:
         """
         从整季包中选取需要的集数下载（仅支持QB/TR）
@@ -443,6 +444,8 @@ class EpisodeStrategy:
                                 if relative_episodes:
                                     item.begin_episode = relative_episodes[0]
                                     item.end_episode = relative_episodes[-1] if len(relative_episodes) > 1 else None
+                                    if update_history_callback:
+                                        update_history_callback(download_id, item)
                                 need_episodes = EpisodeStrategy._update_episodes(
                                     need_tvs, need_tmdbid, need_episodes, relative_episodes, need_season
                                 )
@@ -481,6 +484,8 @@ class EpisodeStrategy:
                         if relative_episodes:
                             item.begin_episode = relative_episodes[0]
                             item.end_episode = relative_episodes[-1] if len(relative_episodes) > 1 else None
+                            if update_history_callback:
+                                update_history_callback(download_id, item)
                         need_episodes = EpisodeStrategy._update_episodes(
                             need_tvs, need_tmdbid, need_episodes, relative_episodes, need_season
                         )
