@@ -137,13 +137,15 @@ def _aliases(info: dict[str, Any]) -> list[str]:
     alternative = info.get("alternative_titles") or {}
     for key in ("titles", "results"):
         for item in alternative.get(key) or []:
-            if isinstance(item, dict) and item.get("title"):
-                values.append(str(item["title"]))
+            value = item.get("title") if hasattr(item, "get") else getattr(item, "title", None)
+            if value:
+                values.append(str(value))
     translations = (info.get("translations") or {}).get("translations") or []
     for item in translations:
-        data = item.get("data") if isinstance(item, dict) else None
-        if isinstance(data, dict):
-            value = data.get("name") or data.get("title")
+        data = item.get("data") if hasattr(item, "get") else getattr(item, "data", None)
+        if data is not None:
+            value = data.get("name") if hasattr(data, "get") else getattr(data, "name", None)
+            value = value or (data.get("title") if hasattr(data, "get") else getattr(data, "title", None))
             if value:
                 values.append(str(value))
     result: list[str] = []

@@ -11,6 +11,7 @@ import re
 
 import log
 from app.db.models.media_identity import MediaIdentity, MediaMetadataSnapshot
+from app.db.models.subscribe import SubscribeMovies, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.domain.mediatypes import MediaType
@@ -50,6 +51,16 @@ def main() -> int:
             row.IDENTITY_ID: row.CANONICAL_TITLE
             for row in db.query(MediaIdentity.IDENTITY_ID, MediaIdentity.CANONICAL_TITLE).all()
         }
+        subscription_ids = [
+            str(row[0])
+            for row in db.query(SubscribeMovies.IDENTITY_ID)
+            .filter(SubscribeMovies.IDENTITY_ID.isnot(None))
+            .distinct()
+            .all()
+        ] + [
+            str(row[0])
+            for row in db.query(SubscribeTvs.IDENTITY_ID).filter(SubscribeTvs.IDENTITY_ID.isnot(None)).distinct().all()
+        ]
     for identity_id, payload in rows:
         latest.setdefault(str(identity_id), payload)
 
@@ -79,7 +90,8 @@ def main() -> int:
         context = build_app_context()
         gateway = context.metadata_gateway
         repo = MediaIdentityRepository()
-        for identity_id in identities:
+        ordered_ids = list(dict.fromkeys([*subscription_ids, *identities]))
+        for identity_id in ordered_ids:
             if fetched >= args.limit:
                 break
             aliases = repo.get_aliases(identity_id)

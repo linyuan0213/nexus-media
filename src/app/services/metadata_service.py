@@ -176,6 +176,9 @@ class MetadataPreviewResult:
         return bool(self.errors)
 
 
+DETAIL_CACHE_VERSION = 3
+
+
 class MetadataService:
     """元数据预览与快照保存."""
 
@@ -1644,9 +1647,11 @@ class MetadataService:
         with self._detail_version_lock:
             raw = self._detail_cache.get("__version__")
             try:
-                version = int(str(raw)) if raw is not None else 2
+                version = int(str(raw)) if raw is not None else DETAIL_CACHE_VERSION
             except (TypeError, ValueError):
-                version = 2
+                version = DETAIL_CACHE_VERSION
+            if version < DETAIL_CACHE_VERSION:
+                version = DETAIL_CACHE_VERSION
                 self._detail_cache.set("__version__", version)
             return version
 
@@ -1655,9 +1660,9 @@ class MetadataService:
         with self._detail_version_lock:
             raw = self._detail_cache.get("__version__")
             try:
-                current = int(str(raw)) if raw is not None else 2
+                current = int(str(raw)) if raw is not None else DETAIL_CACHE_VERSION
             except (TypeError, ValueError):
-                current = 2
+                current = DETAIL_CACHE_VERSION
             version = current + 1
             self._detail_cache.set("__version__", version)
             return version
