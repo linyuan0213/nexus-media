@@ -11,6 +11,7 @@ SearchService - 搜索业务层
 """
 
 import re
+import time
 from concurrent.futures import as_completed
 from typing import Any
 
@@ -36,6 +37,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
 from app.services.search_subject import SearchSubject
 from app.services.subscription_download_guard import SubscriptionDownloadGuard
+from app.sites.search_gate import get_site_search_gate
 from app.utils.string_utils import StringUtils
 
 # 合集/多集资源不能用标题里的首个数字补成单集，否则整季包会被当成单集下载。
@@ -509,6 +511,7 @@ class Searcher:
         # 1. 构建搜索词（含关键词 + 多语言名，build_search_names 内已去重）
         search_name_list, max_workers = SearchQueryBuilder.build_search_names(media_info, self.media)
 
+        search_started = time.time()
         log.info(f"[Searcher]开始搜索 {search_name_list} ...")
         optimal_workers = min(len(search_name_list), max_workers, 8)
 
@@ -542,6 +545,10 @@ class Searcher:
         if len(media_list) == 0:
             log.info(f"[Searcher]{search_name_list} 未搜索到任何资源")
             return None, no_exists, 0, 0
+
+        if in_from == SearchType.SUBSCRIBE and get_site_search_gate().was_deferred_since(search_started):
+            log.warn(f"[Searcher]{search_name_list} 站点限流/排队超时，本轮延迟，不回退低优先站点")
+            return None, no_exists, len(media_list), 0
 
         processor = SearchResultProcessor(
             downloader=self.downloader,

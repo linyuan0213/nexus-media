@@ -191,6 +191,8 @@ class SubscribeConfig(BaseModel):
     batch_limit: int = 20
     batch_workers: int = 3
     reconcile_interval: int = 900
+    site_search_concurrency: int = 1
+    site_search_timeout: int = 30
 
 
 class SecurityConfig(BaseModel):
