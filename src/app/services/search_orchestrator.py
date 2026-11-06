@@ -25,6 +25,7 @@ from app.events.payloads import SearchStartPayload
 from app.infrastructure.progress import CompositeProgressGroup, ProgressTracker
 from app.media import meta_info
 from app.media.image_resolver import DEFAULT_TMDB_IMAGE
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.service import MediaService
 from app.message import Message
 from app.services.downloader_core import DownloaderCore as Downloader
@@ -37,6 +38,9 @@ SITE_TIER_BOOST = 100_000
 
 
 class SearchOrchestrator:
+    _metadata_gateway = None
+    _metadata_service = None
+
     def __init__(
         self,
         searcher,  # Searcher
@@ -49,6 +53,7 @@ class SearchOrchestrator:
         event_bus: EventBus,
         intent_resolver: IntentResolver | None = None,
         metadata_service=None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self._searcher = searcher
         self._search_repo = search_repo
@@ -60,7 +65,46 @@ class SearchOrchestrator:
         self._event_bus = event_bus
         self._intent_resolver = intent_resolver
         self._metadata_service = metadata_service
+        self._metadata_gateway = metadata_gateway
         self._search_auto = settings.get("pt").get("search_auto", True)
+
+    @property
+    def _metadata(self):
+        return self._metadata_gateway or self._metadata_service
+
+    @staticmethod
+    def _metadata_context(content_profile: str | None = None, allow_private: bool = True) -> MetadataContext:
+        return MetadataContext(
+            purpose="search",
+            allow_private=allow_private,
+            content_profile=str(content_profile or "default"),
+        )
+
+    def _metadata_lookup(self, provider: str, external_id: str, *, context=None, **kwargs):
+        target = self._metadata
+        if target is None:
+            return None
+        if self._metadata_gateway is not None:
+            allow_private = bool(kwargs.pop("allow_private", True))
+            kwargs["context"] = context or self._metadata_context(kwargs.get("content_profile"), allow_private)
+        return target.lookup(provider, external_id, **kwargs)
+
+    def _metadata_search(self, *, context=None, **kwargs):
+        target = self._metadata
+        if target is None:
+            return []
+        if self._metadata_gateway is not None:
+            allow_private = bool(kwargs.pop("allow_private", True))
+            kwargs["context"] = context or self._metadata_context(kwargs.get("content_profile"), allow_private)
+        return target.search(**kwargs)
+
+    def _metadata_hydrate(self, media_info) -> None:
+        if self._metadata_gateway is not None:
+            self._metadata_gateway.hydrate_media(media_info, context=self._metadata_context())
+            return
+        target = self._metadata_service
+        if target is not None:
+            target.hydrate_media(media_info)
 
     def begin_search(self, session_id: str, keyword: str = "") -> None:
         """解析锚点元数据前先建立进度，避免 SSE 因长时间无记录提前断开."""
@@ -173,18 +217,20 @@ class SearchOrchestrator:
         anchor_external_id: str,
         media_type: MediaType | None = None,
         content_profile: str | None = None,
+        context: MetadataContext | None = None,
     ):
         """按新锚点模型读取独立元数据源，不经过 TMDB/旧 DB: 转换."""
-        service = self._metadata_service
+        service = self._metadata
         if service is None or not anchor_provider or not anchor_external_id:
             return None
         try:
-            record = service.lookup(
+            record = self._metadata_lookup(
                 anchor_provider,
                 str(anchor_external_id),
                 media_type=media_type,
                 content_profile=content_profile or "default",
                 allow_private=True,
+                context=context,
             )
         except Exception as exc:  # noqa: BLE001 - 来源失败由调用方决定回退
             log.warn(f"[Orchestrator]锚点元数据读取失败 {anchor_provider}:{anchor_external_id}: {exc}")
@@ -243,13 +289,14 @@ class SearchOrchestrator:
         content_id: str,
         media_type: MediaType | None = None,
         content_profile: str | None = None,
+        context: MetadataContext | None = None,
     ):
         """用选定 provider 搜索内容编号，再用命中的 provider 详情 ID 解析."""
-        service = self._metadata_service
+        service = self._metadata
         if service is None or not content_id:
             return None
         try:
-            hits = service.search(
+            hits = self._metadata_search(
                 query=str(content_id),
                 provider=provider or None,
                 media_type=media_type,
@@ -257,6 +304,7 @@ class SearchOrchestrator:
                 limit=5,
                 allow_private=True,
                 wait_timeout=40,
+                context=context,
             )
         except Exception as exc:  # noqa: BLE001
             log.warn(f"[Orchestrator]编号搜索失败 {provider}:{content_id}: {exc}")
@@ -264,7 +312,7 @@ class SearchOrchestrator:
         if not hits and provider:
             # 指定来源临时超时/熔断时，用同编号在全部可用来源中兜底解析。
             try:
-                hits = service.search(
+                hits = self._metadata_search(
                     query=str(content_id),
                     provider=None,
                     media_type=media_type,
@@ -272,6 +320,7 @@ class SearchOrchestrator:
                     limit=5,
                     allow_private=True,
                     wait_timeout=40,
+                    context=context,
                 )
             except Exception as exc:  # noqa: BLE001
                 log.warn(f"[Orchestrator]编号跨来源搜索失败 {content_id}: {exc}")
@@ -287,6 +336,7 @@ class SearchOrchestrator:
                 hit_external,
                 media_type=media_type,
                 content_profile=content_profile,
+                context=context,
             )
             if media is not None:
                 # 保留真实来源，content_id 只是内部定位锚点，不能覆盖通知/详情来源。
@@ -576,7 +626,7 @@ class SearchOrchestrator:
         # 从匹配媒体注入海报/简介/评分到每条搜索结果
         match_media = ctx.match_media
         if match_media:
-            if not match_media.get_poster_image() and self._metadata_service is not None:
+            if not match_media.get_poster_image() and self._metadata is not None:
                 self._hydrate_with_timeout(match_media)
             poster_url = match_media.get_poster_image()
             overview = match_media.overview
@@ -610,14 +660,13 @@ class SearchOrchestrator:
 
     def _hydrate_with_timeout(self, match_media, timeout: float = 5.0) -> None:
         """海报补全是有界增强，不能阻塞搜索入库；超时先返回已有数据."""
-        service = self._metadata_service
-        if service is None:
+        if self._metadata is None:
             return
         executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="search_hydrate")
 
         def _hydrate():
             with background_engine_context():
-                service.hydrate_media(match_media)
+                self._metadata_hydrate(match_media)
 
         future = executor.submit(_hydrate)
         try:

@@ -14,6 +14,7 @@ from app.domain.enums import SearchType, channel_key
 from app.domain.interfaces.chat import ChatPort
 from app.domain.mediatypes import MediaType
 from app.media import meta_info
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.metadata.registry import registry as metadata_registry
 from app.media.service import MediaService
 from app.message import Message
@@ -34,6 +35,9 @@ from app.utils import StringUtils
 class MessageSearchService:
     """消息中心搜索服务"""
 
+    _metadata_gateway = None
+    _metadata_service = None
+
     def __init__(
         self,
         downloader: DownloaderCore,
@@ -46,6 +50,7 @@ class MessageSearchService:
         agent_service: ChatPort,
         message: Message,
         metadata_service=None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self._downloader = downloader
         self._searcher = searcher
@@ -57,6 +62,7 @@ class MessageSearchService:
         self._chat_port = agent_service
         self._message = message
         self._metadata_service = metadata_service
+        self._metadata_gateway = metadata_gateway
         self._pagination = SearchPaginationManager(message=message)
         self._pending_subscriptions: dict[str, dict] = {}
 
@@ -248,20 +254,38 @@ class MessageSearchService:
         title = name
         media_type = MediaType.TV if profile == "anime" else MediaType.MOVIE
         if not is_id and profile == "default":
-            if self._metadata_service is None:
+            if self._metadata_service is None and self._metadata_gateway is None:
                 self._message.send_channel_msg(channel=in_from, title="元数据服务未启用", user_id=user_id)
                 return
             content_profile = profile
+            context = MetadataContext(
+                permissions=frozenset(permissions or ()),
+                content_profile=content_profile,
+                purpose="message",
+                allow_private=False,
+            )
             try:
-                hits = self._metadata_service.search(
-                    query=value,
-                    provider=provider,
-                    media_type=media_type,
-                    content_profile=content_profile,
-                    limit=5,
-                    allow_private=False,
-                    permissions=set(permissions or []),
-                )
+                if self._metadata_gateway is not None:
+                    hits = self._metadata_gateway.search(
+                        query=value,
+                        context=context,
+                        provider=provider,
+                        media_type=media_type,
+                        content_profile=content_profile,
+                        limit=5,
+                    )
+                else:
+                    metadata_service = self._metadata_service
+                    assert metadata_service is not None
+                    hits = metadata_service.search(
+                        query=value,
+                        provider=provider,
+                        media_type=media_type,
+                        content_profile=content_profile,
+                        limit=5,
+                        allow_private=False,
+                        permissions=set(permissions or []),
+                    )
             except Exception as exc:  # noqa: BLE001
                 self._message.send_channel_msg(channel=in_from, title=f"元数据搜索失败: {exc}", user_id=user_id)
                 return

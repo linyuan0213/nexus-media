@@ -45,6 +45,7 @@ from app.infrastructure.thread import ThreadExecutor
 from app.media import MediaService
 from app.media import meta_info as meta_info_fn
 from app.media.category_matcher import get_category
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.metadata.parsing import ParserChain
 from app.media.metadata.refs import parse_media_ref
 from app.media.metadata.registry import registry as metadata_registry
@@ -98,6 +99,9 @@ _PARALLEL_WAIT_TIMEOUT = 1800
 class FileTransferService:
     """文件转移业务 Facade."""
 
+    _metadata_gateway = None
+    _metadata_service = None
+
     def __init__(
         self,
         media_service: MediaService,
@@ -115,6 +119,7 @@ class FileTransferService:
         download_repo=None,
         subscribe_repo=None,
         metadata_service=None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self.media = media_service
         self.message = message
@@ -139,6 +144,7 @@ class FileTransferService:
         self._subscribe_repo = subscribe_repo or SubscribeRepository()
         self._cleanup = cleanup_service
         self._metadata_service = metadata_service
+        self._metadata_gateway = metadata_gateway
 
         # 从配置读取媒体处理参数
         media = settings.get("media")
@@ -159,6 +165,32 @@ class FileTransferService:
             self._filesize_cover = media.get("filesize_cover")
 
         self._default_operation = (settings.get("pt") or {}).get("rmt_mode", "copy") or "copy"
+
+    @property
+    def _metadata(self):
+        return self._metadata_gateway or self._metadata_service
+
+    def _metadata_context(self, media=None) -> MetadataContext:
+        return MetadataContext(
+            user_id=getattr(media, "user_id", None),
+            purpose="transfer",
+            allow_private=True,
+            content_profile=str(getattr(media, "content_profile", "") or "default"),
+        )
+
+    def _metadata_lookup(self, provider: str, external_id: str, **kwargs):
+        target = self._metadata
+        if target is None:
+            return None
+        if self._metadata_gateway is not None:
+            kwargs.pop("allow_private", None)
+            kwargs.pop("permissions", None)
+            kwargs["context"] = MetadataContext(
+                purpose="transfer",
+                allow_private=True,
+                content_profile=str(kwargs.get("content_profile") or "default"),
+            )
+        return target.lookup(provider, external_id, **kwargs)
 
     # ---------- 路径相关委托方法（公共 API 兼容） ----------
 
@@ -567,10 +599,11 @@ class FileTransferService:
                     continue
                 if parsed_profile is None or not getattr(parsed_profile, "content_profile", None):
                     # 普通媒体：非 TMDB 主源先按策略识别，命中则完全跳过 TMDB。
-                    if self._metadata_service is not None and not policy.startswith("tmdb_"):
+                    metadata_client = self._metadata
+                    if metadata_client is not None and not policy.startswith("tmdb_"):
                         try:
                             candidate = meta_info_fn(os.path.basename(_path))
-                            if self._metadata_service.identify_anchor(candidate, policy=policy):
+                            if metadata_client.identify_anchor(candidate, policy=policy):
                                 primary_medias[_path] = candidate
                                 continue
                         except Exception as exc:  # noqa: BLE001
@@ -615,11 +648,12 @@ class FileTransferService:
                     _info.org_string = os.path.basename(_path)
                 if not getattr(_info, "title", ""):
                     _info.title = os.path.splitext(os.path.basename(_path))[0]
-                if self._metadata_service is not None:
+                metadata_client = self._metadata
+                if metadata_client is not None:
                     started = time.perf_counter()
                     try:
-                        self._metadata_service.identify_anchor(_info, policy=policy)
-                        _snapshot = self._metadata_service.compose_for_media(
+                        metadata_client.identify_anchor(_info, policy=policy)
+                        _snapshot = metadata_client.compose_for_media(
                             _info,
                             policy=policy,
                             with_episodes=True,
@@ -772,7 +806,7 @@ class FileTransferService:
                 ):
                     continue
                 try:
-                    record = self._metadata_service.lookup(
+                    record = self._metadata_lookup(
                         provider=provider,
                         external_id=external_id,
                         media_type=getattr(snapshot, "media_type", None),
@@ -802,7 +836,7 @@ class FileTransferService:
             if ":" in source_ref:
                 lookup_provider, lookup_external = source_ref.split(":", 1)
                 try:
-                    record = self._metadata_service.lookup(
+                    record = self._metadata_lookup(
                         provider=lookup_provider,
                         external_id=lookup_external,
                         media_type=getattr(snapshot, "media_type", None) or getattr(media_info, "type", None),
@@ -1137,9 +1171,9 @@ class FileTransferService:
         )
         mtype = subject.display_type or MediaType.from_string(str(getattr(record, "TYPE", "") or "")) or MediaType.MOVIE
         record_data = None
-        if self._metadata_service is not None:
+        if self._metadata is not None:
             try:
-                record_data = self._metadata_service.lookup(
+                record_data = self._metadata_lookup(
                     provider=provider,
                     external_id=external,
                     media_type=mtype,
@@ -2052,9 +2086,7 @@ class FileTransferService:
                     append_to_response="all",
                 )
             )
-        snapshot = (
-            self._metadata_service.latest_snapshot_for_media(media) if self._metadata_service is not None else None
-        )
+        snapshot = self._metadata.latest_snapshot_for_media(media) if self._metadata is not None else None
         season_episode = media.get_season_episode_string() if out_path else media.get_season_string()
         try:
             series_key = SeriesService().ensure_media_series(media)

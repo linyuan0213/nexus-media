@@ -16,6 +16,7 @@ from api.deps import (
     get_media_info_service,
     get_media_library_service,
     get_media_recommendation_service,
+    get_metadata_gateway,
     get_metadata_service,
     get_search_result_service,
     get_searcher_service,
@@ -36,6 +37,7 @@ from app.core.exceptions import (
 from app.domain.mediatypes import MediaType, normalize_media_type_input
 from app.infrastructure.cache_system import TokenCache
 from app.media.metadata import ProviderError, ProviderRef
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.metadata.naming import naming_field_catalog, naming_field_keys
 from app.media.metadata.registry import registry as metadata_registry
 from app.schemas.common import CommonResponse
@@ -69,6 +71,21 @@ def _private_scope(current_user) -> tuple[bool, set[str] | None]:
         return True, None
     permissions = set(getattr(current_user, "permissions", []) or [])
     return "metadata:private:view" in permissions, permissions
+
+
+def _metadata_context(current_user, *, purpose: str, content_profile: str = "default") -> MetadataContext:
+    allow_private, permissions = _private_scope(current_user)
+    return MetadataContext(
+        user_id=getattr(current_user, "user_id", None),
+        permissions=frozenset(permissions or ()),
+        content_profile=content_profile or "default",
+        purpose=purpose,
+        allow_private=allow_private,
+    )
+
+
+def _gateway_for(gateway: MetadataGateway | None, svc: MetadataService) -> MetadataGateway:
+    return gateway or MetadataGateway(svc)
 
 
 # ---------- Request Models ----------
@@ -945,7 +962,13 @@ def media_detail(
     return success(data=result)
 
 
-def _minimal_detail_record(req: "MediaDetailByRefRequest", media_type: MediaType | None, svc: MetadataService) -> dict:
+def _minimal_detail_record(
+    req: "MediaDetailByRefRequest",
+    media_type: MediaType | None,
+    svc: MetadataService,
+    gateway: MetadataGateway | None = None,
+    context: MetadataContext | None = None,
+) -> dict:
     """来源详情不可用时，用锚点/前端标题构造最小记录，并补齐豆瓣分集数."""
     mtype = media_type or MediaType.MOVIE
     base_title = str(req.title or f"{req.provider}:{req.external_id}")
@@ -990,7 +1013,9 @@ def _minimal_detail_record(req: "MediaDetailByRefRequest", media_type: MediaType
                 }
             ]
     if not record.get("seasons") and base_title:
-        total = svc.resolve_season_episode_count(
+        resolver = gateway or MetadataGateway(svc)
+        total = resolver.resolve_season_episode_count(
+            context=context,
             provider=req.provider,
             external_id=req.external_id,
             title=str(record.get("title") or base_title),
@@ -1015,37 +1040,39 @@ def media_detail_by_ref(
     req: MediaDetailByRefRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MetadataService = Depends(get_metadata_service),
+    gateway: MetadataGateway | None = Depends(get_metadata_gateway),
     sub_svc=Depends(get_subscribe_service),
 ):
-    allow_private, permissions = _private_scope(current_user)
     request_type, content_profile = normalize_media_type_input(req.media_type, req.content_profile)
     media_type = MediaType.from_string(request_type) if request_type else None
     if media_type == MediaType.UNKNOWN:
         media_type = None
+    gateway = _gateway_for(gateway, svc)
+    context = _metadata_context(current_user, purpose="api.detail_by_ref", content_profile=content_profile)
     record = None
     is_custom_profile = content_profile != "default"
     if is_custom_profile:
         try:
-            record = svc.lookup(
+            record = gateway.lookup(
                 req.provider,
                 req.external_id,
+                context=context,
                 media_type=media_type,
-                allow_private=allow_private,
-                permissions=permissions,
+                content_profile=content_profile,
             )
         except Exception:  # noqa: BLE001 - 上游抓取/熔断时仍可用前端已有标题展示
-            record = _minimal_detail_record(req, media_type, svc)
+            record = _minimal_detail_record(req, media_type, svc, gateway, context)
             if record is None:
                 return fail(code=ErrorCode.OPERATION_FAILED, msg="无法获取媒体详情")
     if is_custom_profile and req.content_id:
         # 前端已知道内容编号时，优先按编号取聚合详情，避免来源 slug 失效。
         try:
-            aggregate = svc.lookup(
+            aggregate = gateway.lookup(
                 content_profile,
                 req.content_id,
+                context=context,
                 media_type=media_type,
-                allow_private=allow_private,
-                permissions=permissions,
+                content_profile=content_profile,
             )
             if aggregate:
                 record = aggregate
@@ -1054,12 +1081,12 @@ def media_detail_by_ref(
     if not record and is_custom_profile:
         # 源 provider 使用 slug 或临时失效时，回退到该内容画像的聚合 provider。
         try:
-            record = svc.lookup(
+            record = gateway.lookup(
                 content_profile,
                 req.external_id,
+                context=context,
                 media_type=media_type,
-                allow_private=allow_private,
-                permissions=permissions,
+                content_profile=content_profile,
             )
         except Exception:  # noqa: BLE001 - 聚合回退失败按原错误处理
             record = None
@@ -1077,12 +1104,12 @@ def media_detail_by_ref(
         )
         if content_id and req.provider != content_profile:
             try:
-                aggregate = svc.lookup(
+                aggregate = gateway.lookup(
                     content_profile,
                     content_id,
+                    context=context,
                     media_type=media_type,
-                    allow_private=allow_private,
-                    permissions=permissions,
+                    content_profile=content_profile,
                 )
                 if aggregate:
                     record = aggregate
@@ -1097,37 +1124,34 @@ def media_detail_by_ref(
         return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status))
     record = record or {}
     try:
-        snapshot = run_with_timeout(
-            lambda: svc.compose_for_ref(
+        envelope = run_with_timeout(
+            lambda: gateway.resolve(
                 req.provider,
                 req.external_id,
+                context=context,
                 media_type=media_type or MediaType.MOVIE,
-                content_profile=content_profile,
-                include_tmdb=True,
-                user_id=current_user.user_id,
-                allow_private=allow_private,
-                permissions=permissions,
                 with_episodes=False,
             ),
             8.0,
             name="media-detail",
         )
+        snapshot = envelope.metadata if envelope is not None else None
     except Exception:  # noqa: BLE001 - 上游慢/失败时走最小记录兜底
         snapshot = None
     if not snapshot:
         if not record:
             try:
-                record = svc.lookup(
+                record = gateway.lookup(
                     req.provider,
                     req.external_id,
+                    context=context,
                     media_type=media_type,
-                    allow_private=allow_private,
-                    permissions=permissions,
+                    content_profile=content_profile,
                 )
             except Exception:  # noqa: BLE001
                 record = None
         if not record:
-            record = _minimal_detail_record(req, media_type, svc)
+            record = _minimal_detail_record(req, media_type, svc, gateway, context)
         if not record:
             return fail(msg="无法获取媒体详情")
         status = sub_svc.get_subscribe_by_anchor(
@@ -1239,7 +1263,8 @@ def media_detail_by_ref(
         title_hint = str(_field_value(fields, "title") or req.title or "")
         base_hint, parsed_hint = SeriesService.split_title_season(title_hint)
         season_hint = int(parsed_hint or 1)
-        total_hint = svc.resolve_season_episode_count(
+        total_hint = gateway.resolve_season_episode_count(
+            context=context,
             provider=req.provider,
             external_id=req.external_id,
             title=title_hint or base_hint,
@@ -1325,8 +1350,8 @@ def media_detail_by_ref(
             external_id,
             media_type=media_type or MediaType.MOVIE,
             title=str(_field_value(fields, "title") or record.get("title") or ""),
-            allow_private=allow_private,
-            permissions=permissions,
+            allow_private=context.allow_private,
+            permissions=set(context.permissions) or None,
         ),
         "fav": (status or {}).get("fav", "0"),
         "rssid": (status or {}).get("rssid", ""),
@@ -1352,21 +1377,22 @@ def metadata_search(
     req: MetadataSearchRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MetadataService = Depends(get_metadata_service),
+    gateway: MetadataGateway | None = Depends(get_metadata_gateway),
 ):
-    allow_private, permissions = _private_scope(current_user)
     request_type, content_profile = normalize_media_type_input(req.media_type, req.content_profile)
     media_type = MediaType.from_string(request_type) if request_type else None
     if media_type == MediaType.UNKNOWN:
         media_type = None
+    gateway = _gateway_for(gateway, svc)
+    context = _metadata_context(current_user, purpose="api.search", content_profile=content_profile)
     return success(
-        data=svc.search(
+        data=gateway.search(
             query=req.query,
+            context=context,
             provider=req.provider,
             media_type=media_type,
             content_profile=content_profile,
             limit=req.limit,
-            allow_private=allow_private,
-            permissions=permissions,
             wait_timeout=req.timeout_seconds,
         )
     )
@@ -1381,20 +1407,22 @@ def metadata_lookup(
     allow_missing: bool = False,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     svc: MetadataService = Depends(get_metadata_service),
+    gateway: MetadataGateway | None = Depends(get_metadata_gateway),
 ):
-    allow_private, permissions = _private_scope(current_user)
-    request_type, _profile = normalize_media_type_input(media_type, scope)
+    request_type, profile = normalize_media_type_input(media_type, scope)
     ref_type = MediaType.from_string(request_type) if request_type else None
     if ref_type == MediaType.UNKNOWN:
         ref_type = None
+    gateway = _gateway_for(gateway, svc)
+    context = _metadata_context(current_user, purpose="api.lookup", content_profile=profile)
     try:
-        data = svc.lookup(
+        data = gateway.lookup(
             provider,
             external_id,
+            context=context,
             media_type=ref_type,
             scope=scope,
-            allow_private=allow_private,
-            permissions=permissions,
+            content_profile=profile,
         )
     except ProviderError as exc:
         # 单源 404/抓取失败不应变成 500；允许多源回退时返回空结果。

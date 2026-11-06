@@ -50,6 +50,7 @@ from app.infrastructure.progress.tracker import ProgressTracker
 from app.media import MediaCache
 from app.media.external.bangumi import Bangumi
 from app.media.external.douban import DouBan
+from app.media.metadata.gateway import MetadataGateway
 from app.media.parser._release_groups import ReleaseGroupsMatcher
 from app.media.scraper import Scraper
 from app.services.brush.scheduler import BrushTaskScheduler
@@ -160,6 +161,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     )
 
     metadata_service = MetadataService(identity_repo=MediaIdentityRepository(), media_service=media_service)
+    metadata_gateway = MetadataGateway(metadata_service)
     discovery_service = DiscoveryService(
         media_service=media_service,
         media_server=media_server,
@@ -168,7 +170,11 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
             warm_in_background=False,
         ),
     )
-    shared_scraper = Scraper(media_service=media_service, metadata_service=metadata_service)
+    shared_scraper = Scraper(
+        media_service=media_service,
+        metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
+    )
     lifecycle_projector = LifecycleProjector()
     scrape_queue_service = ScrapeQueueService(
         scraper=shared_scraper,
@@ -192,6 +198,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         existence_checker=existence_checker,
         cleanup_service=cleanup_service,
         metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
     )
 
     transfer_pipeline = TransferPipeline(
@@ -295,6 +302,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         download_repo=DownloadHistoryRepositoryAdapter(),
         transfer_history_manager=history_manager,
         metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
     )
 
     searcher = Searcher(
@@ -326,6 +334,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         storage_backend_repo=StorageBackendRepositoryAdapter(),
         media_service=media_service,
         metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
     )
 
     file_index_service = FileIndexService(sync_path_repo=SyncPathRepositoryAdapter())
@@ -370,6 +379,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         event_bus=event_bus,
         intent_resolver=intent_resolver,
         metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
     )
     web_search_service = WebSearchService(
         search_fn=make_web_search_fn(search_orchestrator, SystemConfigService()),
@@ -399,6 +409,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         media_server=media_server,
         douban=douban,
         metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
     )
 
     download_service = DownloadService(
@@ -411,6 +422,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         torrent_remover=torrent_remover,
         download_history_repo=DownloadHistoryRepositoryAdapter(),
         lifecycle=lifecycle_projector,
+        metadata_gateway=metadata_gateway,
     )
 
     plugin_framework_service = PluginFrameworkService(
@@ -455,7 +467,11 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         storage_backend_repo=StorageBackendRepositoryAdapter(),
         media_service=media_service,
         thread_executor=thread_executor,
-        scraper=Scraper(media_service=media_service, metadata_service=metadata_service),
+        scraper=Scraper(
+            media_service=media_service,
+            metadata_service=metadata_service,
+            metadata_gateway=metadata_gateway,
+        ),
         route_repo=MediaLibraryRouteRepositoryAdapter(),
     )
     media_library_service = MediaLibraryService(
@@ -542,6 +558,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         subscribe=subscribe_service,
         rss_task_service=rss_task_service,
         metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
     )
     subscribe_history_service = SubscribeHistoryService(
         history_repo=SubscribeHistoryRepositoryAdapter(),
@@ -572,6 +589,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         sync_service=sync_service,
         poster_resolver=_history_poster_resolver,
         metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
         subscribe_repo=SubscribeRepository(),
     )
     library_rename_service = LibraryRenameService(
@@ -628,6 +646,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         site_favicon_service=site_favicon_service,
         media_info_service=media_info_service,
         metadata_service=metadata_service,
+        metadata_gateway=metadata_gateway,
         discovery_service=discovery_service,
         media_config_service=media_config_service,
         media_file_service=media_file_service,

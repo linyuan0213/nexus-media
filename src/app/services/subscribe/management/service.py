@@ -63,6 +63,7 @@ class SubscribeService:
         transfer_history_manager: Any = None,
         user_repo: Any = None,
         metadata_service: Any = None,
+        metadata_gateway: Any = None,
     ):
         self._movie_repo = movie_repo
         self._tv_repo = tv_repo
@@ -80,7 +81,13 @@ class SubscribeService:
         self._download_repo = download_repo
         self._transfer_history_manager = transfer_history_manager
 
-        self._web_utils = WebUtils(media_service=media_service, douban=douban, bangumi=Bangumi())
+        self._web_utils = WebUtils(
+            media_service=media_service,
+            douban=douban,
+            bangumi=Bangumi(),
+            metadata_gateway=metadata_gateway,
+            metadata_service=metadata_service,
+        )
 
         self._update_svc = SubscribeUpdateService(
             self._movie_repo,
@@ -104,6 +111,7 @@ class SubscribeService:
             metadata_service,
             self._sites,
             self._indexer_service,
+            metadata_gateway=metadata_gateway,
         )
         self._finish_svc = SubscribeFinishService(
             self._movie_repo, self._tv_repo, self._history_repo, self._message, self._event_bus, self._download_repo
@@ -121,7 +129,12 @@ class SubscribeService:
             user_repo,
         )
         self._refresh_svc = SubscribeRefreshService(
-            self._movie_repo, self._tv_repo, self._tv_episode_repo, self._media, metadata_service
+            self._movie_repo,
+            self._tv_repo,
+            self._tv_episode_repo,
+            self._media,
+            metadata_service,
+            metadata_gateway=metadata_gateway,
         )
 
     @property

@@ -12,6 +12,7 @@ from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media import MediaService, meta_info
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.metadata.parsing import ParserChain
 from app.mediaserver import MediaServer
 from app.schemas.auth import UserContext
@@ -56,6 +57,9 @@ class MediaInfoService:
     负责 TMDB/豆瓣 媒体信息查询、订阅信息回退、季列表等
     """
 
+    _metadata_gateway = None
+    _metadata_service = None
+
     def __init__(
         self,
         media_service: MediaService,
@@ -63,12 +67,14 @@ class MediaInfoService:
         media_server: MediaServer,
         douban,
         metadata_service=None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self._media = media_service
         self._subscribe = subscribe
         self._media_server = media_server
         self._douban = douban
         self._metadata_service = metadata_service
+        self._metadata_gateway = metadata_gateway
 
     def get_season_episodes(self, tmdbid, title, year, season, content_profile=None) -> SeasonEpisodesResultDTO:
         """查询剧集情况并按目标媒体库检查存在状态"""
@@ -302,11 +308,20 @@ class MediaInfoService:
     ):
         """并行查询所有可用元数据源；优先来源排序."""
         metadata_service = self._metadata_service
-        if metadata_service is None:
+        if metadata_service is None and self._metadata_gateway is None:
             return [], None
         allow_private = bool(user and user.has_permission("metadata:private:view"))
         permissions = set(user.permissions) if user else None
-        providers = metadata_service.list_providers(
+        context = MetadataContext(
+            user_id=getattr(user, "user_id", None),
+            permissions=frozenset(permissions or ()),
+            content_profile=str(parsed_profile or "default"),
+            purpose="media.identify",
+            allow_private=allow_private,
+        )
+        provider_client = self._metadata_gateway or metadata_service
+        assert provider_client is not None
+        providers = provider_client.list_providers(
             allow_private=allow_private, permissions=permissions, probe_health=False
         )
         searchable = [
@@ -411,6 +426,16 @@ class MediaInfoService:
         def search_one(item):
             key = item["provider"]
             try:
+                if self._metadata_gateway is not None:
+                    return key, self._metadata_gateway.search(
+                        query=str(title),
+                        context=context,
+                        provider=key,
+                        media_type=media_type,
+                        content_profile=profile,
+                        limit=10 if code else 3,
+                    )
+                assert metadata_service is not None
                 return key, metadata_service.search(
                     query=str(title),
                     provider=key,
@@ -427,6 +452,16 @@ class MediaInfoService:
             if item is None:
                 return None
             try:
+                if self._metadata_gateway is not None:
+                    return self._metadata_gateway.lookup(
+                        item["provider"],
+                        code,
+                        context=context,
+                        media_type=media_type,
+                        scope="release",
+                        content_profile=profile,
+                    )
+                assert metadata_service is not None
                 return metadata_service.lookup(
                     item["provider"],
                     code,

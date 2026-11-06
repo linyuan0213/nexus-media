@@ -16,6 +16,7 @@ from app.domain.mediatypes import MediaType
 from app.infrastructure.temp import temp_manager
 from app.media import MediaService
 from app.media.display_image_policy import transform_display_image, unwrap_display_image_url
+from app.media.metadata.gateway import MetadataGateway
 from app.media.models import MediaInfo
 from app.media.poster_resolver import preferred_profile_poster
 from app.schemas.download import (
@@ -42,6 +43,9 @@ class DownloadService:
     - 索引器统计数据格式化
     """
 
+    _metadata_gateway = None
+    _metadata_service = None
+
     def __init__(
         self,
         downloader: Downloader,
@@ -54,6 +58,7 @@ class DownloadService:
         download_history_repo: DownloadHistoryRepositoryAdapter,
         subscribe_repo: SubscribeRepository | None = None,
         lifecycle: LifecycleProjector | None = None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self._downloader = downloader
         self._searcher = searcher
@@ -65,6 +70,7 @@ class DownloadService:
         self._download_history_repo = download_history_repo
         self._subscribe_repo = subscribe_repo or SubscribeRepository()
         self._lifecycle = lifecycle
+        self._metadata_gateway = metadata_gateway
         self._progress_reported: dict[str, int] = {}
 
     # ---------- 下载编排 ----------
@@ -125,6 +131,7 @@ class DownloadService:
                 media.anchor_provider,
                 media.anchor_external_id,
                 media.type,
+                self._metadata_gateway,
             )
             # 保存站点原始种子名，用于下载历史记录和后续识别
             media.org_string = res.TORRENT_NAME

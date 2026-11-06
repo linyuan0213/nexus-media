@@ -4,6 +4,7 @@ from app.agent.tools.base import ToolResult
 from app.agent.tools.context import ToolContext
 from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
+from app.media.metadata.gateway import MetadataContext
 from app.media.metadata.registry import registry as metadata_registry
 from app.services.subscription_intent import resolve_subscription
 
@@ -55,20 +56,36 @@ def _resolve_aggregate_ref(
     permissions: set[str],
 ) -> tuple[str, str, str]:
     """把虚拟聚合来源解析成具体 provider，并带回真实海报；找不到时保持原值."""
-    metadata = getattr(ctx, "metadata_service", None)
+    metadata_gateway = getattr(ctx, "metadata_gateway", None)
+    metadata = metadata_gateway or getattr(ctx, "metadata_service", None)
     if metadata is None:
         return provider, external_id, ""
     query = content_id or external_id or title
     try:
-        hits = metadata.search(
-            query=query,
-            provider=provider or None,
-            media_type=mtype,
-            content_profile=profile,
-            limit=10,
-            allow_private=allow_private,
-            permissions=permissions,
-        )
+        if metadata_gateway is not None:
+            hits = metadata_gateway.search(
+                query=query,
+                context=MetadataContext(
+                    permissions=frozenset(permissions or ()),
+                    content_profile=profile,
+                    purpose="agent.subscribe",
+                    allow_private=allow_private,
+                ),
+                provider=provider or None,
+                media_type=mtype,
+                content_profile=profile,
+                limit=10,
+            )
+        else:
+            hits = metadata.search(
+                query=query,
+                provider=provider or None,
+                media_type=mtype,
+                content_profile=profile,
+                limit=10,
+                allow_private=allow_private,
+                permissions=permissions,
+            )
     except Exception:  # noqa: BLE001 - 搜索失败不阻断订阅
         return provider, external_id, ""
     target = _code_key(query)
@@ -148,19 +165,35 @@ def subscribe_add(
 
     # 只给来源没给 detail id 时，先用元数据搜索解析到具体 provider ref
     if provider and not external_id and not ref:
-        metadata = getattr(ctx, "metadata_service", None)
+        metadata_gateway = getattr(ctx, "metadata_gateway", None)
+        metadata = metadata_gateway or getattr(ctx, "metadata_service", None)
         if metadata is None:
             return ToolResult(success=False, error="缺少 external_id，且元数据服务不可用")
         try:
-            hits = metadata.search(
-                query=title,
-                provider=provider,
-                media_type=mtype,
-                content_profile=profile,
-                limit=5,
-                allow_private=allow_private,
-                permissions=permissions,
-            )
+            if metadata_gateway is not None:
+                hits = metadata_gateway.search(
+                    query=title,
+                    context=MetadataContext(
+                        permissions=frozenset(permissions or ()),
+                        content_profile=profile,
+                        purpose="agent.subscribe",
+                        allow_private=allow_private,
+                    ),
+                    provider=provider,
+                    media_type=mtype,
+                    content_profile=profile,
+                    limit=5,
+                )
+            else:
+                hits = metadata.search(
+                    query=title,
+                    provider=provider,
+                    media_type=mtype,
+                    content_profile=profile,
+                    limit=5,
+                    allow_private=allow_private,
+                    permissions=permissions,
+                )
         except Exception as exc:  # noqa: BLE001
             return ToolResult(success=False, error=f"元数据搜索失败: {exc}")
         if not hits:

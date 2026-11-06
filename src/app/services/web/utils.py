@@ -9,8 +9,7 @@ from app.infrastructure.security import generate_password_hash
 from app.media import meta_info
 from app.media.external.bangumi import Bangumi
 from app.media.external.douban import DouBan
-from app.media.metadata import ProviderRef
-from app.media.metadata.registry import registry as metadata_registry
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.service import MediaService
 from app.utils import ExceptionUtils, IpUtils, StringUtils
 from app.utils.config_tools import get_proxies
@@ -18,10 +17,19 @@ from version import APP_VERSION
 
 
 class WebUtils:
-    def __init__(self, media_service: MediaService, douban: DouBan | None = None, bangumi: Bangumi | None = None):
+    def __init__(
+        self,
+        media_service: MediaService,
+        douban: DouBan | None = None,
+        bangumi: Bangumi | None = None,
+        metadata_gateway: MetadataGateway | None = None,
+        metadata_service: Any = None,
+    ):
         self._douban = douban or DouBan()
         self._media_service = media_service
         self._bangumi = bangumi or Bangumi()
+        self._metadata_gateway = metadata_gateway
+        self._metadata_service = metadata_service
 
         global _default_web_utils
         if _default_web_utils is None:
@@ -91,29 +99,39 @@ class WebUtils:
             provider_key, external_id = raw_id.split(":", 1)
             provider_key = provider_key.strip().lower()
             if provider_key not in ("db", "bg", "tmdb") and external_id:
-                provider = metadata_registry.get_provider(provider_key)
-                if provider is not None:
-                    ref = ProviderRef(
-                        provider=provider_key,
-                        external_id=external_id,
+                record_data = None
+                if self._metadata_gateway is not None:
+                    record_data = self._metadata_gateway.lookup(
+                        provider_key,
+                        external_id,
+                        context=MetadataContext(
+                            purpose="legacy_ref",
+                            allow_private=True,
+                            content_profile="default",
+                        ),
                         media_type=mtype,
-                        scope="default",
                     )
-                    record = provider.detail(ref, None)
-                    if record is not None:
-                        title = str(getattr(record, "title", "") or "").strip()
-                        if title:
-                            media_info = meta_info(title=title, mtype=mtype or MediaType.MOVIE)
-                            media_info.title = title
-                            has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in title)
-                            media_info.cn_name = title if has_cjk else None
-                            media_info.en_name = None if has_cjk else title
-                            media_info.original_title = str(getattr(record, "original_title", "") or title)
-                            media_info.year = str(getattr(record, "year", "") or "")
-                            media_info.overview = str(getattr(record, "overview", "") or "")
-                            media_info.anchor_provider = provider_key
-                            media_info.anchor_external_id = external_id
-                            return media_info
+                elif self._metadata_service is not None:
+                    record_data = self._metadata_service.lookup(
+                        provider_key,
+                        external_id,
+                        media_type=mtype,
+                        allow_private=True,
+                    )
+                if record_data:
+                    title = str(record_data.get("title") or "").strip()
+                    if title:
+                        media_info = meta_info(title=title, mtype=mtype or MediaType.MOVIE)
+                        media_info.title = title
+                        has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in title)
+                        media_info.cn_name = title if has_cjk else None
+                        media_info.en_name = None if has_cjk else title
+                        media_info.original_title = str(record_data.get("original_title") or title)
+                        media_info.year = str(record_data.get("year") or "")
+                        media_info.overview = str(record_data.get("overview") or "")
+                        media_info.anchor_provider = provider_key
+                        media_info.anchor_external_id = external_id
+                        return media_info
         if str(mediaid).startswith("DB:"):
             # 豆瓣锚点：只用豆瓣数据，不再为“补 TMDB”做标题重映射
             doubanid = mediaid[3:]

@@ -32,6 +32,7 @@ def get_message_command_handler(app_context: AppContext, message: Message) -> Me
                 agent_service=app_context.agent_service,
                 message=message,
                 metadata_service=app_context.metadata_service,
+                metadata_gateway=app_context.metadata_gateway,
             )
         if _command_handler is None:
             _command_handler = MessageCommandHandler(

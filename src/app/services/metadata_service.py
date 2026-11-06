@@ -1632,6 +1632,36 @@ class MetadataService:
             or (data.get("images") or {}).get("poster")
         )
 
+    def find_identity_id(
+        self,
+        provider: str,
+        external_id: str,
+        *,
+        scope: str = "default",
+        media_type: str | None = None,
+    ) -> str | None:
+        """按 ref 查询已有身份，供网关填充 envelope，不触发 provider 请求."""
+        identity = self._identity_repo.find_by_ref(
+            provider,
+            str(external_id),
+            scope=scope,
+            media_type=media_type,
+        )
+        return identity.IDENTITY_ID if identity is not None else None
+
+    def latest_snapshot_record(
+        self,
+        identity_id: str,
+        *,
+        policy_key: str | None = None,
+        scope: str | None = None,
+    ) -> Any:
+        return self._identity_repo.latest_snapshot(identity_id, policy_key=policy_key, scope=scope)
+
+    def provider_descriptor(self, provider_key: str) -> Any:
+        provider = self._registry.get_provider(provider_key)
+        return getattr(provider, "descriptor", None)
+
     def list_providers(
         self,
         *,

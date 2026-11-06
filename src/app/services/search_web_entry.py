@@ -12,6 +12,7 @@ import log
 from app.domain.enums import SearchType
 from app.domain.mediatypes import MediaType
 from app.media import meta_info
+from app.media.metadata.gateway import MetadataContext
 from app.services.search_context import SearchContext
 from app.services.search_orchestrator import SearchOrchestrator
 from app.services.search_subject import SearchSubject
@@ -91,6 +92,12 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                 if resolve_provider == "content_id":
                     resolve_provider = ""
             resolved_profile = content_profile or str(filter_args.get("content_profile") or "default")
+            metadata_context = MetadataContext(
+                user_id=user_id,
+                purpose="search",
+                allow_private=True,
+                content_profile=resolved_profile,
+            )
             if anchor_provider == "content_id":
                 match_media = _resolve_anchor_with_timeout(
                     orchestrator.resolve_content_id_media,
@@ -98,6 +105,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     str(anchor_external_id),
                     media_type=lookup_type,
                     content_profile=resolved_profile,
+                    context=metadata_context,
                     timeout=CONTENT_ID_ANCHOR_TIMEOUT,
                 )
                 if match_media:
@@ -112,6 +120,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     str(anchor_external_id),
                     media_type=lookup_type,
                     content_profile=resolved_profile,
+                    context=metadata_context,
                 )
             if not match_media:
                 if anchor_provider == "content_id":

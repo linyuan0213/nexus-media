@@ -257,6 +257,11 @@ def get_metadata_service(app_context: AppContext = Depends(get_app_context)):
     return app_context.metadata_service
 
 
+def get_metadata_gateway(app_context: AppContext = Depends(get_app_context)):
+    """获取元数据网关实例（ADR-028 统一读取入口）"""
+    return app_context.metadata_gateway
+
+
 def get_discovery_service(app_context: AppContext = Depends(get_app_context)):
     """获取探索页发现服务实例"""
     return app_context.discovery_service

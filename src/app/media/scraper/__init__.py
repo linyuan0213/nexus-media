@@ -30,6 +30,7 @@ from app.infrastructure.temp import temp_manager
 from app.media.display_image_policy import unwrap_display_image_url
 from app.media.external.douban import DouBan
 from app.media.fanart import Fanart
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.metadata.images import ImageResolver
 from app.media.metadata.models import Credit, ImageAsset, MediaMetadata
 from app.media.metadata.parsing import ParserChain
@@ -58,15 +59,20 @@ def _nfo_base_name(file_path: str) -> str:
 class Scraper:
     """媒体元数据刮削器 — 生成 NFO 文件、下载图片"""
 
+    _metadata_gateway = None
+    _metadata_service = None
+
     def __init__(
         self,
         media_service: MediaService,
         douban: DouBan | None = None,
         system_config: SystemConfig | None = None,
         metadata_service=None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self.media = media_service
         self._metadata_service = metadata_service
+        self._metadata_gateway = metadata_gateway
         self.douban = douban or DouBan()
         self.fanart = Fanart()
         self._system_config = system_config or SystemConfig()
@@ -81,6 +87,66 @@ class Scraper:
         self._nfo_gen = NfoGenerator(self._downloader)
         self._images = ImageResolver()
         self._credits = ChineseCredits(self.media)
+
+    @property
+    def _metadata(self):
+        return self._metadata_gateway or self._metadata_service
+
+    def _metadata_context(self, content_profile: str | None = None) -> MetadataContext:
+        return MetadataContext(
+            purpose="scrape",
+            allow_private=True,
+            content_profile=str(content_profile or "default"),
+        )
+
+    def _lookup(self, provider: str, external_id: str, **kwargs):
+        target = self._metadata
+        if target is None:
+            return None
+        if self._metadata_gateway is not None:
+            kwargs.pop("allow_private", None)
+            kwargs.pop("permissions", None)
+            kwargs["context"] = self._metadata_context(kwargs.get("content_profile"))
+        return target.lookup(provider, external_id, **kwargs)
+
+    def _search(self, **kwargs):
+        target = self._metadata
+        if target is None:
+            return []
+        if self._metadata_gateway is not None:
+            kwargs["context"] = self._metadata_context(kwargs.get("content_profile"))
+        return target.search(**kwargs)
+
+    def _compose(self, media_info, **kwargs):
+        target = self._metadata
+        if target is None:
+            return None
+        if self._metadata_gateway is not None:
+            kwargs["context"] = self._metadata_context(kwargs.get("content_profile"))
+        return target.compose_for_media(media_info, **kwargs)
+
+    def _latest_snapshot(self, media_info):
+        if self._metadata_gateway is not None:
+            return self._metadata_gateway.latest_snapshot_for_media(
+                media_info,
+                context=self._metadata_context(getattr(media_info, "content_profile", None)),
+            )
+        target = self._metadata_service
+        if target is None:
+            return None
+        return target.latest_snapshot_for_media(media_info)
+
+    def _identify_anchor(self, media_info, *, policy: str | None = None):
+        if self._metadata_gateway is not None:
+            return self._metadata_gateway.identify_anchor(
+                media_info,
+                context=self._metadata_context(getattr(media_info, "content_profile", None)),
+                policy=policy,
+            )
+        target = self._metadata_service
+        if target is None:
+            return False
+        return target.identify_anchor(media_info, policy=policy)
 
     def _init_config(self):
         self._scraper_flag = (settings.get("media") or {}).get("nfo_poster")
@@ -260,16 +326,16 @@ class Scraper:
                 mi = meta_info(os.path.basename(file))
                 profile_info = self._profile_media_info(file)
                 if profile_info is not None and self._metadata_service is not None:
-                    snapshot = None if force_refresh else self._metadata_service.latest_snapshot_for_media(profile_info)
+                    snapshot = None if force_refresh else self._latest_snapshot(profile_info)
                     if snapshot is None:
-                        snapshot = self._metadata_service.compose_for_media(
+                        snapshot = self._compose(
                             profile_info,
                             with_episodes=True,
                             persist=True,
                             max_age_seconds=0 if force_refresh else 1800,
                         )
                     if snapshot is None and force_refresh:
-                        snapshot = self._metadata_service.latest_snapshot_for_media(profile_info)
+                        snapshot = self._latest_snapshot(profile_info)
                         if snapshot is not None:
                             log.warn(f"[Scraper]{file} 强制重刮合成失败，回退最近快照")
                     if snapshot is not None:
@@ -369,12 +435,12 @@ class Scraper:
                             log.warn(f"[Scraper]{file} 无法识别媒体信息")
                             continue
                         media_info = next(iter(medias.values()), None)
-                metadata_service = self._metadata_service
+                metadata_service = self._metadata
                 if media_info is not None and metadata_service is not None:
                     # 转移阶段已写入的快照优先直接读取，避免重复抓取和重复限流。
-                    snapshot = metadata_service.latest_snapshot_for_media(media_info)
+                    snapshot = self._latest_snapshot(media_info)
                     if snapshot is None:
-                        snapshot = metadata_service.compose_for_media(media_info, with_episodes=True, persist=True)
+                        snapshot = self._compose(media_info, with_episodes=True, persist=True)
                     if snapshot is not None:
                         scraped = self.gen_snapshot_files(
                             snapshot=snapshot,
@@ -836,7 +902,7 @@ class Scraper:
             external_id = str(getattr(ref, "external_id", "") or "").strip()
             if not provider or not external_id or provider in {"content_id", "tmdb", "imdb"}:
                 continue
-            record = self._metadata_service.lookup(
+            record = self._lookup(
                 provider,
                 external_id,
                 media_type=getattr(ref, "media_type", None),
@@ -1048,7 +1114,7 @@ class Scraper:
 
     def _compose_standard_snapshot(self, file_path: str, media_info):
         """普通媒体接入 metadata snapshot：优先历史/NFO 锚点，其次按默认策略搜索."""
-        metadata_service = self._metadata_service
+        metadata_service = self._metadata
         if metadata_service is None:
             return None
         provider = ""
@@ -1067,7 +1133,7 @@ class Scraper:
         policy = str((settings.get("media") or {}).get("metadata_default_policy") or "tmdb_primary")
         if self._metadata_service is not None and not provider:
             # 下载历史/订阅已经给出明确锚点时，不能被标题识别覆盖。
-            self._metadata_service.identify_anchor(media_info, policy=policy)
+            self._identify_anchor(media_info, policy=policy)
         anchor_provider = str(getattr(media_info, "anchor_provider", "") or "")
         anchor_external = str(getattr(media_info, "anchor_external_id", "") or "")
         if anchor_provider and anchor_external:
@@ -1085,7 +1151,7 @@ class Scraper:
             title = str(getattr(media_info, "title", "") or "")
             if title:
                 try:
-                    hits = metadata_service.search(
+                    hits = self._search(
                         query=title,
                         provider=primary,
                         media_type=media_type,
@@ -1112,7 +1178,7 @@ class Scraper:
             media_info.type = MediaType.ANIME
             media_info.content_profile = "anime"
         try:
-            return metadata_service.compose_for_media(
+            return self._compose(
                 media_info,
                 policy=policy,
                 anchor_provider=provider,
@@ -1253,12 +1319,12 @@ class Scraper:
                 log.warn(f"[Scraper]{file_name} 现有快照缺少标题，重新合成")
                 snapshot = None
             if snapshot is None and self._metadata_service is not None:
-                snapshot = self._metadata_service.latest_snapshot_for_media(media)
+                snapshot = self._latest_snapshot(media)
                 if not isinstance(snapshot, MediaMetadata) or not self._snapshot_has_content(snapshot):
                     snapshot = None
             if snapshot is None and profile not in ("", "default") and self._metadata_service is not None:
                 # 转移阶段已持久化快照；这里只对旧记录补一次，并复用近期快照。
-                snapshot = self._metadata_service.compose_for_media(
+                snapshot = self._compose(
                     media,
                     with_episodes=True,
                     persist=True,

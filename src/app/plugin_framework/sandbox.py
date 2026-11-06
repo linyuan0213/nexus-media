@@ -300,6 +300,7 @@ class PluginSandbox:
                 site_engine=self._site_engine,
                 media_service=self._media_service,
                 metadata_service=getattr(self._app_context, "metadata_service", None),
+                metadata_gateway=getattr(self._app_context, "metadata_gateway", None),
                 manifest_metadata=manifest.backend.metadata,
                 filter_service=getattr(self._app_context, "filter_service", None),
                 discovery_service=getattr(self._app_context, "discovery_service", None),

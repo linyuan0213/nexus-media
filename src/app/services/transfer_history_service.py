@@ -9,6 +9,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError  # no
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import get_cache_manager
 from app.media.display_image_policy import transform_display_image
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.schemas.media import TransferHistoryPageDTO, UnknownListPageDTO
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.sync_service import SyncService
@@ -19,6 +20,9 @@ class TransferHistoryService:
     转移历史业务服务
     """
 
+    _metadata_gateway = None
+    _metadata_service = None
+
     def __init__(
         self,
         filetransfer: FileTransfer,
@@ -27,6 +31,7 @@ class TransferHistoryService:
         poster_resolver: Callable[[str, int], str] | None = None,
         metadata_service=None,
         subscribe_repo=None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self._filetransfer = filetransfer
         self._sync_service = sync_service
@@ -35,9 +40,45 @@ class TransferHistoryService:
         # (type, tmdbid) -> 海报 URL；None 表示不富化海报
         self._poster_resolver = poster_resolver
         self._metadata_service = metadata_service
+        self._metadata_gateway = metadata_gateway
         self._subscribe_repo = subscribe_repo
         # 进程级 memo：同一身份只回源一次，跨页复用
         self._poster_memo: dict[str, str] = {}
+
+    @property
+    def _metadata(self):
+        return self._metadata_gateway or self._metadata_service
+
+    @staticmethod
+    def _context(content_profile: str | None = None) -> MetadataContext:
+        return MetadataContext(
+            purpose="transfer.history",
+            allow_private=True,
+            content_profile=str(content_profile or "default"),
+        )
+
+    def _latest_snapshot(self, media, context: MetadataContext):
+        if self._metadata_gateway is not None:
+            return self._metadata_gateway.latest_snapshot_for_media(media, context=context)
+        target = self._metadata_service
+        if target is None:
+            return None
+        return target.latest_snapshot_for_media(media)
+
+    def _lookup(self, provider: str, external_id: str, *, context: MetadataContext, **kwargs):
+        if self._metadata_gateway is not None:
+            return self._metadata_gateway.lookup(provider, external_id, context=context, **kwargs)
+        target = self._metadata_service
+        if target is None:
+            return None
+        return target.lookup(
+            provider,
+            external_id,
+            media_type=kwargs.get("media_type"),
+            scope=str(kwargs.get("scope") or "default"),
+            content_profile=kwargs.get("content_profile"),
+            allow_private=context.allow_private,
+        )
 
     def _resolve_poster(self, history: dict) -> str:
         local_poster = self._local_poster(history)
@@ -126,7 +167,7 @@ class TransferHistoryService:
         return str(hint.get("image") or "")
 
     def _snapshot_poster(self, history: dict) -> str:
-        if self._metadata_service is None:
+        if self._metadata is None:
             return ""
         try:
             media = SimpleNamespace(
@@ -136,7 +177,8 @@ class TransferHistoryService:
                 identity_id=history.get("IDENTITY_ID"),
                 content_profile=history.get("CONTENT_PROFILE"),
             )
-            snapshot = self._metadata_service.latest_snapshot_for_media(media)
+            context = self._context(history.get("CONTENT_PROFILE"))
+            snapshot = self._latest_snapshot(media, context)
             if snapshot is None:
                 return ""
             for key in ("poster", "thumb", "cover"):
@@ -149,13 +191,13 @@ class TransferHistoryService:
                 external_id = str(getattr(ref, "external_id", "") or "")
                 if not provider or not external_id or provider in {"content_id", "tmdb", "imdb"}:
                     continue
-                record = self._metadata_service.lookup(
-                    provider=provider,
-                    external_id=external_id,
+                record = self._lookup(
+                    provider,
+                    external_id,
+                    context=context,
                     media_type=getattr(ref, "media_type", None),
                     scope=str(getattr(ref, "scope", "") or "default"),
                     content_profile=history.get("CONTENT_PROFILE"),
-                    allow_private=True,
                 )
                 if record is None:
                     continue

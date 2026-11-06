@@ -25,6 +25,7 @@ from app.domain.mediatypes import MediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.thread import ThreadExecutor
 from app.media import MediaCache
+from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.schemas.sync import (
     ManualTransferResultDTO,
     ReIdentifyResultDTO,
@@ -47,6 +48,9 @@ class SyncService:
     - 手工转移/自定义识别/重新识别的业务编排
     """
 
+    _metadata_gateway = None
+    _metadata_service = None
+
     def __init__(
         self,
         sync: Sync,
@@ -56,6 +60,7 @@ class SyncService:
         storage_backend_repo: StorageBackendRepositoryAdapter,
         media_service=None,
         metadata_service=None,
+        metadata_gateway: MetadataGateway | None = None,
     ):
         self._sync = sync
         self._filetransfer = filetransfer
@@ -66,6 +71,7 @@ class SyncService:
         # 不能只依赖只读缓存，否则缓存未命中时报「识别失败，无法查询到TMDB信息」
         self._media_service = media_service
         self._metadata_service = metadata_service
+        self._metadata_gateway = metadata_gateway
 
     # ---------- 同步目录校验 ----------
 
@@ -286,16 +292,32 @@ class SyncService:
         permissions: set[str] | None = None,
     ):
         """按插件 provider 构造转移元数据，不依赖 TMDB."""
-        if self._metadata_service is None:
+        if self._metadata_service is None and self._metadata_gateway is None:
             return None, media_type or MediaType.MOVIE
-        record = self._metadata_service.lookup(
-            provider,
-            str(external_id),
-            media_type=media_type,
-            content_profile=content_profile,
-            allow_private=allow_private,
-            permissions=permissions,
-        )
+        if self._metadata_gateway is not None:
+            record = self._metadata_gateway.lookup(
+                provider,
+                str(external_id),
+                context=MetadataContext(
+                    permissions=frozenset(permissions or ()),
+                    content_profile=str(content_profile or "default"),
+                    purpose="sync",
+                    allow_private=allow_private,
+                ),
+                media_type=media_type,
+                content_profile=content_profile,
+            )
+        else:
+            target = self._metadata_service
+            assert target is not None
+            record = target.lookup(
+                provider,
+                str(external_id),
+                media_type=media_type,
+                content_profile=content_profile,
+                allow_private=allow_private,
+                permissions=permissions,
+            )
         if not record:
             return None, media_type or MediaType.MOVIE
 

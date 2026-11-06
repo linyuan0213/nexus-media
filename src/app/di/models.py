@@ -133,6 +133,7 @@ class ServiceObjects:
     custom_rss_service: Any = None
     channel_binding_service: Any = None
     metadata_service: Any = None
+    metadata_gateway: Any = None
     discovery_service: Any = None
     scrape_queue_service: Any = None
     transfer_queue_service: Any = None
