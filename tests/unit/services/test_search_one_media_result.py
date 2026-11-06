@@ -138,3 +138,20 @@ class TestCustomProfileSearchNames:
 
         assert "283938" not in names
         assert "学生会也有洞！" in names
+
+
+def test_build_search_names_uses_persisted_aliases_without_provider_call():
+    gateway = MagicMock()
+    media = MediaInfo(
+        title="学生会也有洞！",
+        cn_name="学生会也有洞！",
+        original_title="生徒会にも穴はある!",
+        original_language="ja",
+        type=MediaType.ANIME,
+        aliases=["Seitokai ni mo Ana wa Aru!", "學生會也有洞！"],
+    )
+    names, _ = SearchQueryBuilder.build_search_names(media, gateway)
+    assert "Seitokai ni mo Ana wa Aru!" in names
+    assert "學生會也有洞！" in names
+    gateway.en_title.assert_not_called()
+    gateway.zhtw_title.assert_not_called()

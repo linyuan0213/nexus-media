@@ -106,17 +106,21 @@ class SearchQueryBuilder:
         else:
             search_cn_name = media_info.title
 
-        # 英文名
+        aliases = [str(item).strip() for item in (getattr(media_info, "aliases", None) or []) if str(item).strip()]
+
+        # 英文名优先复用已持久化的多语言别名，避免每次搜索都请求 provider。
         search_en_name = None
         if media_info.en_name:
             search_en_name = media_info.en_name
+        elif media_info.original_language == "en":
+            search_en_name = media_info.original_title
         else:
-            if media_info.original_language == "en":
-                search_en_name = media_info.original_title
-            else:
-                en_title = metadata_gateway.en_title(media_info) if metadata_gateway is not None else ""
-                if en_title:
-                    search_en_name = en_title
+            search_en_name = next(
+                (item for item in aliases if any("a" <= ch.lower() <= "z" for ch in item)),
+                None,
+            )
+            if not search_en_name and metadata_gateway is not None:
+                search_en_name = metadata_gateway.en_title(media_info) or None
 
         for name in (search_cn_name, search_en_name):
             if not name:
@@ -125,10 +129,7 @@ class SearchQueryBuilder:
             if base_name:
                 search_name_list.append(base_name)
             search_name_list.append(str(name))
-        for alias in getattr(media_info, "aliases", None) or []:
-            alias_text = str(alias or "").strip()
-            if not alias_text:
-                continue
+        for alias_text in aliases:
             base_alias = _strip_season_suffix(alias_text)
             if base_alias and base_alias not in search_name_list:
                 search_name_list.append(base_alias)
@@ -146,11 +147,7 @@ class SearchQueryBuilder:
         except Exception:
             multi_lang = False
         if multi_lang:
-            search_zhtw_name = metadata_gateway.zhtw_title(media_info) if metadata_gateway is not None else ""
-            if search_zhtw_name and search_zhtw_name != search_cn_name:
-                search_name_list.append(search_zhtw_name)
-            if media_info.original_language != "cn" and search_en_name != media_info.original_title:
-                search_name_list.append(media_info.original_title)
+            # 多语言标题已在 aliases 中持久化，直接用别名展开，不再实时请求 provider。
             max_workers = len(search_name_list)
 
         # 去重（保持顺序；keyword 常与中文名相同）
