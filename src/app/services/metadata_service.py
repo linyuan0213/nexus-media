@@ -1322,6 +1322,22 @@ class MetadataService:
         if count:
             return count
 
+        # 豆瓣 API 的 episodes_count 对分季条目经常为 0，但网页分集页可用；
+        # 来源 provider 明确时优先取它的 HTML 分集数量，再回退其他 provider。
+        if provider and external_id:
+            try:
+                episodes = self.episodes(
+                    provider,
+                    external_id,
+                    season,
+                    allow_private=allow_private,
+                    permissions=permissions,
+                )
+            except Exception:  # noqa: BLE001 - HTML 分集失败继续其他 provider
+                episodes = []
+            if episodes:
+                return len(episodes)
+
         query = str(title or "").strip()
         if not query:
             return 0

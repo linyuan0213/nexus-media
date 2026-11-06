@@ -547,6 +547,33 @@ class SubscribeAddService:
                         if media_info.provider_data
                         else (media_info.total_episodes or 0)
                     )
+                if not total_episode:
+                    # 豆瓣/Bangumi 等非 TMDB 来源没有 provider_data，不能只依赖 TMDB 季集接口。
+                    # 统一走 MetadataService 的 provider 优先级解析，避免总集数落成 0。
+                    ref = media_info.get_media_ref()
+                    source_provider = (
+                        str(getattr(media_info, "anchor_provider", "") or "")
+                        or (ref.provider if ref is not None else "")
+                        or str(provider or "")
+                    )
+                    source_external = str(getattr(media_info, "anchor_external_id", "") or "") or (
+                        ref.external_id if ref is not None else ""
+                    )
+                    if self._metadata_service is not None and source_provider and source_external:
+                        try:
+                            total_episode = self._metadata_service.resolve_season_episode_count(
+                                provider=source_provider,
+                                external_id=source_external,
+                                title=str(name or media_info.title or ""),
+                                year=str(media_info.year or year or "") or None,
+                                media_type=mtype,
+                                season=_season_number(season, 1),
+                                content_profile=str(content_profile or "default"),
+                                allow_private=allow_private,
+                                permissions=permissions,
+                            )
+                        except Exception as exc:  # noqa: BLE001 - 季集解析失败保留 0，订阅仍可编辑
+                            log.warn(f"[SubscribeAdd]解析季集数失败 {name} S{season}: {exc}")
                 if not total_episode and media_info.provider_data:
                     return 3, f"第{season}季获取剧集数失败，请确认该季是否存在", media_info
                 media_info.begin_season = _season_number(season, 0)
@@ -648,11 +675,16 @@ class SubscribeAddService:
                             f"[SubscribeAdd]{media_info.get_title_string()} S{season} "
                             f"身份历史已有 {continue_ep} 集，从第 {current_ep} 集开始续订"
                         )
+                if not current_ep and total:
+                    # 新订阅未指定进度时，首个待下载集必须是 1，不能落成 0。
+                    current_ep = 1
                 if current_ep:
                     # 首个待下载集为 current_ep → 缺失集数 = total - current_ep + 1
                     lack = max(0, total - current_ep + 1)
                 else:
                     lack = total
+                if not total_ep:
+                    total_ep = total
                 identity_fields = self._identity_fields(
                     media_info,
                     mtype,

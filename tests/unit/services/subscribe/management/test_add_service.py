@@ -100,6 +100,17 @@ class TestResubscribeContinuation:
         assert inserted_kw["current_ep"] == 40
         assert inserted_kw["lack"] == 9  # 48 - 40 + 1
 
+    def test_new_subscription_defaults_current_ep_to_one(self):
+        svc = _build_service()
+        svc._media.get_media_info.return_value = _make_media_info()
+        svc._media.get_tmdb_season_episodes_num.return_value = 12
+        code, _, _ = svc.add_rss_subscribe(
+            name="测试", year="2023", mtype=MediaType.TV, season=1, total_ep=12, current_ep=None
+        )
+        inserted_kw = svc._tv_repo.insert.call_args.kwargs
+        assert inserted_kw["current_ep"] == 1
+        assert inserted_kw["lack"] == 12
+
     def test_no_history_uses_current_ep(self):
         """无转移/下载历史时，沿用传入的 current_ep."""
         svc = _build_service(transfer_contiguous=0, download_contiguous=0)
@@ -121,6 +132,36 @@ class TestResubscribeContinuation:
         )
         inserted_kw = svc._tv_repo.insert.call_args.kwargs
         assert inserted_kw["current_ep"] == 26
+
+
+class TestNonTmdbEpisodeCount:
+    def test_douban_source_uses_metadata_resolver(self):
+        svc = _build_service()
+        media = _make_media_info()
+        media.provider_data = None  # type: ignore[assignment]
+        media.total_episodes = 0
+        media.type = MediaType.ANIME
+        media.anchor_provider = "douban"
+        media.anchor_external_id = "38396475"
+        svc._media.get_media_info.return_value = media
+        svc._metadata_service = MagicMock()
+        svc._metadata_service.resolve_season_episode_count.return_value = 24
+
+        code, _, _ = svc.add_rss_subscribe(
+            name="乱马1/2",
+            year="2026",
+            mtype=MediaType.ANIME,
+            season=3,
+            total_ep=None,
+            current_ep=0,
+        )
+
+        assert code == 0
+        svc._metadata_service.resolve_season_episode_count.assert_called_once()
+        inserted = svc._tv_repo.insert.call_args.kwargs
+        assert inserted["total"] == 24
+        assert inserted["total_ep"] == 24
+        assert inserted["lack"] == 24
 
 
 class TestResolvedSeasonContinuation:
