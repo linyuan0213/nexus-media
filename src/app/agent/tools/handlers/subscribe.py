@@ -57,7 +57,7 @@ def _resolve_aggregate_ref(
 ) -> tuple[str, str, str]:
     """把虚拟聚合来源解析成具体 provider，并带回真实海报；找不到时保持原值."""
     metadata_gateway = getattr(ctx, "metadata_gateway", None)
-    metadata = metadata_gateway or getattr(ctx, "metadata_service", None)
+    metadata = metadata_gateway
     if metadata is None:
         return provider, external_id, ""
     query = content_id or external_id or title
@@ -166,7 +166,7 @@ def subscribe_add(
     # 只给来源没给 detail id 时，先用元数据搜索解析到具体 provider ref
     if provider and not external_id and not ref:
         metadata_gateway = getattr(ctx, "metadata_gateway", None)
-        metadata = metadata_gateway or getattr(ctx, "metadata_service", None)
+        metadata = metadata_gateway
         if metadata is None:
             return ToolResult(success=False, error="缺少 external_id，且元数据服务不可用")
         try:
