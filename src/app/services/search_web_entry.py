@@ -20,6 +20,7 @@ from app.services.subscribe.default_settings import get_default_setting
 # 锚点元数据只是资源搜索的辅助信息；外部源不可用时必须尽快回退关键词，
 # 不能因为一次详情抓取把整次搜索拖在 0%。
 ANCHOR_RESOLVE_TIMEOUT = 15.0
+CONTENT_ID_ANCHOR_TIMEOUT = 45.0
 
 
 def _resolve_anchor_with_timeout(fn, *args, timeout: float = ANCHOR_RESOLVE_TIMEOUT, **kwargs):
@@ -97,7 +98,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     str(anchor_external_id),
                     media_type=lookup_type,
                     content_profile=resolved_profile,
-                    timeout=45.0,
+                    timeout=CONTENT_ID_ANCHOR_TIMEOUT,
                 )
                 if match_media:
                     match_media.anchor_provider = anchor_provider

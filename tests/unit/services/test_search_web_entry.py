@@ -82,6 +82,7 @@ class TestMakeWebSearchFn:
     def test_slow_anchor_resolution_falls_back_without_blocking(self, monkeypatch):
         """元数据源卡住时按超时回退关键词，搜索不能一直停在 0%."""
         monkeypatch.setattr("app.services.search_web_entry.ANCHOR_RESOLVE_TIMEOUT", 0.05)
+        monkeypatch.setattr("app.services.search_web_entry.CONTENT_ID_ANCHOR_TIMEOUT", 0.05)
         orchestrator = MagicMock()
         orchestrator.orchestrate.return_value = (None, {}, 2, 0)
 
