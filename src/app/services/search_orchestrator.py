@@ -246,12 +246,12 @@ class SearchOrchestrator:
     ):
         """用选定 provider 搜索内容编号，再用命中的 provider 详情 ID 解析."""
         service = self._metadata_service
-        if service is None or not provider or not content_id:
+        if service is None or not content_id:
             return None
         try:
             hits = service.search(
                 query=str(content_id),
-                provider=provider,
+                provider=provider or None,
                 media_type=media_type,
                 content_profile=content_profile or "default",
                 limit=5,
