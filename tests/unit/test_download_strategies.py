@@ -16,6 +16,8 @@ class MockMediaItem:
         self.org_string = kwargs.get("org_string", "")
         self._season_list = kwargs.get("season_list", [1])
         self._episode_list = kwargs.get("episode_list", [])
+        self.begin_episode = kwargs.get("begin_episode")
+        self.end_episode = kwargs.get("end_episode")
 
     def get_season_list(self):
         return self._season_list
@@ -221,6 +223,65 @@ class TestEpisodeStrategy:
         )
         assert len(result) == 1
         assert updated[123][0]["episodes"] == [1, 2, 5]
+
+    def test_download_episodes_applies_episode_offset(self):
+        """连续编号 S03E25-E26 在 offset=24 时命中订阅相对集 1-2."""
+        item = MockMediaItem(tmdb_id=123, season_list=[3], episode_list=[25, 26], enclosure="url1")
+        need_tvs = {123: [{"season": 3, "episodes": [1, 2, 3], "total_episodes": 18, "episode_offset": 24}]}
+
+        result, updated = EpisodeStrategy.download_episodes(
+            [item],
+            need_tvs,
+            lambda x: x,
+            lambda item, **kw: ("did", "tid1", ""),
+            lambda url, page: ([], None),
+            lambda tid, eps, did: [],
+            lambda ids, did: None,
+            [],
+        )
+        assert len(result) == 1
+        assert updated[123][0]["episodes"] == [3]
+
+    def test_download_episodes_infer_continuous_offset(self):
+        """无配置 offset 时，E25/E26 对订阅 1-2 自动推断偏移 24."""
+        item = MockMediaItem(tmdb_id=123, season_list=[3], episode_list=[25, 26], enclosure="url1")
+        need_tvs = {123: [{"season": 3, "episodes": [1, 2, 3], "total_episodes": 18}]}
+        result, updated = EpisodeStrategy.download_episodes(
+            [item],
+            need_tvs,
+            lambda x: x,
+            lambda item, **kw: ("did", "tid1", ""),
+            lambda url, page: ([], None),
+            lambda tid, eps, did: [],
+            lambda ids, did: None,
+            [],
+        )
+        assert len(result) == 1
+        assert item.begin_episode == 1
+        assert updated[123][0]["episodes"] == [3]
+
+    def test_download_from_season_pack_applies_episode_offset(self):
+        """整季包选取需集时用资源实际集号，缺失集仍按相对集号更新."""
+        item = MockMediaItem(tmdb_id=123, season_list=[3], episode_list=[], enclosure="url1")
+        need_tvs = {123: [{"season": 3, "episodes": [1, 2], "total_episodes": 18, "episode_offset": 24}]}
+        files_status_calls = []
+
+        def set_files_cb(tid, need_episodes, downloader_id):
+            files_status_calls.append((tid, need_episodes, downloader_id))
+
+        result, updated = EpisodeStrategy.download_from_season_pack(
+            [item],
+            need_tvs,
+            lambda x: x,
+            lambda item, **kw: ("did", "tid1", ""),
+            lambda url, page: ([25, 26, 27], "path"),
+            set_files_cb,
+            lambda ids, downloader_id: None,
+            [],
+        )
+        assert len(result) == 1
+        assert 123 not in updated
+        assert files_status_calls == [("tid1", [25, 26], "did")]
 
     def test_download_episodes_from_torrent(self):
         item = MockMediaItem(

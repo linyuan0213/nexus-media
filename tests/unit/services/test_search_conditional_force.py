@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from app.services.search_service import SearchResultProcessor
+from app.services.subscription_download_guard import SubscriptionDownloadGuard
 
 
 def _processor(rows):
@@ -38,3 +39,29 @@ def test_force_blocks_when_active_download_exists():
     media = _media()
     processor = _processor([SimpleNamespace(state="downloading")])
     assert processor.filter_downloaded([media], force=True) == []
+
+
+def test_active_guard_queries_tmdb_and_series_identity():
+    """普通 TMDB 订阅没有 anchor 时也要查在途下载，不能只按 identity/anchor 判空."""
+    repo = MagicMock()
+    repo.has_active_download_for_media.return_value = False
+    media = SimpleNamespace(
+        identity_id=None,
+        anchor_provider=None,
+        anchor_external_id=None,
+        tmdb_id="123",
+        series_key="series:demo",
+        title="Demo show",
+        get_season_episode_string=lambda: "S01 E01",
+    )
+
+    SubscriptionDownloadGuard(repo).filter_candidates([media])
+
+    repo.has_active_download_for_media.assert_called_once_with(
+        identity_id=None,
+        anchor_provider=None,
+        anchor_external_id=None,
+        tmdb_id="123",
+        series_key="series:demo",
+        season_episode="S01 E01",
+    )

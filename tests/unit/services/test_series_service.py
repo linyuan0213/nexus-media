@@ -45,6 +45,16 @@ class _FakeRepo:
     def upsert_season(self, **kwargs):
         self.seasons[(kwargs["series_key"], kwargs["season_number"])] = kwargs
 
+    def get_seasons(self, series_key):
+        return [
+            SimpleNamespace(
+                SEASON_NUMBER=season,
+                EPISODE_OFFSET=int(value.get("episode_offset") or 0),
+            )
+            for (key, season), value in self.seasons.items()
+            if key == series_key
+        ]
+
     def create_alias(self, **kwargs):
         self.aliases[(kwargs["provider"], kwargs["external_id"], kwargs["scope"], kwargs["season_number"])] = {
             "series_key": kwargs["series_key"],
@@ -125,6 +135,15 @@ class TestSeriesService:
 
         assert key and key.startswith("series:")
         assert media.series_key == key
+
+    def test_episode_offset_is_read_per_season(self):
+        service = _service()
+        repo = cast(Any, service._repo)
+        repo.seasons[("series:demo", 3)] = {"episode_offset": 24}
+
+        assert service.get_episode_offset("series:demo", 3) == 24
+        assert service.get_episode_offset("series:demo", 2) == 0
+        assert service.get_episode_offset(None, 3) == 0
 
     def test_title_parser_strips_season_marker(self):
         assert SeriesService.split_title_season("赛博朋克：边缘行者 第二季") == ("赛博朋克：边缘行者", 2)

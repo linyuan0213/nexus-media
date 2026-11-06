@@ -10,7 +10,8 @@ from app.services.search_subject import SearchSubject
     ("media_type", "profile", "provider", "external", "display", "provider_type", "mode"),
     [
         ("movie", "default", "tmdb", "550", MediaType.MOVIE, MediaType.MOVIE, "title"),
-        ("tv", "default", "bangumi", "400602", MediaType.TV, MediaType.TV, "title"),
+        ("tv", "default", "bangumi", "400602", MediaType.ANIME, MediaType.TV, "title"),
+        ("movie", "default", "bangumi", "400602", MediaType.MOVIE, MediaType.MOVIE, "title"),
         ("anime", "anime", "tmdb", "283938", MediaType.ANIME, MediaType.TV, "title"),
         (None, "anime", "tmdb", "283938", MediaType.ANIME, MediaType.TV, "title"),
         ("movie", "demo", "content_id", "DEMO-660", MediaType.MOVIE, MediaType.MOVIE, "code"),

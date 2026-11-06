@@ -194,12 +194,16 @@ class DownloadHistoryRepositoryAdapter(IDownloadHistoryRepository):
         identity_id: str | None = None,
         anchor_provider: str | None = None,
         anchor_external_id: str | None = None,
+        tmdb_id: str | int | None = None,
+        series_key: str | None = None,
         season_episode: str | None = None,
     ) -> bool:
         return self._repo.has_active_download_for_media(
             identity_id=identity_id,
             anchor_provider=anchor_provider,
             anchor_external_id=anchor_external_id,
+            tmdb_id=tmdb_id,
+            series_key=series_key,
             season_episode=season_episode,
         )
 

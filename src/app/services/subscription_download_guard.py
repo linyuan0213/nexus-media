@@ -26,6 +26,8 @@ class SubscriptionDownloadGuard:
                 identity_id=getattr(media_item, "identity_id", None),
                 anchor_provider=getattr(media_item, "anchor_provider", None),
                 anchor_external_id=getattr(media_item, "anchor_external_id", None),
+                tmdb_id=getattr(media_item, "tmdb_id", None),
+                series_key=getattr(media_item, "series_key", None),
                 season_episode=season_episode,
             ):
                 log.info(

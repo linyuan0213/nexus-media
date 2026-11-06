@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 from app.domain.mediatypes import MediaType
 from app.infrastructure.external.tmdbv3api.as_obj import AsObj
+from app.media.models import MediaInfo
 from app.services.search_orchestrator import SearchOrchestrator
 from app.services.search_web_entry import make_web_search_fn
 
@@ -137,8 +138,6 @@ class TestMakeWebSearchFn:
         assert ctx.filter_args["type"] == MediaType.MOVIE
 
     def test_requested_movie_type_overrides_anchor_default_tv(self):
-        from app.media.models import MediaInfo
-
         orchestrator = MagicMock()
         resolved = MediaInfo(title="生化危机：爆发夜", type=MediaType.TV)
         resolved.year = "2026"
@@ -164,18 +163,38 @@ class TestMakeWebSearchFn:
         orchestrator.orchestrate.return_value = (None, {}, 0, 0)
         fn = make_web_search_fn(orchestrator, system_config=None)
         fn(
-            "SSIS-522 可爱...",
+            "DEMO-522 演示内容",
             anchor_provider="content_id",
-            anchor_external_id="SSIS-522",
-            content_profile="adult",
+            anchor_external_id="DEMO-522",
+            content_profile="demo",
             media_type=MediaType.MOVIE,
-            filters={"metadata_source": "javdb", "content_profile": "adult"},
+            filters={"metadata_source": "demo_source", "content_profile": "demo"},
         )
         ctx = orchestrator.orchestrate.call_args[0][0]
         assert ctx.match_media is not None
-        assert ctx.match_media.provider == "javdb"
-        assert ctx.match_media.metadata_ref == "javdb:SSIS-522"
+        assert ctx.match_media.provider == "demo_source"
+        assert ctx.match_media.metadata_ref == "demo_source:DEMO-522"
         assert ctx.match_media.anchor_provider == "content_id"
+
+    def test_anime_uses_tv_candidate_type_but_keeps_anime_display_type(self):
+        """动漫资源按电视形态过滤，但入库类型仍是动漫，二者不能互相覆盖."""
+        orchestrator = MagicMock()
+        resolved = MediaInfo(title="演示番剧", type=MediaType.TV)
+        orchestrator.resolve_anchor_media.return_value = resolved
+        orchestrator.orchestrate.return_value = (None, {}, 1, 0)
+        fn = make_web_search_fn(orchestrator, system_config=None)
+
+        fn(
+            "演示番剧",
+            anchor_provider="tmdb",
+            anchor_external_id="1001",
+            content_profile="anime",
+            media_type=MediaType.ANIME,
+        )
+
+        ctx = orchestrator.orchestrate.call_args[0][0]
+        assert ctx.filter_args["type"] == MediaType.TV
+        assert ctx.match_media.type == MediaType.ANIME
 
     def test_empty_media_type_is_normalized_for_metadata_lookup(self):
         """未选择类型时前端可能传空串，SearchQuery 枚举不接受空串."""

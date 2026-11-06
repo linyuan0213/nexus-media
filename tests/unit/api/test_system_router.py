@@ -84,7 +84,9 @@ class TestSystemRouter:
             body = b"".join(resp.iter_bytes())
         elapsed = time.monotonic() - start
         assert elapsed < 15
-        assert body == b""
+        assert b'"value": 100' in body
+        assert b'"enable": false' in body
+        assert body.endswith(b"\n\n")
 
     def test_search_progress_completed_session_yields_and_closes(self, client):
         """已完成的会话（enable=False 且 value=100）推送一次后立即关闭."""

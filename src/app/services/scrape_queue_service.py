@@ -148,6 +148,9 @@ class ScrapeQueueService:
         self._executor.submit(self._run_file_payload, payload, None)
 
     def submit_folder_scrape(self, path: str, dst_backend=None, mode: str = "force_all") -> None:
+        if not path:
+            log.error("[ScrapeQueue]拒绝空路径刮削任务")
+            return
         payload = {
             "path": path,
             "backend_id": str(getattr(dst_backend, "id", "") or ""),

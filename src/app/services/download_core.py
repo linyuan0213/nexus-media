@@ -11,7 +11,9 @@ DownloadCore - 下载核心业务逻辑
 依赖注入：所有外部依赖通过构造函数传入。
 """
 
+import hashlib
 import os
+import re
 import threading
 import time
 from typing import Any
@@ -34,6 +36,7 @@ from app.downloader.strategy import RemoveStrategy
 from app.events.bus import EventBus
 from app.events.registry import EventHandlerRegistry  # noqa: F401
 from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.task_queue import QueueUnavailableError
 from app.media import meta_info
 from app.mediaserver import MediaServer
@@ -64,6 +67,15 @@ _DOWNLOAD_UNRETRYABLE_TTL = 6 * 3600
 
 # 链接单飞锁数量上限，超过后清理未占用的锁避免字典无限增长
 _LINK_LOCKS_MAX = 1024
+
+
+def _torrent_lock_key(media_info) -> str:
+    value = str(getattr(media_info, "enclosure", "") or getattr(media_info, "page_url", "") or "").strip()
+    if not value:
+        return ""
+    match = re.search(r"(?i)btih:([a-f0-9]{32,40})", value)
+    identity = match.group(1).lower() if match else value.lower()
+    return hashlib.sha1(identity.encode("utf-8")).hexdigest()[:32]
 
 
 class DownloadCore:
@@ -172,7 +184,21 @@ class DownloadCore:
 
     # ---------- 核心下载方法 ----------
 
-    def download(
+    def download(self, *args, **kwargs):
+        media_info = kwargs.get("media_info") or (args[0] if args else None)
+        key = _torrent_lock_key(media_info)
+        if not key:
+            return self._download_locked(*args, **kwargs)
+        lock = get_lock_manager().create_lock(f"torrent:{key}", ttl_seconds=300)
+        if not lock.acquire():
+            log.info(f"[Downloader]同一种子正在其他实例处理，跳过重复下载: {key}")
+            return None, None, "同一种子正在处理，跳过重复下载"
+        try:
+            return self._download_locked(*args, **kwargs)
+        finally:
+            lock.release()
+
+    def _download_locked(
         self,
         media_info,
         is_paused=None,

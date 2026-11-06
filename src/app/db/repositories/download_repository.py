@@ -560,6 +560,8 @@ class DownloadRepository(BaseRepository):
         identity_id: str | None = None,
         anchor_provider: str | None = None,
         anchor_external_id: str | None = None,
+        tmdb_id: str | int | None = None,
+        series_key: str | None = None,
         season_episode: str | None = None,
     ) -> bool:
         """订阅再次搜索前检查同一媒体/分集是否已有在途下载."""
@@ -582,6 +584,10 @@ class DownloadRepository(BaseRepository):
                     DOWNLOADHISTORY.ANCHOR_EXTERNAL_ID == str(anchor_external_id),
                 )
             )
+        if str(tmdb_id or "").strip().isdigit():
+            conditions.append(DOWNLOADHISTORY.TMDBID == str(tmdb_id))
+        if series_key:
+            conditions.append(DOWNLOADHISTORY.SERIES_KEY == str(series_key))
         if not conditions:
             return False
         with self.readonly() as db:

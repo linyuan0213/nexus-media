@@ -648,7 +648,10 @@ async def search_progress(session_id: str):
                 now = loop.time()
                 if missing_since is None:
                     missing_since = now
-                elif now - missing_since > 10:
+                elif now - missing_since > 2:
+                    # 服务重启后内存进度丢失；旧会话不应把前端锁在 0%，直接结束等待。
+                    payload = {"value": 100, "text": "搜索任务已结束", "enable": False}
+                    yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                     break
                 await asyncio.sleep(0.3)
                 continue

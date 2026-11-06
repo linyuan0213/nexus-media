@@ -13,6 +13,7 @@ from app.infrastructure.cache_system.caches import TMDBCache
 from app.media.display_image_policy import transform_display_image
 from app.media.metadata.registry import registry as metadata_registry
 from app.schemas.auth import UserContext
+from app.services.search_subject import SearchSubject
 from app.services.subscribe.management.utils import parse_rss_desc
 from app.utils.json_utils import JsonUtils
 
@@ -353,9 +354,15 @@ class SubscribeQueryService:
             search_sites = [site for site in (search_sites or []) if site in search_sites_valid]
             anchor_provider, anchor_external_id = _normalized_anchor(rss_tv.ANCHOR_PROVIDER, rss_tv.ANCHOR_EXTERNAL_ID)
             metadata_ref = _canonical_ref(rss_tv)
+            subject = SearchSubject.classify(
+                note_info.get("media_type"),
+                rss_tv.CONTENT_PROFILE,
+                anchor_provider,
+                anchor_external_id or tmdbid,
+            )
             resolved_type = (
-                "anime"
-                if rss_tv.CONTENT_PROFILE == "anime" or anchor_provider == "bangumi"
+                subject.display_type.value
+                if subject.display_type
                 else _resolve_subscribe_type(note_info.get("media_type"), tmdbid, note_info.get("genres"))
             )
             # 历史动漫订阅可能仍是 default 画像；序列化时按实际类型归到 anime 画像，

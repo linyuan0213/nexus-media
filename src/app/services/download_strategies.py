@@ -30,6 +30,81 @@ def mark_download_failed(item) -> None:
         setattr(item, _DOWNLOAD_FAILED_FLAG, True)
 
 
+def _infer_offset(release: set[int], need: set[int], offset: int, season: int = 1) -> int:
+    """无配置偏移时，识别连续编号资源的整体偏移（如 S03E25 对应 S03E01）."""
+    if offset > 0 or season <= 1 or not release or not need or release & need:
+        return offset
+    if min(release) <= max(need):
+        return offset
+    candidate = min(release) - min(need)
+    if candidate > 0 and {episode - candidate for episode in release}.issubset(need):
+        return candidate
+    return offset
+
+
+def _episode_offset(entry: dict) -> int:
+    """订阅缺失季条目上的集号偏移；0 表示资源集号与订阅一致."""
+    try:
+        return max(0, int(entry.get("episode_offset") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _episode_set(values) -> set[int]:
+    result: set[int] = set()
+    for value in values or []:
+        try:
+            result.add(int(value))
+        except (TypeError, ValueError):
+            continue
+    return result
+
+
+def match_release_episodes(
+    release_episodes,
+    need_episodes,
+    offset: int = 0,
+    season: int = 1,
+) -> tuple[list[int], list[int]]:
+    """把资源集号映射回订阅相对集号，返回 (资源实际集号, 相对集号).
+
+    连续编号资源（如 S03E25-E29）通过 EPISODE_OFFSET 映射到 S03E01-E05；
+    资源本身已是相对编号时保持原值，避免重复减偏移。
+    """
+    release = _episode_set(release_episodes)
+    need = _episode_set(need_episodes)
+    offset = _infer_offset(release, need, offset, season)
+    if offset > 0:
+        expected_absolute = {episode + offset for episode in need}
+        selected_absolute = release & expected_absolute
+        if selected_absolute:
+            relative = {episode - offset for episode in selected_absolute if episode > offset}
+            return sorted(selected_absolute), sorted(relative)
+    selected = release & need
+    return sorted(selected), sorted(selected)
+
+
+def relative_release_episodes(
+    release_episodes,
+    need_episodes,
+    offset: int = 0,
+    season: int = 1,
+) -> list[int] | None:
+    """资源集号整体落在订阅需求内时返回相对集号，否则返回 None."""
+    release = _episode_set(release_episodes)
+    need = _episode_set(need_episodes)
+    offset = _infer_offset(release, need, offset, season)
+    if not release:
+        return None
+    if offset > 0:
+        expected_absolute = {episode + offset for episode in need}
+        if release.issubset(expected_absolute):
+            return sorted(episode - offset for episode in release if episode > offset)
+    if release.issubset(need):
+        return sorted(release)
+    return None
+
+
 class MovieDownloadStrategy:
     """
     电影下载策略
@@ -240,6 +315,7 @@ class EpisodeStrategy:
                 need_season = tv.get("season") or 1
                 need_episodes = tv.get("episodes")
                 total_episodes = tv.get("total_episodes") or 0
+                offset = _episode_offset(tv)
                 # 缺失整季的转化为缺失集
                 if not need_episodes:
                     need_episodes = list(range(1, total_episodes + 1))
@@ -264,14 +340,17 @@ class EpisodeStrategy:
                         if not torrent_episodes:
                             continue
                         item_episodes = torrent_episodes
-                    # 为需要集的子集则下载
-                    if set(item_episodes).issubset(set(need_episodes)):
+                    relative_episodes = relative_release_episodes(item_episodes, need_episodes, offset, need_season)
+                    if relative_episodes is not None:
+                        if relative_episodes:
+                            item.begin_episode = relative_episodes[0]
+                            item.end_episode = relative_episodes[-1] if len(relative_episodes) > 1 else None
                         _, download_id, _ = download_callback(item)
                         if download_id:
                             if item not in return_items:
                                 return_items.append(item)
                             need_episodes = EpisodeStrategy._update_episodes(
-                                need_tvs, need_tmdbid, need_episodes, item_episodes, need_season
+                                need_tvs, need_tmdbid, need_episodes, relative_episodes, need_season
                             )
                 index += 1
         return return_items, need_tvs
@@ -313,6 +392,7 @@ class EpisodeStrategy:
             for tv in list(need_tv):
                 need_season = tv.get("season") or 1
                 need_episodes = tv.get("episodes")
+                offset = _episode_offset(tv)
                 if not need_episodes:
                     index += 1
                     continue
@@ -328,11 +408,12 @@ class EpisodeStrategy:
                     item_episodes = item.get_episode_list()
                     if not identity_keys_match(need_tmdbid, media_series_scope_key(item)):
                         continue
-                    if not item_episodes:
-                        # 无集数信息但属于单季整季的也考虑
-                        pass
-                    elif not set(item_episodes).intersection(set(need_episodes)):
-                        continue
+                    if item_episodes:
+                        release_selected, _relative = match_release_episodes(
+                            item_episodes, need_episodes, offset, need_season
+                        )
+                        if not release_selected:
+                            continue
                     if len(item_season) != 1 or item_season[0] != need_season:
                         continue
 
@@ -352,17 +433,22 @@ class EpisodeStrategy:
                                 else []
                             )
                             if torrent_episodes:
-                                selected_episodes = set(torrent_episodes).intersection(set(need_episodes))
-                                if not selected_episodes:
+                                release_episodes, relative_episodes = match_release_episodes(
+                                    torrent_episodes, need_episodes, offset
+                                )
+                                if not release_episodes:
                                     log.info(f"[Downloader]{item.org_string} 磁力包内没有需要的集，回滚")
                                     _rollback(download_id, downloader_id)
                                     continue
+                                if relative_episodes:
+                                    item.begin_episode = relative_episodes[0]
+                                    item.end_episode = relative_episodes[-1] if len(relative_episodes) > 1 else None
                                 need_episodes = EpisodeStrategy._update_episodes(
-                                    need_tvs, need_tmdbid, need_episodes, list(selected_episodes), need_season
+                                    need_tvs, need_tmdbid, need_episodes, relative_episodes, need_season
                                 )
-                                log.info(f"[Downloader]从 {item.org_string} 中选取集：{selected_episodes}")
+                                log.info(f"[Downloader]从 {item.org_string} 中选取集：{release_episodes}")
                                 set_files_status_callback(
-                                    tid=download_id, need_episodes=list(selected_episodes), downloader_id=downloader_id
+                                    tid=download_id, need_episodes=release_episodes, downloader_id=downloader_id
                                 )
                             else:
                                 # 无法解析文件清单：仍按整包下载，但不清空缺失（避免单集包当整季完成）；
@@ -382,20 +468,25 @@ class EpisodeStrategy:
 
                     # 非磁力：解析种子集数 → 暂停加入 → 设置需集 → 开始（失败回滚）
                     torrent_episodes, torrent_path = get_torrent_episodes_callback(item.enclosure, item.page_url)
-                    selected_episodes = set(torrent_episodes).intersection(set(need_episodes))
-                    if not selected_episodes:
+                    release_episodes, relative_episodes = match_release_episodes(
+                        torrent_episodes, need_episodes, offset
+                    )
+                    if not release_episodes:
                         log.info(f"[Downloader]{item.org_string} 没有需要的集，跳过...")
                         continue
                     downloader_id, download_id, _ = download_callback(item, torrent_file=torrent_path, is_paused=True)
                     if not download_id:
                         continue
                     try:
+                        if relative_episodes:
+                            item.begin_episode = relative_episodes[0]
+                            item.end_episode = relative_episodes[-1] if len(relative_episodes) > 1 else None
                         need_episodes = EpisodeStrategy._update_episodes(
-                            need_tvs, need_tmdbid, need_episodes, list(selected_episodes), need_season
+                            need_tvs, need_tmdbid, need_episodes, relative_episodes, need_season
                         )
-                        log.info(f"[Downloader]从 {item.org_string} 中选取集：{selected_episodes}")
+                        log.info(f"[Downloader]从 {item.org_string} 中选取集：{release_episodes}")
                         set_files_status_callback(
-                            tid=download_id, need_episodes=list(selected_episodes), downloader_id=downloader_id
+                            tid=download_id, need_episodes=release_episodes, downloader_id=downloader_id
                         )
                         log.info(f"[Downloader]{item.org_string} 开始下载 ")
                         start_torrents_callback(ids=download_id, downloader_id=downloader_id)

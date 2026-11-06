@@ -25,6 +25,7 @@ from app.message import Message
 from app.services.downloader_core import DownloaderCore
 from app.services.rss_automation.custom_source_service import CustomRssSourceService
 from app.services.rss_processor import RssHelper
+from app.services.series_service import SeriesService
 from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.matcher import SubscribeMatcher
@@ -69,6 +70,7 @@ class RssFeedStrategy:
         self._system_config = system_config
         self._site_grant_service = site_grant_service
         self._custom_rss = custom_rss
+        self._series_service = SeriesService()
         # 站点授权缓存：一轮轮询内按归属用户复用，避免逐订阅查库
         self._grant_cache: dict[int, dict | None] = {}
 
@@ -425,10 +427,12 @@ class RssFeedStrategy:
                             # 同一季可能因多条匹配规则被多次收集，按季覆盖而非追加，
                             # 否则重复条目会让后续策略对同一缺失季重复下载
                             season_entries = rss_no_exists[media_key]
+                            series_key = str(match_info.get("series_key") or "")
                             entry = {
                                 "season": season,
                                 "episodes": episodes,
                                 "total_episodes": total_ep,
+                                "episode_offset": self._series_service.get_episode_offset(series_key, season),
                             }
                             for season_pos, exist in enumerate(season_entries):
                                 if exist.get("season") == season:

@@ -291,6 +291,38 @@ class TestSubscribeSearchEnforcesOwnerScope:
         _, kwargs = strategy._searcher.search_one_media.call_args
         assert kwargs["user_id"] == 8
 
+    def test_search_tvs_applies_anime_type_and_episode_offset(self, strategy):
+        """动漫订阅落 ANIME，并把规范季的 EPISODE_OFFSET 传给下载策略."""
+        strategy._system_config = None
+        strategy._service.get_subscribe_tvs.return_value = {
+            "1": {
+                "id": 1,
+                "name": "Demo Anime",
+                "season": "S03",
+                "total": 18,
+                "user_id": 8,
+                "content_profile": "anime",
+                "series_key": "series:demo",
+                "anchor_provider": "bangumi",
+                "anchor_external_id": "1",
+            }
+        }
+        strategy._tv_repo = MagicMock()
+        strategy._tv_episode_repo = MagicMock()
+        strategy._tv_episode_repo.get.return_value = None
+        strategy._series_service.get_episode_offset = MagicMock(return_value=24)
+        media = _MediaInfo()
+        media.type = "tv"
+        strategy._searcher.search_one_media.return_value = (None, {}, None, None)
+        strategy._downloader.check_exists_medias.return_value = (False, {}, None)
+        with patch.object(strategy, "_get_media_info", return_value=media):
+            strategy._search_tvs()
+
+        kwargs = strategy._searcher.search_one_media.call_args.kwargs
+        assert media.type == MediaType.ANIME
+        entry = kwargs["no_exists"]["series:demo:S03"][0]
+        assert entry["episode_offset"] == 24
+
 
 class TestProviderRefSearch:
     def test_get_media_info_content_id_skips_tmdb(self, strategy):

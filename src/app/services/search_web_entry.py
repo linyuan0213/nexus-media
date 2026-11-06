@@ -133,11 +133,12 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     filter_args.pop(key, None)
 
         if match_media is None and profile and profile != "default":
-            # 无 TMDB ID 的来源仍需一个本地匹配目标
-            match_media = meta_info(title=content, mtype=lookup_type or MediaType.MOVIE)
+            # 无 TMDB ID 的来源仍需一个本地匹配目标；content_id 未知类型时不硬编码电影。
+            match_media = meta_info(title=content, mtype=lookup_type)
             match_media.content_profile = profile
             match_media.keyword = content
-            match_media.type = media_type or MediaType.MOVIE
+            if lookup_type:
+                match_media.type = lookup_type
             match_media.anchor_provider = str(
                 filter_args.get("anchor_provider") or filter_args.get("metadata_source") or profile
             )
@@ -153,19 +154,23 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                 match_media.en_name = content
             # 自定义画像的编号不能走 TMDB 识别，避免错误映射导致资源过滤失败。
             ident_flag = False
-        # 资源搜索必须把类型传给结果过滤器，否则电影搜索会混入 Sxx/全 N 集等剧集资源。
-        requested_type = subject.display_type or filter_args.get("type") or lookup_type
-        if not requested_type and match_media is not None:
-            requested_type = match_media.type
-        if isinstance(requested_type, str):
-            requested_type = MediaType.from_string(requested_type)
-        if requested_type:
-            filter_args["type"] = requested_type
-            if match_media is not None and match_media.type != requested_type:
-                # 搜索主体只有一种真实类型；锚点缺类型时按主体类型修正。
-                match_media.type = requested_type
+        # 结果过滤器按提供方类型判断资源形态：动漫在资源侧仍按电视（Sxx/集数）过滤。
+        # 展示/入库类型单独保留 ANIME，避免两者互相覆盖后电影资源混入动漫搜索。
+        candidate_type = subject.provider_type or filter_args.get("type") or lookup_type
+        if not candidate_type and match_media is not None:
+            candidate_type = match_media.type
+        if isinstance(candidate_type, str):
+            candidate_type = MediaType.from_string(candidate_type)
+        if candidate_type == MediaType.UNKNOWN:
+            candidate_type = None
+        display_type = subject.display_type or candidate_type
+        if candidate_type:
+            filter_args["type"] = candidate_type
+        if match_media is not None and display_type and match_media.type != display_type:
+            # 搜索主体只有一种真实类型；锚点缺类型时按主体类型修正。
+            match_media.type = display_type
         if (
-            requested_type == MediaType.MOVIE
+            candidate_type == MediaType.MOVIE
             and match_media is not None
             and str(getattr(match_media, "year", "") or "").isdigit()
             and int(str(match_media.year)) > 0

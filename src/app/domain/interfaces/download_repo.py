@@ -37,6 +37,8 @@ class IDownloadHistoryRepository(Protocol):
         identity_id: str | None = None,
         anchor_provider: str | None = None,
         anchor_external_id: str | None = None,
+        tmdb_id: str | int | None = None,
+        series_key: str | None = None,
         season_episode: str | None = None,
     ) -> bool:
         """同一媒体/分集是否已有在途下载"""

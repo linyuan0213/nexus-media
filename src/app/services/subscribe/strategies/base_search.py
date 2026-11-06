@@ -42,6 +42,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.filter_service import FilterService as Filter
 from app.services.lifecycle_service import LifecycleProjector
 from app.services.search_service import Searcher
+from app.services.search_subject import SearchSubject
 from app.services.series_service import SeriesService
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.services.subscribe.default_settings import get_default_setting
@@ -165,6 +166,7 @@ class BaseSearchStrategy:
         self._downloader = downloader
         self._filter = filter_service
         self._message = message
+        self._series_service = SeriesService()
         self._ident_cache = get_cache_manager().get_or_create(
             "subscribe_ident", cache_type="memory", maxsize=1000, ttl=3600
         )
@@ -501,10 +503,20 @@ class BaseSearchStrategy:
                     season = int(str(rss_info.get("season")).replace("S", ""))
                 media_info.begin_season = season
                 media_info.rssid = rid
+                # 订阅类型统一由画像+身份决定：动漫订阅必须落 ANIME，否则会进电视剧库。
+                profile = str(getattr(media_info, "content_profile", "") or rss_info.get("content_profile") or "")
+                subject = SearchSubject.classify(
+                    getattr(media_info, "type", None) or MediaType.TV,
+                    profile,
+                    getattr(media_info, "anchor_provider", None),
+                    getattr(media_info, "anchor_external_id", None),
+                )
+                if subject.display_type:
+                    media_info.type = subject.display_type
                 if not media_info.series_key and media_info.anchor_provider and media_info.anchor_external_id:
                     # 旧订阅/缓存行可能缺少 SERIES_KEY；按锚点解析，保证与候选资源的系列键一致。
                     try:
-                        resolution = SeriesService().resolve(
+                        resolution = self._series_service.resolve(
                             provider=media_info.anchor_provider,
                             external_id=media_info.anchor_external_id,
                             title=name_val or media_info.title or "",
@@ -561,8 +573,16 @@ class BaseSearchStrategy:
                     episodes_list = episodes
 
                 media_key = media_series_scope_key(media_info) or media_info.tmdb_id
+                episode_offset = self._series_service.get_episode_offset(media_info.series_key, season)
                 rss_no_exists_local = {
-                    media_key: [{"season": season, "episodes": episodes_list, "total_episodes": total_ep}]
+                    media_key: [
+                        {
+                            "season": season,
+                            "episodes": episodes_list,
+                            "total_episodes": total_ep,
+                            "episode_offset": episode_offset,
+                        }
+                    ]
                 }
 
                 if self._coordinator and not self._coordinator.try_acquire(media_info):

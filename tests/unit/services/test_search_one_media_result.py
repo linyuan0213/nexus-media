@@ -65,17 +65,17 @@ class TestCustomProfileSearchNames:
 
     def test_custom_profile_returns_keyword_only(self):
         media = MediaInfo(
-            title="サドらせ淫語 美人CA",
+            title="演示内容 DEMO-660",
             type=MediaType.MOVIE,
             year="2026",
-            tmdb_id="content_id:START-660",
-            keyword="START-660",
+            tmdb_id="content_id:DEMO-660",
+            keyword="DEMO-660",
             content_profile="demo",
         )
 
         names, workers = SearchQueryBuilder.build_search_names(media, MagicMock())
 
-        assert names == ["START-660"]
+        assert names == ["DEMO-660"]
         assert workers == 1
 
     def test_fill_missing_episode_from_raw_title(self):
@@ -90,6 +90,26 @@ class TestCustomProfileSearchNames:
         SearchResultProcessor.fill_missing_episode(media)
         assert media.begin_episode == 1
         assert media.get_season_episode_string() == "S01 E01"
+
+    def test_fill_missing_episode_supports_chinese_episode(self):
+        media = MediaInfo(title="某番", type=MediaType.ANIME, org_string="某番 第8集 1080P")
+        SearchResultProcessor.fill_missing_episode(media)
+        assert media.begin_episode == 8
+        assert media.get_season_episode_string() == "S01 E08"
+
+    def test_fill_missing_episode_skips_multi_episode_pack(self):
+        media = MediaInfo(title="某番", type=MediaType.ANIME, org_string="某番 01-12 1080P")
+        SearchResultProcessor.fill_missing_episode(media)
+        assert media.begin_episode is None
+
+        media_with_total = MediaInfo(
+            title="某番",
+            type=MediaType.ANIME,
+            org_string="某番 全集 1080P",
+            total_episodes=12,
+        )
+        SearchResultProcessor.fill_missing_episode(media_with_total)
+        assert media_with_total.begin_episode is None
 
     def test_movie_ignores_numeric_tmdb_keyword(self):
         media = MediaInfo(

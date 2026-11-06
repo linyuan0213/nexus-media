@@ -18,6 +18,7 @@ import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
 from app.domain.enums import ProgressKey, SearchType, channel_key, channel_name
+from app.domain.episode_utils import extract_episode_number
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.search_repo import ISearchRepository
 from app.domain.mediatypes import MediaType
@@ -36,6 +37,14 @@ from app.services.indexer_service import IndexerService
 from app.services.search_subject import SearchSubject
 from app.services.subscription_download_guard import SubscriptionDownloadGuard
 from app.utils.string_utils import StringUtils
+
+# 合集/多集资源不能用标题里的首个数字补成单集，否则整季包会被当成单集下载。
+_PACK_EPISODE_HINT = re.compile(
+    r"(?i)(?:complete|全集|合集|全\s*\d+\s*[集话話]"
+    r"|\bS\d{1,2}\s*E\s*\d{1,4}\s*[-~]\s*E?\d{1,4}\b"
+    r"|\bE(?:P)?\s*\d{1,4}\s*[-~]\s*E?\d{1,4}\b"
+    r"|(?<![\w.])\d{1,3}\s*[-~]\s*\d{1,3}(?![\w.]))"
+)
 
 
 def _strip_season_suffix(name: str) -> str:
@@ -300,33 +309,26 @@ class SearchResultProcessor:
 
     @staticmethod
     def _episode_from_title(title: str) -> int | None:
-        text = str(title or "")
-        patterns = (
-            r"(?i)\bS\d{1,2}\s*E(?:P)?(\d{1,4})\b",
-            r"(?i)(?:^|[\s\-\[])(?:EP?|第)?0*(\d{1,3})(?:v\d+)?(?=\s*[\]\[\(\s]|$)",
-        )
-        for pattern in patterns:
-            match = re.search(pattern, text)
-            if match:
-                try:
-                    value = int(match.group(1))
-                except (TypeError, ValueError):
-                    continue
-                if 0 < value <= 999:
-                    return value
-        return None
+        return extract_episode_number(title)
 
     @staticmethod
     def fill_missing_episode(media_item) -> None:
-        """种子标题未带季集时从原始标题补全，供下载记录和去重键使用."""
+        """种子标题未带季集时从原始标题补全单集；合集/多集资源保持原样."""
         if (
             getattr(media_item, "type", None) == MediaType.MOVIE
             or getattr(media_item, "begin_episode", None) is not None
         ):
             return
-        episode = SearchResultProcessor._episode_from_title(
-            getattr(media_item, "org_string", "") or getattr(media_item, "title", "")
-        )
+        try:
+            total_episodes = int(getattr(media_item, "total_episodes", 0) or 0)
+        except (TypeError, ValueError):
+            total_episodes = 0
+        if total_episodes > 1:
+            return
+        raw_title = str(getattr(media_item, "org_string", "") or getattr(media_item, "title", "") or "")
+        if _PACK_EPISODE_HINT.search(raw_title):
+            return
+        episode = SearchResultProcessor._episode_from_title(raw_title)
         if episode:
             media_item.begin_episode = episode
             if getattr(media_item, "begin_season", None) is None:
@@ -532,8 +534,10 @@ class Searcher:
             progress_updater=_update_progress,
         )
 
-        # 3. 去重
+        # 3. 去重；补全单集后再排序和下载判定，保证在途与已完成使用一致键
         media_list = SearchResultDeduplicator.deduplicate(media_list)
+        for media_item in media_list:
+            SearchResultProcessor.fill_missing_episode(media_item)
 
         if len(media_list) == 0:
             log.info(f"[Searcher]{search_name_list} 未搜索到任何资源")

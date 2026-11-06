@@ -12,15 +12,27 @@ _EPISODE_PATTERNS = (
 )
 
 
-def infer_episode_key(se_key: str, title: str) -> str:
-    """ES_STRING 只有季时，用标题中的常见集数写法补全，避免整季挤在一个表里."""
-    if not se_key or se_key == "movie" or re.search(r"E\d", se_key, re.I):
-        return se_key
+def extract_episode_number(title: str) -> int | None:
+    """从标题中提取单个集号；供搜索结果补全与季集键统一使用."""
     for pattern in _EPISODE_PATTERNS:
         match = re.search(pattern, str(title or ""))
         if not match:
             continue
-        episode = int(match.group(1))
-        season = se_key.split()[0]
-        return f"{season} E{episode:02d}"
-    return se_key
+        try:
+            value = int(match.group(1))
+        except (TypeError, ValueError):
+            continue
+        if value > 0:
+            return value
+    return None
+
+
+def infer_episode_key(se_key: str, title: str) -> str:
+    """ES_STRING 只有季时，用标题中的常见集数写法补全，避免整季挤在一个表里."""
+    if not se_key or se_key == "movie" or re.search(r"E\d", se_key, re.I):
+        return se_key
+    episode = extract_episode_number(title)
+    if episode is None:
+        return se_key
+    season = se_key.split()[0]
+    return f"{season} E{episode:02d}"

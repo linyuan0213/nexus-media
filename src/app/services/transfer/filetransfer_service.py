@@ -52,6 +52,7 @@ from app.media.parser import RegexParser
 from app.message import Message
 from app.schemas.media import TransferMediaDTO
 from app.services.scrape_queue_service import ScrapeQueueService
+from app.services.search_subject import SearchSubject
 from app.services.series_service import SeriesService
 from app.services.transfer.cleanup_service import TransferCleanupService
 from app.services.transfer.existence_checker import MediaExistenceChecker
@@ -1127,8 +1128,14 @@ class FileTransferService:
         external = str(getattr(record, "ANCHOR_EXTERNAL_ID", "") or "").strip()
         if not provider or not external or provider == "tmdb":
             return None
-        mtype = MediaType.from_string(str(getattr(record, "TYPE", "") or "")) or MediaType.MOVIE
         profile = str(getattr(record, "CONTENT_PROFILE", "") or "default")
+        subject = SearchSubject.classify(
+            getattr(record, "TYPE", ""),
+            profile,
+            provider,
+            external,
+        )
+        mtype = subject.display_type or MediaType.from_string(str(getattr(record, "TYPE", "") or "")) or MediaType.MOVIE
         record_data = None
         if self._metadata_service is not None:
             try:
@@ -1193,12 +1200,18 @@ class FileTransferService:
             media.anchor_external_id = external
         if getattr(record, "IDENTITY_ID", None) and not getattr(media, "identity_id", None):
             media.identity_id = record.IDENTITY_ID
-        record_type = MediaType.from_string(str(getattr(record, "TYPE", "") or ""))
+        profile = str(getattr(record, "CONTENT_PROFILE", "") or "")
+        subject = SearchSubject.classify(
+            getattr(record, "TYPE", ""),
+            profile,
+            provider,
+            external,
+        )
+        record_type = subject.display_type or MediaType.from_string(str(getattr(record, "TYPE", "") or ""))
         current_type = getattr(media, "type", None)
         if record_type and current_type != record_type:
             log.info(f"[Rmt]按下载记录纠正媒体类型：{current_type} -> {record_type}")
             media.type = record_type
-        profile = str(getattr(record, "CONTENT_PROFILE", "") or "")
         if profile and (
             not str(getattr(media, "content_profile", "") or "")
             or str(getattr(media, "content_profile", "")) == "default"

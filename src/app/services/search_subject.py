@@ -32,7 +32,9 @@ class SearchSubject:
         external = str(external_id or "").strip()
 
         code_identity = profile not in _TITLE_PROFILES or provider == "content_id" or external.startswith("content_id:")
-        if profile == "anime" or raw_type == MediaType.ANIME:
+        if provider == "bangumi" and raw_type != MediaType.MOVIE:
+            display = MediaType.ANIME
+        elif profile == "anime" or raw_type == MediaType.ANIME:
             display = MediaType.ANIME
         elif raw_type in (MediaType.MOVIE, MediaType.TV):
             display = raw_type

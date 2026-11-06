@@ -1,6 +1,7 @@
 """规范剧集解析：来源条目 -> 内部 series_key + 规范季号，不依赖 TMDB."""
 
 from dataclasses import dataclass
+from typing import Any
 
 import log
 from app.db.repositories.media_series_repository import MediaSeriesRepository
@@ -112,6 +113,27 @@ class SeriesService:
             year=series.YEAR,
             created=created,
         )
+
+    def get_episode_offset(self, series_key: str | None, season_number: int | None) -> int:
+        """读取规范季的集号偏移；连续编号资源与订阅相对集号匹配时使用."""
+        key = str(series_key or "").strip()
+        if not key or season_number is None:
+            return 0
+        try:
+            season = int(season_number)
+        except (TypeError, ValueError):
+            return 0
+        offset = 0
+        try:
+            getter = getattr(self._repo, "get_seasons", None)
+            rows: Any = getter(key) if callable(getter) else []
+            for row in rows or []:
+                if int(getattr(row, "SEASON_NUMBER", 0) or 0) == season:
+                    offset = max(0, int(getattr(row, "EPISODE_OFFSET", 0) or 0))
+                    break
+        except Exception:  # noqa: BLE001 - 偏移读取失败按无偏移处理
+            offset = 0
+        return offset
 
     def ensure_media_series(self, media) -> str | None:
         """为运行时 MediaInfo 补齐 series_key；无可靠来源时返回 None."""

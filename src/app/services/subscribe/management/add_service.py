@@ -18,6 +18,7 @@ from app.media import meta_info
 from app.media.display_image_policy import unwrap_display_image_url
 from app.media.metadata import ProviderRef
 from app.media.metadata.registry import registry as metadata_registry
+from app.services.search_subject import SearchSubject
 from app.services.series_service import SeriesService
 from app.services.subscribe.default_settings import get_default_setting
 from app.services.subscribe.management.utils import gen_rss_note
@@ -243,9 +244,13 @@ class SubscribeAddService:
             posters = images.get("poster") or []
             if posters:
                 poster = posters[0].get("url")
-        resolved_type = media_type or MediaType.from_string(str(record.get("media_type") or ""))
-        if content_profile == "anime" or str(record.get("media_type") or "").lower() == "anime":
-            resolved_type = MediaType.ANIME
+        subject = SearchSubject.classify(
+            media_type or record.get("media_type"),
+            content_profile,
+            provider,
+            external_id,
+        )
+        resolved_type = subject.display_type or media_type or MediaType.from_string(str(record.get("media_type") or ""))
         if resolved_type not in (MediaType.MOVIE, MediaType.TV, MediaType.ANIME):
             resolved_type = MediaType.MOVIE
         media_info = meta_info(title=title, mtype=resolved_type)
