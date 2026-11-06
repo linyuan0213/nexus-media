@@ -14,6 +14,7 @@ from app.domain.mediatypes import MediaType
 from app.media import meta_info
 from app.services.search_context import SearchContext
 from app.services.search_orchestrator import SearchOrchestrator
+from app.services.search_subject import SearchSubject
 from app.services.subscribe.default_settings import get_default_setting
 
 # 锚点元数据只是资源搜索的辅助信息；外部源不可用时必须尽快回退关键词，
@@ -70,6 +71,14 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
 
         requested_rule = filter_args.get("rule")
         profile = str(filter_args.get("content_profile") or "").strip()
+        subject = SearchSubject.classify(
+            media_type,
+            profile,
+            anchor_provider,
+            anchor_external_id or metadata_ref or filter_args.get("tmdbid"),
+        )
+        lookup_type = subject.provider_type or media_type
+        media_type = lookup_type
         match_media = None
         resolve_provider = ""
         if anchor_provider and anchor_external_id:
@@ -78,15 +87,15 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                 # content_id 是内部锚点，没有对应 metadata provider。
                 # 用页面选定的真实来源解析编号，再还原 content_id 身份。
                 resolve_provider = str(filter_args.get("metadata_source") or "").strip()
-                if not resolve_provider or resolve_provider == "content_id":
-                    resolve_provider = "javalibrary"
+                if resolve_provider == "content_id":
+                    resolve_provider = ""
             resolved_profile = content_profile or str(filter_args.get("content_profile") or "default")
             if anchor_provider == "content_id":
                 match_media = _resolve_anchor_with_timeout(
                     orchestrator.resolve_content_id_media,
                     resolve_provider,
                     str(anchor_external_id),
-                    media_type=media_type,
+                    media_type=lookup_type,
                     content_profile=resolved_profile,
                 )
                 if match_media:
@@ -99,7 +108,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
                     orchestrator.resolve_anchor_media,
                     resolve_provider,
                     str(anchor_external_id),
-                    media_type=media_type,
+                    media_type=lookup_type,
                     content_profile=resolved_profile,
                 )
             if not match_media:
@@ -125,7 +134,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
 
         if match_media is None and profile and profile != "default":
             # 无 TMDB ID 的来源仍需一个本地匹配目标
-            match_media = meta_info(title=content, mtype=media_type or MediaType.MOVIE)
+            match_media = meta_info(title=content, mtype=lookup_type or MediaType.MOVIE)
             match_media.content_profile = profile
             match_media.keyword = content
             match_media.type = media_type or MediaType.MOVIE
@@ -145,7 +154,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
             # 自定义画像的编号不能走 TMDB 识别，避免错误映射导致资源过滤失败。
             ident_flag = False
         # 资源搜索必须把类型传给结果过滤器，否则电影搜索会混入 Sxx/全 N 集等剧集资源。
-        requested_type = filter_args.get("type") or media_type
+        requested_type = subject.display_type or filter_args.get("type") or lookup_type
         if not requested_type and match_media is not None:
             requested_type = match_media.type
         if isinstance(requested_type, str):
@@ -153,7 +162,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
         if requested_type:
             filter_args["type"] = requested_type
             if match_media is not None and match_media.type != requested_type:
-                # 锚点详情缺媒体类型时可能默认成 TV，以本次搜索显式类型为准。
+                # 搜索主体只有一种真实类型；锚点缺类型时按主体类型修正。
                 match_media.type = requested_type
         if (
             requested_type == MediaType.MOVIE
@@ -195,7 +204,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
             session_id=session_id or "web",
             search_type=SearchType.WEB,
             match_media=match_media,
-            media_type=media_type,
+            media_type=lookup_type,
             ident_flag=ident_flag,
             filter_args=filter_args,
             auto_download=False,

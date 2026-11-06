@@ -9,7 +9,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.domain.enums import ProgressKey
-from app.domain.mediatypes import MediaType, normalize_media_type_input
+from app.domain.mediatypes import normalize_media_type_input
 from app.infrastructure.external.doubanapi import DoubanApi
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -25,6 +25,7 @@ from app.schemas.system import (
     WebSearchResultDTO,
 )
 from app.services.rbac.service import RBACService
+from app.services.search_subject import SearchSubject
 from app.services.web import WebUtils
 from app.utils.config_tools import get_proxies
 from version import APP_VERSION
@@ -221,20 +222,13 @@ class WebSearchService:
             )
             if profile != "default":
                 filters = {**(filters or {}), "content_profile": profile}
-            parsed_type = MediaType.from_string(request_type or "")
-            if profile == "anime":
-                # 动漫画像无论前端是否残留 movie 参数，都必须按 TV 解析锚点。
-                media_type = MediaType.TV
-            elif parsed_type == MediaType.ANIME:
-                media_type = MediaType.TV
-            elif parsed_type == MediaType.TV:
-                media_type = MediaType.TV
-            elif parsed_type == MediaType.MOVIE:
-                media_type = MediaType.MOVIE
-            elif profile != "default":
-                media_type = MediaType.MOVIE
-            else:
-                media_type = MediaType.TV
+            subject = SearchSubject.classify(
+                request_type,
+                profile,
+                anchor_provider or (filters or {}).get("anchor_provider"),
+                anchor_external_id or (filters or {}).get("anchor_external_id"),
+            )
+            media_type = subject.provider_type or media_type
         ret, ret_msg = self._search_fn(
             content=search_word,
             ident_flag=ident_flag,

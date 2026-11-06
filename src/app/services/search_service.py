@@ -33,6 +33,7 @@ from app.message import Message
 from app.schemas.search import SearchMediasResultDTO, SearchOneMediaResultDTO
 from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
+from app.services.search_subject import SearchSubject
 from app.services.subscription_download_guard import SubscriptionDownloadGuard
 from app.utils.string_utils import StringUtils
 
@@ -57,22 +58,20 @@ class SearchQueryBuilder:
     """
 
     @staticmethod
-    def is_code_identity(media_info) -> bool:
-        """是否为 content_id 编号身份（与画像名称无关）."""
-        provider = str(getattr(media_info, "anchor_provider", "") or "").strip()
-        tmdb_id = str(getattr(media_info, "tmdb_id", "") or "")
-        return provider == "content_id" or tmdb_id.startswith("content_id:")
-
-    @staticmethod
     def build_search_names(media_info, media_helper: MediaService) -> tuple[list[str], int]:
         """
         根据媒体信息构建多语言搜索词列表
         :return: (搜索词列表, 建议最大并发数)
         """
-        # 身份是否为内容编号决定搜索策略：编号身份按编号搜索，普通电影/剧集按标题召回。
+        # 统一由 SearchSubject 决定身份搜索模式，避免各层重复判断画像名称。
         profile = str(getattr(media_info, "content_profile", "") or "").strip()
-        code_anchored = SearchQueryBuilder.is_code_identity(media_info)
-        if code_anchored and profile and profile != "default":
+        subject = SearchSubject.classify(
+            getattr(media_info, "type", None),
+            profile,
+            getattr(media_info, "anchor_provider", ""),
+            getattr(media_info, "tmdb_id", "") or getattr(media_info, "anchor_external_id", ""),
+        )
+        if subject.search_mode == "code":
             keyword = (
                 media_info.keyword
                 or getattr(media_info, "anchor_external_id", "")
