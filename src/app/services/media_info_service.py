@@ -8,6 +8,7 @@ import cn2an
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
+from app.domain.media_types import media_type_registry
 from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
@@ -234,7 +235,7 @@ class MediaInfoService:
 
     def get_media_person(self, tmdbid, mtype_str, keyword) -> Any:
         """查询演员"""
-        mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
+        mtype = media_type_registry.resolve(mtype_str).legacy_type
         if tmdbid:
             return self._gw().person_credits("tmdb", tmdbid, media_type=mtype)
         else:
@@ -242,7 +243,7 @@ class MediaInfoService:
 
     def get_media_recommendations(self, tmdbid, mtype_str, page) -> Any:
         """查询推荐"""
-        mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
+        mtype = media_type_registry.resolve(mtype_str).legacy_type
         if mtype == MediaType.MOVIE:
             return self._gw().related_items("recommendations", tmdbid, media_type=MediaType.MOVIE, page=page)
         else:
@@ -250,7 +251,7 @@ class MediaInfoService:
 
     def get_media_similar(self, tmdbid, mtype_str, page) -> Any:
         """查询相似"""
-        mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
+        mtype = media_type_registry.resolve(mtype_str).legacy_type
         if mtype == MediaType.MOVIE:
             return self._gw().related_items("similar", tmdbid, media_type=MediaType.MOVIE, page=page)
         else:
@@ -259,7 +260,7 @@ class MediaInfoService:
     def get_person_medias(self, personid, mtype_str, page) -> Any:
         """查询演员参演作品"""
         if mtype_str:
-            mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
+            mtype = media_type_registry.resolve(mtype_str).legacy_type
         else:
             mtype = None
         return self._gw().related_items("person", None, media_type=mtype, page=page, person_id=personid)
@@ -733,7 +734,7 @@ class MediaInfoService:
 
     def get_media_detail(self, tmdbid, mtype_str) -> dict[str, Any] | None:
         """获取媒体详情"""
-        mtype = MediaType.MOVIE if MediaType.from_string(mtype_str) == MediaType.MOVIE else MediaType.TV
+        mtype = media_type_registry.resolve(mtype_str).legacy_type
         media_info = get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)
         if not media_info or not media_info.provider_data:
             return None
