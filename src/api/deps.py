@@ -118,9 +118,13 @@ def get_current_user(
     auth_header: str | None = credentials.credentials if credentials else None
 
     # 1) JWT 认证（新标准）
-    user_ctx = _extract_user_from_jwt(auth_header)
-    if user_ctx:
-        return _overlay_fresh_snapshot(user_ctx, app_context.rbac_service)
+    jwt_reason = "missing"
+    if auth_header:
+        user_ctx = _extract_user_from_jwt(auth_header)
+        if user_ctx:
+            return _overlay_fresh_snapshot(user_ctx, app_context.rbac_service)
+        token = auth_header.split()[-1] if " " in auth_header else auth_header
+        _, jwt_reason = AuthService.verify_token_detail(token)
 
     # 2) 旧 Token 认证（APIv1 兼容）：映射为系统上下文（旧 API 本就是管理员粒度）
     username = _extract_user_from_token(auth_header)
@@ -138,6 +142,20 @@ def get_current_user(
     if user_ctx:
         return user_ctx
 
+    if jwt_reason == "expired":
+        raise AuthError(
+            "登录已过期，请刷新 Token 或重新登录",
+            errcode=ErrorCode.TOKEN_EXPIRED,
+            http_status=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if jwt_reason == "invalid":
+        raise AuthError(
+            "Token 无效，请重新登录",
+            errcode=ErrorCode.TOKEN_INVALID,
+            http_status=status.HTTP_401_UNAUTHORIZED,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     raise AuthError(
         "安全认证未通过，请检查登录状态、Token 或 ApiKey",
         errcode=ErrorCode.UNAUTHORIZED,

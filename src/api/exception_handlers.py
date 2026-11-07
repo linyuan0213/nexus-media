@@ -29,6 +29,13 @@ async def nexus_error_handler(request: Request, exc: NexusError) -> JSONResponse
     """业务异常：携带 errcode 与 http_status"""
     if exc.http_status >= 500:
         log.error(f"[API]业务异常: {request.method} {request.url.path} - {exc}")
+    elif exc.errcode in {
+        ErrorCode.UNAUTHORIZED,
+        ErrorCode.TOKEN_EXPIRED,
+        ErrorCode.REFRESH_TOKEN_INVALID,
+    }:
+        # 未登录/正常过期/刷新过期属于预期鉴权流程，不污染 WARNING 日志。
+        log.debug(f"[API]鉴权未通过: {request.method} {request.url.path} - {exc.errcode}")
     else:
         log.warn(f"[API]业务异常: {request.method} {request.url.path} - {exc}")
     return JSONResponse(

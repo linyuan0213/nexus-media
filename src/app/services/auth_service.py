@@ -149,25 +149,32 @@ class AuthService:
             return None
 
     @staticmethod
-    def verify_token(token: str) -> UserContext | None:
-        """
-        验证 Access Token，返回用户上下文
-        """
+    def verify_token_detail(token: str) -> tuple[UserContext | None, str]:
+        """验证 Access Token，返回 (上下文, 状态)；状态区分 expired/invalid/ok."""
         try:
             payload = jwt.decode(token, _SECRET_KEY, algorithms=[_ALGORITHM])
-            if payload.get("type") != "access":
-                return None
-
-            return UserContext(
+        except jwt.ExpiredSignatureError:
+            return None, "expired"
+        except (jwt.InvalidTokenError, ValueError):
+            return None, "invalid"
+        if payload.get("type") != "access":
+            return None, "invalid"
+        return (
+            UserContext(
                 user_id=payload.get("user_id", 0),
                 username=payload.get("username", ""),
                 nickname=payload.get("nickname", None),
                 level=payload.get("level", 0),
                 permissions=payload.get("permissions", []),
                 role_codes=payload.get("role_codes", []),
-            )
-        except (jwt.InvalidTokenError, ValueError):
-            return None
+            ),
+            "ok",
+        )
+
+    @staticmethod
+    def verify_token(token: str) -> UserContext | None:
+        """验证 Access Token，返回用户上下文."""
+        return AuthService.verify_token_detail(token)[0]
 
     @staticmethod
     def revoke_token(jti: str) -> None:

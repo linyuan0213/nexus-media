@@ -54,3 +54,29 @@ class TestAuthServiceCompatibility:
         assert isinstance(payload["iat"], int)
         assert isinstance(payload["exp"], int)
         assert payload["exp"] > payload["iat"]
+
+
+def test_verify_token_detail_distinguishes_expired_and_invalid():
+    import jwt
+
+    from app.infrastructure.security import get_secret_key
+
+    secret = get_secret_key()
+    expired = jwt.encode(
+        {
+            "user_id": 1,
+            "username": "test",
+            "type": "access",
+            "iat": datetime.now(timezone.utc) - timedelta(hours=1),
+            "exp": datetime.now(timezone.utc) - timedelta(minutes=1),
+        },
+        secret,
+        algorithm="HS256",
+    )
+    ctx, reason = AuthService.verify_token_detail(expired)
+    assert ctx is None
+    assert reason == "expired"
+
+    ctx, reason = AuthService.verify_token_detail("not-a-jwt")
+    assert ctx is None
+    assert reason == "invalid"
