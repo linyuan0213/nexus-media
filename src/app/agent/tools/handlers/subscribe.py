@@ -3,6 +3,7 @@
 from app.agent.tools.base import ToolResult
 from app.agent.tools.context import ToolContext
 from app.domain.enums import SearchType
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType
 from app.media.metadata.gateway import MetadataContext
 from app.media.metadata.registry import registry as metadata_registry
@@ -129,7 +130,9 @@ def subscribe_add(
     if profile != "default" and not provider:
         return ToolResult(success=False, error="非默认内容画像必须指定 provider")
 
-    mtype = MediaType.MOVIE if profile != "default" or media_type == "movie" else MediaType.TV
+    mtype = (
+        media_type_registry.resolve_profile(profile) or media_type_registry.resolve(media_type, profile)
+    ).legacy_type
     user = ctx.user_context(user_id)
     permissions = set(getattr(user, "permissions", []) or [])
     allow_private = bool(user and (getattr(user, "is_superadmin", False) or "metadata:private:view" in permissions))
@@ -270,7 +273,7 @@ def subscribe_list(
 def subscribe_delete(
     ctx: ToolContext, sub_id: int, media_type: str = "movie", user_id: str | None = None
 ) -> ToolResult:
-    mtype = MediaType.MOVIE if media_type == "movie" else MediaType.TV
+    mtype = media_type_registry.resolve(media_type).legacy_type
     ctx.subscribe_service.cancel_subscribe(mtype=mtype, rssid=sub_id, user=ctx.user_context(user_id))
     return ToolResult(success=True, data={"sub_id": sub_id, "deleted": True})
 

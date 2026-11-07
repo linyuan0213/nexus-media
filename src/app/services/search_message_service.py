@@ -12,6 +12,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.domain.enums import SearchType, channel_key
 from app.domain.interfaces.chat import ChatPort
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType
 from app.media import meta_info
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
@@ -251,7 +252,9 @@ class MessageSearchService:
             return
         external_id = value
         title = name
-        media_type = MediaType.TV if profile == "anime" else MediaType.MOVIE
+        media_type = (
+            media_type_registry.resolve_profile(profile) or media_type_registry.resolve(None, profile)
+        ).legacy_type
         if not is_id and profile == "default":
             if self._metadata_gateway is None:
                 self._message.send_channel_msg(channel=in_from, title="元数据服务未启用", user_id=user_id)

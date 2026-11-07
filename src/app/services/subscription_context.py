@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType
 from app.services.subscribe_repo_adapter import (
     SubscribeMovieRepositoryAdapter,
@@ -58,7 +59,9 @@ def _context(row: Any, media_type: MediaType) -> SimpleNamespace:
 
 def resolve_subscription_context(item: Any):
     """按 rssid → identity/anchor → tmdb → 标题+年份 查找订阅上下文."""
-    media_type = MediaType.TV if _is_tv(item) else MediaType.MOVIE
+    profile = getattr(item, "content_profile", None)
+    resolved = media_type_registry.resolve_profile(profile)
+    media_type = resolved.legacy_type if resolved is not None else (MediaType.TV if _is_tv(item) else MediaType.MOVIE)
     repo = SubscribeTvRepositoryAdapter() if media_type == MediaType.TV else SubscribeMovieRepositoryAdapter()
     try:
         rssid = getattr(item, "rssid", None)

@@ -34,6 +34,16 @@ class MediaTypeRef:
     content_profile: str = "default"
     code_identity: bool = False
 
+    @property
+    def legacy_type(self) -> MediaType:
+        if self.key == MediaType.ANIME.value:
+            return MediaType.ANIME
+        if self.kind == MediaKind.MOVIE:
+            return MediaType.MOVIE
+        if self.kind == MediaKind.EPISODIC:
+            return MediaType.TV
+        return MediaType.UNKNOWN
+
 
 _CORE = {
     "movie": MediaTypeDescriptor("movie", MediaKind.MOVIE, "电影", aliases=("电影",)),
