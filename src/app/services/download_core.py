@@ -28,6 +28,7 @@ from app.db.repositories.download_repo_adapter import (
     DownloadSettingRepositoryAdapter,
 )
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
+from app.domain.media_ref import media_series_scope_key
 from app.domain.media_types import ProviderMediaType
 from app.downloader.client_factory import DownloadClientFactory
 from app.downloader.pipeline import DownloadPipeline
@@ -76,6 +77,27 @@ def _torrent_lock_key(media_info) -> str:
     match = re.search(r"(?i)btih:([a-f0-9]{32,40})", value)
     identity = match.group(1).lower() if match else value.lower()
     return hashlib.sha1(identity.encode("utf-8")).hexdigest()[:32]
+
+
+def _normalize_missing_episodes(meta_info: Any, season: Any, total: Any, missing: Any) -> dict:
+    """把底层缺失集号列表统一为订阅使用的 series/season 映射."""
+    if isinstance(missing, dict):
+        return missing
+    if not missing:
+        return {}
+    key = media_series_scope_key(meta_info) or getattr(meta_info, "tmdb_id", None)
+    if not key:
+        return {}
+    episodes = sorted({int(episode) for episode in missing if str(episode).isdigit()})
+    return {
+        key: [
+            {
+                "season": season,
+                "episodes": episodes,
+                "total_episodes": int(total) if str(total).isdigit() else total,
+            }
+        ]
+    }
 
 
 def _lookup_total_episodes(total_ep: dict, season: Any) -> Any:
@@ -194,7 +216,7 @@ class DownloadCore:
                 return False, no_exists or {}, None
             no_exists_result = self._filetransfer.get_no_exists_medias(meta_info, season=season, total_num=total)
             if no_exists_result:
-                return False, no_exists_result, None
+                return False, _normalize_missing_episodes(meta_info, season, total, no_exists_result), None
             return True, {}, None
 
     # ---------- 核心下载方法 ----------
