@@ -2,6 +2,7 @@ import re
 
 import log
 from app.domain.episode_utils import infer_episode_key
+from app.domain.media_types import media_type_registry
 from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
@@ -186,6 +187,8 @@ class SearchResultService:
                     "content_profile": getattr(item, "CONTENT_PROFILE", None) or "default",
                     "image": poster_url,
                     "type": media_type,
+                    "media_type_name": media_type_registry.resolve(media_type).display_name,
+                    "media_kind": media_type_registry.resolve(media_type).kind.value,
                     "vote": self._resolve_vote(item, rating_cache),
                     "tmdbid": item.TMDBID,
                     "backdrop": poster_url,

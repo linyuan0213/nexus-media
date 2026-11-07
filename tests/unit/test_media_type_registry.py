@@ -58,3 +58,29 @@ def test_resolve_profile_uses_plugin_descriptor():
     assert resolved.key == "plugin:demo:profile"
     assert resolved.kind == MediaKind.MOVIE
     assert registry.resolve_profile("missing_profile") is None
+
+
+def test_from_payload_supports_old_and_new_queue_shapes():
+    registry = MediaTypeRegistry()
+    old = registry.from_payload({"media_type": "anime", "content_profile": "anime"})
+    assert old.key == "anime"
+    assert old.kind == MediaKind.EPISODIC
+
+    registry.register(
+        MediaTypeDescriptor(
+            key="plugin:demo:queued",
+            kind=MediaKind.MOVIE,
+            display_name="Queued",
+            content_profiles=("demo_q",),
+        )
+    )
+    new = registry.from_payload(
+        {
+            "media_type_key": "plugin:demo:queued",
+            "media_kind": "movie",
+            "content_profile": "demo_q",
+        }
+    )
+    assert new.key == "plugin:demo:queued"
+    assert new.kind == MediaKind.MOVIE
+    registry.unregister_namespace("demo")

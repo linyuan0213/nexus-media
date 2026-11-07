@@ -21,6 +21,7 @@ from api.deps import (
 from app.core.error_codes import ErrorCode
 from app.domain.entities.custom_rss import custom_rss_id
 from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType, normalize_media_type_input
 from app.infrastructure.system_config import SystemConfig
 from app.media import meta_info
@@ -555,6 +556,11 @@ def rss_detail(
         return fail()
     detail = list(rssdetail.values())[0]
     detail["type"] = mtype_value
+    resolved_type = media_type_registry.resolve_profile(detail.get("content_profile")) or media_type_registry.resolve(
+        mtype_value, detail.get("content_profile")
+    )
+    detail["media_type_name"] = resolved_type.display_name
+    detail["media_kind"] = resolved_type.kind.value
     return success(data=detail)
 
 

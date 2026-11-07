@@ -35,6 +35,7 @@ from app.core.exceptions import (
     ServiceError,
     ValidationError,
 )
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType, normalize_media_type_input
 from app.infrastructure.cache_system import TokenCache
 from app.media.metadata import ProviderError, ProviderRef
@@ -744,6 +745,8 @@ def get_downloaded(
                     "title": item.TITLE,
                     "type": MediaType.from_string(item.TYPE or "").value,
                     "media_type": MediaType.from_string(item.TYPE or "").display_name,
+                    "media_type_name": media_type_registry.resolve(item.TYPE).display_name,
+                    "media_kind": media_type_registry.resolve(item.TYPE).kind.value,
                     "year": item.YEAR,
                     "vote": item.VOTE,
                     "image": item.POSTER,
@@ -1013,6 +1016,14 @@ def _minimal_detail_record(
         "title": base_title,
         "year": str(req.year or ""),
         "type": mtype.value,
+        "media_type_name": (
+            media_type_registry.resolve_profile(req.content_profile)
+            or media_type_registry.resolve(mtype, req.content_profile)
+        ).display_name,
+        "media_kind": (
+            media_type_registry.resolve_profile(req.content_profile)
+            or media_type_registry.resolve(mtype, req.content_profile)
+        ).kind.value,
         "refs": [{"provider": req.provider, "external_id": req.external_id}],
         "images": {},
         "ratings": {},

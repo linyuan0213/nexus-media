@@ -188,10 +188,7 @@ class TransferQueueService:
     ) -> None:
         if self._lifecycle is None:
             return
-        profile = str(payload.get("content_profile") or "default")
-        resolved_type = media_type_registry.resolve_profile(profile) or media_type_registry.resolve(
-            payload.get("media_type_key") or payload.get("media_type"), profile
-        )
+        resolved_type = media_type_registry.from_payload(payload)
         media_type = resolved_type.key if resolved_type.key != "unknown" else "unknown"
         resolver_type = (
             "anime"

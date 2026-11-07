@@ -90,6 +90,29 @@ class MediaTypeRegistry:
             code_identity=descriptor.code_identity,
         )
 
+    def from_payload(self, payload: dict[str, Any] | None) -> MediaTypeRef:
+        """兼容旧 Redis payload：新 key/kind 优先，旧 media_type/type 自动解析."""
+        data = payload or {}
+        profile = str(data.get("content_profile") or "default")
+        key = str(data.get("media_type_key") or "").strip()
+        kind_value = str(data.get("media_kind") or "").strip()
+        if key:
+            resolved = self.resolve(key, profile)
+            if resolved.key == "unknown" and kind_value:
+                try:
+                    kind = MediaKind(kind_value)
+                except ValueError:
+                    kind = MediaKind.UNKNOWN
+                descriptor = self._descriptors.get(key)
+                return MediaTypeRef(
+                    key=key,
+                    kind=kind,
+                    display_name=descriptor.display_name if descriptor is not None else key,
+                    content_profile=profile,
+                )
+            return resolved
+        return self.resolve_profile(profile) or self.resolve(data.get("media_type") or data.get("type"), profile)
+
     def resolve_profile(self, content_profile: str | None) -> MediaTypeRef | None:
         """按 content profile 找插件/核心描述符；找不到返回 None，不默认 movie."""
         profile = str(content_profile or "").strip()
