@@ -19,7 +19,6 @@ import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
 from app.domain.enums import ProgressKey, SearchType, channel_key, channel_name
-from app.domain.episode_utils import extract_episode_number
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.search_repo import ISearchRepository
 from app.domain.media_types import ProviderMediaType
@@ -30,6 +29,7 @@ from app.events.payloads import SearchStartPayload
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.thread import ThreadExecutor
+from app.media import meta_info
 from app.media.metadata.aliases import select_aliases
 from app.media.service import MediaService
 from app.message import Message
@@ -315,10 +315,6 @@ class SearchResultProcessor:
         return sorted(media_list, key=_sort_key, reverse=True)
 
     @staticmethod
-    def _episode_from_title(title: str) -> int | None:
-        return extract_episode_number(title)
-
-    @staticmethod
     def fill_missing_episode(media_item) -> None:
         """种子标题未带季集时从原始标题补全单集；合集/多集资源保持原样."""
         if (
@@ -335,11 +331,13 @@ class SearchResultProcessor:
         raw_title = str(getattr(media_item, "org_string", "") or getattr(media_item, "title", "") or "")
         if _PACK_EPISODE_HINT.search(raw_title):
             return
-        episode = SearchResultProcessor._episode_from_title(raw_title)
-        if episode:
-            media_item.begin_episode = episode
-            if getattr(media_item, "begin_season", None) is None:
-                media_item.begin_season = 1
+        parsed = meta_info(raw_title)
+        if not parsed.begin_episode:
+            return
+        media_item.begin_episode = parsed.begin_episode
+        if getattr(media_item, "begin_season", None) is None:
+            season = str(parsed.get_season_seq() or "").strip()
+            media_item.begin_season = int(season) if season.isdigit() else 1
 
     def filter_downloaded(self, media_list: list, force: bool = False, over_edition: bool = False) -> list:
         """过滤已完成/在途下载；电影按整部，剧集动漫按分集，洗版模式放行."""
