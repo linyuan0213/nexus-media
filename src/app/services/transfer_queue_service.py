@@ -10,6 +10,7 @@ from app.core.settings import settings
 from app.db.repositories.lifecycle_repository import LifecycleRepository
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
+from app.domain.media_types import MediaKind, media_type_registry
 from app.infrastructure.task_queue import Task, TaskQueue, TaskStatus, TaskWorker, create_task_queue
 from app.services.identity_resolver import IdentityResolver
 from app.services.lifecycle_service import LifecycleProjector
@@ -187,7 +188,20 @@ class TransferQueueService:
     ) -> None:
         if self._lifecycle is None:
             return
-        media_type = str(payload.get("media_type") or "movie")
+        profile = str(payload.get("content_profile") or "default")
+        resolved_type = media_type_registry.resolve_profile(profile) or media_type_registry.resolve(
+            payload.get("media_type_key") or payload.get("media_type"), profile
+        )
+        media_type = resolved_type.key if resolved_type.key != "unknown" else "unknown"
+        resolver_type = (
+            "anime"
+            if resolved_type.key == "anime"
+            else "movie"
+            if resolved_type.kind == MediaKind.MOVIE
+            else "tv"
+            if resolved_type.kind == MediaKind.EPISODIC
+            else "unknown"
+        )
         season = int(payload.get("season") or 0)
         resolved = IdentityResolver().resolve_values(
             identity_id=payload.get("identity_id"),
@@ -195,7 +209,7 @@ class TransferQueueService:
             external_id=payload.get("anchor_external_id"),
             title=payload.get("title"),
             year=payload.get("year"),
-            media_type=media_type,
+            media_type=resolver_type,
             content_profile=payload.get("content_profile"),
             season=season,
             allow_local=True,
