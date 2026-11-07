@@ -84,3 +84,15 @@ def test_from_payload_supports_old_and_new_queue_shapes():
     assert new.key == "plugin:demo:queued"
     assert new.kind == MediaKind.MOVIE
     registry.unregister_namespace("demo")
+
+
+def test_provider_contracts_fill_media_kind():
+    from app.domain.media_ref import MediaRef
+    from app.domain.mediatypes import MediaType
+    from app.media.metadata.models import ProviderRecord, ProviderRef
+
+    assert MediaRef("tmdb", "1", media_type=MediaType.MOVIE).media_kind == MediaKind.MOVIE
+    ref = ProviderRef(provider="tmdb", external_id="1", media_type=MediaType.ANIME)
+    assert ref.media_kind == MediaKind.EPISODIC
+    record = ProviderRecord(provider="tmdb", external_id="1", media_type=MediaType.TV)
+    assert record.media_kind == MediaKind.EPISODIC

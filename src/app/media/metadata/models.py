@@ -9,8 +9,9 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
+from app.domain.media_types import MediaKind, media_type_registry
 from app.domain.mediatypes import MediaType
 
 
@@ -48,9 +49,16 @@ class ProviderRef(BaseModel):
     provider: str
     external_id: str
     media_type: MediaType | None = None
+    media_kind: MediaKind | None = None
     scope: str = "default"
     url: str | None = None
     confidence: float = 1.0
+
+    @model_validator(mode="after")
+    def _fill_media_kind(self):
+        if self.media_kind is None:
+            self.media_kind = media_type_registry.resolve(self.media_type).kind
+        return self
 
 
 class ProviderDescriptor(BaseModel):
@@ -136,6 +144,7 @@ class ProviderRecord(BaseModel):
     external_id: str
     refs: list[ProviderRef] = Field(default_factory=list)
     media_type: MediaType = MediaType.UNKNOWN
+    media_kind: MediaKind | None = None
     content_profile: str = "default"
     locale: str | None = None
 
@@ -165,6 +174,12 @@ class ProviderRecord(BaseModel):
     extra: dict[str, Any] = Field(default_factory=dict)
     fetched_at: datetime = Field(default_factory=_utcnow)
 
+    @model_validator(mode="after")
+    def _fill_media_kind(self):
+        if self.media_kind is None:
+            self.media_kind = media_type_registry.resolve(self.media_type).kind
+        return self
+
 
 class FieldValue(BaseModel):
     """合成后的字段值及其来源."""
@@ -184,6 +199,7 @@ class MediaMetadata(BaseModel):
     schema_version: int = 1
     identity_id: str
     media_type: MediaType = MediaType.UNKNOWN
+    media_kind: MediaKind | None = None
     content_profile: str = "default"
     scope: str = "default"
     primary_provider: str | None = None
@@ -225,6 +241,7 @@ class SearchHit(BaseModel):
     title: str
     year: str | None = None
     media_type: MediaType = MediaType.UNKNOWN
+    media_kind: MediaKind | None = None
     content_profile: str = "default"
     poster: str | None = None
     score: float = 0.0

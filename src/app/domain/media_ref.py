@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from app.domain.media_types import MediaKind, media_type_registry
 from app.domain.mediatypes import MediaType
 
 
@@ -16,6 +17,15 @@ class MediaRef:
     external_id: str
     scope: str = "default"
     media_type: MediaType | None = None
+    media_kind: MediaKind | None = None
+
+    def __post_init__(self) -> None:
+        if self.media_kind is None:
+            object.__setattr__(
+                self,
+                "media_kind",
+                media_type_registry.resolve(self.media_type).kind,
+            )
 
 
 def normalize_identity_key(value: Any) -> str:
