@@ -1,6 +1,6 @@
 """规范剧集、规范季与来源别名（不依赖 TMDB 的内部剧集模型）."""
 
-from sqlalchemy import Integer, String, UniqueConstraint
+from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -41,12 +41,11 @@ class MediaSeriesAlias(Base):
     """来源条目到规范剧集的映射；TMDB 只是可选来源之一."""
 
     __tablename__ = "MEDIA_SERIES_ALIAS"
-    __table_args__ = (UniqueConstraint("PROVIDER", "EXTERNAL_ID", "SCOPE", name="uq_series_alias_provider_ref"),)
 
     PROVIDER: Mapped[str] = mapped_column(String(64), primary_key=True)
     EXTERNAL_ID: Mapped[str] = mapped_column(String(255), primary_key=True)
     SCOPE: Mapped[str] = mapped_column(String(64), primary_key=True, default="default")
-    SEASON_NUMBER: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    SEASON_NUMBER: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
     SERIES_KEY: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     CONFIDENCE: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     MAPPING_SOURCE: Mapped[str] = mapped_column(String(32), nullable=False, default="title_rule")
