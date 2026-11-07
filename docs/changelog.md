@@ -6,6 +6,7 @@
 
 - 身份：转移与刮削执行边界统一通过 IdentityResolver 补全规范 identity，定稿收据只接受规范身份，修复同一集因一个有 identity_id、一个只有 tmdb_id 而重复发送入库通知。
 - 鉴权：JWT 校验区分过期与无效 Token，过期请求返回 `TOKEN_EXPIRED` 并降为 DEBUG 日志，避免正常刷新流程刷 WARNING。
+- 日志：RSS/HTTP 异常日志统一脱敏 `passkey`、`authkey`、`torrent_pass`、`apikey` 等敏感查询参数。
 
 ## v5.8.1 (2026-11-06)
 

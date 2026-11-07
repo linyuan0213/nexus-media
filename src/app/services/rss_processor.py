@@ -12,6 +12,7 @@ from app.services.rss_automation.rsstitle_utils import RssTitleUtils
 from app.sites.engine import SiteEngine
 from app.utils import DomUtils, ExceptionUtils, StringUtils
 from app.utils.config_tools import get_proxies, get_ua
+from app.utils.log_redaction import redact_url
 
 
 class RssHelper:
@@ -99,7 +100,7 @@ class RssHelper:
                 or xml_start.startswith("<feed")
                 or xml_start.startswith("<channel")
             ):
-                log.warn(f"RSS 返回非 XML 内容 ({url[:80]}...): {ret_xml[:500]}")
+                log.warn(f"RSS 返回非 XML 内容 ({redact_url(url)[:80]}...): {ret_xml[:500]}")
                 return []
             # 清理非法 XML 字符（控制字符）
             ret_xml = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", ret_xml)

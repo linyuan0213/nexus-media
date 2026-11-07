@@ -9,6 +9,7 @@ import traceback
 from typing import TYPE_CHECKING, Never
 
 import log
+from app.utils.log_redaction import redact_text
 
 if TYPE_CHECKING:
     from app.core.exceptions import NexusError
@@ -19,7 +20,7 @@ class ExceptionUtils:
     def exception_traceback(cls, e: BaseException, message: str = "") -> None:
         prefix = f"{message}: " if message else ""
         msg = f"{prefix}Exception: {str(e)}\nCallstack:\n{traceback.format_exc()}"
-        log.error(msg)
+        log.error(redact_text(msg))
 
     @classmethod
     def log_and_raise(

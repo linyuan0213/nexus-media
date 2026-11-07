@@ -17,6 +17,7 @@ from app.infrastructure.http.exceptions import HttpClientError, HttpRateLimitErr
 from app.infrastructure.http.middleware import HttpMiddleware
 from app.infrastructure.http.retry import HttpRetryConfig
 from app.infrastructure.rate_limiter import RateLimitEngine
+from app.utils.log_redaction import redact_text, redact_url
 
 _global_host_mapping: dict[str, str] = {}
 
@@ -157,7 +158,7 @@ class HttpClient:
                 host = request.url.host
                 mapping = {**_global_host_mapping, **config_map}
                 if host and host in mapping:
-                    log.debug(f"[HostMapping] {host} -> {mapping[host]} ({request.url})")
+                    log.debug(f"[HostMapping] {host} -> {mapping[host]} ({redact_url(str(request.url))})")
                     request.extensions["sni_hostname"] = host
                     request.url = request.url.copy_with(host=mapping[host])
                 return super().handle_request(request)
@@ -228,7 +229,7 @@ class HttpClient:
         except httpx2.HTTPError as e:
             err = HttpClientError.from_httpx(e)
             if isinstance(err, HttpSSLError):
-                log.warn(f"[HttpClient]SSL/TLS 请求失败: {method} {url} - {err}")
+                log.warn(f"[HttpClient]SSL/TLS 请求失败: {method} {redact_url(str(url))} - {redact_text(err)}")
                 raise err
             raise err from e
 

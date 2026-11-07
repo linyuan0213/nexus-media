@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 import httpx2
 
 import log
+from app.utils.log_redaction import redact_url
 
 
 class HttpMiddleware(ABC):
@@ -23,9 +24,9 @@ class LoggingMiddleware(HttpMiddleware):
     """请求日志中间件."""
 
     def process_request(self, request: httpx2.Request) -> httpx2.Request:
-        log.debug(f"[HTTP] {request.method} {request.url}")
+        log.debug(f"[HTTP] {request.method} {redact_url(str(request.url))}")
         return request
 
     def process_response(self, response: httpx2.Response) -> httpx2.Response:
-        log.debug(f"[HTTP] {response.status_code} {response.request.url}")
+        log.debug(f"[HTTP] {response.status_code} {redact_url(str(response.request.url))}")
         return response
