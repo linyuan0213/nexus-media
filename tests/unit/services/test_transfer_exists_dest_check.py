@@ -142,7 +142,7 @@ def test_file_dedup_skips_when_dest_exists(tmp_path):
     cast(Any, svc._history).insert_transfer_blacklist.assert_called_once()
 
 
-def _source_dedupe_svc(tmp_path, dest_exists: bool = True):
+def _source_dedupe_svc(tmp_path, dest_exists: bool = True, history_date: str | None = None):
     src = tmp_path / "src" / "ABC-123-C.mkv"
     src.parent.mkdir(exist_ok=True)
     src.write_bytes(b"x")
@@ -155,11 +155,21 @@ def _source_dedupe_svc(tmp_path, dest_exists: bool = True):
     svc = FileTransferService.__new__(FileTransferService)
     svc._history = MagicMock()
     svc._existence = MagicMock()
+    svc._existence.is_media_exists.return_value = (
+        dest_exists,
+        str(dest_dir),
+        dest_exists,
+        str(dest),
+    )
     svc._engine = MagicMock()
+    svc._engine.transfer.return_value = True
     svc._history.get_by_source.return_value = SimpleNamespace(
         dest_path=str(dest_dir),
         dest_filename=dest.name,
+        date=history_date,
     )
+    svc._with_library_target_lock = MagicMock(side_effect=lambda _backend, _path, action: action() or True)
+    svc._replicate_to_enabled_backends = MagicMock()
     media = SimpleNamespace(type=MediaType.MOVIE)
     return svc, src, media
 
@@ -188,6 +198,26 @@ def test_same_source_file_rechecks_when_transfer_dest_missing(tmp_path):
     svc, src, media = _source_dedupe_svc(tmp_path, dest_exists=False)
 
     assert svc._source_transferred_path(str(src)) == ""
+
+
+def test_same_source_redownload_overwrites_when_source_newer(tmp_path):
+    svc, src, media = _source_dedupe_svc(tmp_path, history_date="2020-01-01 00:00:00")
+
+    result = svc._do_transfer_file(
+        str(src),
+        media,
+        str(tmp_path / "lib"),
+        None,
+        "link",
+        str(src),
+        str(tmp_path / "lib"),
+        False,
+        [],
+    )
+
+    assert result[3] == 1
+    cast(Any, svc._engine).transfer.assert_called_once()
+    assert cast(Any, svc._engine).transfer.call_args.kwargs["over_flag"] is True
 
 
 def test_different_source_file_is_not_deduplicated(tmp_path):

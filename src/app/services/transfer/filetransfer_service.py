@@ -1853,6 +1853,24 @@ class FileTransferService:
         finally:
             lock.release()
 
+    def _source_is_newer_than_history(self, source_full_path: str) -> bool:
+        """源文件是否比最近一次转移更新（判定为重新下载/替换）."""
+        if not source_full_path:
+            return False
+        try:
+            history = self._history.get_by_source(source_full_path)
+            if history is None:
+                return False
+            entries = history if isinstance(history, (list, tuple)) else [history]
+            dates = [str(getattr(item, "date", "") or "") for item in entries]
+            dates = [value for value in dates if value]
+            if not dates:
+                return False
+            latest = max(time.mktime(time.strptime(value, "%Y-%m-%d %H:%M:%S")) for value in dates)
+            return os.path.getmtime(source_full_path) > latest + 5
+        except (OSError, ValueError, Exception):  # noqa: BLE001 - 历史/文件异常时按旧任务处理
+            return False
+
     def _source_transferred_path(self, source_full_path: str, dst_backend=None) -> str:
         """同一源文件已有成功转移记录且目标仍存在时返回目标路径."""
         if not source_full_path:
@@ -1934,9 +1952,11 @@ class FileTransferService:
         dst_backend=None,
     ):
         # 源文件级去重：同一个文件已成功转移且目标仍存在时跳过，多版本文件互不影响。
+        # 源文件比转移历史更新（重新下载/替换）时放行，并按覆盖处理。
+        redownload = not udf_flag and self._source_is_newer_than_history(reg_path)
         if not udf_flag:
             transferred_path = self._source_transferred_path(reg_path, dst_backend)
-            if transferred_path:
+            if transferred_path and not redownload:
                 log.warn(f"[Rmt]文件已转移，跳过重复转移：{reg_path} -> {transferred_path}")
                 return (
                     0,
@@ -1996,8 +2016,8 @@ class FileTransferService:
                 return 1, 0, alert_messages, 0, new_file, ret_file_path, ret_dir_path
             if file_exist_flag and ret_file_path:
                 exist_filenum = 1
-                if udf_flag:
-                    # 仅手动转移允许覆盖已存在文件；自动同步（监控/目录同步）跳过
+                if udf_flag or redownload:
+                    # 手动转移，或检测到源文件已更新（重新下载）时覆盖；普通自动同步跳过
                     old = ret_file_path
                     base, _ = os.path.splitext(ret_file_path)
                     new_file = f"{base}{file_ext}"
