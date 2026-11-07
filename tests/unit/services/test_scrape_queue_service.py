@@ -173,3 +173,28 @@ class TestFinalizeReceipt:
 
         receipt.claim.assert_called_once()
         message.send_transfer_movie_message.assert_called_once()
+
+
+def test_finalize_receipt_key_resolves_tmdb_to_identity():
+    identity_repo = MagicMock()
+    identity_repo.find_by_ref.return_value = type("Identity", (), {"IDENTITY_ID": "01ABC"})()
+    svc = ScrapeQueueService(scraper=MagicMock(), max_workers=1, identity_repo=identity_repo)
+    tmdb_only = MediaInfo(
+        title="DEMO-001",
+        type=MediaType.ANIME,
+        tmdb_id="220542",
+        begin_season=1,
+        begin_episode=54,
+        end_episode=54,
+    )
+    with_identity = MediaInfo(
+        title="DEMO-001",
+        type=MediaType.ANIME,
+        tmdb_id="220542",
+        identity_id="01ABC",
+        begin_season=1,
+        begin_episode=54,
+        end_episode=54,
+    )
+    assert svc._finalize_receipt_key(tmdb_only) == svc._finalize_receipt_key(with_identity)
+    assert svc._finalize_receipt_key(tmdb_only).startswith("id:01ABC|")

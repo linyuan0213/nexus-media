@@ -8,6 +8,7 @@ from typing import Any
 import log
 from app.core.settings import settings
 from app.db.repositories.finalize_receipt_repository import FinalizeReceiptRepository
+from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.media_ref import media_identity_key
@@ -53,6 +54,7 @@ class ScrapeQueueService:
         queue_name: str = "scrape",
         lifecycle: LifecycleProjector | None = None,
         receipt_repo: FinalizeReceiptRepository | None = None,
+        identity_repo: MediaIdentityRepository | None = None,
     ):
         self._scraper = scraper
         self._max_workers = max(1, int(max_workers))
@@ -60,6 +62,7 @@ class ScrapeQueueService:
         self._event_bus = event_bus
         self._lifecycle = lifecycle
         self._receipt_repo = receipt_repo or FinalizeReceiptRepository()
+        self._identity_repo = identity_repo or MediaIdentityRepository()
         self._queue_name = queue_name
         self._queues: dict[str, TaskQueue] = {}
         self._workers: list[TaskWorker] = []
@@ -326,10 +329,21 @@ class ScrapeQueueService:
                 )
             )
 
-    @staticmethod
-    def _finalize_receipt_key(media: MediaInfo) -> str:
+    def _finalize_receipt_key(self, media: MediaInfo) -> str:
+        """生成稳定定稿键；只有 tmdb id 的对象也先反查规范 identity."""
         try:
-            identity = media_identity_key(media)
+            identity_id = str(getattr(media, "identity_id", "") or "").strip()
+            if not identity_id:
+                ref = media.get_media_ref() if hasattr(media, "get_media_ref") else None
+                if ref is not None and ref.provider and ref.external_id:
+                    found = self._identity_repo.find_by_ref(
+                        ref.provider,
+                        ref.external_id,
+                        media_type=ref.media_type.value if ref.media_type else None,
+                    )
+                    if found is not None:
+                        identity_id = str(found.IDENTITY_ID or "").strip()
+            identity = f"id:{identity_id}" if identity_id else media_identity_key(media)
         except Exception:  # noqa: BLE001 - 兜底避免收据影响定稿
             identity = f"{getattr(media, 'type', '')}:{media.get_name()}:{getattr(media, 'year', '')}"
         episodes = ",".join(str(item) for item in (media.get_episode_list() or []))
