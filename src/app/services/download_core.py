@@ -78,6 +78,21 @@ def _torrent_lock_key(media_info) -> str:
     return hashlib.sha1(identity.encode("utf-8")).hexdigest()[:32]
 
 
+def _lookup_total_episodes(total_ep: dict, season: Any) -> Any:
+    """兼容 int/str 季号键，避免同一季因键类型不同被判定缺失。"""
+    digits = str(season).strip().lstrip("S")
+    candidates = [season, str(season), digits]
+    if digits.isdigit():
+        candidates.extend([int(digits), f"S{int(digits):02d}"])
+    for key in candidates:
+        try:
+            if key in total_ep:
+                return total_ep[key]
+        except TypeError:
+            continue
+    return None
+
+
 class DownloadCore:
     """
     下载核心业务服务
@@ -170,9 +185,7 @@ class DownloadCore:
         else:
             season = meta_info.get_season_seq()
             if isinstance(total_ep, dict):
-                total = total_ep.get(season)
-                if total is None and str(season).isdigit():
-                    total = total_ep.get(int(season))
+                total = _lookup_total_episodes(total_ep, season)
             else:
                 total = total_ep
             if not total:
