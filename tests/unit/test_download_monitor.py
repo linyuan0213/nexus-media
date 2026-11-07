@@ -1,5 +1,8 @@
 """DownloadMonitor 单元测试."""
 
+import os
+import time
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -101,6 +104,47 @@ class TestDownloadMonitor:
 
         assert "qb1:ready" not in m._processed_ids
         assert "tr1:ready" not in m._processed_ids
+
+    def test_warmup_skips_old_source_with_transfer_history(self, tmp_path, mock_factory, mock_bus):
+        target = tmp_path / "old.mkv"
+        target.write_bytes(b"x")
+        os.utime(target, (time.time() - 86400 * 3, time.time() - 86400 * 3))
+        history = MagicMock()
+        history.get_by_source.return_value = SimpleNamespace(date="2026-11-07 12:39:00")
+        m = DownloadMonitor(
+            client_factory=mock_factory,
+            event_bus=mock_bus,
+            history_repo=history,
+        )
+        mock_client = MagicMock()
+        mock_client.get_transfer_task.return_value = [{"id": "old", "path": str(target), "tags": [], "name": "old"}]
+        mock_factory.get_client.return_value = mock_client
+        mock_factory.get_downloader_conf.return_value = {"only_nexus_media": False, "match_path": False}
+
+        m._warmup()
+
+        assert "qb1:old" in m._processed_ids
+
+    def test_warmup_keeps_redownloaded_source_for_transfer(self, tmp_path, mock_factory, mock_bus):
+        target = tmp_path / "redownloaded.mkv"
+        target.write_bytes(b"x")
+        history = MagicMock()
+        history.get_by_source.return_value = SimpleNamespace(date="2020-01-01 00:00:00")
+        m = DownloadMonitor(
+            client_factory=mock_factory,
+            event_bus=mock_bus,
+            history_repo=history,
+        )
+        mock_client = MagicMock()
+        mock_client.get_transfer_task.return_value = [
+            {"id": "redownloaded", "path": str(target), "tags": [], "name": "redownloaded"}
+        ]
+        mock_factory.get_client.return_value = mock_client
+        mock_factory.get_downloader_conf.return_value = {"only_nexus_media": False, "match_path": False}
+
+        m._warmup()
+
+        assert "qb1:redownloaded" not in m._processed_ids
 
     def test_warmup_no_client(self, monitor):
         m, factory, _ = monitor
@@ -261,9 +305,9 @@ class TestDownloadMonitor:
         assert event.payload.task_id == "task2"
         assert "qb1:task2" in m._processed_ids
 
-    def test_emit_new_tasks_skips_tasks_with_transfer_history(self, mock_factory, mock_bus):
+    def test_emit_new_tasks_allows_new_download_for_existing_source(self, mock_factory, mock_bus):
         history = MagicMock()
-        history.get_by_source.return_value = object()
+        history.get_by_source.return_value = SimpleNamespace(date="2026-11-07 12:39:00")
         m = DownloadMonitor(
             client_factory=mock_factory,
             event_bus=mock_bus,
@@ -271,10 +315,10 @@ class TestDownloadMonitor:
             path_exists=lambda _path: True,
         )
 
-        m._emit_new_tasks("qb1", [{"id": "already", "path": "/dl/old.mkv"}])
+        m._emit_new_tasks("qb1", [{"id": "redownloaded", "path": "/dl/old.mkv"}])
 
-        mock_bus.publish.assert_not_called()
-        assert "qb1:already" in m._processed_ids
+        assert mock_bus.publish.call_count == 1
+        assert "qb1:redownloaded" in m._processed_ids
 
     def test_emit_new_tasks_skips_empty_path_or_id(self, monitor):
         """_emit_new_tasks 跳过空 id 或空 path 的任务."""

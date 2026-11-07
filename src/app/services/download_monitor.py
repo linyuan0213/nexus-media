@@ -188,15 +188,12 @@ class DownloadMonitor:
             uid = self._make_id(did, task_id)
             if uid in self._processed_ids:
                 continue
-            # 预热可能未覆盖到（例如历史在启动后才恢复/写入）；已有转移历史的完成任务不再触发。
-            if self._has_transfer_history(task_path):
-                self._processed_ids.add(uid)
-                continue
 
             self._processed_ids.add(uid)
             self._publish_completed(did, task_id, task_path, task)
 
     def _has_transfer_history(self, task_path: str) -> bool:
+        """源文件是否已有转移历史；源文件比历史更新时视为重新下载，仍需转移."""
         if self._history_repo is None or not task_path:
             return False
         try:
@@ -205,9 +202,26 @@ class DownloadMonitor:
                 dir_lookup = getattr(self._history_repo, "get_by_source_dir", None)
                 if dir_lookup is not None:
                     history = dir_lookup(task_path)
-            return history is not None
+            if history is None or history == []:
+                return False
+            if self._source_newer_than_history(task_path, history):
+                return False
+            return True
         except Exception as e:  # noqa: BLE001 - 历史查询失败不应阻断监控
             log.debug(f"[DownloadMonitor]查询转移历史失败 {task_path}: {e}")
+            return False
+
+    @staticmethod
+    def _source_newer_than_history(task_path: str, history: Any) -> bool:
+        entries = history if isinstance(history, (list, tuple)) else [history]
+        dates = [str(getattr(item, "date", "") or "") for item in entries]
+        dates = [value for value in dates if value]
+        if not dates:
+            return False
+        try:
+            latest = max(time.mktime(time.strptime(value, "%Y-%m-%d %H:%M:%S")) for value in dates)
+            return os.path.getmtime(task_path) > latest + 5
+        except (OSError, ValueError):
             return False
 
     def _make_id(self, downloader_id: str, task_id: str) -> str:
