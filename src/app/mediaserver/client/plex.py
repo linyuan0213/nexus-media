@@ -9,7 +9,7 @@ from plexapi.server import PlexServer
 
 import log
 from app.core.exceptions import InfrastructureError, MediaServerError, NetworkError
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
 from app.utils import ExceptionUtils
@@ -430,10 +430,10 @@ class Plex(_IMediaClient):
         for library in self._libraries:
             match library.type:
                 case "movie":
-                    library_type = MediaType.MOVIE.value
+                    library_type = ProviderMediaType.MOVIE.value
                     image_list_str = self.get_libraries_image(library.key, 1)
                 case "show":
-                    library_type = MediaType.TV.value
+                    library_type = ProviderMediaType.SERIES.value
                     image_list_str = self.get_libraries_image(library.key, 2)
                 case _:
                     continue
@@ -664,8 +664,8 @@ class Plex(_IMediaClient):
         for item in items:
             if item is None:
                 continue
-            item_type = MediaType.MOVIE.value if item.TYPE == "movie" else MediaType.TV.value
-            if item_type == MediaType.MOVIE.value:
+            item_type = ProviderMediaType.MOVIE.value if item.TYPE == "movie" else ProviderMediaType.SERIES.value
+            if item_type == ProviderMediaType.MOVIE.value:
                 name = item.title
             else:
                 if item.parentIndex == 1:
@@ -697,9 +697,9 @@ class Plex(_IMediaClient):
         for item in items:
             if item is None:
                 continue
-            item_type = MediaType.MOVIE.value if item.TYPE == "movie" else MediaType.TV.value
+            item_type = ProviderMediaType.MOVIE.value if item.TYPE == "movie" else ProviderMediaType.SERIES.value
             link = self.get_play_url(item.key)
-            title = item.title if item_type == MediaType.MOVIE.value else f"{item.parentTitle} 第{item.index}季"
+            title = item.title if item_type == ProviderMediaType.MOVIE.value else f"{item.parentTitle} 第{item.index}季"
             image = self.get_nt_image_url(item.posterUrl)
             ret_resume.append({"id": item.key, "name": title, "type": item_type, "image": image, "link": link})
         return ret_resume

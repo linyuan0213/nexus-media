@@ -3,7 +3,7 @@ from urllib.parse import quote
 
 import log
 from app.core.exceptions import InfrastructureError, MediaServerError
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.http.client import HttpClient
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
@@ -362,9 +362,7 @@ class Jellyfin(_IMediaClient):
                         title_match = item_name == title or (
                             bool(title) and str(title).casefold() in item_path.casefold()
                         )
-                        if title_match and (
-                            not year or str(res_item.get("ProductionYear")) == str(year)
-                        ):
+                        if title_match and (not year or str(res_item.get("ProductionYear")) == str(year)):
                             ret_movies.append(
                                 {
                                     "title": res_item.get("Name"),
@@ -599,15 +597,15 @@ class Jellyfin(_IMediaClient):
         for library in self.__get_jellyfin_librarys() or []:
             match library.get("CollectionType"):
                 case "movies":
-                    library_type = MediaType.MOVIE.value
+                    library_type = ProviderMediaType.MOVIE.value
                 case "tvshows":
-                    library_type = MediaType.TV.value
+                    library_type = ProviderMediaType.SERIES.value
                 case _:
                     continue
             image = self.get_local_image_by_id(library.get("Id"), remote=False, inner=True)
             link = (
                 f"{self._play_host or self._host}web/index.html#!/movies.html?topParentId={library.get('Id')}"
-                if library_type == MediaType.MOVIE.value
+                if library_type == ProviderMediaType.MOVIE.value
                 else f"{self._play_host or self._host}web/index.html#!/tv.html?topParentId={library.get('Id')}"
             )
             libraries.append(
@@ -792,7 +790,9 @@ class Jellyfin(_IMediaClient):
                 for item in result:
                     if item.get("Type") not in ["Movie", "Episode"]:
                         continue
-                    item_type = MediaType.MOVIE.value if item.get("Type") == "Movie" else MediaType.TV.value
+                    item_type = (
+                        ProviderMediaType.MOVIE.value if item.get("Type") == "Movie" else ProviderMediaType.SERIES.value
+                    )
                     link = self.get_play_url(item.get("Id"))
                     if item.get("ImageTags"):
                         image = self.__get_thumb_url(
@@ -803,7 +803,7 @@ class Jellyfin(_IMediaClient):
                         )
                     else:
                         image = self.get_local_image_by_id(item.get("Id"), remote=False, inner=True)
-                    if item_type == MediaType.MOVIE.value:
+                    if item_type == ProviderMediaType.MOVIE.value:
                         title = item.get("Name")
                     else:
                         if item.get("ParentIndexNumber") == 1:
@@ -848,7 +848,9 @@ class Jellyfin(_IMediaClient):
                 for item in result:
                     if item.get("Type") not in ["Movie", "Series"]:
                         continue
-                    item_type = MediaType.MOVIE.value if item.get("Type") == "Movie" else MediaType.TV.value
+                    item_type = (
+                        ProviderMediaType.MOVIE.value if item.get("Type") == "Movie" else ProviderMediaType.SERIES.value
+                    )
                     link = self.get_play_url(item.get("Id"))
                     image = self.get_local_image_by_id(item_id=item.get("Id"), remote=False, inner=True)
                     ret_latest.append(

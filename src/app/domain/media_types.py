@@ -19,7 +19,7 @@ class ProviderMediaType(str, Enum):
     """外部 provider / 媒体服务器协议类型，不等同于内部 MediaType."""
 
     MOVIE = "movie"
-    SERIES = "series"
+    SERIES = "tv"
     ANIME = "anime"
     UNKNOWN = "unknown"
 

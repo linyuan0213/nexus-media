@@ -2,7 +2,7 @@ from functools import lru_cache
 
 import log
 from app.core.exceptions import InfrastructureError, MediaServerError, NetworkError
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.client.fnos_api import FnOSClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
@@ -361,10 +361,10 @@ class FnOS(_IMediaClient):
         for library in self._libraries:
             match library.get("category"):
                 case "Movie":
-                    library_type = MediaType.MOVIE.value
+                    library_type = ProviderMediaType.MOVIE.value
                     image_list = self.get_libraries_image(library.get("guid"), library.get("category"))
                 case "TV":
-                    library_type = MediaType.TV.value
+                    library_type = ProviderMediaType.SERIES.value
                     image_list = self.get_libraries_image(library.get("guid"), library.get("category"))
                 case _:
                     continue
@@ -447,9 +447,9 @@ class FnOS(_IMediaClient):
                     continue
                 item_type = item.get("type")
                 if item_type == "Movie":
-                    normalized_type = MediaType.MOVIE.value
+                    normalized_type = ProviderMediaType.MOVIE.value
                 elif item_type == "TV":
-                    normalized_type = MediaType.TV.value
+                    normalized_type = ProviderMediaType.SERIES.value
                 else:
                     normalized_type = item_type
                 path = None
@@ -507,8 +507,8 @@ class FnOS(_IMediaClient):
         items = self._fnos.get_resume_list()
         ret_resume = []
         for item in items:
-            item_type = MediaType.MOVIE.value if item.get("type") == "Movie" else MediaType.TV.value
-            if item_type == MediaType.MOVIE.value:
+            item_type = ProviderMediaType.MOVIE.value if item.get("type") == "Movie" else ProviderMediaType.SERIES.value
+            if item_type == ProviderMediaType.MOVIE.value:
                 name = item.get("title")
             else:
                 if item.get("season_number") == 1:
@@ -551,8 +551,8 @@ class FnOS(_IMediaClient):
         for item in items:
             if item.get("path"):
                 continue
-            item_type = MediaType.MOVIE.value if item.get("type") == "Movie" else MediaType.TV.value
-            if item_type == MediaType.MOVIE.value:
+            item_type = ProviderMediaType.MOVIE.value if item.get("type") == "Movie" else ProviderMediaType.SERIES.value
+            if item_type == ProviderMediaType.MOVIE.value:
                 name = item.get("title")
             else:
                 if item.get("season_number") == 1:

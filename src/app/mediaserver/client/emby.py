@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 import log
 from app.core.exceptions import InfrastructureError, MediaServerError, NetworkError
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.http.client import HttpClient
 from app.mediaserver.client._base import _IMediaClient
 from app.mediaserver.schema import ConfigField, MediaServerConfigSchema
@@ -438,9 +438,7 @@ class Emby(_IMediaClient):
                         title_match = item_name == title or (
                             bool(title) and str(title).casefold() in item_path.casefold()
                         )
-                        if title_match and (
-                            not year or str(res_item.get("ProductionYear")) == str(year)
-                        ):
+                        if title_match and (not year or str(res_item.get("ProductionYear")) == str(year)):
                             ret_movies.append(
                                 {
                                     "id": res_item.get("Id"),
@@ -790,7 +788,7 @@ class Emby(_IMediaClient):
         for item in items:
             if not item:
                 continue
-            if item.get("type") == MediaType.MOVIE.value:
+            if item.get("type") == ProviderMediaType.MOVIE.value:
                 movies = self.get_movies(item.get("title"), item.get("year")) or []
                 movie_id = next((m.get("id") for m in movies if m.get("id")), None)
                 if not movie_id:
@@ -827,7 +825,7 @@ class Emby(_IMediaClient):
             return str(item["library_id"])
         if not item.get("title") or not item.get("type"):
             return None
-        if item.get("type") != MediaType.MOVIE.value:
+        if item.get("type") != ProviderMediaType.MOVIE.value:
             item_id = self.__get_emby_series_id_by_name(item.get("title"), item.get("year"))
             if item_id:
                 # 存在电视剧，则直接刷新这个电视剧就行
@@ -876,9 +874,9 @@ class Emby(_IMediaClient):
         for library in self.__get_emby_librarys() or []:
             match library.get("CollectionType"):
                 case "movies":
-                    library_type = MediaType.MOVIE.value
+                    library_type = ProviderMediaType.MOVIE.value
                 case "tvshows":
-                    library_type = MediaType.TV.value
+                    library_type = ProviderMediaType.SERIES.value
                 case _:
                     continue
             image = self.get_local_image_by_id(library.get("Id"), remote=False, inner=True)
@@ -1058,9 +1056,11 @@ class Emby(_IMediaClient):
                 for item in result:
                     if item.get("Type") not in ["Movie", "Episode"]:
                         continue
-                    item_type = MediaType.MOVIE.value if item.get("Type") == "Movie" else MediaType.TV.value
+                    item_type = (
+                        ProviderMediaType.MOVIE.value if item.get("Type") == "Movie" else ProviderMediaType.SERIES.value
+                    )
                     link = self.get_play_url(item.get("Id"))
-                    if item_type == MediaType.MOVIE.value:
+                    if item_type == ProviderMediaType.MOVIE.value:
                         title = item.get("Name")
                     else:
                         if item.get("ParentIndexNumber") == 1:
@@ -1070,7 +1070,7 @@ class Emby(_IMediaClient):
                                 f"{item.get('SeriesName')} 第{item.get('ParentIndexNumber')}季"
                                 f"第{item.get('IndexNumber')}集"
                             )
-                    if item_type == MediaType.MOVIE.value:
+                    if item_type == ProviderMediaType.MOVIE.value:
                         if item.get("ImageTags"):
                             image = self.__get_thumb_url(
                                 item_id=item.get("Id"),
@@ -1125,7 +1125,9 @@ class Emby(_IMediaClient):
                 for item in result:
                     if item.get("Type") not in ["Movie", "Series"]:
                         continue
-                    item_type = MediaType.MOVIE.value if item.get("Type") == "Movie" else MediaType.TV.value
+                    item_type = (
+                        ProviderMediaType.MOVIE.value if item.get("Type") == "Movie" else ProviderMediaType.SERIES.value
+                    )
                     link = self.get_play_url(item.get("Id"))
                     image = self.get_local_image_by_id(item_id=item.get("Id"), remote=False, inner=True)
                     ret_latest.append(
