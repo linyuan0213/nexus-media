@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
+from app.domain.media_ref import MediaRef
 from app.utils.identity import fallback_identity
 
 
@@ -57,10 +58,17 @@ class IdentityResolver:
         create: bool = True,
     ) -> ResolvedIdentity:
         media_type = getattr(getattr(media, "type", None), "value", getattr(media, "type", "movie"))
+        provider = getattr(media, "anchor_provider", None)
+        external_id = getattr(media, "anchor_external_id", None)
+        if not (provider and external_id):
+            ref = media.get_media_ref() if hasattr(media, "get_media_ref") else None
+            if isinstance(ref, MediaRef) and ref.provider and ref.external_id:
+                provider = ref.provider
+                external_id = ref.external_id
         return self.resolve_values(
             identity_id=getattr(media, "identity_id", None),
-            provider=getattr(media, "anchor_provider", None),
-            external_id=getattr(media, "anchor_external_id", None),
+            provider=provider,
+            external_id=external_id,
             title=getattr(media, "title", None),
             year=getattr(media, "year", None),
             media_type=media_type,
@@ -69,6 +77,25 @@ class IdentityResolver:
             allow_local=allow_local,
             create=create,
         )
+
+    def ensure_media(self, media: Any, *, create: bool = True) -> ResolvedIdentity:
+        """解析并把规范身份回写到媒体对象；执行边界统一调用此方法."""
+        identity_id = str(getattr(media, "identity_id", None) or "").strip()
+        if identity_id:
+            return ResolvedIdentity(
+                identity_id=identity_id,
+                provider=str(getattr(media, "anchor_provider", "") or ""),
+                external_id=str(getattr(media, "anchor_external_id", "") or ""),
+                content_profile=str(getattr(media, "content_profile", "") or "default"),
+            )
+        resolved = self.resolve_media(media, create=create)
+        if resolved.identity_id:
+            media.identity_id = resolved.identity_id
+            if not getattr(media, "anchor_provider", None) and resolved.provider:
+                media.anchor_provider = resolved.provider
+            if not getattr(media, "anchor_external_id", None) and resolved.external_id:
+                media.anchor_external_id = resolved.external_id
+        return resolved
 
     def resolve_values(
         self,

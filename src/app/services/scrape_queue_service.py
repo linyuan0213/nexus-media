@@ -8,7 +8,7 @@ from typing import Any
 import log
 from app.core.settings import settings
 from app.db.repositories.finalize_receipt_repository import FinalizeReceiptRepository
-from app.db.repositories.media_identity_repository import MediaIdentityRepository
+from app.db.repositories.identity_resolver import IdentityResolver
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.media_ref import media_identity_key
@@ -54,7 +54,7 @@ class ScrapeQueueService:
         queue_name: str = "scrape",
         lifecycle: LifecycleProjector | None = None,
         receipt_repo: FinalizeReceiptRepository | None = None,
-        identity_repo: MediaIdentityRepository | None = None,
+        identity_resolver: IdentityResolver | None = None,
     ):
         self._scraper = scraper
         self._max_workers = max(1, int(max_workers))
@@ -62,7 +62,7 @@ class ScrapeQueueService:
         self._event_bus = event_bus
         self._lifecycle = lifecycle
         self._receipt_repo = receipt_repo or FinalizeReceiptRepository()
-        self._identity_repo = identity_repo or MediaIdentityRepository()
+        self._identity_resolver = identity_resolver or IdentityResolver()
         self._queue_name = queue_name
         self._queues: dict[str, TaskQueue] = {}
         self._workers: list[TaskWorker] = []
@@ -131,6 +131,7 @@ class ScrapeQueueService:
         finalize: dict[str, Any] | None = None,
     ) -> None:
         """提交单文件刮削；成功后由任务发布最终转移事件."""
+        self._ensure_identity(media)
         if not dir_path or not file_name:
             log.error(f"[ScrapeQueue]拒绝空路径刮削任务: dir={dir_path!r} file={file_name!r}")
             return
@@ -186,6 +187,8 @@ class ScrapeQueueService:
 
     def _run_file_payload(self, payload: dict[str, Any], task: Task | None) -> dict[str, Any]:
         media = MediaInfo.model_validate(payload["media"])
+        if not self._ensure_identity(media):
+            raise RuntimeError(f"刮削任务缺少规范身份: {payload.get('dir_path')}/{payload.get('file_name')}")
         backend = self._resolve_backend(payload.get("backend_id"))
         if task is not None:
             self._record_media(media, LifecycleStage.SCRAPING, LifecycleStatus.RUNNING, "scrape.started", task)
@@ -238,6 +241,9 @@ class ScrapeQueueService:
 
     def finalize_duplicate(self, media: MediaInfo, finalize: dict[str, Any]) -> None:
         """目标已存在且元数据完整：记录入库、发送消息并发布转移完成事件。"""
+        if not self._ensure_identity(media):
+            log.error("[ScrapeQueue]目标已存在但无法解析规范身份，跳过定稿")
+            return
         if self._lifecycle is not None and self._lifecycle.is_in_library(media):
             return
         key = f"library:duplicate:{media.get_title_string()}:{media.get_season_string()}:{media.get_episode_string()}"
@@ -256,6 +262,9 @@ class ScrapeQueueService:
         if not finalize or self._event_bus is None:
             return
         receipt_key = self._finalize_receipt_key(media)
+        if not receipt_key:
+            log.warn("[ScrapeQueue]缺少规范身份，跳过定稿通知")
+            return
         try:
             if not self._receipt_repo.claim(receipt_key):
                 log.info(f"[ScrapeQueue]定稿已处理，跳过重复通知: {receipt_key}")
@@ -329,23 +338,18 @@ class ScrapeQueueService:
                 )
             )
 
-    def _finalize_receipt_key(self, media: MediaInfo) -> str:
-        """生成稳定定稿键；只有 tmdb id 的对象也先反查规范 identity."""
+    def _ensure_identity(self, media: MediaInfo) -> bool:
         try:
-            identity_id = str(getattr(media, "identity_id", "") or "").strip()
-            if not identity_id:
-                ref = media.get_media_ref() if hasattr(media, "get_media_ref") else None
-                if ref is not None and ref.provider and ref.external_id:
-                    found = self._identity_repo.find_by_ref(
-                        ref.provider,
-                        ref.external_id,
-                        media_type=ref.media_type.value if ref.media_type else None,
-                    )
-                    if found is not None:
-                        identity_id = str(found.IDENTITY_ID or "").strip()
-            identity = f"id:{identity_id}" if identity_id else media_identity_key(media)
-        except Exception:  # noqa: BLE001 - 兜底避免收据影响定稿
-            identity = f"{getattr(media, 'type', '')}:{media.get_name()}:{getattr(media, 'year', '')}"
+            return bool(self._identity_resolver.ensure_media(media).identity_id)
+        except Exception as exc:  # noqa: BLE001 - 身份解析失败由调用方决定是否阻断
+            log.warn(f"[ScrapeQueue]身份解析失败: {exc}")
+            return False
+
+    def _finalize_receipt_key(self, media: MediaInfo) -> str:
+        """执行边界已保证 identity；收据键只使用规范身份."""
+        identity = media_identity_key(media)
+        if not identity.startswith("id:"):
+            return ""
         episodes = ",".join(str(item) for item in (media.get_episode_list() or []))
         return f"{identity}|s{media.get_season_seq()}|e{episodes}"
 
