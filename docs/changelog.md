@@ -4,7 +4,7 @@
 
 ### 修复
 
-- 刮削：定稿收据键统一解析为规范 identity，修复同一集因一个有 identity_id、一个只有 tmdb_id 而重复发送入库通知。
+- 刮削：定稿收据键统一解析为规范 identity；转移阶段补全 tmdb/douban/bangumi 引用对应的 identity，修复同一集因一个有 identity_id、一个只有 tmdb_id 而重复发送入库通知。
 
 ## v5.8.1 (2026-11-06)
 

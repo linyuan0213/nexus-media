@@ -24,6 +24,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
+from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.domain.enums import ProgressKey, SyncType
@@ -117,6 +118,7 @@ class FileTransferService:
         download_repo=None,
         subscribe_repo=None,
         metadata_gateway: MetadataGateway | None = None,
+        identity_repo: MediaIdentityRepository | None = None,
     ):
         self.media = media_service
         self.message = message
@@ -141,6 +143,7 @@ class FileTransferService:
         self._subscribe_repo = subscribe_repo or SubscribeRepository()
         self._cleanup = cleanup_service
         self._metadata_gateway = metadata_gateway
+        self._identity_repo = identity_repo or MediaIdentityRepository()
 
         # 从配置读取媒体处理参数
         media = settings.get("media")
@@ -637,6 +640,7 @@ class FileTransferService:
             for _info in medias.values():
                 self._apply_download_record_hint(_info, download_record)
                 self._apply_subscription_hint(_info)
+                self._ensure_identity(_info)
             for _path, _info in medias.items():
                 if not getattr(_info, "org_string", ""):
                     _info.org_string = os.path.basename(_path)
@@ -1215,6 +1219,25 @@ class FileTransferService:
                 info.begin_episode = int(episode)
                 info.end_episode = int(episode)
         return info
+
+    def _ensure_identity(self, media) -> None:
+        """用 tmdb/douban/bangumi 引用反查规范 identity，避免后续链路丢失身份."""
+        if media is None or getattr(media, "identity_id", None):
+            return
+        ref = media.get_media_ref() if hasattr(media, "get_media_ref") else None
+        if ref is None or not ref.provider or not ref.external_id:
+            return
+        try:
+            found = self._identity_repo.find_by_ref(
+                ref.provider,
+                ref.external_id,
+                media_type=ref.media_type.value if ref.media_type else None,
+            )
+        except Exception as exc:  # noqa: BLE001 - 身份补全失败不阻塞转移
+            log.debug(f"[Rmt]身份补全失败 {ref.provider}:{ref.external_id}: {exc}")
+            return
+        if found is not None:
+            media.identity_id = str(found.IDENTITY_ID or "")
 
     @staticmethod
     def _apply_download_record_hint(media, record) -> None:
