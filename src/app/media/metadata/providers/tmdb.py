@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Any, Protocol
 
+from app.domain.media_types import ProviderMediaType
 from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.image_proxy import ImageProxy
@@ -76,9 +77,22 @@ def tmdb_detail_to_record(
         runtimes = info.get("episode_run_time") or []
         runtime = runtimes[0] if runtimes else None
 
-    refs = [ProviderRef(provider="tmdb", external_id=tmdb_id, media_type=media_type, scope=scope)]
+    refs = [
+        ProviderRef(
+            provider="tmdb",
+            external_id=tmdb_id,
+            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+            scope=scope,
+        )
+    ]
     if info.get("imdb_id"):
-        refs.append(ProviderRef(provider="imdb", external_id=str(info["imdb_id"]), media_type=media_type))
+        refs.append(
+            ProviderRef(
+                provider="imdb",
+                external_id=str(info["imdb_id"]),
+                provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+            )
+        )
     if info.get("external_ids", {}).get("wikidata_id"):
         refs.append(ProviderRef(provider="wikidata", external_id=str(info["external_ids"]["wikidata_id"])))
     if info.get("external_ids", {}).get("tvdb_id"):
@@ -86,7 +100,7 @@ def tmdb_detail_to_record(
             ProviderRef(
                 provider="tvdb",
                 external_id=str(info["external_ids"]["tvdb_id"]),
-                media_type=media_type,
+                provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
             )
         )
 
@@ -97,7 +111,7 @@ def tmdb_detail_to_record(
         provider="tmdb",
         external_id=tmdb_id,
         refs=refs,
-        media_type=media_type,
+        provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
         content_profile=content_profile,
         locale=locale,
         title=info.get("title") or info.get("name"),
@@ -305,7 +319,7 @@ class TmdbProvider:
                         ref=ProviderRef(
                             provider="tmdb",
                             external_id=external_id,
-                            media_type=hit_type,
+                            provider_media_type=ProviderMediaType.from_value(getattr(hit_type, "value", hit_type)),
                         ),
                         title=item.get("title") or item.get("name") or "",
                         year=(item.get("release_date") or item.get("first_air_date") or "")[:4] or None,

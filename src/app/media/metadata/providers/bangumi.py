@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Protocol
 
+from app.domain.media_types import ProviderMediaType
 from app.domain.mediatypes import MediaType
 from app.media.external.bangumi import Bangumi
 
@@ -80,7 +81,13 @@ def bangumi_item_to_record(
     return ProviderRecord(
         provider="bangumi",
         external_id=bid,
-        refs=[ProviderRef(provider="bangumi", external_id=bid, media_type=media_type)],
+        refs=[
+            ProviderRef(
+                provider="bangumi",
+                external_id=bid,
+                provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+            )
+        ],
         media_type=media_type,
         content_profile=content_profile,
         locale="zh-CN",
@@ -204,7 +211,11 @@ class BangumiProvider:
             hits.append(
                 SearchHit(
                     provider="bangumi",
-                    ref=ProviderRef(provider="bangumi", external_id=str(bid), media_type=MediaType.ANIME),
+                    ref=ProviderRef(
+                        provider="bangumi",
+                        external_id=str(bid),
+                        provider_media_type=ProviderMediaType.ANIME,
+                    ),
                     title=item.get("name_cn") or item.get("name") or "",
                     year=str(air_date)[:4] or None,
                     media_type=MediaType.ANIME,

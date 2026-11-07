@@ -7,6 +7,7 @@ from datetime import date
 from typing import Any, Literal
 
 import log
+from app.domain.media_types import ProviderMediaType
 from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.infrastructure.image_proxy import ImageProxy
@@ -414,14 +415,22 @@ def _douban_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
             genres.append(candidate)
     return DiscoveryItem(
         provider="douban",
-        ref=ProviderRef(provider="douban", external_id=external_id, media_type=media_type),
+        ref=ProviderRef(
+            provider="douban",
+            external_id=external_id,
+            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+        ),
         content_profile="default",
         title=str(raw.get("title") or ""),
         year=year or None,
         poster=cover,
         rating={"douban": float(rating["value"])} if rating.get("value") is not None else {},
         tags=genres or [str(tag) for tag in raw.get("tags") or [] if tag],
-        anchor_ref=ProviderRef(provider="douban", external_id=external_id, media_type=media_type),
+        anchor_ref=ProviderRef(
+            provider="douban",
+            external_id=external_id,
+            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+        ),
         actions=["subscribe", "detail"],
         extra={
             "douban.card_subtitle": raw.get("card_subtitle"),
@@ -439,13 +448,21 @@ def _tmdb_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
     vote = raw.get("vote")
     return DiscoveryItem(
         provider="tmdb",
-        ref=ProviderRef(provider="tmdb", external_id=external_id, media_type=media_type),
+        ref=ProviderRef(
+            provider="tmdb",
+            external_id=external_id,
+            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+        ),
         content_profile="default",
         title=str(raw.get("title") or raw.get("name") or ""),
         year=str(raw.get("year") or "") or None,
         poster=raw.get("image") or ImageProxy.get_tmdbimage_url(raw.get("poster_path")),
         rating={"tmdb": float(vote)} if isinstance(vote, (int, float)) and vote else {},
-        anchor_ref=ProviderRef(provider="tmdb", external_id=external_id, media_type=media_type),
+        anchor_ref=ProviderRef(
+            provider="tmdb",
+            external_id=external_id,
+            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+        ),
         actions=["subscribe", "detail"],
         extra={"tmdb.genre_ids": raw.get("genre_ids") or []},
     )
@@ -460,7 +477,11 @@ def _bangumi_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
     air_date = raw.get("air_date") or raw.get("date")
     return DiscoveryItem(
         provider="bangumi",
-        ref=ProviderRef(provider="bangumi", external_id=external_id, media_type=MediaType.ANIME),
+        ref=ProviderRef(
+            provider="bangumi",
+            external_id=external_id,
+            provider_media_type=ProviderMediaType.ANIME,
+        ),
         content_profile="anime",
         title=str(raw.get("name_cn") or raw.get("name") or ""),
         original_title=raw.get("name"),
@@ -468,7 +489,11 @@ def _bangumi_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
         poster=images.get("large") or images.get("common"),
         rating={"bangumi": float(rating["score"])} if rating.get("score") else {},
         tags=[str(tag.get("name")) for tag in raw.get("tags") or [] if tag.get("name")],
-        anchor_ref=ProviderRef(provider="bangumi", external_id=external_id, media_type=MediaType.ANIME),
+        anchor_ref=ProviderRef(
+            provider="bangumi",
+            external_id=external_id,
+            provider_media_type=ProviderMediaType.ANIME,
+        ),
         actions=["subscribe", "detail"],
         extra={"air_date": air_date, "bangumi.rank": rating.get("rank")},
     )

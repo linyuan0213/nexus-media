@@ -16,7 +16,7 @@
 - API：搜索结果、媒体详情、订阅详情返回 `media_type_name`/`media_kind`，前端优先使用 descriptor 展示。
 - 消息/重试：生命周期重试和入库消息使用 profile/descriptor 展示，未知旧类型不再默认 movie。
 - 业务：Agent 订阅、搜索消息、订阅上下文改用 MediaTypeRegistry，插件描述符可映射回结构类型。
-- Provider 契约：新增 `ProviderMediaType`，`MediaRef`/`ProviderRef`/`ProviderRecord` 增加 `provider_media_type`/`media_kind`；Emby/Plex/Jellyfin/FnOS 客户端改用外部协议类型。
+- Provider 契约：新增 `ProviderMediaType`，`MediaRef`/`ProviderRef`/`ProviderRecord` 增加 `provider_media_type`/`media_kind`；Emby/Plex/Jellyfin/FnOS 与 TMDB/豆瓣/Bangumi provider 引用改用外部协议类型。
 
 
 ## v5.8.2 (2026-11-07)

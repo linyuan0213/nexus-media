@@ -11,6 +11,7 @@ from typing import Any, Protocol
 
 import log
 from app.core.settings import settings
+from app.domain.media_types import ProviderMediaType
 from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.infrastructure.external.doubanapi.episode_queue import episode_queue
@@ -65,15 +66,27 @@ def douban_detail_to_record(
     douban_id = str(external_id or info.get("id") or "")
     year = str(info.get("year") or "") or None
 
-    refs = [ProviderRef(provider="douban", external_id=douban_id, media_type=media_type)]
+    refs = [
+        ProviderRef(
+            provider="douban",
+            external_id=douban_id,
+            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+        )
+    ]
     imdb_id = str(info.get("imdb") or "").strip()
     if imdb_id.startswith("tt"):
-        refs.append(ProviderRef(provider="imdb", external_id=imdb_id, media_type=media_type))
+        refs.append(
+            ProviderRef(
+                provider="imdb",
+                external_id=imdb_id,
+                provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+            )
+        )
     return ProviderRecord(
         provider="douban",
         external_id=douban_id,
         refs=refs,
-        media_type=media_type,
+        provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
         content_profile=content_profile,
         locale=locale,
         title=info.get("title") or None,
@@ -233,7 +246,11 @@ class DoubanProvider:
             hits.append(
                 SearchHit(
                     provider="douban",
-                    ref=ProviderRef(provider="douban", external_id=str(target["id"]), media_type=media_type),
+                    ref=ProviderRef(
+                        provider="douban",
+                        external_id=str(target["id"]),
+                        provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+                    ),
                     title=target.get("title") or "",
                     year=str(target.get("year") or "") or None,
                     media_type=media_type,
