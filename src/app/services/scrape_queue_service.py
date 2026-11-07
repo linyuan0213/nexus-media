@@ -244,7 +244,9 @@ class ScrapeQueueService:
         if not self._ensure_identity(media):
             log.error("[ScrapeQueue]目标已存在但无法解析规范身份，跳过定稿")
             return
-        if self._lifecycle is not None and self._lifecycle.is_in_library(media):
+        if self._lifecycle is not None and (
+            self._lifecycle.is_in_library(media) or self._lifecycle.has_been_in_library(media)
+        ):
             return
         key = f"library:duplicate:{media.get_title_string()}:{media.get_season_string()}:{media.get_episode_string()}"
         self._record_media(

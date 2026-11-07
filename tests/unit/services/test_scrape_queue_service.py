@@ -112,6 +112,18 @@ class TestScrapeQueueService:
 
         message.send_transfer_movie_message.assert_not_called()
 
+    def test_duplicate_finalize_skips_notification_when_previously_in_library(self):
+        lifecycle = MagicMock()
+        lifecycle.is_in_library.return_value = False
+        lifecycle.has_been_in_library.return_value = True
+        message = MagicMock()
+        svc = ScrapeQueueService(scraper=MagicMock(), max_workers=1, lifecycle=lifecycle, message=message)
+
+        media = MediaInfo(title="DEMO-001", type=MediaType.MOVIE, identity_id="01DEMO")
+        svc.finalize_duplicate(media, {"in_from": "downloaders", "exist_filenum": 1})
+
+        message.send_transfer_movie_message.assert_not_called()
+
 
 class TestFinalizeReceipt:
     def test_duplicate_finalize_skipped_by_receipt(self):

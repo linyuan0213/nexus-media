@@ -261,6 +261,21 @@ class TestDownloadMonitor:
         assert event.payload.task_id == "task2"
         assert "qb1:task2" in m._processed_ids
 
+    def test_emit_new_tasks_skips_tasks_with_transfer_history(self, mock_factory, mock_bus):
+        history = MagicMock()
+        history.get_by_source.return_value = object()
+        m = DownloadMonitor(
+            client_factory=mock_factory,
+            event_bus=mock_bus,
+            history_repo=history,
+            path_exists=lambda _path: True,
+        )
+
+        m._emit_new_tasks("qb1", [{"id": "already", "path": "/dl/old.mkv"}])
+
+        mock_bus.publish.assert_not_called()
+        assert "qb1:already" in m._processed_ids
+
     def test_emit_new_tasks_skips_empty_path_or_id(self, monitor):
         """_emit_new_tasks 跳过空 id 或空 path 的任务."""
         m, _, bus = monitor

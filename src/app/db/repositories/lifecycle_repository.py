@@ -125,6 +125,22 @@ class LifecycleRepository(BaseRepository):
             current.STAGE_STARTED_AT = event.OCCURRED_AT
         _fill_current_metadata(db, current)
 
+    def has_succeeded_stage(self, identity_id: str, stage: str, season: int = 0, episode: int = 0) -> bool:
+        """身份是否曾在指定阶段成功过（用于重启/重复转移后的通知幂等）."""
+        with self.readonly() as db:
+            row = (
+                db.query(MediaLifecycleEvent.ID)
+                .filter(
+                    MediaLifecycleEvent.IDENTITY_ID == identity_id,
+                    MediaLifecycleEvent.SEASON == int(season),
+                    MediaLifecycleEvent.EPISODE == int(episode),
+                    MediaLifecycleEvent.STAGE == stage,
+                    MediaLifecycleEvent.STATUS == LifecycleStatus.SUCCEEDED.value,
+                )
+                .first()
+            )
+            return row is not None
+
     def get_current(self, identity_id: str, season: int = 0, episode: int = 0, *, user=None) -> MediaLifecycle | None:
         with self.readonly() as db:
             query = db.query(MediaLifecycle).filter(

@@ -101,18 +101,10 @@ class DownloadMonitor:
                     if self._history_repo is None:
                         self._processed_ids.add(uid)
                         continue
-                    try:
-                        history = self._history_repo.get_by_source(task_path)
-                        if history is None and task_path:
-                            dir_lookup = getattr(self._history_repo, "get_by_source_dir", None)
-                            if dir_lookup is not None:
-                                history = dir_lookup(task_path)
-                        if history is not None:
-                            self._processed_ids.add(uid)
-                            continue
-                        # 路径暂时不存在不写入已处理集合，等待挂载恢复后重新触发。
-                    except Exception as e:  # noqa: BLE001 - 历史查询失败不应阻断启动
-                        log.debug(f"[DownloadMonitor]查询转移历史失败 {task_id}: {e}")
+                    if self._has_transfer_history(task_path):
+                        self._processed_ids.add(uid)
+                        continue
+                    # 路径暂时不存在不写入已处理集合，等待挂载恢复后重新触发。
         except Exception as e:
             log.warn(f"[DownloadMonitor]预热失败: {e!s}")
 
@@ -196,9 +188,27 @@ class DownloadMonitor:
             uid = self._make_id(did, task_id)
             if uid in self._processed_ids:
                 continue
+            # 预热可能未覆盖到（例如历史在启动后才恢复/写入）；已有转移历史的完成任务不再触发。
+            if self._has_transfer_history(task_path):
+                self._processed_ids.add(uid)
+                continue
 
             self._processed_ids.add(uid)
             self._publish_completed(did, task_id, task_path, task)
+
+    def _has_transfer_history(self, task_path: str) -> bool:
+        if self._history_repo is None or not task_path:
+            return False
+        try:
+            history = self._history_repo.get_by_source(task_path)
+            if history is None:
+                dir_lookup = getattr(self._history_repo, "get_by_source_dir", None)
+                if dir_lookup is not None:
+                    history = dir_lookup(task_path)
+            return history is not None
+        except Exception as e:  # noqa: BLE001 - 历史查询失败不应阻断监控
+            log.debug(f"[DownloadMonitor]查询转移历史失败 {task_path}: {e}")
+            return False
 
     def _make_id(self, downloader_id: str, task_id: str) -> str:
         """生成唯一任务标识."""

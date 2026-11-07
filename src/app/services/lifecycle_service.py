@@ -60,6 +60,27 @@ class LifecycleProjector:
         except Exception:  # noqa: BLE001 - 判断失败按未入库处理，保证正常通知
             return False
 
+    def has_been_in_library(self, media) -> bool:
+        """是否曾成功入库（当前阶段可能被新一轮转移事件暂时覆盖）."""
+        try:
+            resolved = self._resolver.resolve_media(media, allow_local=True)
+            identity_id = resolved.identity_id
+            if not identity_id:
+                return False
+            season = int(media.get_season_seq() or 0) if hasattr(media, "get_season_seq") else 0
+            episodes = list(media.get_episode_list()) if hasattr(media, "get_episode_list") else []
+            return any(
+                self._repo.has_succeeded_stage(
+                    identity_id,
+                    LifecycleStage.IN_LIBRARY.value,
+                    season=season,
+                    episode=int(episode or 0),
+                )
+                for episode in episodes or [0]
+            )
+        except Exception:  # noqa: BLE001 - 查询失败按未入库处理
+            return False
+
     def record(
         self,
         *,
