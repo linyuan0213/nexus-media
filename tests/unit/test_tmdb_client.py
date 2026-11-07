@@ -130,6 +130,27 @@ class TestGetTmdbChineseTitle:
         assert get_tmdb_chinese_title(None) is None
 
 
+class TestProviderMediaTypePayloads:
+    """外部协议字段使用 movie/tv/series 字符串时仍保持电影/剧集语义."""
+
+    def test_movie_payload_uses_movie_shape(self):
+        info = {"media_type": "movie", "title": "Film", "name": "Show", "alternative_titles": {"titles": []}}
+        assert get_tmdb_chinese_title(info) == "Film"
+
+    def test_series_payload_uses_series_shape(self):
+        info = {"media_type": "tv", "name": "Show", "title": "Film", "alternative_titles": {"results": []}}
+        assert get_tmdb_chinese_title(info) == "Show"
+
+    def test_unknown_payload_does_not_default_movie(self):
+        info = {
+            "media_type": "unknown",
+            "name": "Show",
+            "title": "Film",
+            "alternative_titles": {"results": []},
+        }
+        assert get_tmdb_chinese_title(info) == "Show"
+
+
 class TestUpdateTmdbinfoCnTitle:
     def test_fills_cn_title_from_translations(self):
         info = {

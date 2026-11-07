@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+from app.domain.media_types import MediaKind, ProviderMediaType
 from app.domain.mediatypes import MediaType
 
 
@@ -9,7 +10,8 @@ class LookupResult(BaseModel):
     tmdb_id: int | str = 0
     title: str | None = None
     original_title: str | None = None
-    media_type: MediaType | None = None
+    provider_media_type: ProviderMediaType | None = None
+    media_kind: MediaKind | None = None
     year: str | None = None
     overview: str | None = None
     poster_path: str | None = None

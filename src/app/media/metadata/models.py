@@ -188,6 +188,8 @@ class ProviderRecord(BaseModel):
     def _fill_media_kind(self):
         if self.provider_media_type is None:
             self.provider_media_type = ProviderMediaType.from_value(self.media_type.value)
+        if self.media_type == MediaType.UNKNOWN and self.provider_media_type != ProviderMediaType.UNKNOWN:
+            self.media_type = self.provider_media_type.to_media_type()
         if self.media_kind is None:
             self.media_kind = self.provider_media_type.kind
         return self

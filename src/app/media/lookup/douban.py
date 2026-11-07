@@ -1,3 +1,4 @@
+from app.domain.media_types import ProviderMediaType, provider_media_type_of
 from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.media.lookup.base import BaseLookup, LookupResult
@@ -14,7 +15,7 @@ class DoubanLookup(BaseLookup):
         if not name:
             return None
 
-        search_type = hint_type or parsed.type
+        search_type = provider_media_type_of(hint_type or parsed.type)
         result = self._search(name, search_type, parsed.year)
         if not result:
             return None
@@ -29,11 +30,12 @@ class DoubanLookup(BaseLookup):
         if not items:
             return None
 
+        provider_type = provider_media_type_of(mtype)
         for item_obj in items:
-            parsed_type = MediaType.from_string(item_obj.get("type_name") or "")
-            if parsed_type not in (MediaType.MOVIE, MediaType.TV):
+            parsed_type = provider_media_type_of(item_obj.get("type_name"))
+            if parsed_type not in (ProviderMediaType.MOVIE, ProviderMediaType.SERIES):
                 continue
-            if mtype and parsed_type != mtype:
+            if provider_type and parsed_type != provider_type:
                 continue
             item = item_obj.get("target")
             if not item:
@@ -49,11 +51,13 @@ class DoubanLookup(BaseLookup):
             return None
         did = item.get("id")
         rating = item.get("rating", {}) or {}
+        provider_type = provider_media_type_of(mtype or item.get("type"))
         return LookupResult(
             tmdb_id=f"DB:{did}" if did else 0,
             title=item.get("title"),
             original_title=item.get("original_title"),
-            media_type=mtype or (MediaType.MOVIE if item.get("type") == "movie" else MediaType.TV),
+            provider_media_type=provider_type,
+            media_kind=provider_type.kind,
             year=str(item.get("year", "")),
             overview=item.get("card_subtitle") or "",
             poster_path=item.get("cover_url"),

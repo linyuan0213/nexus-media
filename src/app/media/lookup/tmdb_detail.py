@@ -1,4 +1,5 @@
 import log
+from app.domain.media_types import ProviderMediaType, external_protocol_type, provider_media_type_of
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.infrastructure.request_deduper import get_deduper
@@ -11,9 +12,16 @@ class TmdbDetail:
     def __init__(self, client: TmdbClient):
         self.client = client
 
-    def get_detail(self, tmdbid, mtype: MediaType, language: str | None = None, append_to_response=None):
-        if not mtype:
-            mtype = MediaType.UNKNOWN
+    def get_detail(
+        self,
+        tmdbid,
+        mtype: MediaType | ProviderMediaType | None,
+        language: str | None = None,
+        append_to_response=None,
+    ):
+        protocol_type = external_protocol_type(provider_media_type_of(mtype))
+        if protocol_type == ProviderMediaType.UNKNOWN:
+            protocol_type = ProviderMediaType.SERIES
         if language:
             self.client.set_language(language)
         # 缓存键用“实际生效语言”：language 未显式传入时取线程本地语言（可能已被调用方 set_language），
@@ -21,34 +29,34 @@ class TmdbDetail:
         active_lang = getattr(self.client.tmdb, "language", None) if self.client.tmdb else None
         cache_lang = language or (active_lang if active_lang and active_lang != self.client._default_language else None)
         cached = self.client.redis_cache.get_detail(
-            "tmdb", tmdbid, mtype, language=cache_lang, extra=append_to_response or ""
+            "tmdb", tmdbid, protocol_type, language=cache_lang, extra=append_to_response or ""
         )
         if cached:
-            log.debug(f"[Meta]从缓存获取TMDB信息: {mtype.value}/{tmdbid}")
+            log.debug(f"[Meta]从缓存获取TMDB信息: {protocol_type.value}/{tmdbid}")
             if language:
                 self.client.set_language()
             return cached
         deduper = get_deduper()
-        cache_key = f"tmdb_info:{mtype.value}:{tmdbid}:{cache_lang or 'default'}:{append_to_response or ''}"
+        cache_key = f"tmdb_info:{protocol_type.value}:{tmdbid}:{cache_lang or 'default'}:{append_to_response or ''}"
 
         def _fetch():
             if not self.client.tmdb:
                 log.error("[Meta]TMDB API Key 未设置！")
                 return None
-            if mtype == MediaType.MOVIE:
+            if protocol_type == ProviderMediaType.MOVIE:
                 info = self._get_movie_detail(tmdbid, append_to_response)
                 if info:
-                    info["media_type"] = MediaType.MOVIE
+                    info["media_type"] = protocol_type.to_media_type()
             else:
                 info = self._get_tv_detail(tmdbid, append_to_response)
                 if info:
-                    info["media_type"] = MediaType.TV
+                    info["media_type"] = protocol_type.to_media_type()
             if info:
                 info["genre_ids"] = get_genre_ids_from_detail(info.get("genres"))
                 # 以本次实际语言决定是否补中文名：language="en" 时不得覆盖为中文
                 info = update_tmdbinfo_cn_title(info, language or active_lang or self.client._default_language)
             self.client.redis_cache.set_detail(
-                "tmdb", tmdbid, info, mtype, language=cache_lang, extra=append_to_response or ""
+                "tmdb", tmdbid, info, protocol_type, language=cache_lang, extra=append_to_response or ""
             )
             return info
 

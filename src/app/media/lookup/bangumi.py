@@ -1,3 +1,4 @@
+from app.domain.media_types import ProviderMediaType
 from app.domain.mediatypes import MediaType
 from app.media.external.bangumi import Bangumi
 from app.media.lookup.base import BaseLookup, LookupResult
@@ -43,7 +44,8 @@ class BangumiLookup(BaseLookup):
             tmdb_id=f"BG:{bid}" if bid else 0,
             title=item.get("name_cn") or item.get("name"),
             original_title=item.get("name"),
-            media_type=MediaType.ANIME,
+            provider_media_type=ProviderMediaType.ANIME,
+            media_kind=ProviderMediaType.ANIME.kind,
             year=air_date[:4] if air_date else "",
             overview=item.get("summary", ""),
             poster_path=images.get("large"),

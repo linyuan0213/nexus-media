@@ -2,7 +2,7 @@ import difflib
 
 from app.core.settings import settings
 from app.db.repositories.plugin_repo_adapter import MetadataBlacklistRepositoryAdapter
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType, external_protocol_type
 from app.infrastructure.cache_system import get_cache_manager
 from app.infrastructure.cache_system.metadata_cache import MetadataCache
 from app.infrastructure.external.tmdbv3api import (
@@ -135,7 +135,7 @@ def get_genre_ids_from_detail(genres):
 def get_tmdb_chinese_title(tmdbinfo):
     if not tmdbinfo:
         return None
-    if tmdbinfo.get("media_type") == MediaType.MOVIE:
+    if external_protocol_type(tmdbinfo.get("media_type")) == ProviderMediaType.MOVIE:
         alternative_titles = tmdbinfo.get("alternative_titles", {}).get("titles", [])
     else:
         alternative_titles = tmdbinfo.get("alternative_titles", {}).get("results", [])
@@ -160,7 +160,9 @@ def get_tmdb_chinese_title(tmdbinfo):
         return zh_cn
     if zh_tw:
         return to_simplified(zh_tw)
-    return tmdbinfo.get("title") if tmdbinfo.get("media_type") == MediaType.MOVIE else tmdbinfo.get("name")
+    if external_protocol_type(tmdbinfo.get("media_type")) == ProviderMediaType.MOVIE:
+        return tmdbinfo.get("title")
+    return tmdbinfo.get("name")
 
 
 def _get_chinese_title_from_translations(tmdbinfo):
@@ -186,12 +188,13 @@ def _get_chinese_title_from_translations(tmdbinfo):
 
 
 def update_tmdbinfo_cn_title(tmdb_info, default_language):
-    org_title = tmdb_info.get("title") if tmdb_info.get("media_type") == MediaType.MOVIE else tmdb_info.get("name")
+    is_movie = external_protocol_type(tmdb_info.get("media_type")) == ProviderMediaType.MOVIE
+    org_title = tmdb_info.get("title") if is_movie else tmdb_info.get("name")
     # 中文语言配置（zh/zh-CN/zh-Hans...）下补全中文名；非中文配置保持原样
     if not StringUtils.is_chinese(org_title) and str(default_language or "").lower().startswith("zh"):
         cn_title = get_tmdb_chinese_title(tmdbinfo=tmdb_info)
         if cn_title and cn_title != org_title:
-            if tmdb_info.get("media_type") == MediaType.MOVIE:
+            if is_movie:
                 tmdb_info["title"] = cn_title
             else:
                 tmdb_info["name"] = cn_title

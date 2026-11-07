@@ -1,5 +1,6 @@
 """内置 provider 映射适配器测试（无网络）."""
 
+from app.domain.media_types import MediaKind, ProviderMediaType
 from app.domain.mediatypes import MediaType
 from app.media.metadata import ProviderRef, SearchQuery
 from app.media.metadata.providers import (
@@ -109,6 +110,30 @@ def test_tmdb_tv_mapping_uses_name_and_networks():
     assert record.runtime == 81
     assert record.labels == ["HBO"]
     assert record.seasons[0].episode_count == 9
+
+
+def test_tmdb_provider_media_type_mapping_keeps_series_and_anime():
+    tv = tmdb_detail_to_record(_tmdb_tv(), media_type=ProviderMediaType.SERIES)
+    assert tv.provider_media_type == ProviderMediaType.SERIES
+    assert tv.media_type == MediaType.TV
+    assert tv.media_kind == MediaKind.EPISODIC
+
+    movie = tmdb_detail_to_record(_tmdb_movie(), media_type=ProviderMediaType.MOVIE)
+    assert movie.provider_media_type == ProviderMediaType.MOVIE
+    assert movie.media_type == MediaType.MOVIE
+    assert movie.media_kind == MediaKind.MOVIE
+
+    anime = tmdb_detail_to_record(_tmdb_tv(), media_type=ProviderMediaType.ANIME)
+    assert anime.provider_media_type == ProviderMediaType.ANIME
+    assert anime.media_type == MediaType.ANIME
+    assert anime.media_kind == MediaKind.EPISODIC
+
+
+def test_douban_unknown_media_type_is_not_default_movie():
+    record = douban_detail_to_record(_douban_info(), media_type=ProviderMediaType.UNKNOWN)
+    assert record.provider_media_type == ProviderMediaType.UNKNOWN
+    assert record.media_type == MediaType.UNKNOWN
+    assert record.media_kind == MediaKind.UNKNOWN
 
 
 def _douban_info() -> dict:

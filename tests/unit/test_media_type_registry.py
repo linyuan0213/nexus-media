@@ -2,7 +2,17 @@
 
 import pytest
 
-from app.domain.media_types import MediaKind, MediaTypeDescriptor, MediaTypeRegistry
+from app.domain.media_types import (
+    MediaKind,
+    MediaTypeDescriptor,
+    MediaTypeRegistry,
+    ProviderMediaType,
+    external_protocol_type,
+    external_protocol_value,
+    legacy_media_type_of,
+    media_kind_of,
+    provider_media_type_of,
+)
 from app.domain.mediatypes import MediaType
 
 
@@ -96,6 +106,55 @@ def test_provider_contracts_fill_media_kind():
     assert ref.media_kind == MediaKind.EPISODIC
     record = ProviderRecord(provider="tmdb", external_id="1", media_type=MediaType.TV)
     assert record.media_kind == MediaKind.EPISODIC
+
+
+def test_external_protocol_helpers_keep_movie_series_and_anime_semantics():
+    assert provider_media_type_of("movie") == ProviderMediaType.MOVIE
+    assert provider_media_type_of(MediaType.MOVIE) == ProviderMediaType.MOVIE
+    assert provider_media_type_of("series") == ProviderMediaType.SERIES
+    assert provider_media_type_of(MediaType.TV) == ProviderMediaType.SERIES
+    assert provider_media_type_of("tv") == ProviderMediaType.SERIES
+    assert provider_media_type_of(MediaType.ANIME) == ProviderMediaType.ANIME
+    assert provider_media_type_of(ProviderMediaType.ANIME) == ProviderMediaType.ANIME
+
+    assert ProviderMediaType.SERIES.kind == MediaKind.EPISODIC
+    assert ProviderMediaType.ANIME.kind == MediaKind.EPISODIC
+    assert ProviderMediaType.SERIES.to_media_type() == MediaType.TV
+    assert ProviderMediaType.ANIME.to_media_type() == MediaType.ANIME
+    assert external_protocol_type(MediaType.ANIME) == ProviderMediaType.SERIES
+    assert external_protocol_value(MediaType.ANIME) == "tv"
+    assert media_kind_of(MediaType.ANIME) == MediaKind.EPISODIC
+    assert legacy_media_type_of("tv") == MediaType.TV
+
+
+def test_unknown_external_type_is_not_default_movie():
+    assert provider_media_type_of("unknown") == ProviderMediaType.UNKNOWN
+    assert provider_media_type_of(None) == ProviderMediaType.UNKNOWN
+    assert provider_media_type_of("garbage") == ProviderMediaType.UNKNOWN
+    assert ProviderMediaType.UNKNOWN.kind == MediaKind.UNKNOWN
+    assert ProviderMediaType.UNKNOWN.to_media_type() == MediaType.UNKNOWN
+    assert external_protocol_type("unknown") == ProviderMediaType.UNKNOWN
+    assert external_protocol_value("unknown") == "unknown"
+
+
+def test_provider_record_fills_internal_type_from_provider_type():
+    from app.media.metadata.models import ProviderRecord
+
+    record = ProviderRecord(
+        provider="tmdb",
+        external_id="1",
+        provider_media_type=ProviderMediaType.SERIES,
+    )
+    assert record.media_type == MediaType.TV
+    assert record.media_kind == MediaKind.EPISODIC
+
+    unknown = ProviderRecord(
+        provider="tmdb",
+        external_id="2",
+        provider_media_type=ProviderMediaType.UNKNOWN,
+    )
+    assert unknown.media_type == MediaType.UNKNOWN
+    assert unknown.media_kind == MediaKind.UNKNOWN
 
 
 def test_provider_media_type_is_separate_from_internal_type():

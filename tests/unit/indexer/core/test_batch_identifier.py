@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.domain.enums import IdentifyStatus
+from app.domain.media_types import ProviderMediaType
 from app.domain.mediatypes import MediaType
 from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.models import SearchCandidate
@@ -273,7 +274,7 @@ class TestIdentifyGroups:
 
     def test_cn_name_hit_with_consensus(self):
         lookup = MagicMock()
-        hit = LookupResult(tmdb_id=288971, title="穹庐下的魔女", media_type=MediaType.TV)
+        hit = LookupResult(tmdb_id=288971, title="穹庐下的魔女", provider_media_type=ProviderMediaType.SERIES)
         lookup.lookup.return_value = hit
         svc = self._service(lookup)
 
@@ -289,7 +290,7 @@ class TestIdentifyGroups:
 
     def test_target_hit_stops_extra_name_lookups(self):
         lookup = MagicMock()
-        hit = LookupResult(tmdb_id=106449, title="凡人修仙传", media_type=MediaType.TV)
+        hit = LookupResult(tmdb_id=106449, title="凡人修仙传", provider_media_type=ProviderMediaType.SERIES)
         lookup.lookup.return_value = hit
         svc = self._service(lookup)
         group = self._group(["凡人修仙传", "Fsp Dn"])
@@ -307,8 +308,12 @@ class TestIdentifyGroups:
         冲突时采信最具体（最长）名称"""
         lookup = MagicMock()
         lookup.lookup.side_effect = [
-            LookupResult(tmdb_id=999999, title="攻壳机动队", media_type=MediaType.TV),  # cn: 2026 新剧
-            LookupResult(tmdb_id=801, title="攻壳机动队 S.A.C.", media_type=MediaType.TV),  # en: SAC
+            LookupResult(
+                tmdb_id=999999, title="攻壳机动队", provider_media_type=ProviderMediaType.SERIES
+            ),  # cn: 2026 新剧
+            LookupResult(
+                tmdb_id=801, title="攻壳机动队 S.A.C.", provider_media_type=ProviderMediaType.SERIES
+            ),  # en: SAC
         ]
         svc = self._service(lookup)
 
@@ -321,7 +326,7 @@ class TestIdentifyGroups:
 
     def test_fallback_to_en_name(self):
         lookup = MagicMock()
-        lookup.lookup.side_effect = [None, LookupResult(tmdb_id=288971, media_type=MediaType.TV)]
+        lookup.lookup.side_effect = [None, LookupResult(tmdb_id=288971, provider_media_type=ProviderMediaType.SERIES)]
         svc = self._service(lookup)
 
         result = svc.identify_groups([self._group(["穹庐下的魔女", "Jaadugar"])])
@@ -357,7 +362,7 @@ class TestIdentifyGroups:
     def test_identify_groups_uses_episode_remapper(self):
         """集数重映射走 EpisodeRemapper（发布组编号习惯优先，再交 EpisodeMapper）"""
         lookup = MagicMock()
-        lookup.lookup.return_value = LookupResult(tmdb_id=97699, media_type=MediaType.TV)
+        lookup.lookup.return_value = LookupResult(tmdb_id=97699, provider_media_type=ProviderMediaType.SERIES)
         svc = self._service(lookup)
         svc._episode_mapping_enabled = True
         svc._episode_remapper = MagicMock()

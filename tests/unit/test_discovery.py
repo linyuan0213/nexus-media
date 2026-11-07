@@ -5,6 +5,7 @@ from datetime import date
 import pytest
 
 from app.core.exceptions import ValidationError
+from app.domain.media_types import MediaKind, ProviderMediaType
 from app.media.metadata import (
     DiscoveryFeed,
     DiscoveryItem,
@@ -17,6 +18,8 @@ from app.media.metadata.providers.discovery import (
     BangumiDiscovery,
     DoubanDiscovery,
     TmdbDiscovery,
+    _douban_discovery_item,
+    _tmdb_discovery_item,
     season_range,
 )
 from app.media.metadata.registry import MetadataRegistry
@@ -84,6 +87,18 @@ def test_douban_discovery_maps_items():
     assert item.anchor_ref is not None
     assert item.anchor_ref.external_id == "37068446"
     assert page.has_more is False
+
+
+def test_discovery_items_do_not_default_unknown_to_movie():
+    douban = _douban_discovery_item({"id": "1", "title": "未知条目"})
+    assert douban is not None
+    assert douban.ref.provider_media_type == ProviderMediaType.UNKNOWN
+    assert douban.ref.media_kind == MediaKind.UNKNOWN
+
+    tmdb = _tmdb_discovery_item({"id": 2, "title": "未知条目"})
+    assert tmdb is not None
+    assert tmdb.ref.provider_media_type == ProviderMediaType.UNKNOWN
+    assert tmdb.ref.media_kind == MediaKind.UNKNOWN
 
 
 def test_douban_discovery_prefers_poster_over_still_photo():

@@ -7,6 +7,12 @@ from lxml import etree
 
 import log
 from app.core.exceptions import TMDBError
+from app.domain.media_types import (
+    ProviderMediaType,
+    external_protocol_type,
+    legacy_media_type_of,
+    provider_media_type_of,
+)
 from app.domain.mediatypes import MediaType
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -122,7 +128,7 @@ class TmdbSearch:
         results = {}
         with ThreadPoolExecutor(max_workers=min(len(candidates), 5)) as executor:
             future_to_movie = {
-                executor.submit(lambda m: (m, self._fetch_allnames(MediaType.MOVIE, m.get("id"))), m): m
+                executor.submit(lambda m: (m, self._fetch_allnames(ProviderMediaType.MOVIE, m.get("id"))), m): m
                 for m in candidates
             }
             for future in as_completed(future_to_movie):
@@ -183,7 +189,7 @@ class TmdbSearch:
             """验证作品集数是否足够容纳目标集号（高集号动漫专用）"""
             if not episode or episode <= 50:
                 return True
-            detail = self._get_detail(tv_info.get("id"), MediaType.TV)
+            detail = self._get_detail(tv_info.get("id"), ProviderMediaType.SERIES)
             ep_count = detail.get("number_of_episodes", 0) if detail else 0
             if ep_count < episode:
                 log.debug(f"[Meta]{tv_info.get('name')} 集数({ep_count})不足({episode})，跳过")
@@ -231,7 +237,7 @@ class TmdbSearch:
         results = {}
         with ThreadPoolExecutor(max_workers=min(len(candidates), 5)) as executor:
             future_to_tv = {
-                executor.submit(lambda t: (t, self._fetch_allnames(MediaType.TV, t.get("id"))), t): t
+                executor.submit(lambda t: (t, self._fetch_allnames(ProviderMediaType.SERIES, t.get("id"))), t): t
                 for t in candidates
             }
             for future in as_completed(future_to_tv):
@@ -280,7 +286,7 @@ class TmdbSearch:
     def _tv_has_season(self, tmdb_id, season_number):
         """检查 TV 是否有指定的季"""
         try:
-            return self._detail_has_season(self._get_detail(tmdb_id, MediaType.TV), season_number)
+            return self._detail_has_season(self._get_detail(tmdb_id, ProviderMediaType.SERIES), season_number)
         except Exception:
             return False
 
@@ -332,7 +338,7 @@ class TmdbSearch:
             if (compare_tmdb_names(name, tv.get("name")) or compare_tmdb_names(name, tv.get("original_name"))) and (
                 tv.get("first_air_date") or ""
             )[:4] == str(media_year):
-                detail = self._get_detail(tv.get("id"), MediaType.TV)
+                detail = self._get_detail(tv.get("id"), ProviderMediaType.SERIES)
                 # 名称+首播年命中但无目标季（如同名真人剧），跳过避免抢占动漫条目
                 if season_number and not self._detail_has_season(detail, season_number):
                     continue
@@ -344,7 +350,7 @@ class TmdbSearch:
         results = {}
         with ThreadPoolExecutor(max_workers=min(len(candidates), 5)) as executor:
             future_to_tv = {
-                executor.submit(lambda t: (t, self._fetch_allnames(MediaType.TV, t.get("id"))), t): t
+                executor.submit(lambda t: (t, self._fetch_allnames(ProviderMediaType.SERIES, t.get("id"))), t): t
                 for t in candidates
             }
             for future in as_completed(future_to_tv):
@@ -408,11 +414,11 @@ class TmdbSearch:
         tv_matches = []
         for multi in multis[:5]:
             if multi.get("media_type") == "movie":
-                movie_info, names = self._fetch_allnames(MediaType.MOVIE, multi.get("id"))
+                movie_info, names = self._fetch_allnames(ProviderMediaType.MOVIE, multi.get("id"))
                 if compare_tmdb_names(name, names):
                     return movie_info
             elif multi.get("media_type") == "tv":
-                tv_info, names = self._fetch_allnames(MediaType.TV, multi.get("id"))
+                tv_info, names = self._fetch_allnames(ProviderMediaType.SERIES, multi.get("id"))
                 if compare_tmdb_names(name, names):
                     tv_matches.append((tv_info, names))
         if tv_matches:
@@ -448,8 +454,9 @@ class TmdbSearch:
             return []
         ret_infos = []
         for multi in multis:
-            if multi.get("media_type") in ["movie", "tv"]:
-                multi["media_type"] = MediaType.MOVIE if multi.get("media_type") == "movie" else MediaType.TV
+            provider_type = provider_media_type_of(multi.get("media_type"))
+            if provider_type in (ProviderMediaType.MOVIE, ProviderMediaType.SERIES):
+                multi["media_type"] = legacy_media_type_of(provider_type)
                 ret_infos.append(multi)
         return ret_infos
 
@@ -475,7 +482,7 @@ class TmdbSearch:
             return []
         ret_infos = []
         for movie in movies:
-            movie["media_type"] = MediaType.MOVIE
+            movie["media_type"] = legacy_media_type_of(ProviderMediaType.MOVIE)
             ret_infos.append(movie)
         return ret_infos
 
@@ -501,13 +508,14 @@ class TmdbSearch:
             return []
         ret_infos = []
         for tv in tvs:
-            tv["media_type"] = MediaType.TV
+            tv["media_type"] = legacy_media_type_of(ProviderMediaType.SERIES)
             ret_infos.append(tv)
         return ret_infos
 
-    def search_web(self, name: str, mtype: MediaType) -> Any:
+    def search_web(self, name: str, mtype: MediaType | ProviderMediaType) -> Any:
         if not name or StringUtils.is_chinese(name):
             return None
+        hint_type = provider_media_type_of(mtype)
         log.info(f"[Meta]正在从TheDbMovie网站查询：{name}...")
         tmdb_url = f"https://www.themoviedb.org/search?query={name}"
         tmdb_limiter = get_rate_limiter()
@@ -522,19 +530,27 @@ class TmdbSearch:
             return None
         try:
             html = etree.HTML(res.text)
-            xpath = "//a[@data-id and @data-media-type='tv']/@href" if mtype == MediaType.TV else "//a[@data-id]/@href"
+            xpath = (
+                "//a[@data-id and @data-media-type='tv']/@href"
+                if hint_type == ProviderMediaType.SERIES
+                else "//a[@data-id]/@href"
+            )
             tmdb_links = [
                 link for link in cast(list, html.xpath(xpath)) if link and (link.startswith(("/tv", "/movie")))
             ]
             if len(tmdb_links) != 1:
                 log.info(f"[Meta]{name} TMDB网站返回{'数据过多' if tmdb_links else '无'}结果")
                 return None
-            media_type = MediaType.TV if tmdb_links[0].startswith("/tv") else MediaType.MOVIE
+            media_type = ProviderMediaType.SERIES if tmdb_links[0].startswith("/tv") else ProviderMediaType.MOVIE
             tmdbid = tmdb_links[0].split("/")[-1]
             tmdbinfo = self._get_detail(tmdbid, media_type)
-            if not tmdbinfo or (mtype != MediaType.UNKNOWN and tmdbinfo.get("media_type") != mtype):
+            if not tmdbinfo or (
+                hint_type != ProviderMediaType.UNKNOWN
+                and provider_media_type_of(tmdbinfo.get("media_type")) != hint_type
+            ):
                 return None
-            if media_type == MediaType.MOVIE:
+            is_movie = media_type == ProviderMediaType.MOVIE
+            if is_movie:
                 if not (
                     compare_tmdb_names(name, tmdbinfo.get("title"))
                     or compare_tmdb_names(name, tmdbinfo.get("original_title"))
@@ -549,10 +565,10 @@ class TmdbSearch:
                     log.info(f"[Meta]{name} TMDB网站返回结果名称不匹配，跳过")
                     return None
             log.info(
-                f"[Meta]{name} 从WEB识别到 {'电影' if media_type == MediaType.MOVIE else '电视剧'}："
+                f"[Meta]{name} 从WEB识别到 {'电影' if is_movie else '电视剧'}："
                 f"TMDBID={tmdbinfo.get('id')}, "
-                f"名称={tmdbinfo.get('title' if media_type == MediaType.MOVIE else 'name')}, "
-                f"日期={tmdbinfo.get('release_date' if media_type == MediaType.MOVIE else 'first_air_date')}"
+                f"名称={tmdbinfo.get('title' if is_movie else 'name')}, "
+                f"日期={tmdbinfo.get('release_date' if is_movie else 'first_air_date')}"
             )
             return tmdbinfo
         except Exception as err:
@@ -562,13 +578,14 @@ class TmdbSearch:
     def _fetch_allnames(self, mtype, tmdb_id):
         if not mtype or not tmdb_id:
             return {}, []
+        provider_type = external_protocol_type(provider_media_type_of(mtype))
         ret_names = []
         tmdb_info = TmdbDetail(self.client).get_detail(
-            tmdb_id, mtype, append_to_response="alternative_titles,translations"
+            tmdb_id, provider_type, append_to_response="alternative_titles,translations"
         )
         if not tmdb_info:
             return tmdb_info, []
-        if mtype == MediaType.MOVIE:
+        if provider_type == ProviderMediaType.MOVIE:
             for alt in tmdb_info.get("alternative_titles", {}).get("titles", []):
                 title = alt.get("title")
                 if title and title not in ret_names:

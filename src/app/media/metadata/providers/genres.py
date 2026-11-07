@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from app.core.constants import ANIME_GENREIDS
+from app.domain.media_types import MediaKind, ProviderMediaType, provider_media_type_of
 from app.domain.mediatypes import MediaType
 
 _ANIME_GENRE_NAMES = {"动画", "動畫", "アニメ", "animation"}
@@ -27,14 +28,28 @@ def is_anime_genre(genres: Iterable[Any] | None) -> bool:
     return False
 
 
+def classify_provider_media_type(
+    media_type: ProviderMediaType,
+    genres: Iterable[Any] | None,
+    content_profile: str = "default",
+) -> tuple[ProviderMediaType, str]:
+    """按题材细化 provider 类型；动漫属于连续性内容，但保留独立画像."""
+    if content_profile == "anime":
+        return ProviderMediaType.ANIME, "anime"
+    if media_type.kind in (MediaKind.EPISODIC, MediaKind.UNKNOWN) and is_anime_genre(genres):
+        return ProviderMediaType.ANIME, "anime"
+    return media_type, content_profile
+
+
 def classify_media_type(
     media_type: MediaType,
     genres: Iterable[Any] | None,
     content_profile: str = "default",
 ) -> tuple[MediaType, str]:
-    """按题材细化分类；动漫仍然存放在电视剧表，但使用 anime 内容画像."""
-    if content_profile == "anime":
-        return MediaType.ANIME, "anime"
-    if media_type in (MediaType.TV, MediaType.ANIME, MediaType.UNKNOWN) and is_anime_genre(genres):
-        return MediaType.ANIME, "anime"
-    return media_type, content_profile
+    """兼容旧调用的内部类型分类入口."""
+    provider_type, profile = classify_provider_media_type(
+        provider_media_type_of(media_type),
+        genres,
+        content_profile,
+    )
+    return provider_type.to_media_type(), profile

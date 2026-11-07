@@ -8,8 +8,13 @@ from api.routers.subscription import (
     _resolve_type_and_profile,
 )
 from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.media_types import MediaKind, ProviderMediaType
 from app.domain.mediatypes import MediaType
-from app.media.metadata.providers.genres import classify_media_type, is_anime_genre
+from app.media.metadata.providers.genres import (
+    classify_media_type,
+    classify_provider_media_type,
+    is_anime_genre,
+)
 from app.media.models import MediaInfo
 from app.services.subscribe.management.query_service import _resolve_subscribe_type, _source_label
 from app.services.subscribe.management.utils import gen_rss_note
@@ -73,6 +78,22 @@ class TestGenericAnimeClassification:
         assert classify_media_type(MediaType.TV, ["剧情"]) == (MediaType.TV, "default")
         # 电影保持电影，不因为动画题材被塞进电视剧表
         assert classify_media_type(MediaType.MOVIE, ["动画"]) == (MediaType.MOVIE, "default")
+
+    def test_provider_classification_uses_kind_and_keeps_anime(self):
+        assert classify_provider_media_type(ProviderMediaType.SERIES, ["动画"]) == (
+            ProviderMediaType.ANIME,
+            "anime",
+        )
+        assert classify_provider_media_type(ProviderMediaType.SERIES, ["剧情"]) == (
+            ProviderMediaType.SERIES,
+            "default",
+        )
+        assert classify_provider_media_type(ProviderMediaType.MOVIE, ["动画"]) == (
+            ProviderMediaType.MOVIE,
+            "default",
+        )
+        assert ProviderMediaType.SERIES.kind == MediaKind.EPISODIC
+        assert ProviderMediaType.ANIME.kind == MediaKind.EPISODIC
 
     def test_note_genres_resolve_anime_without_tmdb(self):
         assert _resolve_subscribe_type("tv", None, ["动画"]) == MediaType.ANIME.value

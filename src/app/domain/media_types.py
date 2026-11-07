@@ -25,7 +25,10 @@ class ProviderMediaType(str, Enum):
 
     @classmethod
     def from_value(cls, value: Any) -> "ProviderMediaType":
-        raw = str(value or "").strip().lower()
+        if isinstance(value, cls):
+            return value
+        raw_value = value.value if isinstance(value, Enum) else value
+        raw = str(raw_value or "").strip().lower()
         if raw in {"movie", "film"}:
             return cls.MOVIE
         if raw in {"series", "show", "tv", "episode", "episodic"}:
@@ -50,6 +53,34 @@ class ProviderMediaType(str, Enum):
         if self == ProviderMediaType.ANIME:
             return MediaType.ANIME
         return MediaType.UNKNOWN
+
+
+def provider_media_type_of(value: Any) -> ProviderMediaType:
+    """把内部类型/外部协议值归一为 ProviderMediaType；未知值不猜测."""
+    return ProviderMediaType.from_value(value)
+
+
+def external_protocol_type(value: Any, *, anime_as_series: bool = True) -> ProviderMediaType:
+    """归一为外部协议类型；仅支持 movie/tv 的协议把动漫视为剧集."""
+    provider_type = provider_media_type_of(value)
+    if anime_as_series and provider_type == ProviderMediaType.ANIME:
+        return ProviderMediaType.SERIES
+    return provider_type
+
+
+def external_protocol_value(value: Any, *, anime_as_series: bool = True) -> str:
+    """输出外部协议字符串（movie/tv/anime/unknown）."""
+    return external_protocol_type(value, anime_as_series=anime_as_series).value
+
+
+def media_kind_of(value: Any) -> MediaKind:
+    """返回内部结构类型，用于电影/连续性判断."""
+    return provider_media_type_of(value).kind
+
+
+def legacy_media_type_of(value: Any) -> MediaType:
+    """把外部协议类型转回内部 MediaType，供旧接口兼容."""
+    return provider_media_type_of(value).to_media_type()
 
 
 @dataclass(frozen=True)

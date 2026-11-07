@@ -403,7 +403,7 @@ class MediaService:
                 "id": result.tmdb_id,
                 "title": result.title,
                 "original_title": result.original_title,
-                "media_type": result.media_type.value if result.media_type else None,
+                "media_type": result.provider_media_type.value if result.provider_media_type else None,
                 "year": result.year,
                 "overview": result.overview,
                 "vote_average": result.vote_average,
@@ -414,7 +414,7 @@ class MediaService:
             }
             # 补充全量信息（获取 genre_ids 等）
             full_info = self._lookup.get_tmdb_info(
-                mtype=result.media_type,
+                mtype=result.provider_media_type.to_media_type() if result.provider_media_type else None,
                 tmdbid=result.tmdb_id,
                 language=language,
                 append_to_response=append_to_response,
@@ -626,7 +626,7 @@ class MediaService:
                         "id": looked_up.tmdb_id,
                         "title": looked_up.title,
                         "original_title": looked_up.original_title,
-                        "media_type": looked_up.media_type.value if looked_up.media_type else None,
+                        "media_type": looked_up.provider_media_type.value if looked_up.provider_media_type else None,
                         "year": looked_up.year,
                         "overview": looked_up.overview,
                         "vote_average": looked_up.vote_average,
@@ -822,7 +822,7 @@ class MediaService:
                 "id": looked_up.tmdb_id,
                 "title": looked_up.title,
                 "original_title": looked_up.original_title,
-                "media_type": looked_up.media_type.value if looked_up.media_type else None,
+                "media_type": looked_up.provider_media_type.value if looked_up.provider_media_type else None,
                 "year": looked_up.year,
                 "overview": looked_up.overview,
                 "vote_average": looked_up.vote_average,
@@ -1056,7 +1056,9 @@ class MediaService:
                     # 取完整 TMDB detail（含 origin_country/genre_ids 等），
                     # 确保 set_provider_data 的类型与分类判定正确，避免落到"未分类"
                     detail = self.get_tmdb_info(
-                        mtype=looked_up.media_type or parsed.type,
+                        mtype=looked_up.provider_media_type.to_media_type()
+                        if looked_up.provider_media_type
+                        else parsed.type,
                         tmdbid=looked_up.tmdb_id,
                     )
                     if detail:
@@ -1068,7 +1070,7 @@ class MediaService:
                             "title": looked_up.title,
                             "name": looked_up.title,
                             "media_type": (
-                                MediaType.from_string(looked_up.media_type.value) if looked_up.media_type else None
+                                looked_up.provider_media_type.to_media_type() if looked_up.provider_media_type else None
                             ),
                             "year": looked_up.year,
                             "overview": looked_up.overview,

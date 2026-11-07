@@ -7,7 +7,7 @@ from datetime import date
 from typing import Any, Literal
 
 import log
-from app.domain.media_types import ProviderMediaType
+from app.domain.media_types import ProviderMediaType, provider_media_type_of
 from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.infrastructure.image_proxy import ImageProxy
@@ -175,7 +175,7 @@ class TmdbDiscovery:
             item = _tmdb_discovery_item(source)
             if item is None or (year and item.year != year):
                 continue
-            genre_map = self._tmdb_genre_map(item.ref.media_type)
+            genre_map = self._tmdb_genre_map(item.ref.provider_media_type)
             item.tags = [
                 genre_map[str(genre_id)] for genre_id in source.get("genre_ids") or [] if str(genre_id) in genre_map
             ]
@@ -193,14 +193,15 @@ class TmdbDiscovery:
             facets={"genre": facets},
         )
 
-    def _tmdb_genre_map(self, media_type: MediaType | None) -> dict[str, str]:
-        key = media_type.value if media_type else "movie"
+    def _tmdb_genre_map(self, media_type: MediaType | ProviderMediaType | None) -> dict[str, str]:
+        provider_type = provider_media_type_of(media_type)
+        key = provider_type.value if media_type is not None else "movie"
         if key in self._genre_maps:
             return self._genre_maps[key]
         mapping: dict[str, str] = {}
         raw_genres = []
         try:
-            raw_genres = self._media.get_tmdb_genres(media_type) or []
+            raw_genres = self._media.get_tmdb_genres(provider_type) or []
             for item in raw_genres:
                 if isinstance(item, dict):
                     genre_id, genre_name = item.get("id"), item.get("name")
@@ -218,7 +219,7 @@ class TmdbDiscovery:
         if feed == "seasonal_movie":
             return (
                 self._media.get_tmdb_discover(
-                    MediaType.MOVIE,
+                    ProviderMediaType.MOVIE,
                     params={
                         "primary_release_date.gte": start,
                         "primary_release_date.lte": end,
@@ -235,7 +236,7 @@ class TmdbDiscovery:
         }
         if feed == "seasonal_anime":
             params["with_genres"] = 16
-        return self._media.get_tmdb_discover(MediaType.TV, params=params, page=page) or []
+        return self._media.get_tmdb_discover(ProviderMediaType.SERIES, params=params, page=page) or []
 
 
 class BangumiDiscovery:
@@ -399,9 +400,9 @@ def _douban_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
     if not cover:
         photos = raw.get("photos") or []
         cover = photos[0] if photos else None
-    media_type = MediaType.from_string(str(raw.get("type") or ""))
-    if media_type == MediaType.UNKNOWN:
-        media_type = MediaType.TV if raw.get("episodes_info") else MediaType.MOVIE
+    provider_type = provider_media_type_of(raw.get("type"))
+    if provider_type == ProviderMediaType.UNKNOWN and raw.get("episodes_info"):
+        provider_type = ProviderMediaType.SERIES
     rating = raw.get("rating") or {}
     year = str(raw.get("year") or "")
     card = str(raw.get("card_subtitle") or "")
@@ -418,7 +419,7 @@ def _douban_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
         ref=ProviderRef(
             provider="douban",
             external_id=external_id,
-            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+            provider_media_type=provider_type,
         ),
         content_profile="default",
         title=str(raw.get("title") or ""),
@@ -429,7 +430,7 @@ def _douban_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
         anchor_ref=ProviderRef(
             provider="douban",
             external_id=external_id,
-            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+            provider_media_type=provider_type,
         ),
         actions=["subscribe", "detail"],
         extra={
@@ -444,14 +445,14 @@ def _tmdb_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
     external_id = str(raw.get("id") or raw.get("tmdbid") or "").strip()
     if not external_id:
         return None
-    media_type = MediaType.from_string(str(raw.get("media_type") or raw.get("type") or "movie"))
+    provider_type = provider_media_type_of(raw.get("media_type") or raw.get("type"))
     vote = raw.get("vote")
     return DiscoveryItem(
         provider="tmdb",
         ref=ProviderRef(
             provider="tmdb",
             external_id=external_id,
-            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+            provider_media_type=provider_type,
         ),
         content_profile="default",
         title=str(raw.get("title") or raw.get("name") or ""),
@@ -461,7 +462,7 @@ def _tmdb_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
         anchor_ref=ProviderRef(
             provider="tmdb",
             external_id=external_id,
-            provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+            provider_media_type=provider_type,
         ),
         actions=["subscribe", "detail"],
         extra={"tmdb.genre_ids": raw.get("genre_ids") or []},

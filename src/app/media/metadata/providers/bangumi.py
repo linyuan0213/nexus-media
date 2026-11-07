@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Protocol
 
-from app.domain.media_types import ProviderMediaType
+from app.domain.media_types import ProviderMediaType, provider_media_type_of
 from app.domain.mediatypes import MediaType
 from app.media.external.bangumi import Bangumi
 
@@ -40,6 +40,7 @@ def bangumi_item_to_record(
     content_profile: str = "anime",
 ) -> ProviderRecord:
     """把 Bangumi v0 subject / calendar item 映射为规范记录."""
+    provider_type = provider_media_type_of(media_type)
     bid = str(external_id or item.get("id") or "")
     images = item.get("images") or {}
     rating = item.get("rating") or {}
@@ -85,10 +86,10 @@ def bangumi_item_to_record(
             ProviderRef(
                 provider="bangumi",
                 external_id=bid,
-                provider_media_type=ProviderMediaType.from_value(getattr(media_type, "value", media_type)),
+                provider_media_type=provider_type,
             )
         ],
-        media_type=media_type,
+        media_type=provider_type.to_media_type(),
         content_profile=content_profile,
         locale="zh-CN",
         title=item.get("name_cn") or item.get("name") or None,
