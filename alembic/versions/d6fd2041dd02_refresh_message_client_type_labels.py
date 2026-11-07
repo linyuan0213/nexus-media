@@ -64,7 +64,11 @@ def _rewrite(raw: str, *, reverse: bool = False) -> str | None:
 
 def _refresh(*, reverse: bool = False) -> None:
     bind = op.get_bind()
-    rows = bind.execute(sa.text("SELECT ID, TEMPLATES FROM MESSAGE_CLIENT")).fetchall()
+    quote = bind.dialect.identifier_preparer.quote
+    table = quote("MESSAGE_CLIENT")
+    id_column = quote("ID")
+    templates_column = quote("TEMPLATES")
+    rows = bind.execute(sa.text(f"SELECT {id_column}, {templates_column} FROM {table}")).fetchall()
     for row_id, templates in rows:
         if not templates:
             continue
@@ -72,7 +76,7 @@ def _refresh(*, reverse: bool = False) -> None:
         if rewritten is None:
             continue
         bind.execute(
-            sa.text("UPDATE MESSAGE_CLIENT SET TEMPLATES = :templates WHERE ID = :id"),
+            sa.text(f"UPDATE {table} SET {templates_column} = :templates WHERE {id_column} = :id"),
             {"templates": rewritten, "id": row_id},
         )
 

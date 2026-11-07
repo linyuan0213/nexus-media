@@ -21,12 +21,16 @@ def upgrade() -> None:
         "MEDIA_IDENTITY",
         sa.Column("MEDIA_KIND", sa.String(16), nullable=False, server_default="unknown"),
     )
+    quote = op.get_bind().dialect.identifier_preparer.quote
+    table = quote("MEDIA_IDENTITY")
+    kind = quote("MEDIA_KIND")
+    media_type = quote("MEDIA_TYPE")
     op.execute(
-        """
-        UPDATE MEDIA_IDENTITY
-        SET MEDIA_KIND = CASE
-            WHEN MEDIA_TYPE = 'movie' THEN 'movie'
-            WHEN MEDIA_TYPE IN ('tv', 'anime') THEN 'episodic'
+        f"""
+        UPDATE {table}
+        SET {kind} = CASE
+            WHEN {media_type} = 'movie' THEN 'movie'
+            WHEN {media_type} IN ('tv', 'anime') THEN 'episodic'
             ELSE 'unknown'
         END
         """
