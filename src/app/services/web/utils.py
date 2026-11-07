@@ -2,6 +2,7 @@ from typing import Any
 
 import cn2an
 
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -284,8 +285,15 @@ def mediainfo_dict(media_info):
         tmdb_se_link = f"{tmdb_link}/season/{media_info.get_season_seq()}"
         if media_info.get_episode_string():
             tmdb_se_link = f"{tmdb_se_link}/episode/{media_info.get_episode_seq()}"
+    resolved_type = media_type_registry.resolve_profile(getattr(media_info, "content_profile", None)) or (
+        media_type_registry.resolve(getattr(media_info, "media_type_key", None) or media_info.type)
+    )
     return {
         "type": media_info.type.value if media_info.type else "",
+        "media_type_key": getattr(media_info, "media_type_key", None) or resolved_type.key,
+        "media_type_name": resolved_type.display_name,
+        "media_kind": getattr(media_info, "media_kind", None) or resolved_type.kind.value,
+        "content_profile": getattr(media_info, "content_profile", "") or "",
         "name": media_info.get_name(),
         "title": media_info.title,
         "year": media_info.year,

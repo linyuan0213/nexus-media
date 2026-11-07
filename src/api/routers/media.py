@@ -751,10 +751,14 @@ def get_downloaded(
                     "orgid": item.TMDBID,
                     "tmdbid": item.TMDBID,
                     "title": item.TITLE,
-                    "type": MediaType.from_string(item.TYPE or "").value,
-                    "media_type": MediaType.from_string(item.TYPE or "").display_name,
-                    "media_type_name": media_type_registry.resolve(item.TYPE).display_name,
-                    "media_kind": media_type_registry.resolve(item.TYPE).kind.value,
+                    "type": (
+                        resolved := media_type_registry.resolve_profile(getattr(item, "CONTENT_PROFILE", None))
+                        or media_type_registry.resolve(item.TYPE, getattr(item, "CONTENT_PROFILE", None))
+                    ).legacy_type.value,
+                    "media_type": resolved.display_name,
+                    "media_type_key": resolved.key,
+                    "media_type_name": resolved.display_name,
+                    "media_kind": resolved.kind.value,
                     "year": item.YEAR,
                     "vote": item.VOTE,
                     "image": item.POSTER,

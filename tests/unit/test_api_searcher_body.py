@@ -34,6 +34,23 @@ class TestStripEmptyLists:
         assert "categories" not in body
         assert "keyword" in body
 
+    def test_api_error_response_sets_last_error(self):
+        s = self._searcher()
+        with patch("app.sites.api_searcher.HttpClient") as client_cls:
+            client_cls.return_value.post.return_value.is_success = True
+            client_cls.return_value.post.return_value.json.return_value = {
+                "code": "4",
+                "data": None,
+                "message": "請求過於頻繁",
+            }
+            result = s._execute_request(
+                {"method": "POST", "path": "/search", "content_type": "application/json"},
+                {"keyword": "IPTD-543"},
+                {"keyword": "IPTD-543", "page": "0"},
+            )
+        assert result == []
+        assert s.last_error == "API 4: 請求過於頻繁"
+
     def test_nonempty_categories_kept(self):
         s = self._searcher()
         with patch("app.sites.api_searcher.HttpClient") as client_cls:

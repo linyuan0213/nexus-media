@@ -6,6 +6,7 @@ from app.domain.media_metadata import (
     normalize_genres,
     normalize_languages,
 )
+from app.domain.media_types import media_type_registry
 from app.domain.media_utils import check_media_exists
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
@@ -248,8 +249,15 @@ class MediaRecommendationService:
                 "orgid": item.TMDBID,
                 "tmdbid": item.TMDBID,
                 "title": item.TITLE,
-                "type": MediaType.from_string(item.TYPE).value,
-                "media_type": MediaType.from_string(item.TYPE).display_name,
+                "type": (
+                    resolved := media_type_registry.resolve_profile(getattr(item, "CONTENT_PROFILE", None))
+                    or media_type_registry.resolve(item.TYPE, getattr(item, "CONTENT_PROFILE", None))
+                ).legacy_type.value,
+                "media_type": resolved.display_name,
+                "media_type_key": resolved.key,
+                "media_type_name": resolved.display_name,
+                "media_kind": resolved.kind.value,
+                "content_profile": getattr(item, "CONTENT_PROFILE", "") or "",
                 "year": item.YEAR,
                 "vote": item.VOTE,
                 "image": item.POSTER,

@@ -172,6 +172,9 @@ class SearchResultService:
                     poster_url = ImageProxy.get_proxy_image_url(item.POSTER, use_proxy=True)
                 except Exception as e:  # noqa: BLE001
                     log.debug(f"[Search]忽略异常: {e}")
+                resolved_type = media_type_registry.resolve_profile(
+                    getattr(item, "CONTENT_PROFILE", None)
+                ) or media_type_registry.resolve(media_type)
                 search_results_dict[title_string] = {
                     "key": item.ID,
                     "title": item.TITLE,
@@ -187,8 +190,8 @@ class SearchResultService:
                     "content_profile": getattr(item, "CONTENT_PROFILE", None) or "default",
                     "image": poster_url,
                     "type": media_type,
-                    "media_type_name": media_type_registry.resolve(media_type).display_name,
-                    "media_kind": media_type_registry.resolve(media_type).kind.value,
+                    "media_type_name": resolved_type.display_name,
+                    "media_kind": resolved_type.kind.value,
                     "vote": self._resolve_vote(item, rating_cache),
                     "tmdbid": item.TMDBID,
                     "backdrop": poster_url,

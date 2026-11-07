@@ -236,7 +236,7 @@ class BuiltinIndexer(IndexerClientBase):
         # 站点级失败（超时/HTTP 错误等被 searcher 吞掉、不抛异常）同样计为失败
         if not error_flag and last_error:
             error_flag = True
-            if any(token in last_error.lower() for token in ("429", "rate limit", "too many")):
+            if any(token in last_error.lower() for token in ("429", "rate limit", "too many", "频繁")):
                 get_site_search_gate().mark_deferred(getattr(indexer, "siteid", None))
 
         seconds = round((datetime.datetime.now() - start_time).total_seconds(), 1)

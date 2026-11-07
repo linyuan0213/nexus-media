@@ -169,6 +169,13 @@ class ApiSiteSearcher:
             self.last_error = f"{type(e).__name__}"
             log.warn(f"[ApiSiteSearcher]{self._site.name} 搜索失败, url={url}, error={e}")
             return []
+        if isinstance(resp_data, dict) and resp_data.get("code") is not None:
+            code = str(resp_data.get("code"))
+            if code not in {"0", "200", "success"} and not resp_data.get("data"):
+                message = str(resp_data.get("message") or resp_data.get("msg") or "").strip()
+                self.last_error = f"API {code}: {message}".strip()
+                log.warn(f"[ApiSiteSearcher]{self._site.name} 接口返回错误: {self.last_error}, url={url}")
+                return []
         result = self._parse_response(resp_data, search_config)
         log.debug(f"[ApiSiteSearcher]{self._site.name} 返回 {len(result)} 条结果, url={url}")
         if len(result) == 0:

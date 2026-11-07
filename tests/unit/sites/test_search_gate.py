@@ -55,3 +55,12 @@ def test_wait_timeout_raises_busy():
         with pytest.raises(SiteSearchBusyError):
             with gate.acquire("mteam", timeout=0.01):
                 pass
+
+
+def test_deferred_site_is_skipped_until_cooldown():
+    gate = SiteSearchGate(lock_manager=_LockManager())
+    gate.mark_deferred("mteam", seconds=60)
+
+    with pytest.raises(SiteSearchBusyError):
+        with gate.acquire("mteam", timeout=1):
+            pass

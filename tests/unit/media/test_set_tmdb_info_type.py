@@ -74,3 +74,15 @@ def test_set_provider_data_accepts_string_genres():
         )
 
     assert m.genres == ["动画", "剧情"]
+
+
+def test_to_dict_exposes_resolved_type_metadata():
+    media = meta_info(title="Demo", mtype=MediaType.TV)
+    media.content_profile = "anime"
+
+    data = media.to_dict()
+
+    assert data["type"] == "tv"
+    assert data["media_type_name"] == "动漫"
+    assert data["media_kind"] == "episodic"
+    assert data["media_type_key"] == "anime"

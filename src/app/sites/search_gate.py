@@ -19,6 +19,7 @@ class SiteSearchGate:
         self._local_locks: dict[str, threading.BoundedSemaphore] = {}
         self._guard = threading.Lock()
         self._deferred_at: dict[str, float] = {}
+        self._deferred_until: dict[str, float] = {}
         self._deferred_guard = threading.Lock()
 
     @staticmethod
@@ -42,12 +43,21 @@ class SiteSearchGate:
                 self._local_locks[site_id] = lock
             return lock
 
-    def mark_deferred(self, site_id: Any) -> None:
+    def mark_deferred(self, site_id: Any, seconds: float | None = None) -> None:
+        """标记站点退避；限流错误后短时间内不再请求该站点."""
         key = str(site_id or "").strip()
         if not key:
             return
+        if seconds is None:
+            subscribe = settings.get("subscribe") or {}
+            try:
+                seconds = max(1.0, float(subscribe.get("site_search_defer_seconds", 300) or 300))
+            except (TypeError, ValueError):
+                seconds = 300.0
+        now = time.time()
         with self._deferred_guard:
-            self._deferred_at[key] = time.time()
+            self._deferred_at[key] = now
+            self._deferred_until[key] = now + max(0.0, seconds)
 
     def was_deferred_since(self, timestamp: float) -> bool:
         with self._deferred_guard:
@@ -59,6 +69,11 @@ class SiteSearchGate:
         if not key:
             yield
             return
+
+        with self._deferred_guard:
+            until = self._deferred_until.get(key, 0.0)
+        if until > time.time():
+            raise SiteSearchBusyError(f"站点 {key} 退避中")
 
         concurrency, default_timeout = self._config()
         wait = default_timeout if timeout is None else max(0.1, timeout)

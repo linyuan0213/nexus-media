@@ -8,6 +8,7 @@ import log
 from app.core.constants import ANIME_GENREIDS
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.domain.media_ref import MediaRef
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.image_resolver import MediaImageResolver
@@ -756,6 +757,9 @@ class MediaInfo(BaseModel):
         return MediaImageResolver.get_poster_image(self, original=original)
 
     def to_dict(self) -> dict:
+        resolved_type = media_type_registry.resolve_profile(self.content_profile) or media_type_registry.resolve(
+            self.media_type_key or self.type, self.content_profile
+        )
         return {
             "id": self.tmdb_id,
             "orgid": self.tmdb_id,
@@ -763,6 +767,9 @@ class MediaInfo(BaseModel):
             "year": self.year,
             "type": self.type.value if self.type else "",
             "media_type": self.type.value if self.type else "",
+            "media_type_key": self.media_type_key or (resolved_type.key if resolved_type.key != "unknown" else None),
+            "media_kind": self.media_kind or resolved_type.kind.value,
+            "media_type_name": resolved_type.display_name,
             "vote": self.vote_average,
             "image": self.poster_path,
             "imdb_id": self.imdb_id,
