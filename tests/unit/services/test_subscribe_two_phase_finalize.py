@@ -645,6 +645,36 @@ def test_reconcile_finalizes_running_movie_when_transfer_history_exists():
     reopen.assert_not_called()
 
 
+def test_reconcile_does_not_finalize_over_edition_movie_from_old_transfer():
+    """洗版订阅有旧转移历史时仍应继续搜索/下载，不能立即定稿."""
+    import datetime
+    from unittest.mock import patch
+
+    svc, _final_tv, final_mv, reopen = _svc_for_reconcile()
+    movie = SimpleNamespace(
+        id=23,
+        name="ABC-123",
+        year="",
+        tmdb_id="",
+        state="R",
+        over_edition=True,
+        identity_id="id-23",
+        anchor_provider="demo",
+        anchor_external_id="ABC-123",
+    )
+    svc._tv_repo.get_all.return_value = []
+    svc._movie_repo.get_all.return_value = [movie]
+    transfer_repo = MagicMock()
+    transfer_repo.return_value.get_existing_anchors.return_value = {("demo", "ABC-123")}
+    transfer_repo.return_value.get_existing_external_ids.return_value = {"ABC-123"}
+    setattr(svc, "media_exists", MagicMock(return_value=False))
+
+    with patch("app.services.subscribe.management.service.TransferRepository", transfer_repo):
+        svc.reconcile_pending_transfers(now=datetime.datetime(2026, 1, 1))
+
+    final_mv.assert_not_called()
+
+
 def test_reconcile_normalizes_content_id_prefixed_anchor():
     """订阅锚点被写成 tmdb:content_id:XXX 时，也应按外部 ID 命中转移历史."""
     import datetime

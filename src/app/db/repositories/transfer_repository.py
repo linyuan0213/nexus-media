@@ -229,7 +229,13 @@ class TransferRepository(BaseRepository):
         with self.session() as db:
             rows = (
                 db.query(TRANSFERHISTORY.ANCHOR_EXTERNAL_ID)
-                .filter(TRANSFERHISTORY.ANCHOR_EXTERNAL_ID.in_(sorted(values)))
+                .filter(
+                    TRANSFERHISTORY.ANCHOR_EXTERNAL_ID.in_(sorted(values)),
+                    or_(
+                        TRANSFERHISTORY.DEST_STATE.is_(None),
+                        TRANSFERHISTORY.DEST_STATE.notin_(("missing", "deleted")),
+                    ),
+                )
                 .distinct()
                 .all()
             )
@@ -254,7 +260,13 @@ class TransferRepository(BaseRepository):
         with self.session() as db:
             rows = (
                 db.query(TRANSFERHISTORY.ANCHOR_PROVIDER, TRANSFERHISTORY.ANCHOR_EXTERNAL_ID)
-                .filter(or_(*conditions))
+                .filter(
+                    or_(*conditions),
+                    or_(
+                        TRANSFERHISTORY.DEST_STATE.is_(None),
+                        TRANSFERHISTORY.DEST_STATE.notin_(("missing", "deleted")),
+                    ),
+                )
                 .all()
             )
         return {(str(provider), str(external)) for provider, external in rows}

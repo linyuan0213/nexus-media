@@ -270,8 +270,9 @@ class SubscribeService:
                     getattr(mv, "anchor_provider", ""), getattr(mv, "anchor_external_id", "")
                 )
                 pair = (provider or "", external or "")
-                # 转移成功即入库：不依赖媒体服务器扫描，历史订阅也能直接定稿。
-                if pair in transferred or (pair[1] and pair[1] in transferred_external):
+                over_edition = bool(getattr(mv, "over_edition", False))
+                # 转移成功即入库；洗版订阅不能因旧转移历史被立即定稿。
+                if not over_edition and (pair in transferred or (pair[1] and pair[1] in transferred_external)):
                     self.finalize_movie_by_rssid(mv.id)
                     continue
                 state = getattr(mv, "state", None)
