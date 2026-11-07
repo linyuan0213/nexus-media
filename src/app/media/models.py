@@ -68,6 +68,8 @@ class MediaInfo(BaseModel):
     rev_string: str | None = None
     subtitle: str | None = None
     type: MediaType | None = None
+    media_type_key: str | None = None
+    media_kind: str | None = None
     content_profile: str = "default"
     anchor_provider: str | None = None
     anchor_external_id: str | None = None

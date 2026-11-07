@@ -510,6 +510,9 @@ class DownloadService:
         media.title = str(getattr(task, "title", "") or getattr(task, "torrent", "") or "")
         media.year = str(getattr(task, "year", "") or "")
         media.tmdb_id = str(getattr(task, "tmdb_id", "") or "")
+        media_ref = self._task_media_ref(task)
+        media.media_type_key = media_ref.key
+        media.media_kind = media_ref.kind.value
         media.type = self._task_media_type(task)
         media.anchor_provider = getattr(task, "anchor_provider", None)
         media.anchor_external_id = getattr(task, "anchor_external_id", None)
@@ -528,10 +531,14 @@ class DownloadService:
             log.debug(f"[DownloadService]下载进度投影失败 {key}: {exc}")
 
     @staticmethod
-    def _task_media_type(task) -> MediaType:
+    def _task_media_ref(task):
         value = str(getattr(task, "media_type", "") or "").strip()
         profile = str(getattr(task, "content_profile", "") or "").strip()
-        resolved = media_type_registry.resolve_profile(profile) or media_type_registry.resolve(value, profile)
+        return media_type_registry.resolve_profile(profile) or media_type_registry.resolve(value, profile)
+
+    @classmethod
+    def _task_media_type(cls, task) -> MediaType:
+        resolved = cls._task_media_ref(task)
         if resolved.key == MediaType.ANIME.value:
             return MediaType.ANIME
         if resolved.kind == MediaKind.MOVIE:

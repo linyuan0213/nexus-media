@@ -245,7 +245,11 @@ class LifecycleProjector:
         event_key: str | None = None,
     ) -> bool:
         """从 MediaInfo 投影事件；没有稳定身份时跳过，不影响业务."""
-        media_type = getattr(getattr(media, "type", None), "value", getattr(media, "type", "movie")) or "movie"
+        media_type = (
+            str(getattr(media, "media_type_key", "") or "")
+            or getattr(getattr(media, "type", None), "value", getattr(media, "type", ""))
+            or "unknown"
+        )
         season = 0
         if hasattr(media, "get_season_seq"):
             try:

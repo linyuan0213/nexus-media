@@ -29,6 +29,7 @@ from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.domain.enums import ProgressKey, SyncType
 from app.domain.media_ref import canonical_metadata_ref
+from app.domain.media_types import MediaKind, media_type_registry
 from app.domain.mediatypes import MediaType
 from app.events import Event
 from app.events.bus import EventBus
@@ -641,6 +642,7 @@ class FileTransferService:
                 self._apply_download_record_hint(_info, download_record)
                 self._apply_subscription_hint(_info)
                 self._ensure_identity(_info)
+                self._apply_media_type_ref(_info)
             for _path, _info in medias.items():
                 if not getattr(_info, "org_string", ""):
                     _info.org_string = os.path.basename(_path)
@@ -1219,6 +1221,24 @@ class FileTransferService:
                 info.begin_episode = int(episode)
                 info.end_episode = int(episode)
         return info
+
+    @staticmethod
+    def _apply_media_type_ref(media) -> None:
+        if media is None:
+            return
+        value = getattr(media, "media_type_key", None) or getattr(getattr(media, "type", None), "value", None)
+        profile = str(getattr(media, "content_profile", "") or "default")
+        ref = media_type_registry.resolve_profile(profile) or media_type_registry.resolve(value, profile)
+        if ref.key == "unknown" and getattr(media, "media_type_key", None):
+            return
+        media.media_type_key = ref.key
+        media.media_kind = ref.kind.value
+        if ref.key == MediaType.ANIME.value:
+            media.type = MediaType.ANIME
+        elif ref.kind == MediaKind.MOVIE:
+            media.type = MediaType.MOVIE
+        elif ref.kind == MediaKind.EPISODIC:
+            media.type = MediaType.TV
 
     def _ensure_identity(self, media) -> None:
         """执行边界统一解析并回写身份，禁止仅依赖调用方是否提前赋值."""
