@@ -451,6 +451,7 @@ class LifecycleReconciler:
                     count += 1
             identity_by_external: dict[str, str] = {}
             identity_by_title: dict[tuple[str, str, str], str] = {}
+            latest_download_rows: dict[str, Any] = {}
             for row in downloads:
                 identity_id = _valid_identity(row.IDENTITY_ID)
                 if not identity_id:
@@ -462,9 +463,17 @@ class LifecycleReconciler:
                     (str(row.TITLE or "").lower(), str(row.YEAR or ""), str(row.SE or "")),
                     identity_id,
                 )
+                stamp = (_parse_history_time(row.DATE), row.ID)
+                current = latest_download_rows.get(identity_id)
+                if current is None or stamp > (_parse_history_time(current.DATE), current.ID):
+                    latest_download_rows[identity_id] = row
             for row in reversed(downloads):
                 identity_id = _canonical_identity(row, identity_by_external, identity_by_title, self._resolver)
                 if not identity_id:
+                    continue
+                raw_identity = _valid_identity(row.IDENTITY_ID)
+                if raw_identity and latest_download_rows.get(raw_identity) is not row:
+                    # 同一身份存在更新的下载记录时，旧记录的完成态不能覆盖当前下载周期。
                     continue
                 stage, status = map_download_state(row.STATE)
                 episode_pairs = _parse_season_episodes(row.SE)

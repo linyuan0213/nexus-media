@@ -73,13 +73,25 @@ def _row_payload(row) -> dict[str, Any]:
     }
 
 
-def _collapse_timeline(rows: list[Any]) -> list[Any]:
-    """同一阶段保留最后一次事件，并按阶段顺序展示，避免回填事件重复/乱序."""
+def _collapse_timeline(rows: list[Any], snapshot: Any = None) -> list[Any]:
+    """同一阶段保留最后一次事件，并隐藏当前下载周期之前的旧终态事件."""
+    terminal_stages = {"downloaded", "transferred", "scraped", "in_library"}
+    active_started = getattr(snapshot, "STAGE_STARTED_AT", None)
+    snapshot_stage = str(getattr(snapshot, "STAGE", "") or "")
     latest: dict[str, Any] = {}
     for row in rows:
-        current = latest.get(str(row.STAGE))
+        stage = str(row.STAGE)
+        if (
+            snapshot is not None
+            and snapshot_stage not in terminal_stages
+            and stage in terminal_stages
+            and active_started is not None
+            and row.OCCURRED_AT < active_started
+        ):
+            continue
+        current = latest.get(stage)
         if current is None or (row.OCCURRED_AT, row.ID) >= (current.OCCURRED_AT, current.ID):
-            latest[str(row.STAGE)] = row
+            latest[stage] = row
     return sorted(
         latest.values(),
         key=lambda event: (stage_rank(str(event.STAGE)), event.OCCURRED_AT, event.ID),
@@ -311,4 +323,4 @@ def list_lifecycle_events(
         user=current_user,
         until=snapshot.LAST_EVENT_AT if snapshot is not None else None,
     )
-    return success(data=[_event_payload(row) for row in _collapse_timeline(rows)])
+    return success(data=[_event_payload(row) for row in _collapse_timeline(rows, snapshot)])
