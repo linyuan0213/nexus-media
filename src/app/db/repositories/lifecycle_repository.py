@@ -779,6 +779,24 @@ def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
             and stage_rank(item.STAGE) >= stage_rank(LifecycleStage.DOWNLOAD_QUEUED.value)
         ]
         data = representative.as_dict()
+        # 代表行可能是后写入的 E0 占位/失败记录，元数据字段为空；从同组最新非空行补齐。
+        for field in ("POSTER", "TITLE", "YEAR", "MEDIA_TYPE", "CONTENT_PROFILE", "USER_ID"):
+            if data.get(field):
+                continue
+            fallback = next(
+                (
+                    getattr(item, field, None)
+                    for item in sorted(
+                        items,
+                        key=lambda row: row.LAST_EVENT_AT or row.UPDATED_AT,
+                        reverse=True,
+                    )
+                    if getattr(item, field, None)
+                ),
+                None,
+            )
+            if fallback is not None:
+                data[field] = fallback
         data["ACTIVE_STAGE"] = max(active_items, key=lambda item: stage_rank(item.STAGE)).STAGE if active_items else ""
         if status == LifecycleStatus.SUCCEEDED.value and stage not in {
             LifecycleStage.SCRAPED.value,

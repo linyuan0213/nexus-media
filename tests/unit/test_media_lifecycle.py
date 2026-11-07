@@ -821,3 +821,38 @@ def test_record_media_projects_each_episode():
         current = repo.get_current(identity_id, season=1, episode=episode)
         assert current is not None
         assert current.STAGE == LifecycleStage.IN_LIBRARY.value
+
+
+def test_grouped_row_keeps_poster_from_episode_row():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    projector.record(
+        identity_id="poster-identity",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="library.present",
+        media_type="anime",
+        season=1,
+        episode=6,
+        title="Poster Demo",
+        poster="https://image.tmdb.org/t/p/w342/demo.jpg",
+        event_key="poster-ep6",
+        occurred_at=now,
+    )
+    projector.record(
+        identity_id="poster-identity",
+        stage=LifecycleStage.DOWNLOADING,
+        status=LifecycleStatus.BLOCKED,
+        event_type="download.blocked",
+        media_type="anime",
+        season=1,
+        episode=0,
+        title="Poster Demo",
+        poster=None,
+        event_key="poster-ep0-blocked",
+        occurred_at=now + timedelta(minutes=5),
+    )
+    rows, _ = repo.list_grouped(page=1, pagenum=10)
+    row = next(item for item in rows if item["IDENTITY_ID"] == "poster-identity")
+    assert row["POSTER"] == "https://image.tmdb.org/t/p/w342/demo.jpg"
