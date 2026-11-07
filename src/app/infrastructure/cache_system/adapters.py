@@ -272,14 +272,21 @@ class RedisCacheAdapter(CacheAdapter):
                     try:
                         value = pickle.loads(data)  # nosec B301
                     except Exception as e:  # noqa: BLE001
-                        log.debug(f"[Cache]反序列化失败 {key}: {e}")
-                        value = data
-                    with self._lock:
-                        self._stats["hits"] += 1
-                    _emit_cache_event(
-                        CacheEvent(event_type=CacheEventType.HIT, cache_name=self._name, key=key, value=value)
-                    )
-                    return value
+                        # 旧枚举/类路径被删除后 pickle 可能失效；原始 bytes 不能进入业务层。
+                        log.debug(f"[Cache]反序列化失败，删除失效缓存 {key}: {e}")
+                        with self._lock:
+                            self._stats["errors"] += 1
+                        try:
+                            self._redis.delete(self._redis_key(key))
+                        except Exception as delete_error:  # noqa: BLE001
+                            log.debug(f"[Cache]删除失效缓存失败 {key}: {delete_error}")
+                    else:
+                        with self._lock:
+                            self._stats["hits"] += 1
+                        _emit_cache_event(
+                            CacheEvent(event_type=CacheEventType.HIT, cache_name=self._name, key=key, value=value)
+                        )
+                        return value
             except Exception as e:
                 log.debug(f"[Cache]Redis get 失败，回退内存 {key}: {e}")
                 with self._lock:

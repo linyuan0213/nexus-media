@@ -125,6 +125,17 @@ class TestRedisCacheAdapterScopedClear:
             assert store.exists("cache:other:k2")  # 其他命名空间不受影响
             assert store.exists("nexus_media:message_queue")  # 公共数据不受影响
 
+    def test_corrupt_pickle_is_deleted_and_treated_as_miss(self):
+        from app.infrastructure.cache_system.adapters import RedisCacheAdapter
+
+        store = self._make_fake_redis()
+        store.set("cache:mytest:bad", b"not-a-pickle")
+        with patch("app.infrastructure.redis.RedisStore", return_value=store):
+            adapter = RedisCacheAdapter(name="mytest")
+
+            assert adapter.get("bad") is None
+            assert not store.exists("cache:mytest:bad")
+
     def test_keys_are_namespaced(self):
         from app.infrastructure.cache_system.adapters import RedisCacheAdapter
 
