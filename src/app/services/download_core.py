@@ -171,6 +171,8 @@ class DownloadCore:
             season = meta_info.get_season_seq()
             if isinstance(total_ep, dict):
                 total = total_ep.get(season)
+                if total is None and str(season).isdigit():
+                    total = total_ep.get(int(season))
             else:
                 total = total_ep
             if not total:

@@ -19,6 +19,11 @@ depends_on = None
 
 def upgrade() -> None:
     op.rename_table("MEDIA_SERIES_ALIAS", "MEDIA_SERIES_ALIAS_OLD")
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        # PostgreSQL 的约束/索引名在 schema 内全局唯一，旧表改名后仍占用原名。
+        op.drop_constraint("uq_series_alias_provider_ref", "MEDIA_SERIES_ALIAS_OLD", type_="unique")
+        op.drop_index("ix_MEDIA_SERIES_ALIAS_SERIES_KEY", table_name="MEDIA_SERIES_ALIAS_OLD")
     op.create_table(
         "MEDIA_SERIES_ALIAS",
         sa.Column("PROVIDER", sa.String(length=64), nullable=False),

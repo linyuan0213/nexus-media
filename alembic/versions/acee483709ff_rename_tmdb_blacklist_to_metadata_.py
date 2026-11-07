@@ -18,8 +18,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("UPDATE RBAC_MENUS SET MENU_NAME = '识别黑名单' WHERE MENU_CODE = 'RenameBlacklist'")
     bind = op.get_bind()
+    menus = sa.Table("RBAC_MENUS", sa.MetaData(), autoload_with=bind)
+    bind.execute(sa.update(menus).where(menus.c.MENU_CODE == "RenameBlacklist").values(MENU_NAME="识别黑名单"))
     if bind.dialect.name == "sqlite":
         with op.batch_alter_table("TMDB_BLACKLIST") as batch:
             batch.alter_column("TMDB_ID", new_column_name="EXTERNAL_ID")
