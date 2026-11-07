@@ -244,7 +244,10 @@ class RssFeedStrategy:
             if rss_sites:
                 check_sites += list(rss_sites)
             else:
-                mtype = MediaType.TV if rinfo in rss_tvs.values() else MediaType.MOVIE
+                if rinfo in rss_tvs.values():
+                    mtype = MediaType.TV
+                else:
+                    mtype = MediaType.MOVIE
                 check_sites += self._get_default_rss_sites(mtype, rinfo.get("content_profile"), rinfo.get("user_id"))
         check_sites = list(set(check_sites))
 

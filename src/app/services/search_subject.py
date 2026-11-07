@@ -51,7 +51,10 @@ class SearchSubject:
             display = MediaType.TV
         else:
             display = None
-        provider_type = MediaType.TV if display == MediaType.ANIME else display
+        if display == MediaType.ANIME:
+            provider_type = MediaType.TV
+        else:
+            provider_type = display
         return cls(
             raw_type=raw_type,
             display_type=display,

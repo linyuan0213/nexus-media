@@ -879,9 +879,11 @@ class FileTransferService:
         try:
             media_type = getattr(media_info, "type", None) or getattr(snapshot, "media_type", None)
             media_type_value = getattr(media_type, "value", media_type)
-            key = str(media_type_value or "movie").lower()
-            if key not in {"movie", "tv", "anime"}:
-                key = "movie"
+            key = str(media_type_value or "unknown").lower()
+            if key not in {"movie", "tv", "anime", "episodic"}:
+                key = "unknown"
+            if key == "episodic":
+                key = "tv"
             now = time.time()
             cached = getattr(self, "_category_rule_cache", None)
             if cached is not None and now - cached[0] < 60:
