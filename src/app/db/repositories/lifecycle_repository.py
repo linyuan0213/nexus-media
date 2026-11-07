@@ -846,6 +846,12 @@ def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
         if episode_items:
             data["SEASON"] = max(int(item.SEASON or 0) for item in episode_items)
             data["EPISODE"] = max(int(item.EPISODE or 0) for item in episode_items)
+            media_types = [str(item.MEDIA_TYPE or "") for item in episode_items if item.MEDIA_TYPE]
+            if media_types:
+                data["MEDIA_TYPE"] = max(set(media_types), key=media_types.count)
+            profiles = [str(item.CONTENT_PROFILE or "") for item in episode_items if item.CONTENT_PROFILE]
+            if profiles:
+                data["CONTENT_PROFILE"] = max(set(profiles), key=profiles.count)
         providers = [
             str(item.SOURCE_PROVIDER) for item in state_items if item.SOURCE_PROVIDER not in {None, "", "content_id"}
         ]
