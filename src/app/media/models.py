@@ -375,7 +375,7 @@ class MediaInfo(BaseModel):
         return ""
 
     def get_type_string(self) -> str:
-        return f"类型：{self.type.value}" if self.type else ""
+        return f"类型：{self.type.display_name}" if self.type else ""
 
     def get_overview_string(self, max_len: int = 140) -> str:
         if not hasattr(self, "overview"):

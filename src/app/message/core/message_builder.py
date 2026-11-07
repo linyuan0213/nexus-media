@@ -8,6 +8,7 @@ from typing import Any
 
 import log
 from app.db.repositories.rbac.rbac_user_repo_adapter import RBACUserRepositoryAdapter
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType
 from app.media.metadata.registry import registry as metadata_registry
 from app.message.template_registry import message_template_registry
@@ -39,8 +40,9 @@ def _type_label(media_info, profile: str) -> str:
         label = message_template_registry.label(profile)
         if label:
             return label
-        if profile.lower() in {"anime", "tv", "movie"}:
-            return media_info.type.display_name
+        resolved = media_type_registry.resolve_profile(profile)
+        if resolved is not None:
+            return resolved.display_name
     return media_info.type.display_name
 
 

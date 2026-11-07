@@ -17,6 +17,17 @@ def test_anime_profile_label_is_chinese():
     assert _type_label(media, "anime") == "动漫"
 
 
+def test_anime_profile_overrides_tv_type_label():
+    media = MediaInfo(title="Demo", type=MediaType.TV)
+    assert _type_label(media, "anime") == "动漫"
+
+
+def test_type_string_uses_chinese_display_name():
+    assert MediaInfo(title="Demo", type=MediaType.MOVIE).get_type_string() == "类型：电影"
+    assert MediaInfo(title="Demo", type=MediaType.TV).get_type_string() == "类型：电视剧"
+    assert MediaInfo(title="Demo", type=MediaType.ANIME).get_type_string() == "类型：动漫"
+
+
 def test_tv_type_label_is_chinese():
     media = MediaInfo(title="Demo", type=MediaType.TV)
     assert _type_label(media, "default") == "电视剧"
