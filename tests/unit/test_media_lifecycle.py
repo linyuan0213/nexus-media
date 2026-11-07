@@ -856,3 +856,38 @@ def test_grouped_row_keeps_poster_from_episode_row():
     rows, _ = repo.list_grouped(page=1, pagenum=10)
     row = next(item for item in rows if item["IDENTITY_ID"] == "poster-identity")
     assert row["POSTER"] == "https://image.tmdb.org/t/p/w342/demo.jpg"
+
+
+def test_new_episode_zero_row_inherits_poster_from_episode():
+    repo = LifecycleRepository()
+    projector = LifecycleProjector(repo)
+    now = datetime(2026, 11, 2, 10, 0, 0)
+    projector.record(
+        identity_id="inherit-poster",
+        stage=LifecycleStage.IN_LIBRARY,
+        status=LifecycleStatus.SUCCEEDED,
+        event_type="library.present",
+        media_type="anime",
+        season=1,
+        episode=6,
+        title="Inherit Demo",
+        poster="https://image.tmdb.org/t/p/w342/inherit.jpg",
+        event_key="inherit-ep6",
+        occurred_at=now,
+    )
+    projector.record(
+        identity_id="inherit-poster",
+        stage=LifecycleStage.DOWNLOADING,
+        status=LifecycleStatus.RUNNING,
+        event_type="download.progress",
+        media_type="anime",
+        season=1,
+        episode=0,
+        title="Inherit Demo",
+        poster=None,
+        event_key="inherit-ep0",
+        occurred_at=now + timedelta(minutes=5),
+    )
+    current = repo.get_current("inherit-poster", season=1, episode=0)
+    assert current is not None
+    assert current.POSTER == "https://image.tmdb.org/t/p/w342/inherit.jpg"

@@ -57,6 +57,7 @@ class LifecycleRepository(BaseRepository):
             .first()
         )
         if current is None:
+            _fill_snapshot_metadata(db, event.IDENTITY_ID, snapshot)
             db.add(MediaLifecycle(**snapshot))
             return
         current_rank = stage_rank(current.STAGE)
@@ -121,6 +122,7 @@ class LifecycleRepository(BaseRepository):
             setattr(current, key, value)
         if advanced:
             current.STAGE_STARTED_AT = event.OCCURRED_AT
+        _fill_current_metadata(db, current)
 
     def get_current(self, identity_id: str, season: int = 0, episode: int = 0, *, user=None) -> MediaLifecycle | None:
         with self.readonly() as db:
@@ -738,6 +740,44 @@ def _apply_subscription_state(
             item["STATUS"] = "failed"
         elif sub_state == "N":
             item["STATUS"] = "cancelled"
+
+
+_METADATA_FALLBACK_FIELDS = ("TITLE", "YEAR", "POSTER", "CONTENT_PROFILE", "USER_ID")
+
+
+def _fill_snapshot_metadata(db, identity_id: str, snapshot: dict[str, Any]) -> None:
+    """新生命周期行继承同身份其他分集的元数据，避免 E0 工作行覆盖掉海报."""
+    missing = [field for field in _METADATA_FALLBACK_FIELDS if not snapshot.get(field)]
+    if not missing:
+        return
+    for sibling in _lifecycle_metadata_siblings(db, identity_id):
+        for field in missing:
+            if snapshot.get(field):
+                continue
+            value = getattr(sibling, field, None)
+            if value:
+                snapshot[field] = value
+
+
+def _fill_current_metadata(db, current: MediaLifecycle) -> None:
+    """已有行缺少元数据时，从同身份最新非空行回填."""
+    missing = [field for field in _METADATA_FALLBACK_FIELDS if not getattr(current, field, None)]
+    if not missing:
+        return
+    for sibling in _lifecycle_metadata_siblings(db, str(current.IDENTITY_ID), exclude_id=current.ID):
+        for field in missing:
+            if getattr(current, field, None):
+                continue
+            value = getattr(sibling, field, None)
+            if value:
+                setattr(current, field, value)
+
+
+def _lifecycle_metadata_siblings(db, identity_id: str, exclude_id: int | None = None):
+    query = db.query(MediaLifecycle).filter(MediaLifecycle.IDENTITY_ID == identity_id)
+    if exclude_id is not None:
+        query = query.filter(MediaLifecycle.ID != exclude_id)
+    return query.order_by(MediaLifecycle.LAST_EVENT_AT.desc(), MediaLifecycle.ID.desc()).all()
 
 
 def _group_lifecycle_rows(rows: list[MediaLifecycle]) -> list[dict[str, Any]]:
