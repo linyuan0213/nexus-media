@@ -899,10 +899,16 @@ class FileTransferService:
                     if mt in rule_map and bool(getattr(entity, "enabled", True)):
                         rule_map[mt][entity.name] = {} if getattr(entity, "is_default", False) else entity.rules
                 self._category_rule_cache = (now, rule_map)
+            fields = getattr(snapshot, "fields", {}) or {}
+            original_language = getattr(snapshot, "original_language", "") or ""
+            if not original_language:
+                field_value = fields.get("original_language")
+                original_language = getattr(field_value, "value", field_value) or ""
             info = {
                 "genres": list(getattr(snapshot, "genres", []) or []),
                 "countries": list(getattr(snapshot, "countries", []) or []),
                 "spoken_languages": list(getattr(snapshot, "spoken_languages", []) or []),
+                "original_language": str(original_language or "").strip(),
                 "tags": list(getattr(snapshot, "tags", []) or []),
                 "content_profile": getattr(snapshot, "content_profile", "") or "",
                 "providers": [str(getattr(snapshot, "primary_provider", "") or "")]
