@@ -261,6 +261,49 @@ def test_tmdb_provider_adapter_maps_detail_and_episodes():
     )
 
 
+def test_douban_provider_search_skips_non_media_and_marks_anime():
+    from app.media.metadata.providers import DoubanProvider
+
+    class _SearchApi:
+        def search(self, keyword, start=0, count=20, ts=None):
+            return {
+                "items": [
+                    {
+                        "type_name": "电视剧",
+                        "target": {
+                            "id": "37923549",
+                            "title": "FX战士久留美",
+                            "card_subtitle": "日本 / 动画 奇幻 冒险 / 小川优树 / 铃木爱奈",
+                            "rating": {"value": 8.1},
+                        },
+                    },
+                    {
+                        "type_name": "图书",
+                        "target": {"id": "37424432", "title": "FX戰士久留美 1"},
+                    },
+                    {
+                        "type_name": "电影",
+                        "target": {"id": "1292052", "title": "肖申克的救赎"},
+                    },
+                ]
+            }
+
+        def movie_detail(self, subject_id):
+            return None
+
+        def tv_detail(self, subject_id):
+            return None
+
+    provider = DoubanProvider(api=_SearchApi())
+    hits = provider.search(SearchQuery(query="FX战士久留美", limit=10), None)
+
+    assert [hit.title for hit in hits] == ["FX战士久留美", "肖申克的救赎"]
+    assert hits[0].media_type == MediaType.ANIME
+    assert hits[0].content_profile == "anime"
+    assert hits[0].ref.provider_media_type == ProviderMediaType.ANIME
+    assert hits[1].media_type == MediaType.MOVIE
+
+
 def test_douban_provider_adapter_uses_frodo_detail():
     from app.media.metadata.providers import DoubanProvider
 

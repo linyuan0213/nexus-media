@@ -29,9 +29,9 @@ class ProviderMediaType(str, Enum):
             return value
         raw_value = value.value if isinstance(value, Enum) else value
         raw = str(raw_value or "").strip().lower()
-        if raw in {"movie", "film"}:
+        if raw in {"movie", "film", "电影"}:
             return cls.MOVIE
-        if raw in {"series", "show", "tv", "episode", "episodic"}:
+        if raw in {"series", "show", "tv", "episode", "episodic", "电视剧", "剧集"}:
             return cls.SERIES
         if raw in {"anime", "动漫"}:
             return cls.ANIME

@@ -22,6 +22,7 @@ from ..models import (
     ProviderDescriptor,
     ProviderRef,
 )
+from .genres import classify_provider_media_type
 
 FeedKind = Literal["ranking", "trending", "latest", "calendar", "seasonal", "collection", "search"]
 
@@ -106,7 +107,14 @@ class DoubanDiscovery:
         items = [
             item
             for raw_item in raw.get("subject_collection_items") or []
-            if (item := _douban_discovery_item(raw_item, content_profile=content_profile)) is not None
+            if (
+                item := _douban_discovery_item(
+                    raw_item,
+                    content_profile=content_profile,
+                    genres=raw_item.get("genres") or raw_item.get("tags") or [],
+                )
+            )
+            is not None
             and (not year or item.year == year)
         ]
         mainstream, facets = _genre_facets(items)
@@ -177,6 +185,13 @@ class TmdbDiscovery:
             item = _tmdb_discovery_item(source)
             if item is None or (year and item.year != year):
                 continue
+            if feed == "seasonal_anime":
+                item.content_profile = "anime"
+            _, item.content_profile = classify_provider_media_type(
+                item.ref.provider_media_type or ProviderMediaType.UNKNOWN,
+                source.get("genre_ids") or [],
+                item.content_profile,
+            )
             genre_map = self._tmdb_genre_map(item.ref.provider_media_type)
             item.tags = [
                 genre_map[str(genre_id)] for genre_id in source.get("genre_ids") or [] if str(genre_id) in genre_map
@@ -387,7 +402,12 @@ def _genre_facets(items: list[DiscoveryItem], limit: int = 16) -> tuple[list[str
     return mainstream, facets
 
 
-def _douban_discovery_item(raw: dict[str, Any], *, content_profile: str = "default") -> DiscoveryItem | None:
+def _douban_discovery_item(
+    raw: dict[str, Any],
+    *,
+    content_profile: str = "default",
+    genres: list[Any] | None = None,
+) -> DiscoveryItem | None:
     external_id = str(raw.get("id") or "").strip()
     if not external_id:
         return None
@@ -405,6 +425,7 @@ def _douban_discovery_item(raw: dict[str, Any], *, content_profile: str = "defau
     provider_type = provider_media_type_of(raw.get("type"))
     if provider_type == ProviderMediaType.UNKNOWN and raw.get("episodes_info"):
         provider_type = ProviderMediaType.SERIES
+    _, content_profile = classify_provider_media_type(provider_type, genres, content_profile)
     rating = raw.get("rating") or {}
     year = str(raw.get("year") or "")
     card = str(raw.get("card_subtitle") or "")

@@ -21,7 +21,8 @@
 
 - 外部适配：`LookupResult` 改为 `provider_media_type`/`media_kind`，TMDB/豆瓣/Bangumi lookup 与 Provider 统一使用外部协议类型；`ProviderDescriptor` 改为 `provider_media_types`/`media_kinds`/`default_provider_media_type`。
 - API：provider 列表输出外部协议值与 kind 值，详情接口补齐 `media_type_name`/`media_kind`。
-- 探索：豆瓣「热门动画」条目使用 `anime` 画像，卡片显示「动漫」而不是「剧集」。
+- 探索：按条目题材识别动漫，豆瓣动画榜与 TMDB 动画剧集统一使用 `anime` 画像，卡片显示「动漫」而不是「剧集」。
+- 搜索：豆瓣聚合结果过滤图书/豆列，按 `card_subtitle` 题材识别动漫，搜索卡片不再显示「未知」。
 
 ## v5.8.2 (2026-11-07)
 
