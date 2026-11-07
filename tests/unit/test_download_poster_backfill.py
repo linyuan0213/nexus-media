@@ -33,3 +33,12 @@ def test_downloading_poster_backfills_from_subscription():
     subscribe_repo.get_movie_subscription_hint.assert_called_once_with(
         "content_id", "ABC-123", "ABC-123", identity_id=None
     )
+
+
+def test_task_media_type_preserves_anime():
+    from app.domain.mediatypes import MediaType
+    from app.services.download_service import DownloadService
+
+    assert DownloadService._task_media_type(type("T", (), {"media_type": "anime"})()) == MediaType.ANIME
+    assert DownloadService._task_media_type(type("T", (), {"media_type": "tv"})()) == MediaType.TV
+    assert DownloadService._task_media_type(type("T", (), {"media_type": "movie"})()) == MediaType.MOVIE

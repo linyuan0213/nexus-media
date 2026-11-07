@@ -509,7 +509,7 @@ class DownloadService:
         media.title = str(getattr(task, "title", "") or getattr(task, "torrent", "") or "")
         media.year = str(getattr(task, "year", "") or "")
         media.tmdb_id = str(getattr(task, "tmdb_id", "") or "")
-        media.type = MediaType.TV if str(getattr(task, "media_type", "") or "").lower() == "tv" else MediaType.MOVIE
+        media.type = self._task_media_type(task)
         media.anchor_provider = getattr(task, "anchor_provider", None)
         media.anchor_external_id = getattr(task, "anchor_external_id", None)
         media.identity_id = getattr(task, "identity_id", None)
@@ -525,6 +525,15 @@ class DownloadService:
             )
         except Exception as exc:  # noqa: BLE001 - 进度投影失败不影响下载状态
             log.debug(f"[DownloadService]下载进度投影失败 {key}: {exc}")
+
+    @staticmethod
+    def _task_media_type(task) -> MediaType:
+        value = str(getattr(task, "media_type", "") or "").strip().lower()
+        if value == "anime":
+            return MediaType.ANIME
+        if value == "tv":
+            return MediaType.TV
+        return MediaType.MOVIE
 
     def _build_display_info(self, task) -> tuple[str, str]:
         """根据下载历史任务构建显示标题和海报"""
