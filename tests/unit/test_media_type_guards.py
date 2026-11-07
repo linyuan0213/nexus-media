@@ -27,8 +27,8 @@ def _violations(path: Path) -> list[str]:
         if isinstance(node, ast.IfExp):
             for branch in (node.body, node.orelse):
                 if isinstance(branch, ast.Attribute) and branch.attr in {"MOVIE", "TV"}:
-                    if isinstance(branch.value, ast.Name) and branch.value.id == "MediaType":
-                        found.append(f"{path.relative_to(ROOT)}:{node.lineno} MediaType binary fallback")
+                    if isinstance(branch.value, ast.Name) and branch.value.id == "ProviderMediaType":
+                        found.append(f"{path.relative_to(ROOT)}:{node.lineno} ProviderMediaType binary fallback")
         if isinstance(node, ast.Compare):
             for comp in node.comparators:
                 if isinstance(comp, ast.Constant) and comp.value == "tv":

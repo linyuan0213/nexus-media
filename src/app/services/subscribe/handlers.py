@@ -8,7 +8,7 @@ from typing import Any
 import log
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.domain.entities.rss import SubscribeState
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.events import Event, on_event
 from app.events.constants import (
     MEDIA_EPISODE_TRANSFERRED,
@@ -197,7 +197,7 @@ def build_media_episode_transferred_handler(subscribe_service: SubscribeService)
         media_type = getattr(payload, "media_type", None)
         if media_type:
             try:
-                mtype = MediaType(media_type)
+                mtype = ProviderMediaType(media_type)
             except ValueError:
                 mtype = None
         subscribe_service.finalize_tv_by_rssid(rssid, mtype)
@@ -222,7 +222,7 @@ def build_movie_transfer_finalize_handler(subscribe_service: SubscribeService):
         if not isinstance(payload, MediaTransferFinishedPayload):
             payload = MediaTransferFinishedPayload(**payload)
         info = payload.media_info or {}
-        if info.get("type") != MediaType.MOVIE.value:
+        if info.get("type") != ProviderMediaType.MOVIE.value:
             return
         profile = str(info.get("content_profile") or "default")
         anchor_provider = str(info.get("anchor_provider") or "").strip()
@@ -230,7 +230,7 @@ def build_movie_transfer_finalize_handler(subscribe_service: SubscribeService):
         tmdb = str(info.get("tmdb_id") or info.get("id") or info.get("orgid") or "")
         if not tmdb and profile == "default" and not (anchor_provider and anchor_external):
             return
-        media = MediaInfo(type=MediaType.MOVIE, tmdb_id=tmdb)
+        media = MediaInfo(type=ProviderMediaType.MOVIE, tmdb_id=tmdb)
         media.title = info.get("title") or ""
         media.year = info.get("year") or ""
         media.overview = info.get("overview") or ""
@@ -306,7 +306,7 @@ def build_transfer_fail_reopen_handler(subscribe_service: SubscribeService):
                     continue
                 if owner is not None and getattr(sub, "user_id", None) != owner:
                     continue
-                subscribe_service.update_rss_state(MediaType.TV, sub.id, SubscribeState.RUNNING.value)
+                subscribe_service.update_rss_state(ProviderMediaType.SERIES, sub.id, SubscribeState.RUNNING.value)
                 if failed_eps:
                     current = ep_repo.get(sub.id) or []
                     merged = sorted(set(int(e) for e in current) | set(failed_eps))
@@ -328,7 +328,7 @@ def build_transfer_fail_reopen_handler(subscribe_service: SubscribeService):
                     continue
                 if owner is not None and getattr(msub, "user_id", None) != owner:
                     continue
-                subscribe_service.update_rss_state(MediaType.MOVIE, msub.id, SubscribeState.RUNNING.value)
+                subscribe_service.update_rss_state(ProviderMediaType.MOVIE, msub.id, SubscribeState.RUNNING.value)
                 reopened += 1
             # 复位下载历史状态，解除“已完成”过滤，使订阅可重新匹配下载
             DownloadHistoryRepositoryAdapter().update_state(history.downloader, history.download_id, "downloading")

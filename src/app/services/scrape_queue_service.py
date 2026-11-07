@@ -12,7 +12,7 @@ from app.db.repositories.identity_resolver import IdentityResolver
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.media_ref import media_identity_key
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD
@@ -277,14 +277,14 @@ class ScrapeQueueService:
         notify = bool(finalize.get("notify", True))
         if metadata_ok and notify and self._message is not None:
             try:
-                if media.type == MediaType.MOVIE:
+                if media.type == ProviderMediaType.MOVIE:
                     self._message.send_transfer_movie_message(
                         in_from,
                         media,
                         int(finalize.get("exist_filenum") or 0),
                         bool(finalize.get("category_flag")),
                     )
-                elif media.type in (MediaType.TV, MediaType.ANIME):
+                elif media.type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
                     self._message.send_transfer_tv_message(
                         [media],
                         in_from,
@@ -320,7 +320,7 @@ class ScrapeQueueService:
                 ),
             )
         )
-        if media.type in (MediaType.TV, MediaType.ANIME) and media.get_episode_list():
+        if media.type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME) and media.get_episode_list():
             self._event_bus.publish(
                 Event(
                     event_type=MEDIA_EPISODE_TRANSFERRED,

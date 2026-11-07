@@ -5,13 +5,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.domain.enums import IdentifyStatus
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.identity.models import ALIAS_OFFICIAL, AliasEntry, Work
 from app.media.identity.resolver import IdentityResolver, extract_edition_markers
 from app.media.models import MediaInfo
 
 
-def _group(names, cn=None, en=None, year=None, mtype=MediaType.TV, seasons=(1,), episodes=(4,), title="title"):
+def _group(
+    names, cn=None, en=None, year=None, mtype=ProviderMediaType.SERIES, seasons=(1,), episodes=(4,), title="title"
+):
     return {
         "_cache_key": "k1",
         "names": names,
@@ -56,12 +58,12 @@ class TestExtractEditionMarkers:
 class TestResolverGuards:
     def test_tv_year_mismatch_is_not_a_conflict(self):
         group = _group(["Attack on Titan S04"], year="2020")
-        match = MediaInfo(cn_name="进击的巨人", title="进击的巨人", year="2013", type=MediaType.TV)
+        match = MediaInfo(cn_name="进击的巨人", title="进击的巨人", year="2013", type=ProviderMediaType.SERIES)
         assert IdentityResolver._guards_pass(group, match) is True
 
     def test_movie_year_mismatch_is_a_conflict(self):
-        group = _group(["Fight Club"], year="2014", mtype=MediaType.MOVIE, seasons=(), episodes=())
-        match = MediaInfo(cn_name="搏击俱乐部", title="搏击俱乐部", year="1999", type=MediaType.MOVIE)
+        group = _group(["Fight Club"], year="2014", mtype=ProviderMediaType.MOVIE, seasons=(), episodes=())
+        match = MediaInfo(cn_name="搏击俱乐部", title="搏击俱乐部", year="1999", type=ProviderMediaType.MOVIE)
         assert IdentityResolver._guards_pass(group, match) is False
 
     def test_strict_ignores_site_prefix(self):
@@ -71,7 +73,9 @@ class TestResolverGuards:
 class TestDirectPass:
     def test_all_names_match_direct_hit(self, resolver):
         resolver.media.get_all_names.return_value = ["Jaadugar: A Witch in Mongolia", "天幕のジャードゥーガル"]
-        match = MediaInfo(cn_name="穹庐下的魔女", title="穹庐下的魔女", year="2026", type=MediaType.TV, tmdb_id=288971)
+        match = MediaInfo(
+            cn_name="穹庐下的魔女", title="穹庐下的魔女", year="2026", type=ProviderMediaType.SERIES, tmdb_id=288971
+        )
         g = _group(["穹庐下的魔女", "Jaadugar: A Witch in Mongolia"], cn="穹庐下的魔女")
         result = resolver.resolve(g, match)
         assert result.status == IdentifyStatus.HIT
@@ -80,7 +84,9 @@ class TestDirectPass:
 
     def test_zero_overlap_local_reject(self, resolver):
         resolver.media.get_all_names.return_value = ["Ghost in the Shell"]
-        match = MediaInfo(cn_name="攻壳机动队", title="攻壳机动队", year="2026", type=MediaType.TV, tmdb_id=255358)
+        match = MediaInfo(
+            cn_name="攻壳机动队", title="攻壳机动队", year="2026", type=ProviderMediaType.SERIES, tmdb_id=255358
+        )
         g = _group(["Arise Ghost In The Shell Arise"], cn=None, en="Arise Ghost In The Shell Arise", year=None)
         result = resolver.resolve(g, match)
         assert result.status == IdentifyStatus.NOT_FOUND
@@ -141,7 +147,9 @@ class TestExternalValidation:
     def test_hit_target_with_distinguishing_names_rejected(self, resolver):
         """外部解析命中目标，但组内有未解析名称 → 排除"""
         resolver.media.get_all_names.return_value = ["Ghost in the Shell", "攻殻機動隊"]
-        match = MediaInfo(cn_name="攻壳机动队", title="攻壳机动队", year="2026", type=MediaType.TV, tmdb_id=255358)
+        match = MediaInfo(
+            cn_name="攻壳机动队", title="攻壳机动队", year="2026", type=ProviderMediaType.SERIES, tmdb_id=255358
+        )
         g = _group(
             ["攻壳机动队", "Sac 2045 Ghost In The Shell"],
             cn="攻壳机动队",
@@ -185,7 +193,7 @@ class TestExternalValidation:
                     title="新番中文名",
                     original_title="Shin Bangumi",
                     year="2026",
-                    type=MediaType.TV,
+                    type=ProviderMediaType.SERIES,
                     tmdb_id=999,
                 ),
             )

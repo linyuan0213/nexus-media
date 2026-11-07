@@ -37,9 +37,7 @@ class TestMediaServerLifecycle:
             return_value=repo_mock,
         ):
             disable_mediaserver_record("emby")
-        repo_mock.update_media_server.assert_called_once_with(
-            sid=5, name="emby", enabled=0, config="{}", is_default=0
-        )
+        repo_mock.update_media_server.assert_called_once_with(sid=5, name="emby", enabled=0, config="{}", is_default=0)
 
     def test_disable_skips_disabled_or_other_type(self):
         disabled = MagicMock(NAME="emby", ENABLED=0)

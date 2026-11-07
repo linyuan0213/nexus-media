@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.domain.enums import SearchType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 
 @dataclass
@@ -13,7 +13,7 @@ class SearchContext:
     session_id: str
     search_type: SearchType
     match_media: Any | None = None
-    media_type: MediaType | None = None
+    media_type: ProviderMediaType | None = None
     ident_flag: bool = True
     filter_args: dict | None = None
     auto_download: bool = False

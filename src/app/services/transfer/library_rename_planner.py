@@ -10,7 +10,7 @@ import log
 from app.core.constants import RMT_FAVTYPE, RMT_MEDIAEXT
 from app.core.exceptions import ValidationError
 from app.db.repositories.library_rename_repository import path_hash
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.naming import naming_field_keys
 from app.media.scraper.media_library import MediaLibrary
 from app.services.transfer.library_rename_metadata import LibraryMetadataResolver
@@ -24,9 +24,9 @@ from app.utils import PathUtils
 from app.utils.json_utils import JsonUtils
 
 _MEDIA_CFG_KEYS = {
-    MediaType.MOVIE: ("movie_path", "movie_backend"),
-    MediaType.TV: ("tv_path", "tv_backend"),
-    MediaType.ANIME: ("anime_path", "anime_backend"),
+    ProviderMediaType.MOVIE: ("movie_path", "movie_backend"),
+    ProviderMediaType.SERIES: ("tv_path", "tv_backend"),
+    ProviderMediaType.ANIME: ("anime_path", "anime_backend"),
 }
 _EXCLUDED_SEGMENTS = {"#recycle", ".trash", "@eadir", "recycle"}
 
@@ -163,7 +163,7 @@ class LibraryRenamePlanner:
         cfg = self._media_config_service.get_config()
         roots: list[LibraryRoot] = []
         seen: set[tuple[str, str]] = set()
-        for media_type in (MediaType.MOVIE, MediaType.TV, MediaType.ANIME):
+        for media_type in (ProviderMediaType.MOVIE, ProviderMediaType.SERIES, ProviderMediaType.ANIME):
             if media_type not in scope.media_types:
                 continue
             paths_key, backend_key = _MEDIA_CFG_KEYS[media_type]
@@ -318,9 +318,11 @@ class LibraryRenamePlanner:
         base_item["ACTION"] = "rename"
         return base_item
 
-    def _required_field_reason(self, resolved: ResolvedMetadata, media_type: MediaType, base_name: str) -> str | None:
+    def _required_field_reason(
+        self, resolved: ResolvedMetadata, media_type: ProviderMediaType, base_name: str
+    ) -> str | None:
         meta = resolved.media
-        fields = self._movie_fields if media_type == MediaType.MOVIE else self._tv_fields
+        fields = self._movie_fields if media_type == ProviderMediaType.MOVIE else self._tv_fields
         if not meta.title:
             return "missing_title"
         if "year" in fields and not meta.year:
@@ -345,7 +347,7 @@ class LibraryRenamePlanner:
             and (detect_part_hint(meta.org_string or "") or detect_part_hint(base_name))
         ):
             return "missing_part"
-        if media_type != MediaType.MOVIE:
+        if media_type != ProviderMediaType.MOVIE:
             if meta.begin_season is None or meta.begin_episode is None:
                 return "missing_season_episode"
             if any(field in fields for field in ("season", "episode", "season_episode")):
@@ -371,7 +373,7 @@ class LibraryRenamePlanner:
         )
         ext = os.path.splitext(old_path)[1]
         if scope.layout_mode == "filename_only":
-            if meta.type == MediaType.MOVIE:
+            if meta.type == ProviderMediaType.MOVIE:
                 _, file_name = resolver.get_movie_dest_path(meta, adapter, snapshot)
             else:
                 _, _, file_name = resolver.get_tv_dest_path(meta, adapter, snapshot)
@@ -380,7 +382,7 @@ class LibraryRenamePlanner:
                 return None, "empty_filename"
             new_path = os.path.join(os.path.dirname(old_path), file_name + ext)
         elif scope.reorganize_category:
-            if meta.type == MediaType.MOVIE:
+            if meta.type == ProviderMediaType.MOVIE:
                 _, file_name = resolver.get_movie_dest_path(meta, adapter, snapshot)
             else:
                 _, _, file_name = resolver.get_tv_dest_path(meta, adapter, snapshot)
@@ -391,10 +393,10 @@ class LibraryRenamePlanner:
             new_path = os.path.join(new_dir, file_name + ext)
         else:
             prefix = self._current_category(root, old_path, meta.type)
-            fields = self._movie_fields if meta.type == MediaType.MOVIE else self._tv_fields
+            fields = self._movie_fields if meta.type == ProviderMediaType.MOVIE else self._tv_fields
             category_in_format = "category" in fields
             meta.category = prefix or ""
-            if meta.type == MediaType.MOVIE:
+            if meta.type == ProviderMediaType.MOVIE:
                 sub_dir, file_name = resolver.get_movie_dest_path(meta, adapter, snapshot)
                 new_dir = (
                     os.path.join(root.root, sub_dir)
@@ -429,7 +431,7 @@ class LibraryRenamePlanner:
             return file_name
         return os.path.splitext(os.path.basename(old_path))[0]
 
-    def _current_category(self, root: LibraryRoot, path: str, media_type: MediaType | None) -> str:
+    def _current_category(self, root: LibraryRoot, path: str, media_type: ProviderMediaType | None) -> str:
         rel_dir = os.path.relpath(os.path.dirname(path), root.root)
         if rel_dir in (".", ""):
             return ""

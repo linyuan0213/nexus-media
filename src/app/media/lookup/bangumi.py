@@ -1,5 +1,4 @@
 from app.domain.media_types import ProviderMediaType
-from app.domain.mediatypes import MediaType
 from app.media.external.bangumi import Bangumi
 from app.media.lookup.base import BaseLookup, LookupResult
 
@@ -10,7 +9,7 @@ class BangumiLookup(BaseLookup):
     def __init__(self):
         self._bgm = Bangumi()
 
-    def lookup(self, parsed, hint_type: MediaType | None = None) -> LookupResult | None:
+    def lookup(self, parsed, hint_type: ProviderMediaType | None = None) -> LookupResult | None:
         name = parsed.title_en or parsed.title_cn
         if not name:
             return None

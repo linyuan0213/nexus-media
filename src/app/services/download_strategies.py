@@ -14,7 +14,7 @@ import contextlib
 
 import log
 from app.domain.media_ref import identity_keys_match, media_series_scope_key
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 _DOWNLOAD_FAILED_FLAG = "_download_failed"
 
@@ -123,7 +123,7 @@ class MovieDownloadStrategy:
         return_items = []
         downloaded_names: set[str] = set()
         for item in download_list:
-            if item.type != MediaType.MOVIE or is_download_failed(item):
+            if item.type != ProviderMediaType.MOVIE or is_download_failed(item):
                 continue
             # 同一电影已成功下载一个候选即停止，失败则继续尝试下一个候选
             movie_title = (
@@ -176,7 +176,7 @@ class SeasonPackStrategy:
         return_items = []
         for need_tmdbid, need_season in list(need_seasons.items()):
             for item in download_list:
-                if item.type == MediaType.MOVIE:
+                if item.type == ProviderMediaType.MOVIE:
                     continue
                 if is_download_failed(item):
                     continue
@@ -320,7 +320,7 @@ class EpisodeStrategy:
                 if not need_episodes:
                     need_episodes = list(range(1, total_episodes + 1))
                 for item in download_list:
-                    if item.type == MediaType.MOVIE:
+                    if item.type == ProviderMediaType.MOVIE:
                         continue
                     if not identity_keys_match(need_tmdbid, media_series_scope_key(item)):
                         continue
@@ -398,7 +398,7 @@ class EpisodeStrategy:
                     index += 1
                     continue
                 for item in download_list:
-                    if item.type == MediaType.MOVIE:
+                    if item.type == ProviderMediaType.MOVIE:
                         continue
                     if item in return_items or is_download_failed(item):
                         continue

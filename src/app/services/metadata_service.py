@@ -20,7 +20,7 @@ from app.core.settings import settings
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.db.repositories.person_identity_repository import PersonIdentityRepository
 from app.domain.media_ref import MediaSubject
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.cache_system.metadata_cache import MetadataCache
 from app.media.display_image_policy import transform_display_image
 from app.media.metadata import (
@@ -227,7 +227,7 @@ class MetadataService:
         policy: str | None = None,
         anchor_provider: str | None = None,
         content_profile: str = "default",
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         allow_private: bool = False,
         permissions: set[str] | None = None,
     ) -> MetadataPreviewResult:
@@ -257,7 +257,7 @@ class MetadataService:
         self,
         media_info: Any,
         *,
-        media_type: MediaType,
+        media_type: ProviderMediaType,
         mediaid: str | None = None,
         content_profile: str | None = None,
         metadata_policy: str | None = None,
@@ -273,7 +273,7 @@ class MetadataService:
         profile = (
             content_profile
             or str(getattr(media_info, "content_profile", "") or "")
-            or ("anime" if media_type == MediaType.ANIME else "default")
+            or ("anime" if media_type == ProviderMediaType.ANIME else "default")
         )
         fallback_provider = str(getattr(media_info, "anchor_provider", "") or "")
         fallback_external = str(getattr(media_info, "anchor_external_id", "") or "")
@@ -301,7 +301,7 @@ class MetadataService:
             media_type,
         )
         season_num = 0
-        if media_type in (MediaType.TV, MediaType.ANIME):
+        if media_type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
             season_num = int(getattr(media_info, "get_season_seq", lambda: 0)() or 0)
         if matched is not None and season_num and anchor.provider != "tmdb" and matched.provider == "tmdb":
             matched = matched.model_copy(update={"scope": f"season={season_num}"})
@@ -453,7 +453,7 @@ class MetadataService:
         media_info: Any,
         *,
         policy: str | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
     ) -> bool:
         """按系统策略为普通媒体选择主源锚点，失败时按回退链尝试。
 
@@ -493,7 +493,7 @@ class MetadataService:
         ).strip()
         if not title:
             return False
-        target_type = media_type or getattr(media_info, "type", None) or MediaType.MOVIE
+        target_type = media_type or getattr(media_info, "type", None) or ProviderMediaType.MOVIE
         cache_key = (policy_key, title.casefold(), str(getattr(media_info, "year", "") or ""), target_type.value)
         cached = self._anchor_cache.get(cache_key)
         if cached and time.monotonic() - cached[0] < 300:
@@ -501,7 +501,7 @@ class MetadataService:
             media_info.anchor_provider = cached_provider
             media_info.anchor_external_id = cached_external
             if cached_provider == "bangumi":
-                media_info.type = MediaType.ANIME
+                media_info.type = ProviderMediaType.ANIME
                 media_info.content_profile = "anime"
             return True
         with self._anchor_locks_guard:
@@ -514,7 +514,7 @@ class MetadataService:
                 media_info.anchor_provider = cached_provider
                 media_info.anchor_external_id = cached_external
                 if cached_provider == "bangumi":
-                    media_info.type = MediaType.ANIME
+                    media_info.type = ProviderMediaType.ANIME
                     media_info.content_profile = "anime"
                 return True
             return self._identify_anchor_search(
@@ -532,7 +532,7 @@ class MetadataService:
         *,
         policy_key: str,
         title: str,
-        target_type: MediaType,
+        target_type: ProviderMediaType,
         order: list[str],
         cache_key: tuple,
     ) -> bool:
@@ -581,7 +581,7 @@ class MetadataService:
             media_info.anchor_external_id = external_id
             self._anchor_cache[cache_key] = (time.monotonic(), provider, external_id)
             if content_profile == "anime":
-                media_info.type = MediaType.ANIME
+                media_info.type = ProviderMediaType.ANIME
                 media_info.content_profile = content_profile
             log.info(f"[Metadata]主源策略 {policy_key} 命中 {provider}:{external_id}")
             return True
@@ -608,13 +608,13 @@ class MetadataService:
         with_episodes=True 时按需展开分集（豆瓣 HTML 较慢，仅供刮削后台调用）。
         """
         self._ensure_builtin()
-        media_type = getattr(media_info, "type", None) or MediaType.UNKNOWN
+        media_type = getattr(media_info, "type", None) or ProviderMediaType.UNKNOWN
         anchor_provider = anchor_provider or str(getattr(media_info, "anchor_provider", "") or "")
         anchor_external = str(getattr(media_info, "anchor_external_id", "") or "")
         ref = parse_legacy_ref(str(getattr(media_info, "tmdb_id", "") or ""), media_type)
         refs = []
         season = None
-        if media_type in {MediaType.TV, MediaType.ANIME}:
+        if media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
             try:
                 season = int(getattr(media_info, "get_season_seq", lambda: 0)() or 0) or None
             except (TypeError, ValueError):
@@ -706,7 +706,7 @@ class MetadataService:
                 )
         except ValueError:
             resolved = self.get_policy(None, anchor_provider=anchor)
-        profile = content_profile or media_profile or ("anime" if media_type == MediaType.ANIME else "default")
+        profile = content_profile or media_profile or ("anime" if media_type == ProviderMediaType.ANIME else "default")
         identity = self._resolve_identity(media_info, refs, media_type, profile, persist=persist)
         identity_id = identity.IDENTITY_ID if identity is not None else "preview"
 
@@ -722,7 +722,7 @@ class MetadataService:
                         cached_ok = not self._refs_support_images(refs)
                     if (
                         cached_ok
-                        and media_type in {MediaType.MOVIE, MediaType.TV, MediaType.ANIME}
+                        and media_type in {ProviderMediaType.MOVIE, ProviderMediaType.SERIES, ProviderMediaType.ANIME}
                         and self._refs_support_images(refs)
                         and not (cached_metadata.images or {}).get("poster")
                     ):
@@ -750,7 +750,7 @@ class MetadataService:
         metadata = result.metadata
         if metadata is not None:
             self._attach_source_hints(metadata, media_info)
-        if with_episodes and metadata is not None and media_type in {MediaType.TV, MediaType.ANIME}:
+        if with_episodes and metadata is not None and media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
             target_seasons = [season] if season else [item.season_number for item in metadata.seasons] or [1]
             for target_season in target_seasons:
                 if any(item.season_number == target_season for item in metadata.episodes):
@@ -818,7 +818,7 @@ class MetadataService:
         self,
         media_info: Any,
         refs: list[ProviderRef],
-        media_type: MediaType,
+        media_type: ProviderMediaType,
         profile: str,
         *,
         persist: bool,
@@ -866,12 +866,12 @@ class MetadataService:
         self,
         identity: Any,
         refs: list[ProviderRef],
-        media_type: MediaType,
+        media_type: ProviderMediaType,
         season: int,
         title: str | None,
         year: str | None,
     ) -> None:
-        if media_type not in {MediaType.TV, MediaType.ANIME} or season <= 0:
+        if media_type not in {ProviderMediaType.SERIES, ProviderMediaType.ANIME} or season <= 0:
             return
         tmdb_ref = next(
             (ref for ref in refs if ref.provider == "tmdb" and str(ref.external_id).isdigit()),
@@ -1089,7 +1089,7 @@ class MetadataService:
 
     def latest_snapshot_for_media(self, media_info: Any) -> MediaMetadata | None:
         """只读快照，供重命名/整理消费；不发起网络请求."""
-        media_type = getattr(media_info, "type", None) or MediaType.UNKNOWN
+        media_type = getattr(media_info, "type", None) or ProviderMediaType.UNKNOWN
         anchor_provider = str(getattr(media_info, "anchor_provider", "") or "")
         anchor_external = str(getattr(media_info, "anchor_external_id", "") or "")
         ref = None
@@ -1116,7 +1116,7 @@ class MetadataService:
         if identity is None:
             return None
         scope = "default"
-        if media_type in {MediaType.TV, MediaType.ANIME}:
+        if media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
             try:
                 season = int(getattr(media_info, "get_season_seq", lambda: 0)() or 0)
             except (TypeError, ValueError):
@@ -1137,7 +1137,7 @@ class MetadataService:
         *,
         query: str,
         provider: str | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         content_profile: str = "default",
         limit: int = 20,
         allow_private: bool = False,
@@ -1240,7 +1240,7 @@ class MetadataService:
         provider: str,
         external_id: str,
         *,
-        media_type: MediaType = MediaType.UNKNOWN,
+        media_type: ProviderMediaType = ProviderMediaType.UNKNOWN,
         content_profile: str = "default",
         include_tmdb: bool = True,
         max_age_seconds: int = 300,
@@ -1256,7 +1256,7 @@ class MetadataService:
         identity = self._identity_repo.find_by_ref(
             provider,
             str(external_id),
-            media_type=media_type.value if media_type != MediaType.UNKNOWN else None,
+            media_type=media_type.value if media_type != ProviderMediaType.UNKNOWN else None,
         )
         tmdb_id = ""
         season = 0
@@ -1335,7 +1335,7 @@ class MetadataService:
         external_id: str,
         title: str,
         year: str | None = None,
-        media_type: MediaType = MediaType.TV,
+        media_type: ProviderMediaType = ProviderMediaType.SERIES,
         season: int = 1,
         content_profile: str = "default",
         allow_private: bool = False,
@@ -1447,7 +1447,7 @@ class MetadataService:
         provider: str,
         external_id: str,
         *,
-        media_type: MediaType = MediaType.MOVIE,
+        media_type: ProviderMediaType = ProviderMediaType.MOVIE,
         title: str | None = None,
         content_profile: str = "default",
         limit: int = 12,
@@ -1532,9 +1532,9 @@ class MetadataService:
             provider=provider,
             external_id=str(external_id),
             media_type=(
-                target.descriptor.default_provider_media_type.to_media_type()
+                target.descriptor.default_provider_media_type
                 if target.descriptor.default_provider_media_type is not None
-                else MediaType.TV
+                else ProviderMediaType.SERIES
             ),
             scope="default",
         )
@@ -1560,7 +1560,7 @@ class MetadataService:
         provider: str,
         external_id: str,
         *,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         scope: str = "default",
         allow_private: bool = False,
         content_profile: str | None = None,
@@ -1728,7 +1728,7 @@ class MetadataService:
         provider: str,
         external_id: str | int | None,
         *,
-        media_type: MediaType | str | None = None,
+        media_type: ProviderMediaType | str | None = None,
         extra: str = "",
         extras: tuple[str, ...] | None = None,
         scope: str = "default",
@@ -1752,7 +1752,7 @@ class MetadataService:
                 info = cache.get_detail(
                     provider,
                     str(external_id),
-                    media_type or MediaType.UNKNOWN,
+                    media_type or ProviderMediaType.UNKNOWN,
                     extra=candidate,
                     scope=scope,
                 )

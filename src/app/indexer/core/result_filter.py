@@ -16,7 +16,7 @@ import log
 from app.core.settings import settings
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.domain.enums import ProgressKey
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.miss_collector import get_miss_collector
@@ -173,17 +173,17 @@ class ResultFilter:
                 return False
 
         # 类型冲突拒绝：电影 ≠ 剧集/动漫（互斥），动漫和剧集双向兼容
-        _anime_tv = {MediaType.TV, MediaType.ANIME}
+        _anime_tv = {ProviderMediaType.SERIES, ProviderMediaType.ANIME}
         _torrent_type = meta_info.type
-        if not _torrent_type or _torrent_type == MediaType.TV:
+        if not _torrent_type or _torrent_type == ProviderMediaType.SERIES:
             _source = str(meta_info.rev_string or meta_info.org_string or "")
             if re.search(r"(?i)\[movie[^\[\]]*\]", _source):
-                _torrent_type = MediaType.MOVIE
+                _torrent_type = ProviderMediaType.MOVIE
         if (
             _torrent_type
-            and _torrent_type != MediaType.UNKNOWN
+            and _torrent_type != ProviderMediaType.UNKNOWN
             and match_media.type
-            and match_media.type != MediaType.UNKNOWN
+            and match_media.type != ProviderMediaType.UNKNOWN
         ):
             if not ({_torrent_type, match_media.type} <= _anime_tv):
                 if _torrent_type != match_media.type:
@@ -529,7 +529,10 @@ class ResultFilter:
     def _type_compatible(a, b):
         if a == b:
             return True
-        return bool(a in (MediaType.TV, MediaType.ANIME) and b in (MediaType.TV, MediaType.ANIME))
+        return bool(
+            a in (ProviderMediaType.SERIES, ProviderMediaType.ANIME)
+            and b in (ProviderMediaType.SERIES, ProviderMediaType.ANIME)
+        )
 
     def local_filter(self, result_array, filter_args, match_media=None, search_name=""):
         """
@@ -565,7 +568,7 @@ class ResultFilter:
                 # 只有完全无法解析时才退回 movie。
                 mi = meta_info(title=torrent_name, subtitle=description)
                 if not mi.get_name():
-                    mi = meta_info(title=torrent_name, subtitle=description, mtype=MediaType.MOVIE)
+                    mi = meta_info(title=torrent_name, subtitle=description, mtype=ProviderMediaType.MOVIE)
                 mi.set_torrent_info(
                     site=item.get("_indexer_name", ""),
                     site_order=item.get("_indexer_order", 0),
@@ -612,7 +615,7 @@ class ResultFilter:
                 mi = meta_info(
                     title=torrent_name,
                     subtitle=f"{labels} {description}",
-                    mtype=MediaType.MOVIE,
+                    mtype=ProviderMediaType.MOVIE,
                 )
             else:
                 mi = cached_meta_info(title=torrent_name, subtitle=f"{labels} {description}")
@@ -677,7 +680,7 @@ class ResultFilter:
                 labels=labels,
             )
 
-            if mi.type == MediaType.TV and filter_args.get("type") == MediaType.MOVIE:
+            if mi.type == ProviderMediaType.SERIES and filter_args.get("type") == ProviderMediaType.MOVIE:
                 log.info(
                     f"[ResultFilter]{torrent_name} 是 {mi.type.value}，不匹配类型：{filter_args.get('type').value}"
                 )
@@ -982,7 +985,7 @@ class ResultFilter:
                 media_info.org_string = meta_info.org_string
 
             if (
-                filter_args.get("type") == MediaType.MOVIE
+                filter_args.get("type") == ProviderMediaType.MOVIE
                 and match_media is not None
                 and not str(media_info.year).isdigit()
                 # identity_anchored 表示已由内容编号/外部身份锚定；编号本身足够唯一，
@@ -994,8 +997,10 @@ class ResultFilter:
                 continue
 
             if filter_args.get("type"):
-                if (filter_args.get("type") == MediaType.TV and media_info.type == MediaType.MOVIE) or (
-                    filter_args.get("type") == MediaType.MOVIE and media_info.type == MediaType.TV
+                if (
+                    filter_args.get("type") == ProviderMediaType.SERIES and media_info.type == ProviderMediaType.MOVIE
+                ) or (
+                    filter_args.get("type") == ProviderMediaType.MOVIE and media_info.type == ProviderMediaType.SERIES
                 ):
                     display_name = cache_key if not cand.identity_anchored else torrent_name
                     log.info(
@@ -1007,7 +1012,7 @@ class ResultFilter:
 
             display_name = cache_key if not cand.identity_anchored else torrent_name
             if match_media is not None and match_media.over_edition:
-                if media_info.type != MediaType.MOVIE and media_info.get_episode_list():
+                if media_info.type != ProviderMediaType.MOVIE and media_info.get_episode_list():
                     log.info(
                         f"[ResultFilter]"
                         f"{media_info.get_title_string()}{media_info.get_season_string()} "

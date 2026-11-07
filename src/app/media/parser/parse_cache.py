@@ -10,7 +10,7 @@ meta_info() 是纯函数（标题+副标题 → MediaInfo），同一批种子�
 """
 
 import log
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.cache_system import get_cache_manager
 from app.media.models import MediaInfo
 from app.media.parser._metainfo import meta_info
@@ -27,11 +27,11 @@ class ParseCache:
         self._cache = get_cache_manager().get_or_create("parse_cache", "tiered", memory_maxsize=5000, ttl=_TTL)
 
     @staticmethod
-    def _key(title: str, subtitle: str | None, mtype: MediaType | None) -> str:
+    def _key(title: str, subtitle: str | None, mtype: ProviderMediaType | None) -> str:
         raw = f"{title}\x00{subtitle or ''}\x00{mtype.value if mtype else ''}"
         return f"parse:v{_PARSER_VERSION}:{StringUtils.md5_hash(raw)}"
 
-    def parse(self, title: str, subtitle: str | None = None, mtype: MediaType | None = None) -> MediaInfo:
+    def parse(self, title: str, subtitle: str | None = None, mtype: ProviderMediaType | None = None) -> MediaInfo:
         """带缓存的 meta_info：命中返回独立副本，未命中解析后写缓存"""
         key = self._key(title, subtitle, mtype)
         cached = self._cache.get(key)
@@ -55,5 +55,5 @@ def get_parse_cache() -> ParseCache:
     return _parse_cache
 
 
-def cached_meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None = None) -> MediaInfo:
+def cached_meta_info(title: str, subtitle: str | None = None, mtype: ProviderMediaType | None = None) -> MediaInfo:
     return get_parse_cache().parse(title, subtitle, mtype)

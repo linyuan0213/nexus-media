@@ -34,7 +34,7 @@ from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.db.repositories.transfer_repo_adapter import TransferBlacklistRepositoryAdapter
 from app.db.repositories.word_repo_adapter import CustomWordGroupRepositoryAdapter, CustomWordRepositoryAdapter
 from app.di.models import BusinessFacades, InfrastructureObjects, ServiceObjects
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.downloader.client_factory import DownloadClientFactory
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.indexer import Indexer
@@ -567,8 +567,8 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
     def _history_poster_resolver(type_value: str, tmdbid: int) -> str:
         """按 (类型, TMDBID) 解析海报 URL：优先缓存，缺失时回源一次并回填缓存."""
         try:
-            mtype = MediaType.from_string(type_value)
-            if mtype not in (MediaType.MOVIE, MediaType.TV, MediaType.ANIME) or not tmdbid:
+            mtype = ProviderMediaType.from_value(type_value)
+            if mtype not in (ProviderMediaType.MOVIE, ProviderMediaType.SERIES, ProviderMediaType.ANIME) or not tmdbid:
                 return ""
             info = metadata_gateway.cached_details("tmdb", tmdbid, media_type=mtype)
             if not info:

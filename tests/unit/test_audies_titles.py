@@ -4,7 +4,7 @@
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.parser.unified import UnifiedParser
 
 # (标题, 期望en名, 期望集数, 期望季数, 期望分辨率, 期望类型, 备注)
@@ -16,7 +16,7 @@ TITLES = [
         None,
         None,
         "2160p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "UHD电影",
     ),
     (
@@ -25,7 +25,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "EUR蓝光",
     ),
     (
@@ -34,7 +34,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "标准蓝光",
     ),
     (
@@ -43,7 +43,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "森林",
     ),
     (
@@ -52,7 +52,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "CC标准",
     ),
     (
@@ -61,7 +61,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "KOR韩版",
     ),
     (
@@ -70,7 +70,7 @@ TITLES = [
         None,
         None,
         "2160p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "UHD老片",
     ),
     (
@@ -79,7 +79,7 @@ TITLES = [
         None,
         None,
         "2160p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "UHD Atmos",
     ),
     (
@@ -88,7 +88,7 @@ TITLES = [
         None,
         None,
         "2160p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "UHD主谋",
     ),
     (
@@ -97,7 +97,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "GBR英版",
     ),
     (
@@ -106,7 +106,7 @@ TITLES = [
         None,
         None,
         "2160p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "GER德版",
     ),
     (
@@ -115,7 +115,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "长标题",
     ),
     (
@@ -124,7 +124,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "VC-1编码",
     ),
     (
@@ -133,18 +133,26 @@ TITLES = [
         None,
         None,
         "2160p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "UHD HDR",
     ),
     # === WebDL 电影 ===
-    ("A Ma 2025 1080p friDay WEB-DL H264 AAC-ADWeb", "A Ma", None, None, "1080p", MediaType.MOVIE, "friDay电影"),
+    (
+        "A Ma 2025 1080p friDay WEB-DL H264 AAC-ADWeb",
+        "A Ma",
+        None,
+        None,
+        "1080p",
+        ProviderMediaType.MOVIE,
+        "friDay电影",
+    ),
     (
         "Sword and Armor 2025 1080p friDay WEB-DL H264 AAC-ADWeb",
         "Sword and Armor",
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "剑与甲",
     ),
     (
@@ -153,7 +161,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "未来年份",
     ),
     (
@@ -162,17 +170,25 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "秘密关系",
     ),
-    ("Clutch 2025 1080p friDay WEB-DL H264 AAC-ADWeb", "Clutch", None, None, "1080p", MediaType.MOVIE, "绝命劫车"),
+    (
+        "Clutch 2025 1080p friDay WEB-DL H264 AAC-ADWeb",
+        "Clutch",
+        None,
+        None,
+        "1080p",
+        ProviderMediaType.MOVIE,
+        "绝命劫车",
+    ),
     (
         "Relentless Fury 2025 1080p friDay WEB-DL H264 AAC-ADWeb",
         "Relentless Fury",
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "赴汤蹈火",
     ),
     (
@@ -181,7 +197,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "末日生存战",
     ),
     (
@@ -190,7 +206,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "铁窗后的家",
     ),
     (
@@ -199,7 +215,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "绝命清算",
     ),
     (
@@ -208,7 +224,7 @@ TITLES = [
         None,
         None,
         "1080p",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         "新来的小朋友",
     ),
     # === WebDL 剧集 (S01) ===
@@ -218,7 +234,7 @@ TITLES = [
         None,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "剧集S01",
     ),
     (
@@ -227,7 +243,7 @@ TITLES = [
         None,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "剧集S01无HDR",
     ),
     (
@@ -236,7 +252,7 @@ TITLES = [
         None,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "剧集S01-1080p",
     ),
     (
@@ -245,7 +261,7 @@ TITLES = [
         None,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城S01",
     ),
     (
@@ -254,7 +270,7 @@ TITLES = [
         None,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城S01-1080p",
     ),
     (
@@ -263,7 +279,7 @@ TITLES = [
         None,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈S01",
     ),
     (
@@ -272,7 +288,7 @@ TITLES = [
         None,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈S01-1080p",
     ),
     (
@@ -281,7 +297,7 @@ TITLES = [
         None,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "房州探案录S01",
     ),
     (
@@ -290,7 +306,7 @@ TITLES = [
         None,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "房州探案录S01-1080p",
     ),
     # === WebDL 剧集 (SxxExx) ===
@@ -300,7 +316,7 @@ TITLES = [
         16,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "黄泉使者S01E16",
     ),
     (
@@ -309,7 +325,7 @@ TITLES = [
         25,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈E25",
     ),
     (
@@ -318,7 +334,7 @@ TITLES = [
         24,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈E24",
     ),
     (
@@ -327,7 +343,7 @@ TITLES = [
         23,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈E23",
     ),
     (
@@ -336,7 +352,7 @@ TITLES = [
         22,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈E22-HQ",
     ),
     (
@@ -345,7 +361,7 @@ TITLES = [
         22,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈E22",
     ),
     (
@@ -354,7 +370,7 @@ TITLES = [
         22,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈E22-1080p",
     ),
     (
@@ -363,7 +379,7 @@ TITLES = [
         12,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "如约而至E12",
     ),
     (
@@ -372,7 +388,7 @@ TITLES = [
         14,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "如约而至E14",
     ),
     (
@@ -381,7 +397,7 @@ TITLES = [
         13,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "如约而至E13",
     ),
     (
@@ -390,7 +406,7 @@ TITLES = [
         17,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城E17",
     ),
     (
@@ -399,7 +415,7 @@ TITLES = [
         18,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城E18",
     ),
     (
@@ -408,7 +424,7 @@ TITLES = [
         20,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城E20",
     ),
     (
@@ -417,7 +433,7 @@ TITLES = [
         19,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城E19",
     ),
     (
@@ -426,7 +442,7 @@ TITLES = [
         9,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "昭阳公主E09",
     ),
     (
@@ -435,7 +451,7 @@ TITLES = [
         8,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "昭阳公主E08",
     ),
     (
@@ -444,7 +460,7 @@ TITLES = [
         9,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "昭阳公主E09-1080p",
     ),
     (
@@ -453,7 +469,7 @@ TITLES = [
         16,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "依然的喜事E16-HDR",
     ),
     (
@@ -462,7 +478,7 @@ TITLES = [
         15,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "依然的喜事E15",
     ),
     (
@@ -471,7 +487,7 @@ TITLES = [
         16,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "砵兰街行动E16",
     ),
     (
@@ -480,7 +496,7 @@ TITLES = [
         10,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "凤池生春E10",
     ),
     (
@@ -489,7 +505,7 @@ TITLES = [
         9,
         1,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "凤池生春E09",
     ),
     (
@@ -498,7 +514,7 @@ TITLES = [
         16,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "依然的喜事E16-1080p",
     ),
     (
@@ -507,7 +523,7 @@ TITLES = [
         15,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "依然的喜事E15-1080p",
     ),
     (
@@ -516,7 +532,7 @@ TITLES = [
         16,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "砵兰街行动E16-1080p",
     ),
     (
@@ -525,7 +541,7 @@ TITLES = [
         10,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "凤池生春E10-1080p",
     ),
     (
@@ -534,7 +550,7 @@ TITLES = [
         9,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "凤池生春E09-1080p",
     ),
     (
@@ -543,7 +559,7 @@ TITLES = [
         14,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "如约而至E14-1080p",
     ),
     (
@@ -552,7 +568,7 @@ TITLES = [
         19,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城E19-1080p",
     ),
     (
@@ -561,7 +577,7 @@ TITLES = [
         12,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "如约而至E12-1080p",
     ),
     (
@@ -570,7 +586,7 @@ TITLES = [
         18,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城E18-1080p",
     ),
     (
@@ -579,7 +595,7 @@ TITLES = [
         20,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城E20-1080p",
     ),
     (
@@ -588,7 +604,7 @@ TITLES = [
         17,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "灼灼不倾城E17-1080p",
     ),
     (
@@ -597,7 +613,7 @@ TITLES = [
         13,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "如约而至E13-1080p",
     ),
     (
@@ -606,7 +622,7 @@ TITLES = [
         25,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈E25-1080p",
     ),
     (
@@ -615,7 +631,7 @@ TITLES = [
         24,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈E24-1080p",
     ),
     (
@@ -624,7 +640,7 @@ TITLES = [
         23,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "夫妻的博弈E23-1080p",
     ),
     # === 综艺 ===
@@ -634,7 +650,7 @@ TITLES = [
         9,
         1,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "韩国大胃王E09",
     ),
     (
@@ -643,7 +659,7 @@ TITLES = [
         7,
         2,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "西游E07专访",
     ),
     (
@@ -652,7 +668,7 @@ TITLES = [
         9,
         2,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "西游E09游戏",
     ),
     (
@@ -661,7 +677,7 @@ TITLES = [
         9,
         2,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "西游E09-1080p",
     ),
     (
@@ -670,7 +686,7 @@ TITLES = [
         7,
         2,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "西游E07-1080p",
     ),
     (
@@ -679,7 +695,7 @@ TITLES = [
         15,
         8,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "中国新说唱E15",
     ),
     (
@@ -688,7 +704,7 @@ TITLES = [
         9,
         8,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "中国新说唱E09未播",
     ),
     (
@@ -697,7 +713,7 @@ TITLES = [
         9,
         8,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "中国新说唱E09-1080p",
     ),
     (
@@ -706,7 +722,7 @@ TITLES = [
         15,
         8,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "中国新说唱E15-1080p",
     ),
     (
@@ -715,7 +731,7 @@ TITLES = [
         6,
         10,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "中餐厅E06直拍",
     ),
     (
@@ -724,7 +740,7 @@ TITLES = [
         6,
         10,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "中餐厅E06-1080p",
     ),
     (
@@ -733,7 +749,7 @@ TITLES = [
         11,
         2,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "寻宝藏E11",
     ),
     (
@@ -742,7 +758,7 @@ TITLES = [
         12,
         2,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "寻宝藏E12",
     ),
     (
@@ -751,7 +767,7 @@ TITLES = [
         11,
         2,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "寻宝藏E11-1080p",
     ),
     (
@@ -760,7 +776,7 @@ TITLES = [
         12,
         2,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "寻宝藏E12-1080p",
     ),
     (
@@ -769,7 +785,7 @@ TITLES = [
         1,
         8,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "密室大逃脱E01",
     ),
     (
@@ -778,17 +794,25 @@ TITLES = [
         1,
         8,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "密室大逃脱E01-1080p",
     ),
-    ("H!6 S2026E11 Plus 2026 2160p WEB-DL H265 AAC-ADWeb", "H!6", 11, 2026, "2160p", MediaType.TV, "你好星期六E11"),
+    (
+        "H!6 S2026E11 Plus 2026 2160p WEB-DL H265 AAC-ADWeb",
+        "H!6",
+        11,
+        2026,
+        "2160p",
+        ProviderMediaType.SERIES,
+        "你好星期六E11",
+    ),
     (
         "H!6 S2026E11 Plus 2026 1080p WEB-DL H265 AAC-ADWeb",
         "H!6",
         11,
         2026,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "你好星期六E11-1080p",
     ),
     (
@@ -797,7 +821,7 @@ TITLES = [
         14,
         6,
         "2160p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "喜欢你我也是E14",
     ),
     (
@@ -806,7 +830,7 @@ TITLES = [
         14,
         6,
         "1080p",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         "喜欢你我也是E14-1080p",
     ),
 ]

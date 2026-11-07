@@ -2,7 +2,7 @@
 
 from urllib.parse import quote
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.display_image_policy import (
     clear_display_image_transformers,
     register_display_image_transformer,
@@ -56,7 +56,7 @@ def test_media_info_message_image_uses_display_transformer():
     clear_message_image_transformers()
     register_display_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "demo" and url else url)
     try:
-        media = MediaInfo(title="T", type=MediaType.MOVIE)
+        media = MediaInfo(title="T", type=ProviderMediaType.MOVIE)
         media.content_profile = "demo"
         media.poster_path = "http://a.jpg"
         assert media.get_message_image() == "/img/blur?url=x"
@@ -68,7 +68,7 @@ def test_media_info_message_image_uses_display_transformer():
 def test_media_info_message_image_uses_snapshot_fanart_without_tmdb_placeholder():
     clear_display_image_transformers()
     clear_message_image_transformers()
-    media = MediaInfo(title="TC-268", type=MediaType.MOVIE)
+    media = MediaInfo(title="TC-268", type=ProviderMediaType.MOVIE)
     media.content_profile = "demo"
     setattr(
         media,
@@ -88,7 +88,7 @@ def test_message_image_can_be_blurred_while_page_image_is_clear():
     register_display_image_transformer(lambda profile, url: url)
     register_message_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "demo" and url else url)
     try:
-        media = MediaInfo(title="T", type=MediaType.MOVIE)
+        media = MediaInfo(title="T", type=ProviderMediaType.MOVIE)
         media.content_profile = "demo"
         media.poster_path = "http://a.jpg"
         assert media.get_message_image() == "/img/blur?url=x"
@@ -103,7 +103,7 @@ def test_message_image_does_not_fall_back_to_display_blur_when_message_rule_exis
     register_display_image_transformer(lambda profile, url: "/img/blur?url=x" if profile == "demo" and url else url)
     register_message_image_transformer(lambda profile, url: url)
     try:
-        media = MediaInfo(title="T", type=MediaType.MOVIE)
+        media = MediaInfo(title="T", type=ProviderMediaType.MOVIE)
         media.content_profile = "demo"
         media.poster_path = "http://a.jpg"
         assert media.get_message_image() == "http://a.jpg"
@@ -118,7 +118,7 @@ def test_message_poster_uses_message_policy_but_page_poster_stays_clear():
     register_display_image_transformer(lambda profile, url: "/display" if url else url)
     register_message_image_transformer(lambda profile, url: "/message" if url else url)
     try:
-        media = MediaInfo(title="T", type=MediaType.MOVIE)
+        media = MediaInfo(title="T", type=ProviderMediaType.MOVIE)
         media.content_profile = "demo"
         media.poster_path = "http://a.jpg"
         assert media.get_poster_image() == "http://a.jpg"

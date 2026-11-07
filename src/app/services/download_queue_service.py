@@ -15,7 +15,7 @@ from typing import Any
 import log
 from app.core.settings import settings
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.task_queue import Task, TaskQueue, TaskStatus, TaskWorker, create_task_queue
 from app.media.models import MediaInfo
 from app.services.lifecycle_service import LifecycleProjector
@@ -82,7 +82,7 @@ class DownloadQueueService:
         """是否为该资源/下载器启用 Nexus 队列."""
         media_type = getattr(media_info, "type", None)
         media_type_value = getattr(media_type, "value", media_type)
-        if not downloader_id or str(media_type_value or "").lower() != MediaType.MOVIE.value:
+        if not downloader_id or str(media_type_value or "").lower() != ProviderMediaType.MOVIE.value:
             return False
         conf = self._client_factory.get_downloader_conf(str(downloader_id))
         if not isinstance(conf, dict):

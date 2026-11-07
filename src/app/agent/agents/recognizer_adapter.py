@@ -5,7 +5,7 @@ media 层不再 import agent 层，由 Builder 注入本适配器。
 """
 
 from app.agent.agents.media_recognizer import MediaRecognizer, MediaResult
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.parser.base import BaseParser, ParserResult
 
 
@@ -52,11 +52,11 @@ class MediaRecognizerParser(BaseParser):
         )
 
     @staticmethod
-    def _map_type(type_str: str | None) -> MediaType | None:
+    def _map_type(type_str: str | None) -> ProviderMediaType | None:
         if type_str == "anime":
-            return MediaType.ANIME
+            return ProviderMediaType.ANIME
         if type_str == "tv":
-            return MediaType.TV
+            return ProviderMediaType.SERIES
         if type_str == "movie":
-            return MediaType.MOVIE
+            return ProviderMediaType.MOVIE
         return None

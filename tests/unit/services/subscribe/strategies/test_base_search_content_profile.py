@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.subscribe.strategies.base_search import BaseSearchStrategy
 
 # 带 media_type 与海报的 TMDB 详情，供 set_provider_data/get_poster_image 使用
@@ -72,7 +72,7 @@ class TestGetMediaInfoContentProfile:
             tmdbid="106449",
             name="凡人修仙传",
             year="2020",
-            mtype=MediaType.ANIME,
+            mtype=ProviderMediaType.ANIME,
             content_profile="anime",
         )
 
@@ -90,7 +90,7 @@ class TestGetMediaInfoContentProfile:
             tmdbid="106449",
             name="凡人修仙传",
             year="2020",
-            mtype=MediaType.ANIME,
+            mtype=ProviderMediaType.ANIME,
             content_profile="anime",
         )
 
@@ -106,7 +106,7 @@ class TestGetMediaInfoContentProfile:
             tmdbid="106449",
             name="凡人修仙传",
             year="2020",
-            mtype=MediaType.TV,
+            mtype=ProviderMediaType.SERIES,
             content_profile="default",
         )
 
@@ -122,7 +122,7 @@ class TestGetMediaInfoContentProfile:
             tmdbid="106449",
             name="凡人修仙传",
             year="2020",
-            mtype=MediaType.TV,
+            mtype=ProviderMediaType.SERIES,
             content_profile="",
         )
 
@@ -137,7 +137,7 @@ class TestGetMediaInfoContentProfile:
             tmdbid="106449",
             name="凡人修仙传",
             year="2020",
-            mtype=MediaType.ANIME,
+            mtype=ProviderMediaType.ANIME,
             content_profile="plugin_custom",
         )
 
@@ -155,7 +155,7 @@ class TestGetMediaInfoContentProfile:
             tmdbid="106449",
             name="凡人修仙传",
             year="2020",
-            mtype=MediaType.ANIME,
+            mtype=ProviderMediaType.ANIME,
             content_profile=profile,
         )
 
@@ -171,7 +171,7 @@ class TestGetMediaInfoContentProfile:
             tmdbid="335790",
             name="黑暗召唤师在地下恋爱中",
             year="2025",
-            mtype=MediaType.ANIME,
+            mtype=ProviderMediaType.ANIME,
             content_profile="anime",
             anchor_provider="bangumi",
             anchor_external_id="123456",

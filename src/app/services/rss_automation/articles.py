@@ -7,7 +7,7 @@ import log
 from app.core.exceptions import RepositoryError, ServiceError
 from app.domain.enums import SearchType, UserRssTaskUseType
 from app.domain.media_ref import media_series_scope_key
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.rss_automation.executor import _parse_userrss_result
 from app.utils import ExceptionUtils, StringUtils
 
@@ -88,7 +88,7 @@ def _test_rss_articles(service, taskid: int | None, title: str) -> tuple[Any, bo
     if media_info.get_media_ref() is None:
         log.info(f"[RssTaskService]{title} 识别为 {media_info.get_name()} 未匹配到媒体信息")
     else:
-        if media_info.type == MediaType.MOVIE:
+        if media_info.type == ProviderMediaType.MOVIE:
             exist_flag, no_exists, _ = service.downloader.check_exists_medias(meta_info=media_info, no_exists=no_exists)
             if exist_flag:
                 log.info(f"[RssTaskService]电影 {media_info.get_title_string()} 已存在")

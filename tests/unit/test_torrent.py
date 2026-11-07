@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.core.constants import site_priority_order
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.sites.torrent import Torrent
 
@@ -29,7 +29,7 @@ class TestTorrentGetDownloadList:
     def test_prioritizes_season_pack_over_single_episodes(self):
         single = _MediaInfo(
             title="Single Ep",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             tmdb_id=1,
             begin_season=1,
             begin_episode=1,
@@ -40,7 +40,7 @@ class TestTorrentGetDownloadList:
         )
         pack = _MediaInfo(
             title="Season Pack",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             tmdb_id=1,
             begin_season=1,
             res_order=1,
@@ -53,7 +53,7 @@ class TestTorrentGetDownloadList:
     def test_prioritizes_multi_episode_pack(self):
         single = _MediaInfo(
             title="Single Ep",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             tmdb_id=1,
             begin_season=1,
             begin_episode=1,
@@ -64,7 +64,7 @@ class TestTorrentGetDownloadList:
         )
         multi = _MediaInfo(
             title="E01-E12 Pack",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             tmdb_id=1,
             begin_season=1,
             begin_episode=1,
@@ -80,14 +80,14 @@ class TestTorrentGetDownloadList:
         """site_order=100-pri（pri 越小=主站越优先）：site 模式应选 pri 小（site_order 大）的站点"""
         low = _MediaInfo(
             title="Low",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=0,
             site_order=9999,
             seeders=5,
         )
         high = _MediaInfo(
             title="High",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=0,
             site_order=0,
             seeders=500,
@@ -98,14 +98,14 @@ class TestTorrentGetDownloadList:
     def test_site_mode_site_priority_beats_rule_order(self):
         high_site = _MediaInfo(
             title="HighSite",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=0,
             site_order=9999,
             seeders=1,
         )
         high_rule = _MediaInfo(
             title="HighRule",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=99,
             site_order=0,
             seeders=999,
@@ -117,14 +117,14 @@ class TestTorrentGetDownloadList:
         """site 模式：同一站点内规则顺序第二，优先于做种数."""
         same_site_low_seed = _MediaInfo(
             title="LowSeedHighRule",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=99,
             site_order=9999,
             seeders=5,
         )
         same_site_high_seed = _MediaInfo(
             title="HighSeedLowRule",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=1,
             site_order=9999,
             seeders=500,
@@ -136,14 +136,14 @@ class TestTorrentGetDownloadList:
         """做种数优先：低优先级站点做种更多时应胜出."""
         preferred_site = _MediaInfo(
             title="PreferredSite",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=1,
             site_order=9999,
             seeders=5,
         )
         other_site = _MediaInfo(
             title="OtherSite",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=99,
             site_order=0,
             seeders=500,
@@ -155,14 +155,14 @@ class TestTorrentGetDownloadList:
         """seeder 模式种子数相同时，主站（pri 小、site_order 大）胜出"""
         low = _MediaInfo(
             title="Low",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=0,
             site_order=9999,
             seeders=5,
         )
         high = _MediaInfo(
             title="High",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             res_order=0,
             site_order=0,
             seeders=5,
@@ -173,7 +173,7 @@ class TestTorrentGetDownloadList:
     def test_collapse_keeps_single_best_candidate_per_name(self):
         first = _MediaInfo(
             title="Same Show",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             tmdb_id=1,
             begin_season=1,
             begin_episode=1,
@@ -184,7 +184,7 @@ class TestTorrentGetDownloadList:
         )
         second = _MediaInfo(
             title="Same Show",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             tmdb_id=1,
             begin_season=1,
             begin_episode=1,
@@ -200,7 +200,7 @@ class TestTorrentGetDownloadList:
     def test_no_collapse_keeps_multi_site_candidates_in_order(self):
         first = _MediaInfo(
             title="Same Show",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             tmdb_id=1,
             begin_season=1,
             begin_episode=1,
@@ -211,7 +211,7 @@ class TestTorrentGetDownloadList:
         )
         second = _MediaInfo(
             title="Same Show",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             tmdb_id=1,
             begin_season=1,
             begin_episode=1,

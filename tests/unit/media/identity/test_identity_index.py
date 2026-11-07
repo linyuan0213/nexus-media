@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.identity.builder import IdentityIndexBuilder
 from app.media.identity.index import AliasIndex
 from app.media.identity.models import (
@@ -132,7 +132,7 @@ class TestBuilder:
                 ]
             },
         }
-        work = IdentityIndexBuilder._build_tmdb_work(288971, MediaType.TV, info)
+        work = IdentityIndexBuilder._build_tmdb_work(288971, ProviderMediaType.SERIES, info)
         assert work.year == 2026
         assert work.official_titles == ["穹庐下的魔女", "天幕のジャードゥーガル"]
         kinds = {a.text: a.kind for a in work.aliases}
@@ -144,7 +144,7 @@ class TestBuilder:
     def test_ensure_tmdb_work_cached(self):
         b = self._builder()
         b._index.get_work.return_value = Work(source="tmdb", work_id=288971, official_titles=["穹庐下的魔女"])  # type: ignore[union-attr]
-        work = b.ensure_tmdb_work(288971, MediaType.TV)
+        work = b.ensure_tmdb_work(288971, ProviderMediaType.SERIES)
         assert work.work_id == 288971  # type: ignore[union-attr]
         b._tmdb_detail.get_detail.assert_not_called()  # type: ignore[union-attr]
 
@@ -157,7 +157,7 @@ class TestBuilder:
             "original_language": "ja",
             "first_air_date": "2026-07-04",
         }
-        work = b.ensure_tmdb_work(288971, MediaType.TV)
+        work = b.ensure_tmdb_work(288971, ProviderMediaType.SERIES)
         assert work.work_id == 288971  # type: ignore[union-attr]
         b._index.put_work.assert_called_once()  # type: ignore[union-attr]
 
@@ -165,7 +165,7 @@ class TestBuilder:
         b = self._builder()
         b._index.get_work.return_value = None  # type: ignore[union-attr]
         b._tmdb_detail.get_detail.side_effect = RuntimeError("boom")  # type: ignore[union-attr]
-        assert b.ensure_tmdb_work(288971, MediaType.TV) is None
+        assert b.ensure_tmdb_work(288971, ProviderMediaType.SERIES) is None
 
     def test_get_work_names_tmdb(self):
         b = self._builder()
@@ -175,7 +175,7 @@ class TestBuilder:
             "original_language": "ja",
             "first_air_date": "2026-07-04",
         }
-        names = b.get_work_names("tmdb", 288971, MediaType.TV)
+        names = b.get_work_names("tmdb", 288971, ProviderMediaType.SERIES)
         assert names == ["穹庐下的魔女"]
 
 
@@ -202,7 +202,7 @@ class TestGetAllNamesSwitch:
         svc._lookup.all_names.return_value = ["A", "B"]
         with patch("app.media.service.settings") as mock_settings:
             mock_settings.get.return_value = {"identity_index": False}
-            assert svc.get_all_names(1, MediaType.TV) == ["A", "B"]
+            assert svc.get_all_names(1, ProviderMediaType.SERIES) == ["A", "B"]
         svc._lookup.all_names.assert_called_once()
 
     def test_flag_on_uses_index(self):
@@ -216,7 +216,7 @@ class TestGetAllNamesSwitch:
         ):
             mock_settings.get.return_value = {"identity_index": True}
             mock_builder.return_value.get_work_names.return_value = ["X", "Y"]
-            assert svc.get_all_names(1, MediaType.TV) == ["X", "Y"]
+            assert svc.get_all_names(1, ProviderMediaType.SERIES) == ["X", "Y"]
         svc._lookup.all_names.assert_not_called()
 
     def test_flag_on_fallback_to_legacy(self):
@@ -231,4 +231,4 @@ class TestGetAllNamesSwitch:
         ):
             mock_settings.get.return_value = {"identity_index": True}
             mock_builder.return_value.get_work_names.side_effect = RuntimeError("boom")
-            assert svc.get_all_names(1, MediaType.TV) == ["legacy"]
+            assert svc.get_all_names(1, ProviderMediaType.SERIES) == ["legacy"]

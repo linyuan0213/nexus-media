@@ -42,7 +42,7 @@ class TestExtractField:
         """空 selector + extract=regex：直接在整页 HTML 上跑正则（audiences join_at 场景）"""
         html = (
             '<div class="ud-hero__meta"><span><i class="far fa-calendar-plus">'
-            '</i>加入日期：2024-04-05 16:55:17 (2年5月前)</span></div>'
+            "</i>加入日期：2024-04-05 16:55:17 (2年5月前)</span></div>"
         )
         cfg = {
             "selector": "",
@@ -61,9 +61,7 @@ class TestConfigHtmlParse:
         """type=html + fields 分支：_parse_base_info 解析用户名（hhanclub 场景）"""
         ins = _MockInstance()
         ins._index_html = '<html><body><a href="userdetails.php?id=19504"><b>linyuan213</b></a></body></html>'
-        ins._def = SimpleNamespace(
-            user_info={"type": "html", "page": "userdetails.php?id={userid}", "fields": {}}
-        )
+        ins._def = SimpleNamespace(user_info={"type": "html", "page": "userdetails.php?id={userid}", "fields": {}})
         ins.parse()  # type: ignore[arg-type]
         assert ins.username == "linyuan213"
 

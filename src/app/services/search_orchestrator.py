@@ -17,7 +17,7 @@ from app.domain.enums import SearchType, channel_name
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.intent import IntentResolver
 from app.domain.interfaces.search_repo import ISearchRepository
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import SEARCH_START
@@ -204,7 +204,7 @@ class SearchOrchestrator:
         self,
         anchor_provider: str,
         anchor_external_id: str,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         content_profile: str | None = None,
         context: MetadataContext | None = None,
     ):
@@ -229,11 +229,15 @@ class SearchOrchestrator:
         title = str(record.get("title") or record.get("name") or "").strip()
         if not title:
             return None
-        actual_type = media_type or MediaType.from_string(str(record.get("media_type") or "")) or MediaType.TV
+        actual_type = (
+            media_type or ProviderMediaType.from_value(str(record.get("media_type") or "")) or ProviderMediaType.SERIES
+        )
         genres = record.get("genres") or []
         genre_names = [str(item.get("name") if isinstance(item, dict) else item).strip() for item in genres if item]
-        if actual_type == MediaType.TV and any(name in {"动画", "动漫", "アニメ", "Animation"} for name in genre_names):
-            actual_type = MediaType.ANIME
+        if actual_type == ProviderMediaType.SERIES and any(
+            name in {"动画", "动漫", "アニメ", "Animation"} for name in genre_names
+        ):
+            actual_type = ProviderMediaType.ANIME
         info = meta_info(title=title, mtype=actual_type)
         info.title = title
         has_cjk = any("\u4e00" <= char <= "\u9fff" for char in title)
@@ -253,7 +257,7 @@ class SearchOrchestrator:
             info.en_name = latin_alias
         info.aliases = aliases
         info.original_title = original_title or title
-        if actual_type in (MediaType.TV, MediaType.ANIME) and info.begin_season is None and title:
+        if actual_type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME) and info.begin_season is None and title:
             # 豆瓣等单季条目把季写在标题里：解析成真实季号，供匹配和过滤使用。
             _, _, title_season, _, _, _ = StringUtils.get_keyword_from_string(title)
             if title_season:
@@ -284,7 +288,7 @@ class SearchOrchestrator:
         self,
         provider: str,
         content_id: str,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         content_profile: str | None = None,
         context: MetadataContext | None = None,
     ):
@@ -449,7 +453,7 @@ class SearchOrchestrator:
                     f"[Orchestrator]首次识别标题不匹配，按 TV 重试: 搜索名={ctx.keyword}, "
                     f"provider标题={self._provider_title(media_info)}"
                 )
-                retry = self._identify_media(ctx, force_type=MediaType.TV)
+                retry = self._identify_media(ctx, force_type=ProviderMediaType.SERIES)
                 media_info = (
                     retry
                     if retry and retry.provider_data and self._provider_title_matches(retry, ctx.keyword)
@@ -466,7 +470,7 @@ class SearchOrchestrator:
                 # 没有季标记时才按整部剧召回。
                 if not (ctx.filter_args or {}).get("season"):
                     title_season = None
-                    if media_info.type in (MediaType.TV, MediaType.ANIME):
+                    if media_info.type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
                         _, _, title_season, _, _, _ = StringUtils.get_keyword_from_string(
                             str(media_info.title or media_info.cn_name or "")
                         )
@@ -504,14 +508,14 @@ class SearchOrchestrator:
             filter_args["user_id"] = ctx.user_id
         return filter_args
 
-    def _identify_media(self, ctx: SearchContext, force_type: MediaType | None = None) -> Any:
+    def _identify_media(self, ctx: SearchContext, force_type: ProviderMediaType | None = None) -> Any:
         try:
             if self._intent_resolver:
                 intent = self._intent_resolver.resolve(ctx.keyword)
-                mtype = MediaType.from_string(intent.media_type) if intent.media_type else None
+                mtype = ProviderMediaType.from_value(intent.media_type) if intent.media_type else None
                 # TMDB 无动漫类型，识别按电视剧处理（与旧 Web 流水线一致）
-                if mtype == MediaType.ANIME:
-                    mtype = MediaType.TV
+                if mtype == ProviderMediaType.ANIME:
+                    mtype = ProviderMediaType.SERIES
                 season_num = intent.season
                 episode_num = intent.episode
                 keyword = intent.keywords or ctx.keyword
@@ -646,10 +650,10 @@ class SearchOrchestrator:
                 if vote and not mi.vote_average:
                     mi.vote_average = vote
                 # 结果行必须继承锚点的媒体类型和身份，否则资源卡片/入库会退回默认 movie。
-                if match_media.type != MediaType.UNKNOWN:
-                    if match_media.type in (MediaType.MOVIE, MediaType.ANIME):
+                if match_media.type != ProviderMediaType.UNKNOWN:
+                    if match_media.type in (ProviderMediaType.MOVIE, ProviderMediaType.ANIME):
                         mi.type = match_media.type
-                    elif mi.type not in (MediaType.TV, MediaType.ANIME):
+                    elif mi.type not in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
                         mi.type = match_media.type
                 if not getattr(mi, "anchor_provider", None):
                     mi.anchor_provider = getattr(match_media, "anchor_provider", None)

@@ -12,7 +12,6 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, model_validator
 
 from app.domain.media_types import MediaKind, ProviderMediaType, media_type_registry
-from app.domain.mediatypes import MediaType
 
 
 def _utcnow() -> datetime:
@@ -48,7 +47,7 @@ class ProviderRef(BaseModel):
 
     provider: str
     external_id: str
-    media_type: MediaType | None = None
+    media_type: ProviderMediaType | None = None
     provider_media_type: ProviderMediaType | None = None
     media_kind: MediaKind | None = None
     scope: str = "default"
@@ -60,7 +59,7 @@ class ProviderRef(BaseModel):
         if self.provider_media_type is None and self.media_type is not None:
             self.provider_media_type = ProviderMediaType.from_value(self.media_type.value)
         if self.media_type is None and self.provider_media_type is not None:
-            self.media_type = self.provider_media_type.to_media_type()
+            self.media_type = self.provider_media_type
         if self.media_kind is None:
             self.media_kind = (
                 self.provider_media_type.kind
@@ -153,7 +152,7 @@ class ProviderRecord(BaseModel):
     provider: str
     external_id: str
     refs: list[ProviderRef] = Field(default_factory=list)
-    media_type: MediaType = MediaType.UNKNOWN
+    media_type: ProviderMediaType = ProviderMediaType.UNKNOWN
     provider_media_type: ProviderMediaType | None = None
     media_kind: MediaKind | None = None
     content_profile: str = "default"
@@ -189,8 +188,8 @@ class ProviderRecord(BaseModel):
     def _fill_media_kind(self):
         if self.provider_media_type is None:
             self.provider_media_type = ProviderMediaType.from_value(self.media_type.value)
-        if self.media_type == MediaType.UNKNOWN and self.provider_media_type != ProviderMediaType.UNKNOWN:
-            self.media_type = self.provider_media_type.to_media_type()
+        if self.media_type == ProviderMediaType.UNKNOWN and self.provider_media_type != ProviderMediaType.UNKNOWN:
+            self.media_type = self.provider_media_type
         if self.media_kind is None:
             self.media_kind = self.provider_media_type.kind
         return self
@@ -213,7 +212,7 @@ class MediaMetadata(BaseModel):
 
     schema_version: int = 1
     identity_id: str
-    media_type: MediaType = MediaType.UNKNOWN
+    media_type: ProviderMediaType = ProviderMediaType.UNKNOWN
     media_kind: MediaKind | None = None
     content_profile: str = "default"
     scope: str = "default"
@@ -243,7 +242,7 @@ class MediaMetadata(BaseModel):
 
 class SearchQuery(BaseModel):
     query: str
-    media_type: MediaType | None = None
+    media_type: ProviderMediaType | None = None
     content_profile: str = "default"
     year: str | None = None
     locale: str | None = None
@@ -255,7 +254,7 @@ class SearchHit(BaseModel):
     ref: ProviderRef
     title: str
     year: str | None = None
-    media_type: MediaType = MediaType.UNKNOWN
+    media_type: ProviderMediaType = ProviderMediaType.UNKNOWN
     media_kind: MediaKind | None = None
     content_profile: str = "default"
     poster: str | None = None
@@ -321,7 +320,7 @@ class Detection(BaseModel):
     content_profile: str
     confidence: float
     anchor_hint: ProviderRef | None = None
-    base_media_type: MediaType | None = None
+    base_media_type: ProviderMediaType | None = None
     extra: dict[str, Any] = Field(default_factory=dict)
 
 

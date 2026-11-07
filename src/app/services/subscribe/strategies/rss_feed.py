@@ -17,9 +17,8 @@ from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryA
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SearchType
 from app.domain.media_ref import media_series_scope_key
-from app.domain.media_type_utils import MediaTypeMapper
-from app.domain.media_types import media_type_registry
-from app.domain.mediatypes import MediaType
+from app.domain.media_type_utils import ProviderMediaTypeMapper
+from app.domain.media_types import ProviderMediaType, media_type_registry
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.service import MediaService
 from app.message import Message
@@ -186,7 +185,7 @@ class RssFeedStrategy:
 
     def _get_default_rss_sites(
         self,
-        mtype: MediaType,
+        mtype: ProviderMediaType,
         content_profile: str | None = None,
         user_id: int | str | None = None,
     ) -> list:
@@ -216,22 +215,23 @@ class RssFeedStrategy:
 
         rss_movies = self.subscribe.get_subscribe_movies(state=SubscribeState.RUNNING.value)
         if not rss_movies:
-            log.warn(f"[RssFeedStrategy] 没有正在订阅的{MediaType.MOVIE.display_name}")
+            log.warn(f"[RssFeedStrategy] 没有正在订阅的{ProviderMediaType.MOVIE.display_name}")
         else:
             log.info(
                 "[RssFeedStrategy] {}订阅清单：{}".format(
-                    MediaType.MOVIE.display_name,
+                    ProviderMediaType.MOVIE.display_name,
                     " ".join("{}".format(info.get("name")) for info in rss_movies.values()),
                 )
             )
 
         rss_tvs = self.subscribe.get_subscribe_tvs(state=SubscribeState.RUNNING.value)
         if not rss_tvs:
-            log.warn(f"[RssFeedStrategy] 没有正在订阅的{MediaType.TV.display_name}")
+            log.warn(f"[RssFeedStrategy] 没有正在订阅的{ProviderMediaType.SERIES.display_name}")
         else:
             log.info(
                 "[RssFeedStrategy] {}订阅清单：{}".format(
-                    MediaType.TV.display_name, " ".join("{}".format(info.get("name")) for info in rss_tvs.values())
+                    ProviderMediaType.SERIES.display_name,
+                    " ".join("{}".format(info.get("name")) for info in rss_tvs.values()),
                 )
             )
 
@@ -245,9 +245,9 @@ class RssFeedStrategy:
                 check_sites += list(rss_sites)
             else:
                 if rinfo in rss_tvs.values():
-                    mtype = MediaType.TV
+                    mtype = ProviderMediaType.SERIES
                 else:
-                    mtype = MediaType.MOVIE
+                    mtype = ProviderMediaType.MOVIE
                 check_sites += self._get_default_rss_sites(mtype, rinfo.get("content_profile"), rinfo.get("user_id"))
         check_sites = list(set(check_sites))
 
@@ -431,7 +431,7 @@ class RssFeedStrategy:
                 if not match_flag:
                     if match_info and any("站点属性解析失败" in m for m in match_msg):
                         # ANIME 存于电视剧表：按 to_tmdb 映射，避免误写电影表
-                        rtype = MediaTypeMapper.to_tmdb(media_info.type) or MediaType.MOVIE.value
+                        rtype = ProviderMediaTypeMapper.to_tmdb(media_info.type) or ProviderMediaType.MOVIE.value
                         self.subscribe.update_rss_state(rtype, match_info.get("id"), SubscribeState.ERROR.value)
                         log.warn(f"[RssFeedStrategy] {match_info.get('name')} 站点属性解析失败，标记为错误状态")
                     continue
@@ -450,7 +450,7 @@ class RssFeedStrategy:
                             continue
 
                     if not match_info.get("over_edition"):
-                        if media_info.type == MediaType.MOVIE:
+                        if media_info.type == ProviderMediaType.MOVIE:
                             exist_flag, rss_no_exists, _ = self.downloader.check_exists_medias(
                                 meta_info=media_info, no_exists=rss_no_exists
                             )
@@ -472,7 +472,7 @@ class RssFeedStrategy:
                                             external_id=str(media_info.tmdb_id or ""),
                                             title=str(media_info.title or ""),
                                             year=str(media_info.year or "") or None,
-                                            media_type=media_info.type or MediaType.TV,
+                                            media_type=media_info.type or ProviderMediaType.SERIES,
                                             season=season,
                                             content_profile=str(media_info.content_profile or "default"),
                                             provider_data=media_info.provider_data,
@@ -529,7 +529,7 @@ class RssFeedStrategy:
                         if exist_flag:
                             continue
                     else:
-                        if media_info.type != MediaType.MOVIE and media_info.get_episode_list():
+                        if media_info.type != ProviderMediaType.MOVIE and media_info.get_episode_list():
                             log.info(
                                 f"[RssFeedStrategy] {media_info.get_title_string()}{media_info.get_season_string()} "
                                 f"正在洗版，过滤掉季集不完整的资源：{title}"
@@ -594,7 +594,7 @@ class RssFeedStrategy:
         pending_rss_torrents = []
         updated_rss_torrents = []
 
-        def __mark_downloaded(download_item, mtype=MediaType.TV):
+        def __mark_downloaded(download_item, mtype=ProviderMediaType.SERIES):
             # 下载成功（已按真实种子清单判定覆盖所需集）→ 登记为“待转移”：
             # 不删订阅、不写历史、不发通知；定稿由转移落盘确认，转移失败可回滚重下。
             if not download_item:
@@ -604,11 +604,11 @@ class RssFeedStrategy:
             pending_rss_torrents.append(download_item.rssid)
             if self.subscribe is None:
                 return
-            if mtype in (MediaType.TV, MediaType.ANIME):
+            if mtype in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
                 # 整季已覆盖：清空缺集，防止状态短暂回退到 RUNNING 时旧缺集再次触发下载
                 self.subscribe.clear_subscribe_tv_lack(download_item.rssid, download_item)
             self.subscribe.update_rss_state(mtype, download_item.rssid, SubscribeState.COMPLETED.value)
-            if mtype != MediaType.TV:
+            if mtype != ProviderMediaType.SERIES:
                 return
             # 同媒体其他用户的订阅联动置为待转移（共享媒体库，ADR-021 记账分离）
             for sibling_id in getattr(download_item, "sibling_rssids", None) or []:
@@ -616,7 +616,7 @@ class RssFeedStrategy:
                     continue
                 pending_rss_torrents.append(sibling_id)
                 log.info(f"[RssFeedStrategy] 联动登记待转移兄弟订阅 rssid={sibling_id}（同一媒体共享下载）")
-                self.subscribe.update_rss_state(MediaType.TV, sibling_id, SubscribeState.COMPLETED.value)
+                self.subscribe.update_rss_state(ProviderMediaType.SERIES, sibling_id, SubscribeState.COMPLETED.value)
 
         def __update_tv_rss(download_item, left_media):
             if not download_item or not left_media:
@@ -670,7 +670,7 @@ class RssFeedStrategy:
         # 不能在这里按 RSS 原始顺序先保留第一条，否则站点/做种优先失效。
 
         for media in rss_download_torrents:
-            if media.type not in (MediaType.TV, MediaType.ANIME):
+            if media.type not in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
                 continue
             if media.begin_episode is not None:
                 continue
@@ -698,7 +698,7 @@ class RssFeedStrategy:
             if episode_count > 1:
                 collection_priority = 2
             elif (
-                getattr(x, "type", None) in (MediaType.TV, MediaType.ANIME)
+                getattr(x, "type", None) in (ProviderMediaType.SERIES, ProviderMediaType.ANIME)
                 and getattr(x, "begin_season", None) is not None
                 and getattr(x, "begin_episode", None) is None
             ):
@@ -734,7 +734,7 @@ class RssFeedStrategy:
         movie_candidate_counts: dict = {}
         selected_movies = []
         for media in rss_download_torrents:
-            if getattr(media, "type", None) != MediaType.MOVIE:
+            if getattr(media, "type", None) != ProviderMediaType.MOVIE:
                 selected_movies.append(media)
                 continue
             rssid = getattr(media, "rssid", None)
@@ -772,9 +772,9 @@ class RssFeedStrategy:
                     )
                     if item.over_edition:
                         __update_over_edition(item)
-                    elif getattr(item, "type", None) == MediaType.MOVIE:
+                    elif getattr(item, "type", None) == ProviderMediaType.MOVIE:
                         # 电影：登记待转移，转移落盘确认后定稿
-                        __mark_downloaded(item, MediaType.MOVIE)
+                        __mark_downloaded(item, ProviderMediaType.MOVIE)
                     elif not known_season_episode:
                         # 季号与集号范围都无法识别：不据此判定订阅完成，避免误判，交给下一轮
                         log.warn(f"[RssFeedStrategy]{getattr(item, 'org_string', '')} 未识别到季集，不判定订阅完成")

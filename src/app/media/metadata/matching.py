@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.parser.unified.type_inferrer import infer_type
 from app.media.parser.unified.types import ParseContext
 
@@ -18,7 +18,7 @@ class LegacyMatchProfile:
 
     key = "default"
     content_profile = "default"
-    base_media_type = MediaType.TV
+    base_media_type = ProviderMediaType.SERIES
     priority = 0
 
     def detect(self, ctx: ParseContext) -> Detection:

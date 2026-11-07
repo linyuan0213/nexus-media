@@ -2,7 +2,7 @@
 
 from app.agent.agents.media_recognizer import MediaRecognizer, MediaResult
 from app.agent.agents.recognizer_adapter import MediaRecognizerParser
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 
 class _FakeRecognizer(MediaRecognizer):
@@ -37,7 +37,7 @@ class TestMediaRecognizerParser:
         assert parsed is not None
         assert parsed.title_cn == "流浪地球"
         assert parsed.year == "2019"
-        assert parsed.type == MediaType.MOVIE
+        assert parsed.type == ProviderMediaType.MOVIE
 
     def test_parse_none_result(self):
         parser = MediaRecognizerParser(_FakeRecognizer(result=None))
@@ -48,9 +48,9 @@ class TestMediaRecognizerParser:
         parser = MediaRecognizerParser(_FakeRecognizer(result=result))
         results = parser.parse_batch(["a", "b"])
         assert len(results) == 2
-        assert all(r is not None and r.type == MediaType.TV and r.season == 2 for r in results)
+        assert all(r is not None and r.type == ProviderMediaType.SERIES and r.season == 2 for r in results)
 
     def test_type_mapping(self):
-        assert MediaRecognizerParser._map_type("anime") == MediaType.ANIME
+        assert MediaRecognizerParser._map_type("anime") == ProviderMediaType.ANIME
         assert MediaRecognizerParser._map_type("unknown") is None
         assert MediaRecognizerParser._map_type(None) is None

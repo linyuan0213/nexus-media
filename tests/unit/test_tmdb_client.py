@@ -1,6 +1,6 @@
 """测试 TMDB 客户端工具函数 — 多语言名称匹配"""
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.lookup.tmdb_client import (
     compare_tmdb_names,
     get_tmdb_chinese_title,
@@ -42,7 +42,7 @@ class TestCompareTmdbNames:
 class TestGetTmdbChineseTitle:
     def test_cn_simplified(self):
         info = {
-            "media_type": MediaType.TV,
+            "media_type": ProviderMediaType.SERIES,
             "alternative_titles": {"results": [{"title": "鬼灭之刃", "iso_3166_1": "CN"}]},
         }
         result = get_tmdb_chinese_title(info)
@@ -50,7 +50,7 @@ class TestGetTmdbChineseTitle:
 
     def test_tw_traditional_fallback(self):
         info = {
-            "media_type": MediaType.TV,
+            "media_type": ProviderMediaType.SERIES,
             "alternative_titles": {"results": [{"title": "鬼滅之刃", "iso_3166_1": "TW"}]},
         }
         result = get_tmdb_chinese_title(info)
@@ -58,7 +58,7 @@ class TestGetTmdbChineseTitle:
 
     def test_hk_traditional_fallback(self):
         info = {
-            "media_type": MediaType.MOVIE,
+            "media_type": ProviderMediaType.MOVIE,
             "alternative_titles": {"titles": [{"title": "鬼滅之刃", "iso_3166_1": "HK"}]},
         }
         result = get_tmdb_chinese_title(info)
@@ -66,7 +66,7 @@ class TestGetTmdbChineseTitle:
 
     def test_no_chinese_title(self):
         info = {
-            "media_type": MediaType.MOVIE,
+            "media_type": ProviderMediaType.MOVIE,
             "alternative_titles": {"titles": []},
             "title": "Kimetsu no Yaiba",
         }
@@ -75,7 +75,7 @@ class TestGetTmdbChineseTitle:
 
     def test_zh_cn_from_translations(self):
         info = {
-            "media_type": MediaType.TV,
+            "media_type": ProviderMediaType.SERIES,
             "alternative_titles": {"results": []},
             "name": "Chainsmoker Cat",
             "translations": {
@@ -90,7 +90,7 @@ class TestGetTmdbChineseTitle:
 
     def test_zh_tw_from_translations_fallback(self):
         info = {
-            "media_type": MediaType.TV,
+            "media_type": ProviderMediaType.SERIES,
             "alternative_titles": {"results": []},
             "name": "Chainsmoker Cat",
             "translations": {
@@ -104,7 +104,7 @@ class TestGetTmdbChineseTitle:
 
     def test_zh_generic_from_translations(self):
         info = {
-            "media_type": MediaType.MOVIE,
+            "media_type": ProviderMediaType.MOVIE,
             "alternative_titles": {"titles": []},
             "title": "Chainsmoker Cat",
             "translations": {
@@ -118,7 +118,7 @@ class TestGetTmdbChineseTitle:
 
     def test_translations_no_chinese(self):
         info = {
-            "media_type": MediaType.TV,
+            "media_type": ProviderMediaType.SERIES,
             "alternative_titles": {"results": []},
             "name": "Chainsmoker Cat",
             "translations": {"translations": [{"iso_639_1": "en", "data": {"name": "Chainsmoker Cat"}}]},
@@ -154,7 +154,7 @@ class TestProviderMediaTypePayloads:
 class TestUpdateTmdbinfoCnTitle:
     def test_fills_cn_title_from_translations(self):
         info = {
-            "media_type": MediaType.TV,
+            "media_type": ProviderMediaType.SERIES,
             "name": "Chainsmoker Cat",
             "alternative_titles": {"results": []},
             "translations": {
@@ -168,7 +168,7 @@ class TestUpdateTmdbinfoCnTitle:
 
     def test_fills_cn_title_with_zh_cn_config(self):
         info = {
-            "media_type": MediaType.MOVIE,
+            "media_type": ProviderMediaType.MOVIE,
             "title": "Chainsmoker Cat",
             "alternative_titles": {"titles": []},
             "translations": {
@@ -182,7 +182,7 @@ class TestUpdateTmdbinfoCnTitle:
 
     def test_keep_en_title_when_non_chinese_config(self):
         info = {
-            "media_type": MediaType.TV,
+            "media_type": ProviderMediaType.SERIES,
             "name": "Chainsmoker Cat",
             "alternative_titles": {"results": []},
             "translations": {
@@ -195,6 +195,6 @@ class TestUpdateTmdbinfoCnTitle:
         assert result["name"] == "Chainsmoker Cat"
 
     def test_keep_cn_title_already_chinese(self):
-        info = {"media_type": MediaType.TV, "name": "尼古喵喵", "alternative_titles": {"results": []}}
+        info = {"media_type": ProviderMediaType.SERIES, "name": "尼古喵喵", "alternative_titles": {"results": []}}
         result = update_tmdbinfo_cn_title(info, "zh")
         assert result["name"] == "尼古喵喵"

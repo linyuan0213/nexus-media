@@ -6,7 +6,7 @@ import ast
 import threading
 from pathlib import Path
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.gateway import MetadataGateway
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -129,8 +129,8 @@ def test_same_ref_calls_provider_once_per_chain():
     service = _CountingService()
     gateway = MetadataGateway(service)
 
-    first = gateway.lookup("boundary_demo", "BOUNDARY-1", media_type=MediaType.MOVIE)
-    second = gateway.lookup("boundary_demo", "BOUNDARY-1", media_type=MediaType.MOVIE)
+    first = gateway.lookup("boundary_demo", "BOUNDARY-1", media_type=ProviderMediaType.MOVIE)
+    second = gateway.lookup("boundary_demo", "BOUNDARY-1", media_type=ProviderMediaType.MOVIE)
 
     assert first == second
     assert service.lookups == 1
@@ -142,7 +142,7 @@ def test_concurrent_same_ref_calls_provider_once():
     results = []
 
     def worker():
-        results.append(gateway.lookup("boundary_demo", "BOUNDARY-2", media_type=MediaType.MOVIE))
+        results.append(gateway.lookup("boundary_demo", "BOUNDARY-2", media_type=ProviderMediaType.MOVIE))
 
     threads = [threading.Thread(target=worker) for _ in range(8)]
     for thread in threads:
@@ -219,7 +219,7 @@ def test_same_ref_resolve_composes_once():
     service = _CountingService()
     gateway = MetadataGateway(service)
 
-    gateway.resolve("boundary_demo", "BOUNDARY-3", media_type=MediaType.MOVIE)
-    gateway.resolve("boundary_demo", "BOUNDARY-3", media_type=MediaType.MOVIE)
+    gateway.resolve("boundary_demo", "BOUNDARY-3", media_type=ProviderMediaType.MOVIE)
+    gateway.resolve("boundary_demo", "BOUNDARY-3", media_type=ProviderMediaType.MOVIE)
 
     assert service.composes == 1

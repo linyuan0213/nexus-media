@@ -8,7 +8,6 @@ from typing import Any, Literal
 
 import log
 from app.domain.media_types import ProviderMediaType, provider_media_type_of
-from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.external.bangumi import Bangumi
@@ -210,7 +209,7 @@ class TmdbDiscovery:
             facets={"genre": facets},
         )
 
-    def _tmdb_genre_map(self, media_type: MediaType | ProviderMediaType | None) -> dict[str, str]:
+    def _tmdb_genre_map(self, media_type: ProviderMediaType | ProviderMediaType | None) -> dict[str, str]:
         provider_type = provider_media_type_of(media_type)
         key = provider_type.value if media_type is not None else "movie"
         if key in self._genre_maps:

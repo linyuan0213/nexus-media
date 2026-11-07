@@ -5,7 +5,7 @@
 """
 
 from app.core.constants import FANART_MOVIE_API_URL, FANART_TV_API_URL
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -51,7 +51,7 @@ class Fanart:
             if not ret:
                 return images
             data = ret.json()
-            if media_type == MediaType.MOVIE:
+            if media_type == ProviderMediaType.MOVIE:
                 for image_type in self._movie_image_types:
                     items = data.get(image_type)
                     if isinstance(items, list) and items:
@@ -82,7 +82,7 @@ class Fanart:
     @classmethod
     @lru_cache_with_ttl(maxsize=256, ttl=3600)
     def __request_fanart(cls, media_type, queryid):
-        if media_type == MediaType.MOVIE:
+        if media_type == ProviderMediaType.MOVIE:
             image_url = FANART_MOVIE_API_URL % queryid
         else:
             image_url = FANART_TV_API_URL % queryid
@@ -98,34 +98,34 @@ class Fanart:
         if not media_type or not queryid:
             return default
         images = self._get_images(media_type, queryid)
-        key = "moviethumb" if media_type == MediaType.MOVIE else "tvthumb"
+        key = "moviethumb" if media_type == ProviderMediaType.MOVIE else "tvthumb"
         return images.get(key, default)
 
     def get_poster(self, media_type, queryid, default=None):
         if not media_type or not queryid:
             return default
         images = self._get_images(media_type, queryid)
-        key = "movieposter" if media_type == MediaType.MOVIE else "tvposter"
+        key = "movieposter" if media_type == ProviderMediaType.MOVIE else "tvposter"
         return images.get(key, default)
 
     def get_background(self, media_type, queryid, default=None):
         if not media_type or not queryid:
             return default
         images = self._get_images(media_type, queryid)
-        key = "moviebackground" if media_type == MediaType.MOVIE else "showbackground"
+        key = "moviebackground" if media_type == ProviderMediaType.MOVIE else "showbackground"
         return images.get(key, default)
 
     def get_banner(self, media_type, queryid, default=None):
         if not media_type or not queryid:
             return default
         images = self._get_images(media_type, queryid)
-        key = "moviebanner" if media_type == MediaType.MOVIE else "tvbanner"
+        key = "moviebanner" if media_type == ProviderMediaType.MOVIE else "tvbanner"
         return images.get(key, default)
 
     def get_disc(self, media_type, queryid, default=None):
         if not media_type or not queryid:
             return default
-        if media_type != MediaType.MOVIE:
+        if media_type != ProviderMediaType.MOVIE:
             return default
         images = self._get_images(media_type, queryid)
         return images.get("moviedisc", default)
@@ -134,36 +134,36 @@ class Fanart:
         if not media_type or not queryid:
             return default
         images = self._get_images(media_type, queryid)
-        key = "hdmovielogo" if media_type == MediaType.MOVIE else "hdtvlogo"
+        key = "hdmovielogo" if media_type == ProviderMediaType.MOVIE else "hdtvlogo"
         return images.get(key, default)
 
     def get_thumb(self, media_type, queryid, default=None):
         if not media_type or not queryid:
             return default
         images = self._get_images(media_type, queryid)
-        key = "moviethumb" if media_type == MediaType.MOVIE else "tvthumb"
+        key = "moviethumb" if media_type == ProviderMediaType.MOVIE else "tvthumb"
         return images.get(key, default)
 
     def get_clearart(self, media_type, queryid, default=None):
-        if not media_type or not queryid or media_type != MediaType.TV:
+        if not media_type or not queryid or media_type != ProviderMediaType.SERIES:
             return default
         images = self._get_images(media_type, queryid)
         return images.get("hdclearart", default)
 
     def get_seasonposter(self, media_type, queryid, season, default=None):
-        if not media_type or not queryid or media_type != MediaType.TV:
+        if not media_type or not queryid or media_type != ProviderMediaType.SERIES:
             return default
         images = self._get_images(media_type, queryid)
         return images.get("seasonposter", {}).get(season, "") or default
 
     def get_seasonthumb(self, media_type, queryid, season, default=None):
-        if not media_type or not queryid or media_type != MediaType.TV:
+        if not media_type or not queryid or media_type != ProviderMediaType.SERIES:
             return default
         images = self._get_images(media_type, queryid)
         return images.get("seasonthumb", {}).get(season, "") or default
 
     def get_seasonbanner(self, media_type, queryid, season, default=None):
-        if not media_type or not queryid or media_type != MediaType.TV:
+        if not media_type or not queryid or media_type != ProviderMediaType.SERIES:
             return default
         images = self._get_images(media_type, queryid)
         return images.get("seasonbanner", {}).get(season, "") or default

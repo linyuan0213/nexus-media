@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 
 from app.domain.media_types import MediaKind, ProviderMediaType
-from app.domain.mediatypes import MediaType
 
 
 class LookupResult(BaseModel):
@@ -24,5 +23,5 @@ class LookupResult(BaseModel):
 class BaseLookup:
     """查询器基类"""
 
-    def lookup(self, parsed, hint_type: MediaType | None = None) -> LookupResult | None:
+    def lookup(self, parsed, hint_type: ProviderMediaType | None = None) -> LookupResult | None:
         raise NotImplementedError

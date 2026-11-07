@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.transfer.filetransfer_service import FileTransferService
 
 
@@ -44,7 +44,7 @@ def test_disambiguates_by_filename_in_aggregated_dir(tmp_path):
     svc, file_path = _service(records, tmp_path)
     tmdb_info, media_type, _s, _e = svc._lookup_download_record(file_path)
     assert tmdb_info is not None
-    assert media_type == MediaType.ANIME
+    assert media_type == ProviderMediaType.ANIME
 
 
 def test_ambiguous_records_return_none(tmp_path):
@@ -79,7 +79,7 @@ def test_same_tmdb_multiple_records_not_ambiguous(tmp_path):
     svc, file_path = _service(records, tmp_path)
     tmdb_info, media_type, _s, _e = svc._lookup_download_record(file_path)
     assert tmdb_info is not None
-    assert media_type == MediaType.ANIME
+    assert media_type == ProviderMediaType.ANIME
 
 
 def test_apply_download_record_hint_keeps_anchor_without_tmdb():

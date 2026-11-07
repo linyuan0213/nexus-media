@@ -9,7 +9,6 @@ from collections.abc import Callable, Sequence
 from typing import Any, Protocol
 
 from app.domain.media_types import MediaKind, ProviderMediaType, media_kind_of, provider_media_type_of
-from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.tmdb_client import TmdbClient
@@ -41,7 +40,7 @@ class _DetailLike(Protocol):
     def get_detail(
         self,
         tmdbid: str,
-        mtype: MediaType | ProviderMediaType,
+        mtype: ProviderMediaType | ProviderMediaType,
         language: str | None = None,
         append_to_response: str | None = None,
     ) -> dict[str, Any] | None: ...
@@ -60,7 +59,7 @@ class _SearchLike(Protocol):
 def tmdb_detail_to_record(
     info: dict[str, Any],
     *,
-    media_type: MediaType | ProviderMediaType,
+    media_type: ProviderMediaType | ProviderMediaType,
     external_id: str | None = None,
     scope: str = "default",
     locale: str | None = None,
@@ -115,7 +114,7 @@ def tmdb_detail_to_record(
         provider="tmdb",
         external_id=tmdb_id,
         refs=refs,
-        media_type=provider_type.to_media_type(),
+        media_type=provider_type,
         provider_media_type=provider_type,
         content_profile=content_profile,
         locale=locale,
@@ -332,7 +331,7 @@ class TmdbProvider:
                         ),
                         title=item.get("title") or item.get("name") or "",
                         year=(item.get("release_date") or item.get("first_air_date") or "")[:4] or None,
-                        media_type=hit_type.to_media_type(),
+                        media_type=hit_type,
                         content_profile=hit_profile,
                         poster=ImageProxy.get_tmdbimage_url(item.get("poster_path"))
                         if item.get("poster_path")

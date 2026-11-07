@@ -10,7 +10,7 @@ from typing import Any
 
 import log
 from app.domain.enums import SearchType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media import meta_info
 from app.media.metadata.gateway import MetadataContext
 from app.services.search_context import SearchContext
@@ -52,7 +52,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
         anchor_external_id: str | None = None,
         identity_id: str | None = None,
         content_profile: str | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         session_id: str | None = None,
         user_id: int | None = None,
     ) -> tuple[int, str]:
@@ -171,8 +171,8 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
         if not candidate_type and match_media is not None:
             candidate_type = match_media.type
         if isinstance(candidate_type, str):
-            candidate_type = MediaType.from_string(candidate_type)
-        if candidate_type == MediaType.UNKNOWN:
+            candidate_type = ProviderMediaType.from_value(candidate_type)
+        if candidate_type == ProviderMediaType.UNKNOWN:
             candidate_type = None
         display_type = subject.display_type or candidate_type
         if candidate_type:
@@ -181,7 +181,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
             # 搜索主体只有一种真实类型；锚点缺类型时按主体类型修正。
             match_media.type = display_type
         if (
-            candidate_type == MediaType.MOVIE
+            candidate_type == ProviderMediaType.MOVIE
             and match_media is not None
             and str(getattr(match_media, "year", "") or "").isdigit()
             and int(str(match_media.year)) > 0
@@ -245,7 +245,7 @@ def make_web_search_fn(orchestrator: SearchOrchestrator, system_config: Any):
 
 
 def _default_subscribe_setting(
-    media_type: MediaType | None,
+    media_type: ProviderMediaType | None,
     system_config: Any,
     content_profile: str | None = None,
     user_id: int | str | None = None,
@@ -255,7 +255,7 @@ def _default_subscribe_setting(
 
 def _apply_default_rule(
     filter_args: dict,
-    media_type: MediaType | None,
+    media_type: ProviderMediaType | None,
     system_config: Any,
     content_profile: str | None = None,
     user_id: int | str | None = None,
@@ -268,7 +268,7 @@ def _apply_default_rule(
 
 def _apply_default_sites(
     filter_args: dict,
-    media_type: MediaType | None,
+    media_type: ProviderMediaType | None,
     system_config: Any,
     content_profile: str | None = None,
     fallback_sites: list[str] | None = None,

@@ -2,7 +2,7 @@
 
 from typing import Any, cast
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.matching import MatchChain
 from app.media.metadata.models import Detection
 from app.media.metadata.naming import (
@@ -19,11 +19,11 @@ from app.services.transfer.name_format import validate
 class _HighPriorityProfile:
     key = "custom"
     content_profile = "custom"
-    base_media_type = MediaType.MOVIE
+    base_media_type = ProviderMediaType.MOVIE
     priority = 100
 
     def detect(self, ctx):
-        return Detection(content_profile="custom", confidence=0.99, base_media_type=MediaType.MOVIE)
+        return Detection(content_profile="custom", confidence=0.99, base_media_type=ProviderMediaType.MOVIE)
 
     def match(self, parsed, ctx):
         return None
@@ -32,11 +32,11 @@ class _HighPriorityProfile:
 class _LowPriorityProfile:
     key = "low"
     content_profile = "low"
-    base_media_type = MediaType.MOVIE
+    base_media_type = ProviderMediaType.MOVIE
     priority = 50
 
     def detect(self, ctx):
-        return Detection(content_profile="low", confidence=0.2, base_media_type=MediaType.MOVIE)
+        return Detection(content_profile="low", confidence=0.2, base_media_type=ProviderMediaType.MOVIE)
 
     def match(self, parsed, ctx):
         return None
@@ -86,7 +86,7 @@ def test_unified_parser_uses_high_confidence_match_profile():
     result = UnifiedParser(match_chain=MatchChain(registry=registry)).parse("Some.Movie.2024.1080p")
 
     assert result is not None
-    assert result.type == MediaType.MOVIE
+    assert result.type == ProviderMediaType.MOVIE
 
 
 def test_naming_profile_namespaced_field_is_valid_only_when_registered():
@@ -138,7 +138,7 @@ def test_naming_profile_resolver_renders_field_value():
     register_naming_profile(profile, registry=registry, plugin_id="p-render")
 
     values = render_naming_fields(
-        SimpleNamespace(type=MediaType.MOVIE),
+        SimpleNamespace(type=ProviderMediaType.MOVIE),
         None,
         registry=registry,
     )
@@ -159,7 +159,7 @@ def test_parser_profile_short_circuits_unified_parser():
         def extract(self, title, subtitle=""):
             if "ABC-123" not in title:
                 return None
-            result = ParserResult(title_cn="自定义识别", type=MediaType.MOVIE, confidence=0.99)
+            result = ParserResult(title_cn="自定义识别", type=ProviderMediaType.MOVIE, confidence=0.99)
             result.content_profile = "custom"
             result.anchor_provider = "content_id"
             result.anchor_external_id = "ABC-123"

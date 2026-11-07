@@ -2,14 +2,14 @@
 
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services import download_strategies
 from app.services.download_strategies import EpisodeStrategy
 
 
 def _item(episodes):
     item = MagicMock()
-    item.type = MediaType.TV
+    item.type = ProviderMediaType.SERIES
     item.tmdb_id = 1
     item.enclosure = "magnet:?xt=urn:btih:abc"
     item.page_url = "http://p"

@@ -6,7 +6,7 @@ MovieLike Plugin v2
 import os
 
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.mediaserver.media_server import MediaServer
 from app.plugin_framework.builtin_plugins._ms_common.mediaserver_lifecycle import resolve_plugin_server_id
 from app.plugin_framework.context import PluginContext
@@ -97,7 +97,7 @@ class MovieLikePlugin:
             return
 
         movie_name = os.path.basename(movie_dir)
-        movie_path = self._filetransfer.get_best_target_path(mtype=MediaType.MOVIE, in_path=movie_dir)
+        movie_path = self._filetransfer.get_best_target_path(mtype=ProviderMediaType.MOVIE, in_path=movie_dir)
         org_path = os.path.join(movie_path or "", movie_type, movie_name)
         new_path = os.path.join(movie_path or "", dir_name, movie_name)
 

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.lookup.tmdb_client import update_tmdbinfo_cn_title
 from app.services.search_orchestrator import SearchOrchestrator
 from app.services.transfer.filetransfer_service import FileTransferService
@@ -50,7 +50,7 @@ class TestMergeTransferResults:
 
 class TestTmdbLanguage:
     def test_en_language_does_not_force_chinese(self):
-        info = {"media_type": MediaType.MOVIE, "title": "English Title"}
+        info = {"media_type": ProviderMediaType.MOVIE, "title": "English Title"}
         result = update_tmdbinfo_cn_title(dict(info), "en")
         assert result["title"] == "English Title"
 

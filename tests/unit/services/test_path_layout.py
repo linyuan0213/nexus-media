@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.services.media_config_service import MediaConfigService
 from app.services.transfer.existence_checker import MediaExistenceChecker
@@ -40,10 +40,10 @@ def _media(media_type, category="分类", title="作品", season=1):
 @pytest.mark.parametrize(
     ("media_type", "flag", "expected"),
     [
-        (MediaType.MOVIE, True, "/media/movie/分类/作品 (2024)"),
-        (MediaType.MOVIE, False, "/media/movie/作品 (2024)"),
-        (MediaType.TV, True, "/media/tv/分类/作品 (2024)/Season 1"),
-        (MediaType.TV, False, "/media/tv/作品 (2024)/Season 1"),
+        (ProviderMediaType.MOVIE, True, "/media/movie/分类/作品 (2024)"),
+        (ProviderMediaType.MOVIE, False, "/media/movie/作品 (2024)"),
+        (ProviderMediaType.SERIES, True, "/media/tv/分类/作品 (2024)/Season 1"),
+        (ProviderMediaType.SERIES, False, "/media/tv/作品 (2024)/Season 1"),
     ],
 )
 def test_movie_tv_category_layout(media_type, flag, expected):
@@ -51,7 +51,7 @@ def test_movie_tv_category_layout(media_type, flag, expected):
         movie_category_flag=flag,
         tv_category_flag=flag,
     )
-    root = "/media/movie" if media_type == MediaType.MOVIE else "/media/tv"
+    root = "/media/movie" if media_type == ProviderMediaType.MOVIE else "/media/tv"
     assert resolver.get_dest_path_by_info(root, _media(media_type), None) == expected
 
 
@@ -65,7 +65,10 @@ def test_movie_tv_category_layout(media_type, flag, expected):
 )
 def test_anime_layout_defaults_to_flat(flag, category, expected):
     resolver = _resolver(anime_category_flag=flag)
-    assert resolver.get_dest_path_by_info("/media/anime", _media(MediaType.ANIME, category=category), None) == expected
+    assert (
+        resolver.get_dest_path_by_info("/media/anime", _media(ProviderMediaType.ANIME, category=category), None)
+        == expected
+    )
 
 
 def test_existence_checker_keeps_legacy_layout_compatible():
@@ -79,7 +82,7 @@ def test_existence_checker_keeps_legacy_layout_compatible():
 def test_invalid_category_name_falls_back_to_flat():
     resolver = _resolver(movie_category_flag=True)
     assert (
-        resolver.get_dest_path_by_info("/media/movie", _media(MediaType.MOVIE, category="../escape"), None)
+        resolver.get_dest_path_by_info("/media/movie", _media(ProviderMediaType.MOVIE, category="../escape"), None)
         == "/media/movie/作品 (2024)"
     )
 

@@ -3,16 +3,16 @@
 from typing import Any
 
 from app.domain.enums import SystemConfigKey
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 
 def default_setting_key(
-    media_type: MediaType | None,
+    media_type: ProviderMediaType | None,
     content_profile: str | None = None,
     user_id: int | str | None = None,
 ) -> str:
     """生成默认订阅设置键；user_id 非空时附加用户作用域."""
-    if media_type in (MediaType.TV, MediaType.ANIME):
+    if media_type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
         key = SystemConfigKey.DefaultSubscribeSettingTV.value
     else:
         key = SystemConfigKey.DefaultSubscribeSettingMovie.value
@@ -26,7 +26,7 @@ def default_setting_key(
 
 def get_default_setting(
     system_config: Any,
-    media_type: MediaType | None,
+    media_type: ProviderMediaType | None,
     content_profile: str | None = None,
     user_id: int | str | None = None,
 ) -> dict:

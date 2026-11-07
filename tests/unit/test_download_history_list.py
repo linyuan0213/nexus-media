@@ -81,11 +81,11 @@ def test_recent_downloads_keep_distinct_non_tmdb_items_in_time_order():
 
 
 def test_queued_history_can_be_promoted_to_real_download_id():
-    from app.domain.mediatypes import MediaType
+    from app.domain.media_types import ProviderMediaType
     from app.media.models import MediaInfo
 
     media = MediaInfo(
-        type=MediaType.MOVIE,
+        type=ProviderMediaType.MOVIE,
         title="Demo",
         org_string="DEMO-001",
         enclosure="magnet:?xt=urn:btih:abc123",

@@ -16,7 +16,6 @@ from app.domain.media_types import (
     provider_media_type_of,
 )
 from app.domain.media_utils import check_media_exists
-from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media import meta_info
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
@@ -89,7 +88,7 @@ class MediaInfoService:
                 {
                     "state": bool(
                         self._media_server.check_item_exists(
-                            mtype=ProviderMediaType.SERIES.to_media_type(),
+                            mtype=ProviderMediaType.SERIES,
                             title=title,
                             year=year,
                             tmdbid=tmdbid,
@@ -102,7 +101,7 @@ class MediaInfoService:
             )
         return SeasonEpisodesResultDTO(episodes=episodes)
 
-    def _douban_record(self, external_id: str, media_type: MediaType) -> dict[str, Any] | None:
+    def _douban_record(self, external_id: str, media_type: ProviderMediaType) -> dict[str, Any] | None:
         if self._metadata_gateway is None:
             return None
         try:
@@ -136,7 +135,7 @@ class MediaInfoService:
         else:
             title_season = None
         if not str(tmdbid).isdigit():
-            media_info = get_mediainfo_from_id(mtype=ProviderMediaType.SERIES.to_media_type(), mediaid=tmdbid)
+            media_info = get_mediainfo_from_id(mtype=ProviderMediaType.SERIES, mediaid=tmdbid)
             if not media_info or not media_info.provider_data:
                 return []
             season_infos = self._gw().season_summaries(media_info.provider_data)
@@ -156,9 +155,9 @@ class MediaInfoService:
         """
         查询媒体信息（优先订阅信息，不足时回退到 TMDB）
         """
-        media_type = media_type_registry.resolve(mtype).legacy_type
+        media_type = media_type_registry.resolve(mtype).content_type
         if media_kind_of(media_type) == MediaKind.UNKNOWN:
-            media_type = ProviderMediaType.SERIES.to_media_type()
+            media_type = ProviderMediaType.SERIES
 
         rssid_ok = False
         seasons: list[dict] = []
@@ -241,7 +240,7 @@ class MediaInfoService:
 
     def get_media_person(self, tmdbid, mtype_str, keyword) -> Any:
         """查询演员"""
-        mtype = media_type_registry.resolve(mtype_str).legacy_type
+        mtype = media_type_registry.resolve(mtype_str).content_type
         if tmdbid:
             return self._gw().person_credits("tmdb", tmdbid, media_type=mtype)
         else:
@@ -249,28 +248,22 @@ class MediaInfoService:
 
     def get_media_recommendations(self, tmdbid, mtype_str, page) -> Any:
         """查询推荐"""
-        provider_type = provider_media_type_of(media_type_registry.resolve(mtype_str).legacy_type)
+        provider_type = provider_media_type_of(media_type_registry.resolve(mtype_str).content_type)
         if provider_type == ProviderMediaType.MOVIE:
-            return self._gw().related_items(
-                "recommendations", tmdbid, media_type=provider_type.to_media_type(), page=page
-            )
-        return self._gw().related_items(
-            "recommendations", tmdbid, media_type=ProviderMediaType.SERIES.to_media_type(), page=page
-        )
+            return self._gw().related_items("recommendations", tmdbid, media_type=provider_type, page=page)
+        return self._gw().related_items("recommendations", tmdbid, media_type=ProviderMediaType.SERIES, page=page)
 
     def get_media_similar(self, tmdbid, mtype_str, page) -> Any:
         """查询相似"""
-        provider_type = provider_media_type_of(media_type_registry.resolve(mtype_str).legacy_type)
+        provider_type = provider_media_type_of(media_type_registry.resolve(mtype_str).content_type)
         if provider_type == ProviderMediaType.MOVIE:
-            return self._gw().related_items("similar", tmdbid, media_type=provider_type.to_media_type(), page=page)
-        return self._gw().related_items(
-            "similar", tmdbid, media_type=ProviderMediaType.SERIES.to_media_type(), page=page
-        )
+            return self._gw().related_items("similar", tmdbid, media_type=provider_type, page=page)
+        return self._gw().related_items("similar", tmdbid, media_type=ProviderMediaType.SERIES, page=page)
 
     def get_person_medias(self, personid, mtype_str, page) -> Any:
         """查询演员参演作品"""
         if mtype_str:
-            mtype = media_type_registry.resolve(mtype_str).legacy_type
+            mtype = media_type_registry.resolve(mtype_str).content_type
         else:
             mtype = None
         return self._gw().related_items("person", None, media_type=mtype, page=page, person_id=personid)
@@ -362,7 +355,7 @@ class MediaInfoService:
         ]
         # 普通名称不要查内容画像不匹配的插件源，避免无关结果和慢请求。
         wanted_profile = parsed_profile or (
-            "anime" if getattr(media_info, "type", None) == MediaType.ANIME else "default"
+            "anime" if getattr(media_info, "type", None) == ProviderMediaType.ANIME else "default"
         )
         searchable = [
             item
@@ -432,22 +425,22 @@ class MediaInfoService:
                         reason = "命中已有订阅来源"
                         break
 
-        parsed_type = getattr(media_info, "type", MediaType.UNKNOWN) if media_info is not None else MediaType.UNKNOWN
-        if not isinstance(parsed_type, MediaType):
-            parsed_type = MediaType.from_string(str(parsed_type))
+        parsed_type = (
+            getattr(media_info, "type", ProviderMediaType.UNKNOWN)
+            if media_info is not None
+            else ProviderMediaType.UNKNOWN
+        )
+        if not isinstance(parsed_type, ProviderMediaType):
+            parsed_type = ProviderMediaType.from_value(str(parsed_type))
         if media_kind_of(parsed_type) == MediaKind.UNKNOWN:
-            parsed_type = (
-                ProviderMediaType.SERIES.to_media_type()
-                if _EPISODE_RE.search(name or "")
-                else ProviderMediaType.MOVIE.to_media_type()
-            )
-        if parsed_type == MediaType.ANIME:
-            media_type = MediaType.ANIME
+            parsed_type = ProviderMediaType.SERIES if _EPISODE_RE.search(name or "") else ProviderMediaType.MOVIE
+        if parsed_type == ProviderMediaType.ANIME:
+            media_type = ProviderMediaType.ANIME
         elif media_kind_of(parsed_type) == MediaKind.EPISODIC:
-            media_type = ProviderMediaType.SERIES.to_media_type()
+            media_type = ProviderMediaType.SERIES
         else:
-            media_type = ProviderMediaType.MOVIE.to_media_type()
-        profile = parsed_profile or ("anime" if parsed_type == MediaType.ANIME else "default")
+            media_type = ProviderMediaType.MOVIE
+        profile = parsed_profile or ("anime" if parsed_type == ProviderMediaType.ANIME else "default")
         title = query or (
             (
                 getattr(media_info, "cn_name", None)
@@ -648,7 +641,7 @@ class MediaInfoService:
     def get_movie_calendar(self, tid, rssid) -> dict | None:
         """查询电影上映日期"""
         if tid and tid.startswith("DB:"):
-            record = self._douban_record(tid.replace("DB:", ""), ProviderMediaType.MOVIE.to_media_type())
+            record = self._douban_record(tid.replace("DB:", ""), ProviderMediaType.MOVIE)
             if not record:
                 return None
             release_date = str(record.get("release_date") or "")
@@ -666,7 +659,7 @@ class MediaInfoService:
             }
         else:
             if tid:
-                tmdb_info = self._gw().details("tmdb", tid, media_type=ProviderMediaType.MOVIE.to_media_type())
+                tmdb_info = self._gw().details("tmdb", tid, media_type=ProviderMediaType.MOVIE)
             else:
                 return None
             if not tmdb_info:
@@ -693,7 +686,7 @@ class MediaInfoService:
     def get_tv_calendar(self, tid, season, name, rssid) -> list | None:
         """查询电视剧上映日期"""
         if tid and tid.startswith("DB:"):
-            record = self._douban_record(tid.replace("DB:", ""), ProviderMediaType.SERIES.to_media_type())
+            record = self._douban_record(tid.replace("DB:", ""), ProviderMediaType.SERIES)
             if not record:
                 return None
             release_date = str(record.get("release_date") or "")
@@ -720,7 +713,7 @@ class MediaInfoService:
                 return None
             air_date = tmdb_info.get("air_date")
             if not tmdb_info.get("poster_path"):
-                tv_tmdb_info = self._gw().details("tmdb", tid, media_type=ProviderMediaType.SERIES.to_media_type())
+                tv_tmdb_info = self._gw().details("tmdb", tid, media_type=ProviderMediaType.SERIES)
                 if tv_tmdb_info:
                     poster_path = ImageProxy.get_tmdbimage_url(tv_tmdb_info.get("poster_path"))
                 else:
@@ -751,7 +744,7 @@ class MediaInfoService:
 
     def get_media_detail(self, tmdbid, mtype_str) -> dict[str, Any] | None:
         """获取媒体详情"""
-        mtype = media_type_registry.resolve(mtype_str).legacy_type
+        mtype = media_type_registry.resolve(mtype_str).content_type
         media_info = get_mediainfo_from_id(mtype=mtype, mediaid=tmdbid)
         if not media_info or not media_info.provider_data:
             return None

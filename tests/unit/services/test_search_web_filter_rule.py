@@ -3,7 +3,7 @@
 from typing import Any, cast
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.search_web_entry import _apply_default_rule, _apply_default_sites, make_web_search_fn
 
 
@@ -46,7 +46,7 @@ def test_manual_search_ignores_default_rule():
     config.get.return_value = {"search_sites": [], "rule": 10000}
     fn = make_web_search_fn(cast(Any, _Orchestrator()), config)
 
-    fn("凡人修仙传", filters={"site": []}, media_type=MediaType.TV)
+    fn("凡人修仙传", filters={"site": []}, media_type=ProviderMediaType.SERIES)
 
     assert captured["filter_args"]["rule"] == -1
 
@@ -81,7 +81,7 @@ def test_default_sites_and_page_selection_are_merged():
     config.get.return_value = {"search_sites": ["M-Team"], "rule": ""}
     args: dict = {}
 
-    _apply_default_sites(args, MediaType.TV, config, None, ["观众"])
+    _apply_default_sites(args, ProviderMediaType.SERIES, config, None, ["观众"])
 
     assert args["site"] == ["M-Team", "观众"]
 
@@ -91,7 +91,7 @@ def test_page_selection_used_when_default_sites_empty():
     config.get.return_value = {"search_sites": [], "rule": ""}
     args: dict = {}
 
-    _apply_default_sites(args, MediaType.MOVIE, config, None, ["观众"])
+    _apply_default_sites(args, ProviderMediaType.MOVIE, config, None, ["观众"])
 
     assert args["site"] == ["观众"]
 
@@ -101,6 +101,6 @@ def test_all_sites_used_when_default_and_selection_empty():
     config.get.return_value = {"search_sites": [], "rule": ""}
     args: dict = {}
 
-    _apply_default_sites(args, MediaType.MOVIE, config, None, None)
+    _apply_default_sites(args, ProviderMediaType.MOVIE, config, None, None)
 
     assert args["site"] is None

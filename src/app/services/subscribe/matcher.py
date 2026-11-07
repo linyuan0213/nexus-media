@@ -4,7 +4,7 @@ import log
 from app.core.settings import settings
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.domain.media_ref import media_identity_key, normalize_identity_key
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.media.identity.matcher import get_target_matcher
 from app.media.models import MediaInfo
@@ -114,7 +114,7 @@ class SubscribeMatcher:
 
         # ---------- 收集全部命中订阅（多用户同媒体 fan-out 记账用） ----------
         candidates: list[dict] = []
-        if media_info.type == MediaType.MOVIE and rss_movies:
+        if media_info.type == ProviderMediaType.MOVIE and rss_movies:
             for _rid, rss_info in rss_movies.items():
                 rss_sites = rss_info.get("rss_sites")
                 if rss_sites and media_info.site not in rss_sites:
@@ -146,7 +146,7 @@ class SubscribeMatcher:
 
                 candidates.append(rss_info)
 
-        elif media_info.type != MediaType.MOVIE and rss_tvs:
+        elif media_info.type != ProviderMediaType.MOVIE and rss_tvs:
             for _rid, rss_info in rss_tvs.items():
                 rss_sites = rss_info.get("rss_sites")
                 if rss_sites and media_info.site not in rss_sites:
@@ -189,7 +189,7 @@ class SubscribeMatcher:
             match_rss_info = candidates[0]
             # 种子未识别时不覆盖 TMDB，避免衍生作品被错标
             rss_info = match_rss_info
-            if media_info.type != MediaType.MOVIE:
+            if media_info.type != ProviderMediaType.MOVIE:
                 if (
                     rss_info.get("tmdbid")
                     and str(rss_info["tmdbid"]).isdigit()
@@ -197,10 +197,10 @@ class SubscribeMatcher:
                     and int(rss_info["tmdbid"]) == media_info.tmdb_id
                 ):
                     media_info.tmdb_id = int(rss_info["tmdbid"])
-                sub_type = MediaType.from_string(rss_info.get("type") or "")
+                sub_type = ProviderMediaType.from_value(rss_info.get("type") or "")
                 # 订阅声明动漫时以动漫为准；已识别为动漫不因订阅属于电视剧表而降级
-                if sub_type != MediaType.UNKNOWN and not (
-                    media_info.type == MediaType.ANIME and sub_type == MediaType.TV
+                if sub_type != ProviderMediaType.UNKNOWN and not (
+                    media_info.type == ProviderMediaType.ANIME and sub_type == ProviderMediaType.SERIES
                 ):
                     media_info.type = sub_type
                 if rss_info.get("year") and not media_info.year:

@@ -7,14 +7,14 @@
 
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services import download_strategies
 from app.services.download_strategies import EpisodeStrategy, SeasonPackStrategy
 
 
 def _tv_item(enclosure="http://x/download"):
     item = MagicMock()
-    item.type = MediaType.TV
+    item.type = ProviderMediaType.SERIES
     item.tmdb_id = 1
     item.enclosure = enclosure
     item.page_url = "http://p/show"

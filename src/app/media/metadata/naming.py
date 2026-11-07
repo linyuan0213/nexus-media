@@ -10,7 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 from .registry import MetadataRegistry
 from .registry import registry as global_registry
@@ -86,9 +86,11 @@ def render_naming_fields(
 ) -> dict[str, Any]:
     """执行已注册 profile 的字段 resolver，供 get_format_dict 合并."""
     content_profile = getattr(media, "content_profile", None) or (
-        "anime" if getattr(media, "type", None) == MediaType.ANIME else "default"
+        "anime" if getattr(media, "type", None) == ProviderMediaType.ANIME else "default"
     )
-    media_kind = "tv" if getattr(media, "type", None) in {MediaType.TV, MediaType.ANIME} else "movie"
+    media_kind = (
+        "tv" if getattr(media, "type", None) in {ProviderMediaType.SERIES, ProviderMediaType.ANIME} else "movie"
+    )
     values: dict[str, Any] = {}
     for profile in list_naming_profiles(registry):
         if profile.content_profile not in {content_profile, "default"}:

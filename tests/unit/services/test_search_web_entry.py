@@ -4,7 +4,7 @@ import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.external.tmdbv3api.as_obj import AsObj
 from app.media.models import MediaInfo
 from app.services.search_orchestrator import SearchOrchestrator
@@ -41,7 +41,7 @@ class TestMakeWebSearchFn:
             "x",
             anchor_provider="douban",
             anchor_external_id="36139980",
-            media_type=MediaType.TV,
+            media_type=ProviderMediaType.SERIES,
         )
         assert code == 0
         orchestrator.resolve_anchor_media.assert_called_once()
@@ -98,7 +98,7 @@ class TestMakeWebSearchFn:
             anchor_provider="content_id",
             anchor_external_id="DEMO-4025269",
             content_profile="demo",
-            media_type=MediaType.MOVIE,
+            media_type=ProviderMediaType.MOVIE,
         )
         elapsed = time.monotonic() - started
         assert code == 0
@@ -117,7 +117,7 @@ class TestMakeWebSearchFn:
             anchor_provider="content_id",
             anchor_external_id="DEMO-4025269",
             content_profile="demo",
-            media_type=MediaType.MOVIE,
+            media_type=ProviderMediaType.MOVIE,
         )
         assert code == 0
         assert msg == ""
@@ -133,14 +133,14 @@ class TestMakeWebSearchFn:
         orchestrator.orchestrate.return_value = (None, {}, 1, 0)
         fn = make_web_search_fn(orchestrator, system_config=None)
 
-        fn("生化危机：爆发夜", media_type=MediaType.MOVIE)
+        fn("生化危机：爆发夜", media_type=ProviderMediaType.MOVIE)
 
         ctx = orchestrator.orchestrate.call_args[0][0]
-        assert ctx.filter_args["type"] == MediaType.MOVIE
+        assert ctx.filter_args["type"] == ProviderMediaType.MOVIE
 
     def test_requested_movie_type_overrides_anchor_default_tv(self):
         orchestrator = MagicMock()
-        resolved = MediaInfo(title="生化危机：爆发夜", type=MediaType.TV)
+        resolved = MediaInfo(title="生化危机：爆发夜", type=ProviderMediaType.SERIES)
         resolved.year = "2026"
         orchestrator.resolve_anchor_media.return_value = resolved
         orchestrator.orchestrate.return_value = (None, {}, 1, 0)
@@ -150,12 +150,12 @@ class TestMakeWebSearchFn:
             "生化危机：爆发夜",
             anchor_provider="douban",
             anchor_external_id="37068446",
-            media_type=MediaType.MOVIE,
+            media_type=ProviderMediaType.MOVIE,
         )
 
         ctx = orchestrator.orchestrate.call_args[0][0]
-        assert ctx.match_media.type == MediaType.MOVIE
-        assert ctx.filter_args["type"] == MediaType.MOVIE
+        assert ctx.match_media.type == ProviderMediaType.MOVIE
+        assert ctx.filter_args["type"] == ProviderMediaType.MOVIE
 
     def test_content_id_fallback_keeps_selected_provider(self):
         """编号详情失败时不能用内部 content_id 作为来源展示."""
@@ -168,7 +168,7 @@ class TestMakeWebSearchFn:
             anchor_provider="content_id",
             anchor_external_id="DEMO-522",
             content_profile="demo",
-            media_type=MediaType.MOVIE,
+            media_type=ProviderMediaType.MOVIE,
             filters={"metadata_source": "demo_source", "content_profile": "demo"},
         )
         ctx = orchestrator.orchestrate.call_args[0][0]
@@ -180,7 +180,7 @@ class TestMakeWebSearchFn:
     def test_anime_uses_tv_candidate_type_but_keeps_anime_display_type(self):
         """动漫资源按电视形态过滤，但入库类型仍是动漫，二者不能互相覆盖."""
         orchestrator = MagicMock()
-        resolved = MediaInfo(title="演示番剧", type=MediaType.TV)
+        resolved = MediaInfo(title="演示番剧", type=ProviderMediaType.SERIES)
         orchestrator.resolve_anchor_media.return_value = resolved
         orchestrator.orchestrate.return_value = (None, {}, 1, 0)
         fn = make_web_search_fn(orchestrator, system_config=None)
@@ -190,12 +190,12 @@ class TestMakeWebSearchFn:
             anchor_provider="tmdb",
             anchor_external_id="1001",
             content_profile="anime",
-            media_type=MediaType.ANIME,
+            media_type=ProviderMediaType.ANIME,
         )
 
         ctx = orchestrator.orchestrate.call_args[0][0]
-        assert ctx.filter_args["type"] == MediaType.TV
-        assert ctx.match_media.type == MediaType.ANIME
+        assert ctx.filter_args["type"] == ProviderMediaType.SERIES
+        assert ctx.match_media.type == ProviderMediaType.ANIME
 
     def test_empty_media_type_is_normalized_for_metadata_lookup(self):
         """未选择类型时前端可能传空串，SearchQuery 枚举不接受空串."""
@@ -219,7 +219,7 @@ class TestMakeWebSearchFn:
         system_config = MagicMock()
         system_config.get.return_value = {"search_sites": ["site_a"]}
         fn = make_web_search_fn(orchestrator, system_config=system_config)
-        fn("x", media_type=MediaType.TV)
+        fn("x", media_type=ProviderMediaType.SERIES)
         ctx = orchestrator.orchestrate.call_args[0][0]
         assert ctx.filter_args["site"] == ["site_a"]
 
@@ -231,7 +231,7 @@ class TestMakeWebSearchFn:
         fn = make_web_search_fn(orchestrator, system_config=system_config)
         fn(
             "x",
-            media_type=MediaType.MOVIE,
+            media_type=ProviderMediaType.MOVIE,
             filters={"site_default_first": True, "site_fallback": ["site_b"]},
         )
         ctx = orchestrator.orchestrate.call_args[0][0]
@@ -259,7 +259,7 @@ class TestMakeWebSearchFn:
         system_config = MagicMock()
         system_config.get.return_value = {"search_sites": ["only_default"]}
         fn = make_web_search_fn(orchestrator, system_config=system_config)
-        fn("x", filters={"site": []}, media_type=MediaType.TV)
+        fn("x", filters={"site": []}, media_type=ProviderMediaType.SERIES)
         ctx = orchestrator.orchestrate.call_args[0][0]
         assert ctx.filter_args["site"] is None
 

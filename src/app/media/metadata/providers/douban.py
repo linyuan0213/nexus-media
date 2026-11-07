@@ -12,7 +12,6 @@ from typing import Any, Protocol
 import log
 from app.core.settings import settings
 from app.domain.media_types import MediaKind, ProviderMediaType, provider_media_type_of
-from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.infrastructure.external.doubanapi.episode_queue import episode_queue
 
@@ -53,7 +52,7 @@ _RUNTIME_RE = re.compile(r"(\d+)")
 def douban_detail_to_record(
     info: dict[str, Any],
     *,
-    media_type: MediaType | ProviderMediaType,
+    media_type: ProviderMediaType | ProviderMediaType,
     external_id: str | None = None,
     locale: str = "zh-CN",
     content_profile: str = "default",
@@ -90,7 +89,7 @@ def douban_detail_to_record(
         provider="douban",
         external_id=douban_id,
         refs=refs,
-        media_type=provider_type.to_media_type(),
+        media_type=provider_type,
         provider_media_type=provider_type,
         content_profile=content_profile,
         locale=locale,
@@ -280,7 +279,7 @@ class DoubanProvider:
                     ),
                     title=target.get("title") or "",
                     year=str(target.get("year") or "") or None,
-                    media_type=provider_type.to_media_type(),
+                    media_type=provider_type,
                     content_profile=content_profile,
                     poster=target.get("cover_url"),
                     extra={"rating": rating_value} if rating_value else {},

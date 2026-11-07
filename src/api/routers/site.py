@@ -428,11 +428,7 @@ def get_sites(
         name = str(site.get("name") or "")
         configured = priority_map.get(f"{source}:{name}")
         site["priority"] = (
-            configured
-            if configured is not None
-            else int(site.get("pri") or 0)
-            if source == "builtin"
-            else 100
+            configured if configured is not None else int(site.get("pri") or 0) if source == "builtin" else 100
         )
     # 无站点管理权限的用户按站点授权过滤（ADR-021 4.3）
     grant_service = getattr(app_context, "site_grant_service", None)

@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 import log
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.media.parser import meta_info
 from app.services.transfer.library_rename_models import ResolvedMetadata
@@ -28,11 +28,11 @@ _RELEASE_FIELDS = (
 )
 
 
-def from_history(row: dict[str, Any], hint: MediaType) -> ResolvedMetadata | None:
+def from_history(row: dict[str, Any], hint: ProviderMediaType) -> ResolvedMetadata | None:
     if not row:
         return None
-    media_type = MediaType.from_string(str(row.get("TYPE") or ""))
-    if media_type == MediaType.UNKNOWN:
+    media_type = ProviderMediaType.from_value(str(row.get("TYPE") or ""))
+    if media_type == ProviderMediaType.UNKNOWN:
         media_type = hint
     meta = MediaInfo(
         type=media_type,
@@ -69,8 +69,8 @@ def from_cache(row: dict[str, Any], backend: StorageBackend, path: str) -> Resol
         return None
     if row.get("FILE_MTIME") is not None and abs(float(row["FILE_MTIME"]) - float(stat.mtime)) > 2:
         return None
-    media_type = MediaType.from_string(str(row.get("TYPE") or ""))
-    if media_type == MediaType.UNKNOWN:
+    media_type = ProviderMediaType.from_value(str(row.get("TYPE") or ""))
+    if media_type == ProviderMediaType.UNKNOWN:
         return None
     raw = {}
     try:
@@ -98,11 +98,13 @@ def from_cache(row: dict[str, Any], backend: StorageBackend, path: str) -> Resol
     )
 
 
-def from_download_history(entity: Any, base_name: str, hint: MediaType, *, exact: bool) -> ResolvedMetadata | None:
+def from_download_history(
+    entity: Any, base_name: str, hint: ProviderMediaType, *, exact: bool
+) -> ResolvedMetadata | None:
     if not entity:
         return None
-    media_type = MediaType.from_string(str(getattr(entity, "media_type", "") or ""))
-    if media_type == MediaType.UNKNOWN:
+    media_type = ProviderMediaType.from_value(str(getattr(entity, "media_type", "") or ""))
+    if media_type == ProviderMediaType.UNKNOWN:
         media_type = hint
     meta = MediaInfo(
         type=media_type,
@@ -117,7 +119,7 @@ def from_download_history(entity: Any, base_name: str, hint: MediaType, *, exact
     apply_season_episode(meta, getattr(entity, "season_episode", "") or "")
     source_filename = None
     torrent = _basename(getattr(entity, "torrent", "") or "")
-    if torrent and (_file_base_matches(torrent, base_name) or (exact and media_type == MediaType.MOVIE)):
+    if torrent and (_file_base_matches(torrent, base_name) or (exact and media_type == ProviderMediaType.MOVIE)):
         source_filename = torrent
     return ResolvedMetadata(
         media=meta,
@@ -127,7 +129,7 @@ def from_download_history(entity: Any, base_name: str, hint: MediaType, *, exact
     )
 
 
-def from_nfo(data: dict[str, Any], hint: MediaType) -> ResolvedMetadata | None:
+def from_nfo(data: dict[str, Any], hint: ProviderMediaType) -> ResolvedMetadata | None:
     if not data:
         return None
     media_type = hint
@@ -167,7 +169,7 @@ def from_nfo(data: dict[str, Any], hint: MediaType) -> ResolvedMetadata | None:
     )
 
 
-def from_media_server(item: dict[str, Any], hint: MediaType) -> ResolvedMetadata | None:
+def from_media_server(item: dict[str, Any], hint: ProviderMediaType) -> ResolvedMetadata | None:
     if not item:
         return None
     tmdbid = _to_int(item.get("tmdbid"))
@@ -177,9 +179,9 @@ def from_media_server(item: dict[str, Any], hint: MediaType) -> ResolvedMetadata
     item_type = str(item.get("type") or "").lower()
     media_type = hint
     if item_type in ("movie",):
-        media_type = MediaType.MOVIE
+        media_type = ProviderMediaType.MOVIE
     elif item_type in ("series", "show", "tv"):
-        media_type = MediaType.TV
+        media_type = ProviderMediaType.SERIES
     meta = MediaInfo(
         type=media_type,
         title=title,
@@ -191,7 +193,7 @@ def from_media_server(item: dict[str, Any], hint: MediaType) -> ResolvedMetadata
     return ResolvedMetadata(media=meta, source="mediaserver", confidence="high")
 
 
-def from_filename(path: str, hint: MediaType) -> ResolvedMetadata | None:
+def from_filename(path: str, hint: ProviderMediaType) -> ResolvedMetadata | None:
     base_name = os.path.basename(path)
     parsed = meta_info(base_name, mtype=hint)
     if not parsed:
@@ -210,7 +212,7 @@ def from_filename(path: str, hint: MediaType) -> ResolvedMetadata | None:
 def from_online(
     path: str,
     backend: StorageBackend,
-    hint: MediaType,
+    hint: ProviderMediaType,
     metadata_gateway: Any,
 ) -> ResolvedMetadata | None:
     if metadata_gateway is None:
@@ -291,8 +293,8 @@ def merge_missing(target: MediaInfo, source: MediaInfo) -> None:
         target.category = source.category
 
 
-def finalize_media(meta: MediaInfo, hint: MediaType) -> None:
-    if not meta.type or meta.type == MediaType.UNKNOWN:
+def finalize_media(meta: MediaInfo, hint: ProviderMediaType) -> None:
+    if not meta.type or meta.type == ProviderMediaType.UNKNOWN:
         meta.type = hint
     if meta.title and not meta.cn_name and not meta.en_name:
         if StringUtils.is_all_chinese(meta.title):
@@ -312,7 +314,7 @@ def apply_online(
         return
     meta = resolved.media
     tmdbid = _to_int(meta.tmdb_id)
-    if not tmdbid or not meta.type or meta.type == MediaType.UNKNOWN:
+    if not tmdbid or not meta.type or meta.type == ProviderMediaType.UNKNOWN:
         return
     try:
         info = metadata_gateway.details_for_media(meta, append_to_response="all")
@@ -326,7 +328,7 @@ def apply_online(
     if meta.imdb_id:
         resolved.online_fields.append("imdbid")
     if (
-        meta.type in (MediaType.TV, MediaType.ANIME)
+        meta.type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME)
         and meta.begin_season is not None
         and meta.begin_episode is not None
     ):

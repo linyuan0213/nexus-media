@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 _PREFIX_ALIASES = {
     "TMDB": "tmdb",
@@ -25,10 +25,10 @@ _PREFIX_ALIASES = {
 class LegacyProviderRef:
     provider: str
     external_id: str
-    media_type: MediaType
+    media_type: ProviderMediaType
 
 
-def parse_legacy_ref(raw_id: str | None, media_type: MediaType) -> LegacyProviderRef | None:
+def parse_legacy_ref(raw_id: str | None, media_type: ProviderMediaType) -> LegacyProviderRef | None:
     """解析历史字段；纯数字按 TMDB 处理，未知格式返回 None."""
     if raw_id is None:
         return None

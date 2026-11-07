@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.matching import MatchChain
 from app.media.metadata.parsing import ParserChain
 from app.media.parser.base import BaseParser, ParserResult
@@ -59,7 +59,7 @@ class UnifiedParser(BaseParser):
     def _build_result(
         self,
         ctx: ParseContext,
-        media_type: MediaType,
+        media_type: ProviderMediaType,
         original: str,
         *,
         content_profile: str = "",
@@ -85,7 +85,7 @@ class UnifiedParser(BaseParser):
             type=media_type,
             confidence=confidence,
             org_string=original,
-            content_profile=content_profile or ("anime" if media_type == MediaType.ANIME else "default"),
+            content_profile=content_profile or ("anime" if media_type == ProviderMediaType.ANIME else "default"),
             anchor_provider=getattr(getattr(detection, "anchor_hint", None), "provider", None),
             anchor_external_id=getattr(getattr(detection, "anchor_hint", None), "external_id", None),
         )

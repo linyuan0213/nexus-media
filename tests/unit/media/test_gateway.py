@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 
 
@@ -23,8 +23,8 @@ def test_resolve_by_title_reuses_cache_for_same_context():
         allow_private=True,
     )
 
-    first = gateway.resolve_by_title("Demo", media_type=MediaType.TV, year="2024", context=ctx)
-    second = gateway.resolve_by_title("Demo", media_type=MediaType.TV, year="2024", context=ctx)
+    first = gateway.resolve_by_title("Demo", media_type=ProviderMediaType.SERIES, year="2024", context=ctx)
+    second = gateway.resolve_by_title("Demo", media_type=ProviderMediaType.SERIES, year="2024", context=ctx)
 
     assert first is not None and second is not None
     assert first.title == second.title
@@ -39,19 +39,19 @@ def test_resolve_by_title_cache_isolated_by_year_and_permissions():
 
     gateway.resolve_by_title(
         "Demo",
-        media_type=MediaType.TV,
+        media_type=ProviderMediaType.SERIES,
         year="2024",
         context=MetadataContext(content_profile="default", permissions=frozenset({"a"})),
     )
     gateway.resolve_by_title(
         "Demo",
-        media_type=MediaType.TV,
+        media_type=ProviderMediaType.SERIES,
         year="2025",
         context=MetadataContext(content_profile="default", permissions=frozenset({"a"})),
     )
     gateway.resolve_by_title(
         "Demo",
-        media_type=MediaType.TV,
+        media_type=ProviderMediaType.SERIES,
         year="2024",
         context=MetadataContext(content_profile="anime", permissions=frozenset({"b"})),
     )
@@ -65,8 +65,8 @@ def test_resolve_reuses_cached_envelope():
     gateway = MetadataGateway(service, default_ttl=60)
     ctx = MetadataContext()
 
-    first = gateway.resolve("tmdb", "1", context=ctx, media_type=MediaType.MOVIE)
-    second = gateway.resolve("tmdb", "1", context=ctx, media_type=MediaType.MOVIE)
+    first = gateway.resolve("tmdb", "1", context=ctx, media_type=ProviderMediaType.MOVIE)
+    second = gateway.resolve("tmdb", "1", context=ctx, media_type=ProviderMediaType.MOVIE)
 
     assert first is not None and second is not None
     assert second.cache_hit is True
@@ -86,7 +86,7 @@ def test_resolve_singleflight_for_same_ref():
     results = []
 
     def worker():
-        results.append(gateway.resolve("tmdb", "singleflight", context=ctx, media_type=MediaType.MOVIE))
+        results.append(gateway.resolve("tmdb", "singleflight", context=ctx, media_type=ProviderMediaType.MOVIE))
 
     threads = [threading.Thread(target=worker) for _ in range(4)]
     for thread in threads:
@@ -111,14 +111,14 @@ def test_lookup_reuses_cached_detail_and_passes_context():
         allow_private=True,
     )
 
-    first = gateway.lookup("demo", "DEMO-1", context=ctx, media_type=MediaType.MOVIE)
-    second = gateway.lookup("demo", "DEMO-1", context=ctx, media_type=MediaType.MOVIE)
+    first = gateway.lookup("demo", "DEMO-1", context=ctx, media_type=ProviderMediaType.MOVIE)
+    second = gateway.lookup("demo", "DEMO-1", context=ctx, media_type=ProviderMediaType.MOVIE)
 
     assert first == {"title": "Demo"} and second == first
     service.lookup.assert_called_once_with(
         "demo",
         "DEMO-1",
-        media_type=MediaType.MOVIE,
+        media_type=ProviderMediaType.MOVIE,
         scope="default",
         allow_private=True,
         content_profile="default",
@@ -139,7 +139,7 @@ def test_lookup_singleflight_for_same_ref():
     results = []
 
     def worker():
-        results.append(gateway.lookup("demo", "DEMO-1", context=ctx, media_type=MediaType.MOVIE))
+        results.append(gateway.lookup("demo", "DEMO-1", context=ctx, media_type=ProviderMediaType.MOVIE))
 
     threads = [threading.Thread(target=worker) for _ in range(4)]
     for thread in threads:
@@ -157,8 +157,8 @@ def test_lookup_returns_stale_when_provider_fails():
     gateway = MetadataGateway(service)
     ctx = MetadataContext()
 
-    first = gateway.lookup("demo", "DEMO-1", context=ctx, media_type=MediaType.MOVIE)
-    second = gateway.lookup("demo", "DEMO-1", context=ctx, media_type=MediaType.MOVIE, freshness="force")
+    first = gateway.lookup("demo", "DEMO-1", context=ctx, media_type=ProviderMediaType.MOVIE)
+    second = gateway.lookup("demo", "DEMO-1", context=ctx, media_type=ProviderMediaType.MOVIE, freshness="force")
 
     assert first == {"title": "Demo"}
     assert second == first
@@ -172,7 +172,7 @@ def test_resolve_many_deduplicates_same_ref():
     result = gateway.resolve_many(
         [("demo", "DEMO-1"), ("demo", "DEMO-1")],
         context=MetadataContext(),
-        media_type=MediaType.MOVIE,
+        media_type=ProviderMediaType.MOVIE,
     )
 
     assert list(result) == [("demo", "DEMO-1")]
@@ -208,8 +208,8 @@ def test_l2_cache_is_shared_between_gateway_instances():
     first.clear()
     ctx = MetadataContext()
 
-    first.resolve("tmdb", "l2-demo", context=ctx, media_type=MediaType.MOVIE)
-    second.resolve("tmdb", "l2-demo", context=ctx, media_type=MediaType.MOVIE)
+    first.resolve("tmdb", "l2-demo", context=ctx, media_type=ProviderMediaType.MOVIE)
+    second.resolve("tmdb", "l2-demo", context=ctx, media_type=ProviderMediaType.MOVIE)
 
     assert service.compose_for_ref.call_count == 1
     assert second.metrics()["l2_hit"] >= 1

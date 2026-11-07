@@ -30,7 +30,7 @@ from app.core.constants import (
     EPISODE_MAPPER_SEASON_GAP_DAYS,
     EPISODE_MAPPER_SEASON_GAP_FORCE_DAYS,
 )
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.lookup.tmdb_lookup import TmdbLookup
 
 
@@ -50,7 +50,7 @@ class EpisodeMapper:
             return None
 
         try:
-            tv_info = self._tmdb.get_tmdb_info(MediaType.TV, tmdb_id)
+            tv_info = self._tmdb.get_tmdb_info(ProviderMediaType.SERIES, tmdb_id)
             if not tv_info:
                 return None
 
@@ -217,7 +217,7 @@ class EpisodeMapper:
                 seasons = self._blocks.get(cache_key2)
                 if not seasons:
                     try:
-                        tv_info = self._tmdb.get_tmdb_info(MediaType.TV, tmdb_id)
+                        tv_info = self._tmdb.get_tmdb_info(ProviderMediaType.SERIES, tmdb_id)
                         if tv_info:
                             raw = [s for s in tv_info.get("seasons", []) if s.get("season_number", 0) > 0]
                             seasons = sorted(raw, key=lambda s: s.get("season_number", 0))
@@ -240,7 +240,7 @@ class EpisodeMapper:
             seasons = self._blocks.get(cache_key)
             if not seasons:
                 try:
-                    tv_info = self._tmdb.get_tmdb_info(MediaType.TV, tmdb_id)
+                    tv_info = self._tmdb.get_tmdb_info(ProviderMediaType.SERIES, tmdb_id)
                     if tv_info:
                         raw = [s for s in tv_info.get("seasons", []) if s.get("season_number", 0) > 0]
                         seasons = sorted(raw, key=lambda s: s.get("season_number", 0))
@@ -261,7 +261,7 @@ class EpisodeMapper:
             seasons = self._blocks.get(cache_key)
             if not seasons:
                 try:
-                    tv_info = self._tmdb.get_tmdb_info(MediaType.TV, tmdb_id)
+                    tv_info = self._tmdb.get_tmdb_info(ProviderMediaType.SERIES, tmdb_id)
                     if tv_info:
                         raw = [s for s in tv_info.get("seasons", []) if s.get("season_number", 0) > 0]
                         seasons = sorted(raw, key=lambda s: s.get("season_number", 0))
@@ -358,7 +358,7 @@ class EpisodeMapper:
 
         try:
             if not seasons:
-                tv_info = self._tmdb.get_tmdb_info(MediaType.TV, tmdb_id)
+                tv_info = self._tmdb.get_tmdb_info(ProviderMediaType.SERIES, tmdb_id)
                 if not tv_info:
                     return None
                 raw = [s for s in tv_info.get("seasons", []) if s.get("season_number", 0) > 0]

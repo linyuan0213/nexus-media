@@ -35,8 +35,7 @@ from app.core.exceptions import (
     ServiceError,
     ValidationError,
 )
-from app.domain.media_types import media_type_registry
-from app.domain.mediatypes import MediaType, normalize_media_type_input
+from app.domain.media_types import ProviderMediaType, media_type_registry, normalize_media_type_input
 from app.infrastructure.cache_system import TokenCache
 from app.media.metadata import ProviderError, ProviderRef
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
@@ -336,7 +335,7 @@ def _field_value(fields: dict, name: str):
 
 
 def _record_detail_data(
-    record: dict, media_type: MediaType, status: dict | None, gateway: MetadataGateway | None = None
+    record: dict, media_type: ProviderMediaType, status: dict | None, gateway: MetadataGateway | None = None
 ) -> dict:
     """非默认画像直接使用 provider 记录，避免通用合成丢失私有来源图片."""
     provider = str(record.get("provider") or "")
@@ -754,7 +753,7 @@ def get_downloaded(
                     "type": (
                         resolved := media_type_registry.resolve_profile(getattr(item, "CONTENT_PROFILE", None))
                         or media_type_registry.resolve(item.TYPE, getattr(item, "CONTENT_PROFILE", None))
-                    ).legacy_type.value,
+                    ).content_type.value,
                     "media_type": resolved.display_name,
                     "media_type_key": resolved.key,
                     "media_type_name": resolved.display_name,
@@ -1012,12 +1011,12 @@ def media_detail(
 
 def _minimal_detail_record(
     req: "MediaDetailByRefRequest",
-    media_type: MediaType | None,
+    media_type: ProviderMediaType | None,
     gateway: MetadataGateway,
     context: MetadataContext | None = None,
 ) -> dict:
     """来源详情不可用时，用锚点/前端标题构造最小记录，并补齐豆瓣分集数."""
-    mtype = media_type or MediaType.MOVIE
+    mtype = media_type or ProviderMediaType.MOVIE
     base_title = str(req.title or f"{req.provider}:{req.external_id}")
     season_number = SeriesService.split_title_season(str(req.title or ""))[1] or 1
     record = {
@@ -1072,8 +1071,8 @@ def media_detail_by_ref(
     sub_svc=Depends(get_subscribe_service),
 ):
     request_type, content_profile = normalize_media_type_input(req.media_type, req.content_profile)
-    media_type = MediaType.from_string(request_type) if request_type else None
-    if media_type == MediaType.UNKNOWN:
+    media_type = ProviderMediaType.from_value(request_type) if request_type else None
+    if media_type == ProviderMediaType.UNKNOWN:
         media_type = None
     context = _metadata_context(current_user, purpose="api.detail_by_ref", content_profile=content_profile)
     record = None
@@ -1145,10 +1144,10 @@ def media_detail_by_ref(
         status = sub_svc.get_subscribe_by_anchor(
             str(record.get("provider") or req.provider),
             str(record.get("external_id") or req.external_id),
-            media_type or MediaType.MOVIE,
+            media_type or ProviderMediaType.MOVIE,
             user=current_user,
         )
-        return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status, gateway))
+        return success(data=_record_detail_data(record, media_type or ProviderMediaType.MOVIE, status, gateway))
     record = record or {}
     try:
         envelope = run_with_timeout(
@@ -1156,7 +1155,7 @@ def media_detail_by_ref(
                 req.provider,
                 req.external_id,
                 context=context,
-                media_type=media_type or MediaType.MOVIE,
+                media_type=media_type or ProviderMediaType.MOVIE,
                 with_episodes=False,
             ),
             8.0,
@@ -1184,10 +1183,10 @@ def media_detail_by_ref(
         status = sub_svc.get_subscribe_by_anchor(
             str(record.get("provider") or req.provider),
             str(record.get("external_id") or req.external_id),
-            media_type or MediaType.MOVIE,
+            media_type or ProviderMediaType.MOVIE,
             user=current_user,
         )
-        return success(data=_record_detail_data(record, media_type or MediaType.MOVIE, status, gateway))
+        return success(data=_record_detail_data(record, media_type or ProviderMediaType.MOVIE, status, gateway))
     fields = snapshot.get("fields") or {}
     images = snapshot.get("images") or {}
     poster = next(
@@ -1286,7 +1285,7 @@ def media_detail_by_ref(
                     "episode_count": episodes_count,
                 }
             )
-    if not seasons and media_type in {MediaType.TV, MediaType.ANIME}:
+    if not seasons and media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
         title_hint = str(_field_value(fields, "title") or req.title or "")
         base_hint, parsed_hint = SeriesService.split_title_season(title_hint)
         season_hint = int(parsed_hint or 1)
@@ -1296,7 +1295,7 @@ def media_detail_by_ref(
             external_id=req.external_id,
             title=title_hint or base_hint,
             year=str(req.year or "") or None,
-            media_type=media_type or MediaType.TV,
+            media_type=media_type or ProviderMediaType.SERIES,
             season=season_hint,
         )
         if total_hint:
@@ -1328,7 +1327,7 @@ def media_detail_by_ref(
     provider = str(record.get("provider") or req.provider)
     external_id = str(record.get("external_id") or req.external_id)
     links = []
-    provider_url = gateway.provider_detail_url(provider, external_id, media_type or MediaType.MOVIE)
+    provider_url = gateway.provider_detail_url(provider, external_id, media_type or ProviderMediaType.MOVIE)
     if provider_url:
         label = gateway.provider_display_name(provider)
         links.append({"provider": provider, "label": label, "url": provider_url})
@@ -1340,7 +1339,7 @@ def media_detail_by_ref(
     status = sub_svc.get_subscribe_by_anchor(
         provider,
         external_id,
-        media_type or MediaType.MOVIE,
+        media_type or ProviderMediaType.MOVIE,
         user=current_user,
     )
     data = {
@@ -1356,7 +1355,7 @@ def media_detail_by_ref(
         "original_title": _field_value(fields, "original_title") or "",
         "year": _field_value(fields, "year") or record.get("year") or "",
         "overview": _field_value(fields, "overview") or record.get("overview") or "",
-        "type": (media_type or MediaType.MOVIE).value,
+        "type": (media_type or ProviderMediaType.MOVIE).value,
         "media_type_name": (
             media_type_registry.resolve_profile(record.get("content_profile") or req.content_profile)
             or media_type_registry.resolve(media_type, record.get("content_profile") or req.content_profile)
@@ -1382,7 +1381,7 @@ def media_detail_by_ref(
             provider,
             external_id,
             context=context,
-            media_type=media_type or MediaType.MOVIE,
+            media_type=media_type or ProviderMediaType.MOVIE,
             title=str(_field_value(fields, "title") or record.get("title") or ""),
         ),
         "fav": (status or {}).get("fav", "0"),
@@ -1411,8 +1410,8 @@ def metadata_search(
     gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
     request_type, content_profile = normalize_media_type_input(req.media_type, req.content_profile)
-    media_type = MediaType.from_string(request_type) if request_type else None
-    if media_type == MediaType.UNKNOWN:
+    media_type = ProviderMediaType.from_value(request_type) if request_type else None
+    if media_type == ProviderMediaType.UNKNOWN:
         media_type = None
     context = _metadata_context(current_user, purpose="api.search", content_profile=content_profile)
     return success(
@@ -1439,8 +1438,8 @@ def metadata_lookup(
     gateway: MetadataGateway = Depends(get_metadata_gateway),
 ):
     request_type, profile = normalize_media_type_input(media_type, scope)
-    ref_type = MediaType.from_string(request_type) if request_type else None
-    if ref_type == MediaType.UNKNOWN:
+    ref_type = ProviderMediaType.from_value(request_type) if request_type else None
+    if ref_type == ProviderMediaType.UNKNOWN:
         ref_type = None
     context = _metadata_context(current_user, purpose="api.lookup", content_profile=profile)
     try:
@@ -1605,8 +1604,8 @@ def metadata_preview(
     refs = []
     for item in req.refs:
         ref_type_value, _profile = normalize_media_type_input(item.media_type, content_profile)
-        ref_type = MediaType.from_string(ref_type_value) if ref_type_value else None
-        if ref_type == MediaType.UNKNOWN:
+        ref_type = ProviderMediaType.from_value(ref_type_value) if ref_type_value else None
+        if ref_type == ProviderMediaType.UNKNOWN:
             ref_type = None
         refs.append(
             ProviderRef(
@@ -1616,8 +1615,8 @@ def metadata_preview(
                 scope=item.scope,
             )
         )
-    media_type = MediaType.from_string(request_type) if request_type else None
-    if media_type == MediaType.UNKNOWN:
+    media_type = ProviderMediaType.from_value(request_type) if request_type else None
+    if media_type == ProviderMediaType.UNKNOWN:
         media_type = None
     try:
         result = gateway.preview(

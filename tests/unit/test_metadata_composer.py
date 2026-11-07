@@ -1,6 +1,6 @@
 """MetadataComposer 单元测试."""
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata import (
     Credit,
     EpisodeRecord,
@@ -22,7 +22,7 @@ def _record(provider: str, **overrides) -> ProviderRecord:
         "provider": provider,
         "external_id": f"{provider}-1",
         "refs": [ProviderRef(provider=provider, external_id=f"{provider}-1")],
-        "media_type": MediaType.TV,
+        "media_type": ProviderMediaType.SERIES,
         "content_profile": "default",
     }
     data.update(overrides)
@@ -188,7 +188,7 @@ def test_resolve_policy_priority():
 
 def test_media_type_resolved_from_records():
     snapshot = MetadataComposer().compose("id-1", [_douban_record()], get_preset("douban_primary"))
-    assert snapshot.media_type == MediaType.TV
+    assert snapshot.media_type == ProviderMediaType.SERIES
     assert isinstance(snapshot, MediaMetadata)
 
 

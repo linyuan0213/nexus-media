@@ -12,7 +12,7 @@ from app.core.exceptions import (
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
 from app.db.repositories.media_library_route_repo_adapter import MediaLibraryRouteRepositoryAdapter
 from app.domain.enums import OsType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.events import Event
 from app.events.constants import SUBTITLE_DOWNLOAD
 from app.events.payloads import SubtitleDownloadPayload
@@ -150,17 +150,25 @@ class MediaFileService:
 
         for i, p in enumerate(movie_paths):
             item = _make_path(
-                p, MediaType.MOVIE.display_name, "movie", movie_backend[i] if i < len(movie_backend) else "local"
+                p,
+                ProviderMediaType.MOVIE.display_name,
+                "movie",
+                movie_backend[i] if i < len(movie_backend) else "local",
             )
             if item:
                 library_paths.append(item)
         for i, p in enumerate(tv_paths):
-            item = _make_path(p, MediaType.TV.display_name, "tv", tv_backend[i] if i < len(tv_backend) else "local")
+            item = _make_path(
+                p, ProviderMediaType.SERIES.display_name, "tv", tv_backend[i] if i < len(tv_backend) else "local"
+            )
             if item:
                 library_paths.append(item)
         for i, p in enumerate(anime_paths):
             item = _make_path(
-                p, MediaType.ANIME.display_name, "anime", anime_backend[i] if i < len(anime_backend) else "local"
+                p,
+                ProviderMediaType.ANIME.display_name,
+                "anime",
+                anime_backend[i] if i < len(anime_backend) else "local",
             )
             if item:
                 library_paths.append(item)

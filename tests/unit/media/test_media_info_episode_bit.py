@@ -1,12 +1,12 @@
 """季集补齐位数：单季超过 99 集时统一用 3 位集号，保证文件名排序."""
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media import MediaInfo
 
 
 def _tv(season: int = 1, begin: int | None = None, end: int | None = None) -> MediaInfo:
     return MediaInfo(
-        type=MediaType.TV,
+        type=ProviderMediaType.SERIES,
         begin_season=season,
         begin_episode=begin,
         end_episode=end,
@@ -39,7 +39,7 @@ class TestEpisodeBit:
         assert media.get_episode_bit() == 2
 
     def test_movie_has_no_episode_bit_impact(self):
-        media = MediaInfo(type=MediaType.MOVIE)
+        media = MediaInfo(type=ProviderMediaType.MOVIE)
         assert media.get_episode_bit() == 2
 
 

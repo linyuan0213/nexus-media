@@ -11,14 +11,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.media.scraper import Scraper
 
 
 def build_movie_media(tmdb_id=550, title="Fight Club") -> MediaInfo:
     media = MediaInfo()
-    media.type = MediaType.MOVIE
+    media.type = ProviderMediaType.MOVIE
     media.tmdb_id = tmdb_id
     media.title = title
     media.original_title = title
@@ -45,7 +45,7 @@ def build_movie_media(tmdb_id=550, title="Fight Club") -> MediaInfo:
 
 def build_tv_media(tmdb_id=1399, title="Game of Thrones") -> MediaInfo:
     media = MediaInfo()
-    media.type = MediaType.TV
+    media.type = ProviderMediaType.SERIES
     media.tmdb_id = tmdb_id
     media.title = title
     media.original_title = title

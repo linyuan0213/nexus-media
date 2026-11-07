@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.providers.tmdb import TmdbProvider
 from app.media.metadata.registry import registry as metadata_registry
 
@@ -17,7 +17,7 @@ class SubscriptionIntent:
     external_id: str
     name: str
     content_profile: str
-    media_type: MediaType
+    media_type: ProviderMediaType
     mediaid: str
     metadata_ref: str | None
     metadata_policy: str | None
@@ -58,9 +58,9 @@ def resolve_subscription(
         if profiles:
             profile = sorted(profiles)[0]
     media_type = (
-        descriptor.default_provider_media_type.to_media_type()
+        descriptor.default_provider_media_type
         if descriptor.default_provider_media_type is not None
-        else (MediaType.TV if profile == "anime" else MediaType.MOVIE)
+        else (ProviderMediaType.SERIES if profile == "anime" else ProviderMediaType.MOVIE)
     )
     declared_format = str(getattr(descriptor, "subscription_id_format", "") or "")
     id_format = declared_format or ("{provider}:{id}" if profile != "default" else "{id}")

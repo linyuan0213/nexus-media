@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.domain.media_types import MediaKind, ProviderMediaType, media_type_registry
-from app.domain.mediatypes import MediaType
 
 
 @dataclass(frozen=True)
@@ -16,7 +15,7 @@ class MediaRef:
     provider: str
     external_id: str
     scope: str = "default"
-    media_type: MediaType | None = None
+    media_type: ProviderMediaType | None = None
     provider_media_type: ProviderMediaType | None = None
     media_kind: MediaKind | None = None
 
@@ -120,7 +119,7 @@ def identity_keys_match(left: Any, right: Any) -> bool:
 class MediaSubject:
     """供 Composer 使用的最小媒体主体，替代 SimpleNamespace/MediaInfo 鸭子类型."""
 
-    media_type: MediaType
+    media_type: ProviderMediaType
     tmdb_id: str = ""
     douban_id: str | None = None
     anchor_provider: str = ""
@@ -133,7 +132,7 @@ class MediaSubject:
     extra: dict[str, Any] | None = None
 
     @property
-    def type(self) -> MediaType:
+    def type(self) -> ProviderMediaType:
         return self.media_type
 
     def get_season_seq(self) -> int:

@@ -22,7 +22,7 @@ from app.core.module_config import ModuleConf
 from app.core.settings import settings
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.domain.enums import SystemConfigKey
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.ffmpeg import FfmpegProcessor
 from app.infrastructure.image_proxy import ImageProxy
 from app.infrastructure.system_config import SystemConfig
@@ -174,9 +174,9 @@ class Scraper:
     def _has_scraped_metadata(self, file: str, dst_backend=None) -> bool:
         """判断单个文件是否已具备当前配置要求的 NFO 与图片，供增量刮削跳过."""
         media_info = self._profile_media_info(file) or meta_info(os.path.basename(file))
-        media_type = getattr(media_info, "type", None) or MediaType.MOVIE
-        is_tv = media_type in {MediaType.TV, MediaType.ANIME}
-        if is_tv and media_type == MediaType.TV:
+        media_type = getattr(media_info, "type", None) or ProviderMediaType.MOVIE
+        is_tv = media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}
+        if is_tv and media_type == ProviderMediaType.SERIES:
             explicit_series = bool(
                 re.search(
                     r"(?i)(?:^|[.\s_\-\[])(?:s\d{1,2}(?:e\d{1,3})?|season[.\s]*\d+|第\s*\d+\s*季)",
@@ -245,7 +245,7 @@ class Scraper:
         if parsed is None or not getattr(parsed, "content_profile", None):
             return None
         code = getattr(parsed, "anchor_external_id", None) or os.path.basename(file_path)
-        media_info = meta_info(code, mtype=getattr(parsed, "type", None) or MediaType.MOVIE)
+        media_info = meta_info(code, mtype=getattr(parsed, "type", None) or ProviderMediaType.MOVIE)
         media_info.content_profile = parsed.content_profile
         media_info.anchor_provider = getattr(parsed, "anchor_provider", "") or ""
         media_info.anchor_external_id = getattr(parsed, "anchor_external_id", "") or ""
@@ -253,7 +253,7 @@ class Scraper:
 
     def _nfo_needs_rewrite(self, dir_path: str, file_name: str, media_type) -> bool:
         """已有 NFO 但缺少核心元数据时，增量模式也必须重写."""
-        is_tv = media_type in {MediaType.TV, MediaType.ANIME}
+        is_tv = media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}
         candidates = [os.path.join(dir_path, f"{file_name}.nfo")]
         if is_tv:
             candidates.extend([os.path.join(dir_path, "tvshow.nfo"), os.path.join(dir_path, "season.nfo")])
@@ -376,7 +376,7 @@ class Scraper:
                     ) = self._download_history_tmdb(file)
                     if dl_tmdbid or dl_anchor_provider:
                         log.info(f"[Scraper]从下载历史读取到tmdbid：{dl_tmdbid}，类型={dl_type}")
-                        dl_mtype = MediaType.from_string(dl_type) or mi.type or MediaType.MOVIE
+                        dl_mtype = ProviderMediaType.from_value(dl_type) or mi.type or ProviderMediaType.MOVIE
                         db_anchor = str(dl_tmdbid or "").startswith("DB:") or (
                             dl_anchor_provider and dl_anchor_provider != "tmdb" and not str(dl_tmdbid or "").isdigit()
                         )
@@ -486,7 +486,7 @@ class Scraper:
         if not force_nfo and self._nfo_needs_rewrite(dir_path, file_name, media.type):
             log.info(f"[Scraper]{file_name} 现有 NFO 不完整，强制重写")
             force_nfo = True
-        if media.type == MediaType.MOVIE:
+        if media.type == ProviderMediaType.MOVIE:
             self._scrape_movie_from_snapshot(snapshot, media, dir_path, file_name, force_nfo, force_pic)
         else:
             self._scrape_tv_from_snapshot(snapshot, media, dir_path, file_name, file_ext, force_nfo, force_pic)
@@ -997,14 +997,14 @@ class Scraper:
         if scraper_pic.get("actor"):
             self._download_snapshot_actors(snapshot, target_dir, force_pic)
 
-    def _snapshot_fanart_id(self, snapshot, media=None) -> tuple[MediaType, str] | None:
+    def _snapshot_fanart_id(self, snapshot, media=None) -> tuple[ProviderMediaType, str] | None:
         """解析 Fanart.tv 所需 ID：电影用 TMDB，剧集用 TVDB."""
         media_type = getattr(snapshot, "media_type", None)
-        if not isinstance(media_type, MediaType):
+        if not isinstance(media_type, ProviderMediaType):
             media_type = getattr(media, "type", None)
-        if not isinstance(media_type, MediaType):
+        if not isinstance(media_type, ProviderMediaType):
             return None
-        if media_type == MediaType.MOVIE:
+        if media_type == ProviderMediaType.MOVIE:
             if media is not None and getattr(media, "tmdb_id", None):
                 return media_type, str(media.tmdb_id)
             refs = getattr(snapshot, "refs", []) or []
@@ -1034,7 +1034,7 @@ class Scraper:
             ("banner", "banner", fanart.get_banner),
             ("thumb", "thumb", fanart.get_thumb),
         ]
-        if media_type == MediaType.MOVIE:
+        if media_type == ProviderMediaType.MOVIE:
             specs.append(("disc", "disc", fanart.get_disc))
         else:
             specs.append(("clearart", "clearart", fanart.get_clearart))
@@ -1058,7 +1058,7 @@ class Scraper:
         if query is None:
             return
         media_type, query_id = query
-        if media_type == MediaType.MOVIE:
+        if media_type == ProviderMediaType.MOVIE:
             return
         season_no = int(season_number)
         if scraper_pic.get("season_poster") and (season is None or not season.poster):
@@ -1120,7 +1120,7 @@ class Scraper:
                 provider, external_id = "douban", raw[3:]
             elif raw.isdigit():
                 provider, external_id = "tmdb", raw
-        media_type = getattr(media_info, "type", None) or MediaType.MOVIE
+        media_type = getattr(media_info, "type", None) or ProviderMediaType.MOVIE
         policy = str((settings.get("media") or {}).get("metadata_default_policy") or "tmdb_primary")
         if self._metadata_gateway is not None and not provider:
             # 下载历史/订阅已经给出明确锚点时，不能被标题识别覆盖。
@@ -1160,13 +1160,13 @@ class Scraper:
                     ref = hit.get("ref") or {}
                     provider = str(ref.get("provider") or "")
                     external_id = str(ref.get("external_id") or "")
-                    parsed_type = MediaType.from_string(str(hit.get("media_type") or ""))
-                    if parsed_type != MediaType.UNKNOWN:
+                    parsed_type = ProviderMediaType.from_value(str(hit.get("media_type") or ""))
+                    if parsed_type != ProviderMediaType.UNKNOWN:
                         media_type = parsed_type
         if not provider or not external_id:
             return None
         if provider == "bangumi":
-            media_info.type = MediaType.ANIME
+            media_info.type = ProviderMediaType.ANIME
             media_info.content_profile = "anime"
         try:
             return self._compose(
@@ -1240,7 +1240,7 @@ class Scraper:
 
     def _extract_tmdbid(self, file_path, meta_info, dst_backend=None):
         """从本地 NFO 文件提取 TMDB ID"""
-        if meta_info.type == MediaType.MOVIE:
+        if meta_info.type == ProviderMediaType.MOVIE:
             movie_nfo = os.path.join(os.path.dirname(file_path), "movie.nfo")
             if dst_backend is not None:
                 if dst_backend.exists(movie_nfo):
@@ -1339,7 +1339,7 @@ class Scraper:
                 else:
                     log.error(f"[Scraper]{file_name} 快照刮削未生成完整 NFO/图片")
                 return ok
-            if media.type == MediaType.MOVIE:
+            if media.type == ProviderMediaType.MOVIE:
                 self._scrape_movie(media, dir_path, file_name, force_nfo, force_pic)
             else:
                 self._scrape_tv(media, dir_path, file_name, file_ext, force_nfo, force_pic)

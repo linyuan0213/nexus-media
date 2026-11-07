@@ -11,12 +11,12 @@ from app.db.models import SEARCHRESULTINFO, Base
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.db.repositories.search_repository import SearchRepository
 from app.db.session import SessionManager
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 
 def _make_media_item(index: int, page_url: str | None = None, site: str = "site-a"):
     item = MagicMock()
-    item.type = MediaType.MOVIE
+    item.type = ProviderMediaType.MOVIE
     item.org_string = f"torrent {index}"
     item.enclosure = ""
     item.description = f"desc {index}"

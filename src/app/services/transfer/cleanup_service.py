@@ -11,7 +11,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import LIBRARY_FILE_DELETED, MEDIA_SOURCE_DELETED
@@ -143,10 +143,10 @@ class TransferCleanupService:
                         season_match = re.search(r"S(\d+)", season_str)
                         if season_match:
                             mi.begin_season = int(season_match.group(1))
-                    if MediaType.from_string(transinfo.media_type) == MediaType.MOVIE:
-                        mi.type = MediaType.MOVIE
+                    if ProviderMediaType.from_value(transinfo.media_type) == ProviderMediaType.MOVIE:
+                        mi.type = ProviderMediaType.MOVIE
                     else:
-                        mi.type = MediaType.TV
+                        mi.type = ProviderMediaType.SERIES
                     dest_path = self._path_resolver.get_dest_path_by_info(
                         dest=dest, meta_info=mi, media_service=self._media
                     )

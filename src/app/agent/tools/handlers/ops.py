@@ -3,12 +3,12 @@
 from app.agent.pydantic_agent import PydanticChatAgent
 from app.agent.tools.base import ToolResult
 from app.agent.tools.context import ToolContext
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.schemas.scheduler import RunSchedulerJobRequest
 
 
 def library_check(ctx: ToolContext, title: str, media_type: str | None = None) -> ToolResult:
-    mtype = MediaType.from_string(media_type) if media_type else None
+    mtype = ProviderMediaType.from_value(media_type) if media_type else None
     meta = ctx.media_service.get_media_info(title=title, mtype=mtype)
     if not meta:
         return ToolResult(success=False, error=f"无法识别《{title}》")

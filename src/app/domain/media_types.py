@@ -6,20 +6,12 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-from app.domain.mediatypes import MediaType
-
-
-class MediaKind(str, Enum):
-    MOVIE = "movie"
-    EPISODIC = "episodic"
-    UNKNOWN = "unknown"
-
 
 class ProviderMediaType(str, Enum):
-    """外部 provider / 媒体服务器协议类型，不等同于内部 MediaType."""
+    """唯一内容类型值对象；TV/SERIES 是同一外部协议值."""
 
-    MOVIE = "movie"
     SERIES = "tv"
+    MOVIE = "movie"
     ANIME = "anime"
     UNKNOWN = "unknown"
 
@@ -38,21 +30,33 @@ class ProviderMediaType(str, Enum):
         return cls.UNKNOWN
 
     @property
-    def kind(self) -> MediaKind:
+    def kind(self) -> "MediaKind":
         if self == ProviderMediaType.MOVIE:
             return MediaKind.MOVIE
         if self in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
             return MediaKind.EPISODIC
         return MediaKind.UNKNOWN
 
-    def to_media_type(self) -> MediaType:
-        if self == ProviderMediaType.MOVIE:
-            return MediaType.MOVIE
-        if self == ProviderMediaType.SERIES:
-            return MediaType.TV
-        if self == ProviderMediaType.ANIME:
-            return MediaType.ANIME
-        return MediaType.UNKNOWN
+    @property
+    def display_name(self) -> str:
+        return _MEDIA_TYPE_DISPLAY_NAMES.get(self, "未知")
+
+    def __str__(self) -> str:
+        return self.value
+
+
+_MEDIA_TYPE_DISPLAY_NAMES: dict[ProviderMediaType, str] = {
+    ProviderMediaType.MOVIE: "电影",
+    ProviderMediaType.SERIES: "电视剧",
+    ProviderMediaType.ANIME: "动漫",
+    ProviderMediaType.UNKNOWN: "未知",
+}
+
+
+class MediaKind(str, Enum):
+    MOVIE = "movie"
+    EPISODIC = "episodic"
+    UNKNOWN = "unknown"
 
 
 def provider_media_type_of(value: Any) -> ProviderMediaType:
@@ -78,11 +82,6 @@ def media_kind_of(value: Any) -> MediaKind:
     return provider_media_type_of(value).kind
 
 
-def legacy_media_type_of(value: Any) -> MediaType:
-    """把外部协议类型转回内部 MediaType，供旧接口兼容."""
-    return provider_media_type_of(value).to_media_type()
-
-
 @dataclass(frozen=True)
 class MediaTypeDescriptor:
     key: str
@@ -103,14 +102,14 @@ class MediaTypeRef:
     code_identity: bool = False
 
     @property
-    def legacy_type(self) -> MediaType:
-        if self.key == MediaType.ANIME.value:
-            return MediaType.ANIME
+    def content_type(self) -> ProviderMediaType:
+        if self.key == ProviderMediaType.ANIME.value:
+            return ProviderMediaType.ANIME
         if self.kind == MediaKind.MOVIE:
-            return MediaType.MOVIE
+            return ProviderMediaType.MOVIE
         if self.kind == MediaKind.EPISODIC:
-            return MediaType.TV
-        return MediaType.UNKNOWN
+            return ProviderMediaType.SERIES
+        return ProviderMediaType.UNKNOWN
 
 
 _CORE = {
@@ -150,14 +149,14 @@ class MediaTypeRegistry:
     def resolve(self, value: Any = None, content_profile: str | None = "default") -> MediaTypeRef:
         if isinstance(value, MediaTypeRef):
             return value
-        if isinstance(value, MediaType):
+        if isinstance(value, ProviderMediaType):
             key = value.value
         else:
             raw = str(value or "").strip()
             key = raw if raw in self._descriptors else _CORE_ALIASES.get(raw.lower(), "")
             if not key:
-                parsed = MediaType.from_string(raw)
-                key = parsed.value if parsed != MediaType.UNKNOWN else ""
+                parsed = ProviderMediaType.from_value(raw)
+                key = parsed.value if parsed != ProviderMediaType.UNKNOWN else ""
         descriptor = self._descriptors.get(key) or _CORE["unknown"]
         profile = str(content_profile or "").strip() or "default"
         return MediaTypeRef(
@@ -204,6 +203,15 @@ class MediaTypeRegistry:
 
     def all(self) -> tuple[MediaTypeDescriptor, ...]:
         return tuple(self._descriptors.values())
+
+
+def normalize_media_type_input(
+    value: str | None,
+    content_profile: str | None = None,
+) -> tuple[str | None, str]:
+    """归一化 API 入参中的展示类型别名，返回 (media_type, content_profile)."""
+    profile = str(content_profile or "").strip() or "default"
+    return value, profile
 
 
 media_type_registry = MediaTypeRegistry()

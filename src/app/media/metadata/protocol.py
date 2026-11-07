@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 from .models import (
     Detection,
@@ -51,7 +51,7 @@ class DiscoveryProvider(Protocol):
 
 class MatchProfile(Protocol):
     key: str
-    base_media_type: MediaType
+    base_media_type: ProviderMediaType
     priority: int
 
     def detect(self, ctx: object) -> Detection | None: ...

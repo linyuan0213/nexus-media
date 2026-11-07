@@ -7,7 +7,7 @@
 
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.subscribe.strategies.base_search import BaseSearchStrategy
 from app.sites.torrent import Torrent
 
@@ -44,7 +44,7 @@ def _build(check_result, monkeypatch):
     media = MagicMock()
     media.provider_data = {"seasons": []}
     media.tmdb_id = "335790"
-    media.type = MediaType.ANIME
+    media.type = ProviderMediaType.ANIME
     media.total_episodes = 12
     media.get_title_string.return_value = "黑暗召唤师在地下恋爱中 (2026) S01"
     media.get_season_seq.return_value = "1"

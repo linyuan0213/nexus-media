@@ -8,7 +8,7 @@ from bencode import bdecode
 
 import log
 from app.core.constants import RMT_MEDIAEXT
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -407,7 +407,7 @@ class Torrent:
             if episode_count > 1:
                 collection_priority = 2
             elif (
-                getattr(x, "type", None) in (MediaType.TV, MediaType.ANIME)
+                getattr(x, "type", None) in (ProviderMediaType.SERIES, ProviderMediaType.ANIME)
                 and getattr(x, "begin_season", None) is not None
                 and getattr(x, "begin_episode", None) is None
             ):
@@ -449,7 +449,7 @@ class Torrent:
         # 排序后重新加入数组，按真实名称控重
         for t_item in media_list:
             # 控重的主链是名称、年份、季、集
-            if t_item.type != MediaType.MOVIE:
+            if t_item.type != ProviderMediaType.MOVIE:
                 media_name = f"{t_item.get_title_string()}{t_item.get_season_episode_string()}"
             else:
                 media_name = t_item.get_title_string()

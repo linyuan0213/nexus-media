@@ -581,10 +581,10 @@ class TestCheckRssRule:
 
     def test_exclude_subscribe_json_sites_no_crash(self):
         """订阅 rss_sites 存 JSON 字符串 + media_info.site 为 None 时不应崩溃（原为 TypeError）"""
-        from app.domain.mediatypes import MediaType
+        from app.domain.media_types import ProviderMediaType
 
         class _MI:
-            type = MediaType.TV
+            type = ProviderMediaType.SERIES
             site = None
             tmdb_id = "123"
             year = "2026"
@@ -617,10 +617,10 @@ class TestCheckRssRule:
 
     def test_exclude_subscribe_other_site_not_excluded(self):
         """订阅仅限 M-Team，但当前种子来自其他站点时不应排除"""
-        from app.domain.mediatypes import MediaType
+        from app.domain.media_types import ProviderMediaType
 
         class _MI:
-            type = MediaType.TV
+            type = ProviderMediaType.SERIES
             site = "OtherSite"
             tmdb_id = "123"
             year = "2026"

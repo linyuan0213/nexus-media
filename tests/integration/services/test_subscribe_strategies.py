@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from app.core.settings import settings as app_settings
 from app.domain.entities.rss import SubscribeState
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.services.subscribe.coordinator import DownloadCoordinator
 from app.services.subscribe.search_engine import SubscribeSearchEngine
@@ -314,7 +314,7 @@ class TestRssFeedStrategy:
         """下载覆盖完成后登记“待转移”（COMPLETED），不在此删除订阅、不写历史。"""
         strategy = self._make_strategy()
         media = MagicMock()
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
         media.begin_episode = None
         media.enclosure = "http://site/a.torrent"
         media.page_url = "http://site/page"
@@ -335,12 +335,12 @@ class TestRssFeedStrategy:
 
         subscribe = cast(Any, strategy.subscribe)
         subscribe.finish_rss_subscribe.assert_not_called()
-        subscribe.update_rss_state.assert_called_once_with(MediaType.TV, 5, SubscribeState.COMPLETED.value)
+        subscribe.update_rss_state.assert_called_once_with(ProviderMediaType.SERIES, 5, SubscribeState.COMPLETED.value)
 
     def test_rss_tv_full_coverage_clears_lack_before_completed(self):
         """整季覆盖后清空缺集，避免状态回退时旧缺集触发重复下载."""
         strategy = self._make_strategy()
-        media = MediaInfo(title="Demo", type=MediaType.TV)
+        media = MediaInfo(title="Demo", type=ProviderMediaType.SERIES)
         media.tmdb_id = "335790"
         media.begin_season = 1
         media.begin_episode = 1
@@ -356,13 +356,13 @@ class TestRssFeedStrategy:
 
         subscribe = cast(Any, strategy.subscribe)
         subscribe.clear_subscribe_tv_lack.assert_called_once_with(7, media)
-        subscribe.update_rss_state.assert_called_once_with(MediaType.TV, 7, SubscribeState.COMPLETED.value)
+        subscribe.update_rss_state.assert_called_once_with(ProviderMediaType.SERIES, 7, SubscribeState.COMPLETED.value)
 
     def test_rss_movie_marks_pending_transfer(self):
         """电影下载成功登记“待转移”（COMPLETED），由转移落盘确认后定稿。"""
         strategy = self._make_strategy()
         media = MagicMock()
-        media.type = MediaType.MOVIE
+        media.type = ProviderMediaType.MOVIE
         media.rssid = 7
         media.over_edition = False
         media.tmdb_id = 9
@@ -379,11 +379,11 @@ class TestRssFeedStrategy:
 
         subscribe = cast(Any, strategy.subscribe)
         subscribe.finish_rss_subscribe.assert_not_called()
-        subscribe.update_rss_state.assert_called_once_with(MediaType.MOVIE, 7, SubscribeState.COMPLETED.value)
+        subscribe.update_rss_state.assert_called_once_with(ProviderMediaType.MOVIE, 7, SubscribeState.COMPLETED.value)
 
     def _movie(self, *, title: str, site_order: int, seeders: int, res_order: int) -> MagicMock:
         media = MagicMock()
-        media.type = MediaType.MOVIE
+        media.type = ProviderMediaType.MOVIE
         media.rssid = 7
         media.title = title
         media.site_order = site_order
@@ -447,35 +447,35 @@ class TestRssFeedStrategy:
     def test_get_default_rss_sites_no_system_config(self):
         strategy = self._make_strategy()
         strategy._system_config = None
-        assert strategy._get_default_rss_sites(MediaType.TV) == []
+        assert strategy._get_default_rss_sites(ProviderMediaType.SERIES) == []
 
     def test_get_default_rss_sites_tv(self):
         strategy = self._make_strategy()
         sys_config = MagicMock()
         sys_config.get.return_value = {"rss_sites": ["siteA", "siteB"]}
         strategy._system_config = sys_config
-        assert strategy._get_default_rss_sites(MediaType.TV) == ["siteA", "siteB"]
+        assert strategy._get_default_rss_sites(ProviderMediaType.SERIES) == ["siteA", "siteB"]
 
     def test_get_default_rss_sites_movie(self):
         strategy = self._make_strategy()
         sys_config = MagicMock()
         sys_config.get.return_value = {"rss_sites": ["siteM"]}
         strategy._system_config = sys_config
-        assert strategy._get_default_rss_sites(MediaType.MOVIE) == ["siteM"]
+        assert strategy._get_default_rss_sites(ProviderMediaType.MOVIE) == ["siteM"]
 
     def test_get_default_rss_sites_invalid_setting(self):
         strategy = self._make_strategy()
         sys_config = MagicMock()
         sys_config.get.return_value = "not_a_dict"
         strategy._system_config = sys_config
-        assert strategy._get_default_rss_sites(MediaType.TV) == []
+        assert strategy._get_default_rss_sites(ProviderMediaType.SERIES) == []
 
     def test_get_default_rss_sites_exception_returns_empty(self):
         strategy = self._make_strategy()
         sys_config = MagicMock()
         sys_config.get.side_effect = RuntimeError("db error")
         strategy._system_config = sys_config
-        assert strategy._get_default_rss_sites(MediaType.TV) == []
+        assert strategy._get_default_rss_sites(ProviderMediaType.SERIES) == []
 
     def test_custom_rss_only_allows_owner_subscriptions(self):
         strategy = self._make_strategy()

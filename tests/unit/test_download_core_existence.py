@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.download_core import DownloadCore
 
 
@@ -15,7 +15,7 @@ def test_check_exists_medias_accepts_numeric_or_string_season_keys(total_ep, sea
     core._filetransfer = MagicMock()
     core._filetransfer.get_no_exists_medias.return_value = []
     media = MagicMock()
-    media.type = MediaType.TV
+    media.type = ProviderMediaType.SERIES
     media.total_episodes = 0
     media.get_season_seq.return_value = season
 

@@ -5,7 +5,7 @@ from time import sleep
 
 import log
 from app.core.settings import settings
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.external.doubanapi import DoubanApi, DoubanWeb
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -50,13 +50,15 @@ class DouBan:
             log.info(f"[Douban]随机休眠：{time} 秒")
             sleep(time)
         if mtype is not None:
-            mtype_normalized = MediaType.from_string(str(mtype)) if not isinstance(mtype, MediaType) else mtype
+            mtype_normalized = (
+                ProviderMediaType.from_value(str(mtype)) if not isinstance(mtype, ProviderMediaType) else mtype
+            )
         else:
             mtype_normalized = None
 
-        if mtype_normalized == MediaType.MOVIE:
+        if mtype_normalized == ProviderMediaType.MOVIE:
             douban_info = self.doubanapi.movie_detail(doubanid)
-        elif mtype_normalized == MediaType.TV:
+        elif mtype_normalized == ProviderMediaType.SERIES:
             douban_info = self.doubanapi.tv_detail(doubanid)
         else:
             douban_info = self.doubanapi.movie_detail(doubanid)
@@ -86,7 +88,7 @@ class DouBan:
             year_range = [int(metainfo.year), int(metainfo.year) + 1, int(metainfo.year) - 1]
         else:
             year_range = []
-        if metainfo.type == MediaType.MOVIE:
+        if metainfo.type == ProviderMediaType.MOVIE:
             search_res = self.doubanapi.movie_search(metainfo.title).get("items") or []
             if not search_res:
                 return None
@@ -97,7 +99,7 @@ class DouBan:
                 ):
                     return res.get("target_id")
             return None
-        elif metainfo.type == MediaType.TV:
+        elif metainfo.type == ProviderMediaType.SERIES:
             search_res = self.doubanapi.tv_search(metainfo.title).get("items") or []
             if not search_res:
                 return None
@@ -124,14 +126,14 @@ class DouBan:
         doubanid = self.__search_douban_id(metainfo)
         if not doubanid:
             return None
-        if metainfo.type == MediaType.MOVIE:
+        if metainfo.type == ProviderMediaType.MOVIE:
             douban_info = self.doubanapi.movie_detail(doubanid)
             celebrities = self.doubanapi.movie_celebrities(doubanid)
             if douban_info and celebrities:
                 douban_info["directors"] = celebrities.get("directors")
                 douban_info["actors"] = celebrities.get("actors")
             return douban_info
-        elif metainfo.type == MediaType.TV:
+        elif metainfo.type == ProviderMediaType.SERIES:
             douban_info = self.doubanapi.tv_detail(doubanid)
             celebrities = self.doubanapi.tv_celebrities(doubanid)
             if douban_info and celebrities:
@@ -195,7 +197,7 @@ class DouBan:
             sleep(time)
         return self.doubanweb.user(cookie=self.cookie, userid=userid)
 
-    def search_douban_medias(self, keyword, mtype: MediaType | None = None, season=None, episode=None, page=1):
+    def search_douban_medias(self, keyword, mtype: ProviderMediaType | None = None, season=None, episode=None, page=1):
         """
         根据关键字搜索豆瓣，返回可能的标题和年份信息
         """
@@ -208,25 +210,25 @@ class DouBan:
             return []
         ret_medias = []
         for item_obj in result.get("items"):
-            parsed_type = MediaType.from_string(item_obj.get("type_name") or "")
+            parsed_type = ProviderMediaType.from_value(item_obj.get("type_name") or "")
             if mtype and parsed_type != mtype:
                 continue
-            if parsed_type not in (MediaType.TV, MediaType.MOVIE):
+            if parsed_type not in (ProviderMediaType.SERIES, ProviderMediaType.MOVIE):
                 continue
             item = item_obj.get("target")
             mi = meta_info(title=item.get("title"))
             mi.title = item.get("title")
-            if parsed_type == MediaType.MOVIE:
-                mi.type = MediaType.MOVIE
+            if parsed_type == ProviderMediaType.MOVIE:
+                mi.type = ProviderMediaType.MOVIE
             else:
-                mi.type = MediaType.TV
+                mi.type = ProviderMediaType.SERIES
             if season:
-                if mi.type != MediaType.TV:
+                if mi.type != ProviderMediaType.SERIES:
                     continue
                 if season != 1 and mi.begin_season != season:
                     continue
             if episode and str(episode).isdigit():
-                if mi.type != MediaType.TV:
+                if mi.type != ProviderMediaType.SERIES:
                     continue
                 mi.begin_episode = int(episode)
                 mi.title = f"{mi.title} 第{episode}集"
@@ -400,7 +402,7 @@ class DouBan:
     def get_douban_disover(self, mtype, sort, tags, page=1):
         if not self.doubanapi:
             return []
-        if mtype == MediaType.MOVIE:
+        if mtype == ProviderMediaType.MOVIE:
             infos = self.doubanapi.movie_recommend(
                 start=(page - 1) * self._movie_num, count=self._movie_num, sort=sort, tags=tags
             )
@@ -435,11 +437,11 @@ class DouBan:
             if not media_type:
                 if info.get("type") not in ("movie", "tv"):
                     continue
-                mtype = MediaType.MOVIE if info.get("type") == "movie" else MediaType.TV
+                mtype = ProviderMediaType.MOVIE if info.get("type") == "movie" else ProviderMediaType.SERIES
             else:
                 mtype = media_type
 
-            if mtype == MediaType.MOVIE:
+            if mtype == ProviderMediaType.MOVIE:
                 type_str = "movie"
                 # 海报
                 poster_path = info.get("cover", {}).get("url")

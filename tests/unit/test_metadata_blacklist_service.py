@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.metadata_blacklist_service import MetadataBlacklistService
 
 
@@ -55,8 +55,8 @@ class TestMetadataBlacklistService:
         items, total = service.get_blacklist(page=1, count=10)
         assert total == 1
         assert items[0]["title"] == "Test Movie"
-        assert items[0]["media_type"] == MediaType.MOVIE.value
-        assert items[0]["media_type_label"] == MediaType.MOVIE.display_name
+        assert items[0]["media_type"] == ProviderMediaType.MOVIE.value
+        assert items[0]["media_type_label"] == ProviderMediaType.MOVIE.display_name
         service._cache.set.assert_called_once()
 
     def test_get_blacklist_filter_by_external_id(self, service, mock_repo):

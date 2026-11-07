@@ -13,7 +13,7 @@ from pathlib import Path
 import yaml
 
 import log
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.parser.episode_mapper import EpisodeMapper
 
 _DEFAULT_PATH = Path(__file__).resolve().parents[4] / "config" / "edition_overrides.yaml"
@@ -108,7 +108,7 @@ class EpisodeRemapper:
         if not tmdb_id or not seasons or not self._mapper or not self._mapper._tmdb:
             return None
         try:
-            tv_info = self._mapper._tmdb.get_tmdb_info(MediaType.TV, tmdb_id)
+            tv_info = self._mapper._tmdb.get_tmdb_info(ProviderMediaType.SERIES, tmdb_id)
         except Exception as e:
             log.warn(f"[EpisodeRemapper]季包展开获取详情失败: {tmdb_id}, {e}")
             return None

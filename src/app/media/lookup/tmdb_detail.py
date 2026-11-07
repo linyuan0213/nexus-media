@@ -1,6 +1,5 @@
 import log
 from app.domain.media_types import ProviderMediaType, external_protocol_type, provider_media_type_of
-from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.infrastructure.request_deduper import get_deduper
 from app.media.lookup.tmdb_client import TmdbClient, get_genre_ids_from_detail, update_tmdbinfo_cn_title
@@ -15,7 +14,7 @@ class TmdbDetail:
     def get_detail(
         self,
         tmdbid,
-        mtype: MediaType | ProviderMediaType | None,
+        mtype: ProviderMediaType | ProviderMediaType | None,
         language: str | None = None,
         append_to_response=None,
     ):
@@ -46,11 +45,11 @@ class TmdbDetail:
             if protocol_type == ProviderMediaType.MOVIE:
                 info = self._get_movie_detail(tmdbid, append_to_response)
                 if info:
-                    info["media_type"] = protocol_type.to_media_type()
+                    info["media_type"] = protocol_type
             else:
                 info = self._get_tv_detail(tmdbid, append_to_response)
                 if info:
-                    info["media_type"] = protocol_type.to_media_type()
+                    info["media_type"] = protocol_type
             if info:
                 info["genre_ids"] = get_genre_ids_from_detail(info.get("genres"))
                 # 以本次实际语言决定是否补中文名：language="en" 时不得覆盖为中文

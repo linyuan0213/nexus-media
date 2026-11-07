@@ -17,8 +17,8 @@ from urllib.parse import quote
 from lxml import etree
 
 import log
-from app.domain.media_type_utils import MediaTypeMapper
-from app.domain.mediatypes import MediaType
+from app.domain.media_type_utils import ProviderMediaTypeMapper
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.chrome.challenge import has_pending_turnstile, is_challenge
 from app.infrastructure.chrome.site_lock import site_serial
 from app.infrastructure.chrome.task import browser_task
@@ -46,7 +46,7 @@ class HtmlSiteSearcher:
         self,
         keyword: str = "",
         page: int = 0,
-        mtype: MediaType | None = None,
+        mtype: ProviderMediaType | None = None,
         page_size: int | None = None,
         content_profile: str | None = None,
     ) -> list[dict[str, Any]]:
@@ -90,7 +90,9 @@ class HtmlSiteSearcher:
     def _domain(self) -> str:
         return (self._user_config.get("domain") or self._site.domain or "").rstrip("/")
 
-    def _build_url(self, keyword: str, page: int, mtype: MediaType | None, page_size: int | None = None) -> str | None:
+    def _build_url(
+        self, keyword: str, page: int, mtype: ProviderMediaType | None, page_size: int | None = None
+    ) -> str | None:
         cfg = self._site.html
         if not (isinstance(cfg, dict) or hasattr(cfg, "search")):
             return None
@@ -139,7 +141,7 @@ class HtmlSiteSearcher:
         if mtype:
             for pk in ("cat", "category", "cat_id"):
                 if pk in params_filled:
-                    params_filled[pk] = MediaTypeMapper.to_site_cat(mtype)
+                    params_filled[pk] = ProviderMediaTypeMapper.to_site_cat(mtype)
 
         # 每页数量：站点参数中存在 page_size/limit/per_page 等键时覆盖为前端选择值
         if page_size:

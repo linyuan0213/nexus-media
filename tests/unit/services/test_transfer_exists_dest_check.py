@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.transfer.filetransfer_service import FileTransferService
 
 
@@ -40,7 +40,7 @@ def _svc(exists: bool, tmp_path, dest_filename="E05.mkv"):
 
 
 def _meta():
-    return SimpleNamespace(type=MediaType.TV, tmdb_id=1)
+    return SimpleNamespace(type=ProviderMediaType.SERIES, tmdb_id=1)
 
 
 def test_dest_exists_history_counts_transferred(tmp_path):
@@ -95,7 +95,7 @@ def _svc_for_dedup(tmp_path, dest_exists: bool):
 
 def _media():
     return SimpleNamespace(
-        type=MediaType.TV,
+        type=ProviderMediaType.SERIES,
         tmdb_id=1,
         begin_season=1,
         begin_episode=1,
@@ -170,7 +170,7 @@ def _source_dedupe_svc(tmp_path, dest_exists: bool = True, history_date: str | N
     )
     svc._with_library_target_lock = MagicMock(side_effect=lambda _backend, _path, action: action() or True)
     svc._replicate_to_enabled_backends = MagicMock()
-    media = SimpleNamespace(type=MediaType.MOVIE)
+    media = SimpleNamespace(type=ProviderMediaType.MOVIE)
     return svc, src, media
 
 

@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from typing import Any, Literal
 
 import log
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.cache_system.metadata_cache import MetadataCache
 
 
@@ -66,7 +66,7 @@ class MetadataContext:
 class MetadataEnvelope:
     provider: str
     external_id: str
-    media_type: MediaType | None
+    media_type: ProviderMediaType | None
     metadata: dict[str, Any]
     fetched_at: datetime
     expires_at: datetime
@@ -109,7 +109,7 @@ class MetadataGateway:
         mode: str,
         provider: str,
         external_id: str,
-        media_type: MediaType | None,
+        media_type: ProviderMediaType | None,
         context: MetadataContext,
         scope: str,
         season: int,
@@ -150,7 +150,7 @@ class MetadataGateway:
         provider: str,
         external_id: str,
         *,
-        media_type: MediaType | None,
+        media_type: ProviderMediaType | None,
         scope: str,
     ) -> tuple[str | None, str | None, list[Any]]:
         identity_id = None
@@ -224,7 +224,7 @@ class MetadataGateway:
         external_id: str,
         *,
         context: MetadataContext | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         season: int = 0,
         scope: str | None = None,
         ttl: int | None = None,
@@ -264,7 +264,7 @@ class MetadataGateway:
                 data = self._service.compose_for_ref(
                     provider,
                     external_id,
-                    media_type=media_type or MediaType.UNKNOWN,
+                    media_type=media_type or ProviderMediaType.UNKNOWN,
                     content_profile=ctx.content_profile,
                     allow_private=ctx.allow_private,
                     permissions=ctx.permission_set(),
@@ -312,7 +312,7 @@ class MetadataGateway:
     def _title_key(
         title: str,
         subtitle: str,
-        media_type: MediaType | None,
+        media_type: ProviderMediaType | None,
         year: str | None,
         context: MetadataContext,
         strict: bool | None,
@@ -334,7 +334,7 @@ class MetadataGateway:
         title: str,
         *,
         subtitle: str | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         year: str | None = None,
         context: MetadataContext | None = None,
         strict: bool | None = None,
@@ -397,7 +397,7 @@ class MetadataGateway:
         external_id: str,
         *,
         context: MetadataContext | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         scope: str = "default",
         content_profile: str | None = None,
         ttl: int | None = None,
@@ -466,7 +466,7 @@ class MetadataGateway:
         provider: str,
         external_id: str,
         *,
-        media_type: MediaType | None,
+        media_type: ProviderMediaType | None,
         context: MetadataContext,
         season: int,
         scope: str | None,
@@ -484,7 +484,7 @@ class MetadataGateway:
                     data = self._service.compose_for_ref(
                         provider,
                         external_id,
-                        media_type=media_type or MediaType.UNKNOWN,
+                        media_type=media_type or ProviderMediaType.UNKNOWN,
                         content_profile=context.content_profile,
                         allow_private=context.allow_private,
                         permissions=context.permission_set(),
@@ -523,7 +523,7 @@ class MetadataGateway:
         refs: list[tuple[str, str]],
         *,
         context: MetadataContext | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         season: int = 0,
         scope: str | None = None,
     ) -> dict[tuple[str, str], MetadataEnvelope | None]:
@@ -550,7 +550,7 @@ class MetadataGateway:
         query: str,
         context: MetadataContext | None = None,
         provider: str | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         content_profile: str | None = None,
         limit: int = 20,
         wait_timeout: float | None = None,
@@ -592,7 +592,7 @@ class MetadataGateway:
         season: int = 1,
         *,
         context: MetadataContext | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
     ) -> list[dict[str, Any]]:
         ctx = context or MetadataContext()
         kwargs: dict[str, Any] = {
@@ -606,7 +606,7 @@ class MetadataGateway:
         provider: str,
         external_id: str | int | None,
         *,
-        media_type: MediaType | str | None = None,
+        media_type: ProviderMediaType | str | None = None,
         extra: str = "",
         extras: tuple[str, ...] | None = None,
     ) -> Any | None:
@@ -633,7 +633,7 @@ class MetadataGateway:
         provider: str,
         external_id: str | int | None,
         *,
-        media_type: MediaType | str | None = None,
+        media_type: ProviderMediaType | str | None = None,
         language: str | None = None,
         append_to_response: str | None = None,
         chinese: bool = True,
@@ -655,7 +655,7 @@ class MetadataGateway:
             provider_key,
             str(external_id),
             context=context,
-            media_type=MediaType.from_string(str(media_type)) if media_type else None,
+            media_type=ProviderMediaType.from_value(str(media_type)) if media_type else None,
         )
         return data or {}
 
@@ -667,7 +667,7 @@ class MetadataGateway:
 
     def _tmdb_info(
         self,
-        mtype: MediaType | str | None,
+        mtype: ProviderMediaType | str | None,
         tmdbid: str | int | None,
         *,
         language: str | None = None,
@@ -691,7 +691,7 @@ class MetadataGateway:
         file_list: list[str],
         *,
         tmdb_info: dict[str, Any] | None = None,
-        media_type: MediaType | str | None = None,
+        media_type: ProviderMediaType | str | None = None,
         season: int | None = None,
         language: str | None = None,
         chinese: bool = True,
@@ -734,7 +734,7 @@ class MetadataGateway:
         external_id: str | int | None,
         season: int,
         *,
-        media_type: MediaType | str | None = MediaType.TV,
+        media_type: ProviderMediaType | str | None = ProviderMediaType.SERIES,
         context: MetadataContext | None = None,
     ) -> dict[str, Any]:
         """按 provider ref 获取季详情；TMDB 走本地兼容实现."""
@@ -745,7 +745,7 @@ class MetadataGateway:
             str(external_id),
             season,
             context=context,
-            media_type=MediaType.from_string(str(media_type)) if media_type else MediaType.TV,
+            media_type=ProviderMediaType.from_value(str(media_type)) if media_type else ProviderMediaType.SERIES,
         )
         return {"episodes": episodes} if episodes else {}
 
@@ -754,7 +754,7 @@ class MetadataGateway:
         provider: str,
         external_id: str | int | None,
         *,
-        media_type: MediaType | str | None = MediaType.TV,
+        media_type: ProviderMediaType | str | None = ProviderMediaType.SERIES,
         extras: tuple[str, ...] | None = None,
     ) -> set[str]:
         """读取缓存中的题材 ID，供订阅类型推断等只读判断使用."""
@@ -795,11 +795,11 @@ class MetadataGateway:
             return [], []
         return self._media.get_tmdb_directors_actors(tmdbinfo=tmdbinfo)
 
-    def all_names(self, provider: str, external_id: str | int | None, media_type: MediaType | str) -> list[str]:
+    def all_names(self, provider: str, external_id: str | int | None, media_type: ProviderMediaType | str) -> list[str]:
         """媒体全部名称（正名/原名/别名/译名）."""
         if self._media is None or str(provider or "").lower() != "tmdb" or external_id in (None, ""):
             return []
-        return list(self._media.get_all_names(int(external_id), MediaType.from_string(str(media_type))) or [])
+        return list(self._media.get_all_names(int(external_id), ProviderMediaType.from_value(str(media_type))) or [])
 
     def person_aka_names(self, person_id: str | int | None) -> list[str]:
         """演职人员又名；仅网关内部委托 MediaService."""
@@ -812,7 +812,7 @@ class MetadataGateway:
         query: str,
         *,
         provider: str | None = None,
-        media_type: MediaType | str | None = None,
+        media_type: ProviderMediaType | str | None = None,
         year: str | None = None,
         page: int = 1,
         limit: int = 20,
@@ -820,7 +820,7 @@ class MetadataGateway:
     ) -> list[dict[str, Any]]:
         """带分页的 provider 搜索；TMDB 兼容分页留在网关内部."""
         provider_key = str(provider or "").strip().lower()
-        mtype = MediaType.from_string(str(media_type)) if media_type else None
+        mtype = ProviderMediaType.from_value(str(media_type)) if media_type else None
         if provider_key == "tmdb":
             if self._media is None:
                 return []
@@ -850,12 +850,12 @@ class MetadataGateway:
         provider: str,
         external_id: str | int | None,
         *,
-        media_type: MediaType | str | None = None,
+        media_type: ProviderMediaType | str | None = None,
     ) -> Any:
         """演职人员作品列表."""
         if str(provider or "").lower() != "tmdb" or self._media is None:
             return []
-        mtype = MediaType.from_string(str(media_type)) if media_type else MediaType.MOVIE
+        mtype = ProviderMediaType.from_value(str(media_type)) if media_type else ProviderMediaType.MOVIE
         return self._media.get_tmdb_cats(tmdbid=external_id, mtype=mtype)
 
     def search_person(self, name: str) -> Any:
@@ -869,15 +869,15 @@ class MetadataGateway:
         kind: str,
         external_id: str | int | None,
         *,
-        media_type: MediaType | str | None = None,
+        media_type: ProviderMediaType | str | None = None,
         page: int = 1,
         person_id: str | int | None = None,
     ) -> Any:
         """相似/推荐/人物作品；业务层只描述关系类型."""
         if self._media is None or (external_id in (None, "") and person_id in (None, "")):
             return []
-        mtype = MediaType.from_string(str(media_type)) if media_type else MediaType.MOVIE
-        is_movie = mtype == MediaType.MOVIE
+        mtype = ProviderMediaType.from_value(str(media_type)) if media_type else ProviderMediaType.MOVIE
+        is_movie = mtype == ProviderMediaType.MOVIE
         kind = str(kind or "").strip().lower()
         if kind == "similar":
             return (
@@ -895,7 +895,7 @@ class MetadataGateway:
             return self._media.get_person_medias(personid=person_id, mtype=mtype, page=page)
         return []
 
-    def detail_url(self, media_type: MediaType | str, external_id: str | int | None) -> str:
+    def detail_url(self, media_type: ProviderMediaType | str, external_id: str | int | None) -> str:
         """媒体详情页 URL；provider 兼容细节留在网关内部."""
         if self._media is None or external_id in (None, ""):
             return ""
@@ -905,7 +905,7 @@ class MetadataGateway:
         """详情页扩展字段（背景、题材、花絮、演职员）."""
         if self._media is None or media_info is None:
             return {"background": [], "genres": [], "fact": "", "crews": [], "actors": []}
-        mtype = getattr(media_info, "type", MediaType.MOVIE)
+        mtype = getattr(media_info, "type", ProviderMediaType.MOVIE)
         provider_data = getattr(media_info, "provider_data", {}) or {}
         external_id = getattr(media_info, "tmdb_id", None)
         return {
@@ -936,25 +936,25 @@ class MetadataGateway:
             return ""
         return str(self._media.get_tmdb_zhtw_title(media_info) or "")
 
-    def genre_catalog(self, media_type: MediaType | str) -> list[dict[str, Any]]:
+    def genre_catalog(self, media_type: ProviderMediaType | str) -> list[dict[str, Any]]:
         """类型目录；provider 兼容细节留在网关内部."""
         if self._media is None:
             return []
-        mtype = MediaType.from_string(str(media_type))
+        mtype = ProviderMediaType.from_value(str(media_type))
         return list(self._media.get_tmdb_genres(mtype) or [])
 
     def discover_items(
         self,
         category: str,
         *,
-        media_type: MediaType | str | None = None,
+        media_type: ProviderMediaType | str | None = None,
         page: int = 1,
         params: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """发现页数据；业务层只描述内容类别，不感知 provider 方法."""
         if self._media is None:
             return []
-        mtype = MediaType.from_string(str(media_type)) if media_type else None
+        mtype = ProviderMediaType.from_value(str(media_type)) if media_type else None
         category = str(category or "").strip().lower()
         if category == "hot_movies":
             return list(self._media.get_tmdb_hot_movies(page) or [])
@@ -968,7 +968,8 @@ class MetadataGateway:
             return list(self._media.get_tmdb_trending_all_week(page=page) or [])
         if category == "discover":
             return list(
-                self._media.get_tmdb_discover(mtype=mtype or MediaType.MOVIE, page=page, params=params or {}) or []
+                self._media.get_tmdb_discover(mtype=mtype or ProviderMediaType.MOVIE, page=page, params=params or {})
+                or []
             )
         return []
 
@@ -1000,13 +1001,13 @@ class MetadataGateway:
         self,
         provider_key: str,
         external_id: str,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
     ) -> str:
         descriptor = self.provider_descriptor(provider_key)
         template = str(getattr(descriptor, "detail_url_template", "") or "")
         if not template:
             return ""
-        type_value = "movie" if media_type == MediaType.MOVIE else "tv"
+        type_value = "movie" if media_type == ProviderMediaType.MOVIE else "tv"
         return template.format(external_id=external_id, media_type=type_value)
 
     def hydrate_media(self, media_info: Any, *, context: MetadataContext | None = None) -> bool:
@@ -1063,7 +1064,7 @@ class MetadataGateway:
         external_id: str,
         title: str,
         year: str | None = None,
-        media_type: MediaType = MediaType.TV,
+        media_type: ProviderMediaType = ProviderMediaType.SERIES,
         season: int = 1,
         content_profile: str | None = None,
         provider_data: dict[str, Any] | None = None,
@@ -1100,7 +1101,7 @@ class MetadataGateway:
         external_id: str,
         *,
         context: MetadataContext | None = None,
-        media_type: MediaType = MediaType.MOVIE,
+        media_type: ProviderMediaType = ProviderMediaType.MOVIE,
         title: str | None = None,
         content_profile: str = "default",
         limit: int = 12,
@@ -1125,7 +1126,7 @@ class MetadataGateway:
         policy: str | None = None,
         anchor_provider: str | None = None,
         content_profile: str = "default",
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
     ) -> Any:
         ctx = context or MetadataContext(content_profile=content_profile)
         return self._service.preview(

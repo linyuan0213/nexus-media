@@ -21,7 +21,7 @@ import pytz
 
 import log
 from app.domain.enums import BrushDeleteType, BrushStopType, SwitchState
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
 
 
@@ -189,7 +189,7 @@ class BrushRuleEngine:
 
         match_flag = False
         # 匹配电影
-        if media_info.type == MediaType.MOVIE and rss_movies:
+        if media_info.type == ProviderMediaType.MOVIE and rss_movies:
             for rss_info in rss_movies.values():
                 if BrushRuleEngine._match_media(media_info, rss_info):
                     match_flag = True

@@ -6,7 +6,7 @@ from typing import Any, cast
 import log
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SubscribeType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
 from app.events.payloads import SubscribeAddPayload
@@ -154,7 +154,7 @@ class SubscribeUpdateService:
             "rss_sites": rss_sites,
             "search_sites": search_sites,
         }
-        if mtype != MediaType.MOVIE:
+        if mtype != ProviderMediaType.MOVIE:
             values.update(
                 {
                     "season": season or self._existing(row, "SEASON", "season", default=""),
@@ -187,7 +187,7 @@ class SubscribeUpdateService:
         media_info: Any,
         title: str,
         year: str | None,
-        media_type: MediaType,
+        media_type: ProviderMediaType,
         season: int,
         content_profile: str,
         provider_data: dict[str, Any] | None,
@@ -282,7 +282,7 @@ class SubscribeUpdateService:
 
         # 归属校验：普通用户越权更新返回不存在（避免资源探测）
         if user is not None and not user.is_superadmin:
-            owner_repo = self._movie_repo if mtype == MediaType.MOVIE else self._tv_repo
+            owner_repo = self._movie_repo if mtype == ProviderMediaType.MOVIE else self._tv_repo
             if not owner_repo.get_all(rssid=int(rssid), user=user):
                 return -1, "订阅不存在", None
 
@@ -298,7 +298,7 @@ class SubscribeUpdateService:
         download_setting = int(str(download_setting)) if str(download_setting).replace("-", "").isdigit() else -1
         fuzzy_match = bool(fuzzy_match)
 
-        repo = self._movie_repo if mtype == MediaType.MOVIE else self._tv_repo
+        repo = self._movie_repo if mtype == ProviderMediaType.MOVIE else self._tv_repo
         existing_rows = repo.get_all(rssid=int(rssid), user=user)
         existing = existing_rows[0] if existing_rows else None
         effective_state = state or (
@@ -379,7 +379,7 @@ class SubscribeUpdateService:
                     log.warn(f"[Subscribe]更新时 TMDB 查询失败，使用现有订阅身份保存: {name} ({year})")
                     return self._update_generic(repo, existing, **generic_kwargs)
                 return 1, "TMDB无法查询到媒体信息", None
-            if media_info.type != MediaType.MOVIE:
+            if media_info.type != ProviderMediaType.MOVIE:
                 if not season and str(mediaid).startswith("DB:"):
                     season = 1
                 if season:
@@ -491,7 +491,7 @@ class SubscribeUpdateService:
             media_info.type = mtype
             if season:
                 media_info.begin_season = int(season)
-            if mtype == MediaType.MOVIE:
+            if mtype == ProviderMediaType.MOVIE:
                 code = self._movie_repo.update(
                     rssid=int(rssid),
                     user=user,

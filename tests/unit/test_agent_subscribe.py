@@ -119,7 +119,7 @@ def test_agent_subscribe_demo_requires_private_permission():
 
 def test_default_subscribe_setting_is_profile_aware():
     from app.domain.enums import SystemConfigKey
-    from app.domain.mediatypes import MediaType
+    from app.domain.media_types import ProviderMediaType
     from app.services.subscribe.management.add_service import SubscribeAddService
 
     keys = {
@@ -134,8 +134,8 @@ def test_default_subscribe_setting_is_profile_aware():
     service = SubscribeAddService.__new__(SubscribeAddService)
     service._system_config = _Config()
 
-    assert service._default_setting_for(MediaType.MOVIE, "demo") == {"pix": "4K"}
-    assert service._default_setting_for(MediaType.MOVIE, "default") == {"pix": "1080p"}
+    assert service._default_setting_for(ProviderMediaType.MOVIE, "demo") == {"pix": "4K"}
+    assert service._default_setting_for(ProviderMediaType.MOVIE, "default") == {"pix": "1080p"}
 
 
 def test_agent_subscribe_resolves_provider_when_external_id_missing():
@@ -161,7 +161,7 @@ def test_agent_subscribe_resolves_provider_when_external_id_missing():
 
 def test_web_search_uses_profile_default_sites():
     from app.domain.enums import SystemConfigKey
-    from app.domain.mediatypes import MediaType
+    from app.domain.media_types import ProviderMediaType
     from app.services.search_web_entry import _apply_default_sites
 
     keys = {
@@ -173,7 +173,7 @@ def test_web_search_uses_profile_default_sites():
             return keys.get(key, {})
 
     filter_args = {}
-    _apply_default_sites(filter_args, MediaType.MOVIE, _Config(), "demo")
+    _apply_default_sites(filter_args, ProviderMediaType.MOVIE, _Config(), "demo")
 
     assert filter_args["site"] == ["M-Team"]
 

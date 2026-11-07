@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.plugin_framework.builtin_plugins.dl_thunder.backend.download_client import Thunder
 
 _PY_THUNDER = "app.plugin_framework.builtin_plugins.dl_thunder.backend.download_client.PyThunder"
@@ -12,7 +12,7 @@ class MockMediaInfo:
     """Mock 媒体信息对象"""
 
     def __init__(self, **kwargs):
-        self.type = kwargs.get("type", MediaType.TV)
+        self.type = kwargs.get("type", ProviderMediaType.SERIES)
         self.title = kwargs.get("title", "Test Show")
         self.tmdb_id = kwargs.get("tmdb_id", 12345)
         self.enclosure = kwargs.get("enclosure", "https://example.com/torrent")

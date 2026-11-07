@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 from app.db.repositories.identity_resolver import IdentityResolver
 from app.domain.lifecycle import LifecycleStage
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.task_queue import Task
 from app.infrastructure.thread import ThreadExecutor
 from app.media.models import MediaInfo
@@ -28,7 +28,7 @@ class TestScrapeQueueService:
         scraper.gen_scraper_files.side_effect = _scrape
         svc = ScrapeQueueService(scraper=scraper, max_workers=1)
 
-        media = MediaInfo(title="Test", type=MediaType.MOVIE, identity_id="01DEMO")
+        media = MediaInfo(title="Test", type=ProviderMediaType.MOVIE, identity_id="01DEMO")
         svc.submit_file_scrape(media, "/dst", "Test.mkv", ".mkv")
 
         assert done.wait(timeout=5)
@@ -50,7 +50,7 @@ class TestScrapeQueueService:
         scraper.gen_scraper_files.side_effect = capture
         svc = ScrapeQueueService(scraper=scraper, max_workers=1)
 
-        media = MediaInfo(title="Test", type=MediaType.MOVIE, identity_id="01DEMO")
+        media = MediaInfo(title="Test", type=ProviderMediaType.MOVIE, identity_id="01DEMO")
         svc.submit_file_scrape(media, "/dst", "Test.mkv", ".mkv")
         assert done.wait(timeout=5)
         assert len(captured) == 1
@@ -62,7 +62,7 @@ class TestScrapeQueueService:
         lifecycle = MagicMock()
         svc = ScrapeQueueService(scraper=scraper, max_workers=1, lifecycle=lifecycle)
 
-        media = MediaInfo(title="Test", type=MediaType.MOVIE, identity_id="01DEMO")
+        media = MediaInfo(title="Test", type=ProviderMediaType.MOVIE, identity_id="01DEMO")
         task = Task.create(
             "scrape:file",
             "scrape.file",
@@ -93,7 +93,7 @@ class TestScrapeQueueService:
         scraper.gen_scraper_files.side_effect = RuntimeError("boom")
         svc = ScrapeQueueService(scraper=scraper, max_workers=1)
 
-        media = MediaInfo(title="Test", type=MediaType.MOVIE, identity_id="01DEMO")
+        media = MediaInfo(title="Test", type=ProviderMediaType.MOVIE, identity_id="01DEMO")
         svc.submit_file_scrape(media, "/dst", "Test.mkv", ".mkv")
 
         # 不抛异常即为通过；等待任务结束
@@ -107,7 +107,7 @@ class TestScrapeQueueService:
         message = MagicMock()
         svc = ScrapeQueueService(scraper=MagicMock(), max_workers=1, lifecycle=lifecycle, message=message)
 
-        media = MediaInfo(title="DEMO-001", type=MediaType.MOVIE, identity_id="01DEMO")
+        media = MediaInfo(title="DEMO-001", type=ProviderMediaType.MOVIE, identity_id="01DEMO")
         svc.finalize_duplicate(media, {"in_from": "downloaders", "exist_filenum": 1})
 
         message.send_transfer_movie_message.assert_not_called()
@@ -119,7 +119,7 @@ class TestScrapeQueueService:
         message = MagicMock()
         svc = ScrapeQueueService(scraper=MagicMock(), max_workers=1, lifecycle=lifecycle, message=message)
 
-        media = MediaInfo(title="DEMO-001", type=MediaType.MOVIE, identity_id="01DEMO")
+        media = MediaInfo(title="DEMO-001", type=ProviderMediaType.MOVIE, identity_id="01DEMO")
         svc.finalize_duplicate(media, {"in_from": "downloaders", "exist_filenum": 1})
 
         message.send_transfer_movie_message.assert_not_called()
@@ -138,7 +138,7 @@ class TestFinalizeReceipt:
             event_bus=event_bus,
             receipt_repo=receipt,
         )
-        media = MediaInfo(title="DEMO-001", type=MediaType.MOVIE, identity_id="01DEMO")
+        media = MediaInfo(title="DEMO-001", type=ProviderMediaType.MOVIE, identity_id="01DEMO")
 
         svc._finalize(media, {"in_from": "downloaders", "exist_filenum": 1}, metadata_ok=True)
 
@@ -157,7 +157,7 @@ class TestFinalizeReceipt:
             event_bus=event_bus,
             receipt_repo=receipt,
         )
-        media = MediaInfo(title="DEMO-001", type=MediaType.MOVIE, identity_id="01DEMO")
+        media = MediaInfo(title="DEMO-001", type=ProviderMediaType.MOVIE, identity_id="01DEMO")
 
         svc._finalize(
             media,
@@ -180,7 +180,7 @@ class TestFinalizeReceipt:
             event_bus=event_bus,
             receipt_repo=receipt,
         )
-        media = MediaInfo(title="DEMO-001", type=MediaType.MOVIE, identity_id="01DEMO")
+        media = MediaInfo(title="DEMO-001", type=ProviderMediaType.MOVIE, identity_id="01DEMO")
 
         svc._finalize(media, {"in_from": "downloaders", "exist_filenum": 1}, metadata_ok=True)
 
@@ -194,7 +194,7 @@ def test_finalize_receipt_key_resolves_tmdb_to_identity():
     svc = ScrapeQueueService(scraper=MagicMock(), max_workers=1, identity_resolver=IdentityResolver(identity_repo))
     tmdb_only = MediaInfo(
         title="DEMO-001",
-        type=MediaType.ANIME,
+        type=ProviderMediaType.ANIME,
         tmdb_id="220542",
         begin_season=1,
         begin_episode=54,
@@ -202,7 +202,7 @@ def test_finalize_receipt_key_resolves_tmdb_to_identity():
     )
     with_identity = MediaInfo(
         title="DEMO-001",
-        type=MediaType.ANIME,
+        type=ProviderMediaType.ANIME,
         tmdb_id="220542",
         identity_id="01ABC",
         begin_season=1,

@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 from app.domain.enums import SearchType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.services.search_service import Searcher, SearchQueryBuilder, SearchResultProcessor
 
@@ -27,7 +27,7 @@ def _make_searcher() -> Searcher:
 class TestSearchOneMediaReturn:
     """电影：即使还有其它候选未下载，也应返回已下载项（供订阅判定完成）."""
 
-    def _run(self, media_type: MediaType):
+    def _run(self, media_type: ProviderMediaType):
         searcher = _make_searcher()
         downloaded = MagicMock(name="downloaded")
         leftover = MagicMock(name="leftover")
@@ -50,12 +50,12 @@ class TestSearchOneMediaReturn:
         return result, downloaded
 
     def test_movie_returns_downloaded_item_with_leftovers(self):
-        (first, _no_exists, _total, download_count), downloaded = self._run(MediaType.MOVIE)
+        (first, _no_exists, _total, download_count), downloaded = self._run(ProviderMediaType.MOVIE)
         assert first is downloaded
         assert download_count == 1
 
     def test_tv_still_returns_none_with_leftovers(self):
-        (first, _no_exists, _total, download_count), _downloaded = self._run(MediaType.TV)
+        (first, _no_exists, _total, download_count), _downloaded = self._run(ProviderMediaType.SERIES)
         assert first is None
         assert download_count == 1
 
@@ -66,7 +66,7 @@ class TestCustomProfileSearchNames:
     def test_custom_profile_returns_keyword_only(self):
         media = MediaInfo(
             title="演示内容 DEMO-660",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             year="2026",
             tmdb_id="content_id:DEMO-660",
             keyword="DEMO-660",
@@ -81,7 +81,7 @@ class TestCustomProfileSearchNames:
     def test_fill_missing_episode_from_raw_title(self):
         media = MediaInfo(
             title="学生会也有洞！",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             org_string=(
                 "[绿茶字幕组&LoliHouse] 学生会也有洞！ / Seitokai ni mo Ana wa Aru "
                 "- 01 [WebRip 1080p HEVC-10bit AAC][简繁日内封字幕]"
@@ -92,19 +92,19 @@ class TestCustomProfileSearchNames:
         assert media.get_season_episode_string() == "S01 E01"
 
     def test_fill_missing_episode_supports_chinese_episode(self):
-        media = MediaInfo(title="某番", type=MediaType.ANIME, org_string="某番 第8集 1080P")
+        media = MediaInfo(title="某番", type=ProviderMediaType.ANIME, org_string="某番 第8集 1080P")
         SearchResultProcessor.fill_missing_episode(media)
         assert media.begin_episode == 8
         assert media.get_season_episode_string() == "S01 E08"
 
     def test_fill_missing_episode_skips_multi_episode_pack(self):
-        media = MediaInfo(title="某番", type=MediaType.ANIME, org_string="某番 01-12 1080P")
+        media = MediaInfo(title="某番", type=ProviderMediaType.ANIME, org_string="某番 01-12 1080P")
         SearchResultProcessor.fill_missing_episode(media)
         assert media.begin_episode is None
 
         media_with_total = MediaInfo(
             title="某番",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             org_string="某番 全集 1080P",
             total_episodes=12,
         )
@@ -115,7 +115,7 @@ class TestCustomProfileSearchNames:
         media = MediaInfo(
             title="搏击俱乐部",
             cn_name="搏击俱乐部",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             content_profile="movie",
             keyword="550",
             tmdb_id=550,
@@ -129,7 +129,7 @@ class TestCustomProfileSearchNames:
         media = MediaInfo(
             title="学生会也有洞！",
             cn_name="学生会也有洞！",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             content_profile="anime",
             keyword="283938",
             tmdb_id=283938,
@@ -147,7 +147,7 @@ def test_build_search_names_uses_persisted_aliases_without_provider_call():
         cn_name="学生会也有洞！",
         original_title="生徒会にも穴はある!",
         original_language="ja",
-        type=MediaType.ANIME,
+        type=ProviderMediaType.ANIME,
         aliases=["Seitokai ni mo Ana wa Aru!", "學生會也有洞！"],
     )
     names, _ = SearchQueryBuilder.build_search_names(media, gateway)
@@ -164,7 +164,7 @@ def test_build_search_names_keeps_english_alias_with_three_aliases():
         cn_name="FX战士久留美",
         original_title="FX戦士くるみちゃん",
         original_language="ja",
-        type=MediaType.ANIME,
+        type=ProviderMediaType.ANIME,
         aliases=["FX战士久留美", "FX戦士くるみちゃん", "FX Fighter KURUMICHAN"],
     )
     names, _ = SearchQueryBuilder.build_search_names(media, gateway)
@@ -179,7 +179,7 @@ def test_build_search_names_caps_alias_explosion():
         cn_name="学生会也有洞！",
         original_title="生徒会にも穴はある！",
         original_language="ja",
-        type=MediaType.ANIME,
+        type=ProviderMediaType.ANIME,
         aliases=[
             "学生会也有洞！",
             "生徒会にも穴はある！",

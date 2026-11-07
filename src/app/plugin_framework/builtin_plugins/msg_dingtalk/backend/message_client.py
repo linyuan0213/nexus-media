@@ -305,9 +305,7 @@ class DingTalk(_IMessageClient):
             return False, "标题和内容不能同时为空"
         # 1. 交互回复：优先会话 Webhook（精准发回对话）
         if user_id and user_id in self._session_webhooks:
-            return self._send_webhook_to(
-                self._session_webhooks[user_id], self._build_payload(title, text, image)
-            )
+            return self._send_webhook_to(self._session_webhooks[user_id], self._build_payload(title, text, image))
         # 2. 主动通知：机器人单聊（发个人，无需群机器人）
         if self._app_key and self._app_secret:
             users = self._active_user_ids()
@@ -355,9 +353,7 @@ class DingTalk(_IMessageClient):
                         "sign": gen_sign(self._secret, timestamp),
                     }
                 )
-            resp = HttpClient(config=HttpClientConfig(timeout=15)).post(
-                webhook_url, json=payload, headers=headers
-            )
+            resp = HttpClient(config=HttpClientConfig(timeout=15)).post(webhook_url, json=payload, headers=headers)
             data = resp.json()
             if data and data.get("errcode") == 0:
                 return True, ""

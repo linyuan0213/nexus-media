@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 
 from app.domain.entities.rss import SubscribeHistoryEntity, SubscribeMovieEntity, SubscribeTvEntity
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 
 
@@ -68,7 +68,7 @@ def test_tv_entity_maps_identity_fields():
 def test_web_utils_douban_fallback_does_not_supplement_tmdb():
     from unittest.mock import MagicMock
 
-    from app.domain.mediatypes import MediaType
+    from app.domain.media_types import ProviderMediaType
     from app.services.web.utils import WebUtils
 
     media_service = MagicMock()
@@ -86,7 +86,7 @@ def test_web_utils_douban_fallback_does_not_supplement_tmdb():
     media_service.get_media_info.return_value = None
     utils = WebUtils(metadata_gateway=gateway)
 
-    info = utils.get_mediainfo_from_id(MediaType.TV, "DB:25848328")
+    info = utils.get_mediainfo_from_id(ProviderMediaType.SERIES, "DB:25848328")
 
     assert info is not None
     assert info.tmdb_id == ""
@@ -101,7 +101,7 @@ def test_web_utils_douban_fallback_does_not_supplement_tmdb():
 
 def test_detail_links_follow_anchor_and_keep_tmdb_supplement():
     info = MediaInfo(
-        type=MediaType.TV,
+        type=ProviderMediaType.SERIES,
         title="权力的游戏",
         tmdb_id=1399,
         douban_id="26584183",
@@ -117,7 +117,7 @@ def test_detail_links_follow_anchor_and_keep_tmdb_supplement():
 
 def test_media_info_exposes_typed_ref():
     info = MediaInfo(
-        type=MediaType.TV,
+        type=ProviderMediaType.SERIES,
         tmdb_id="1399",
         anchor_provider="douban",
         anchor_external_id="26584183",

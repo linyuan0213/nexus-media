@@ -7,9 +7,8 @@ from api.routers.subscription import (
     _resolve_mtype,
     _resolve_type_and_profile,
 )
-from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.media_type_utils import ProviderMediaTypeMapper
 from app.domain.media_types import MediaKind, ProviderMediaType
-from app.domain.mediatypes import MediaType
 from app.media.metadata.providers.genres import (
     classify_media_type,
     classify_provider_media_type,
@@ -21,33 +20,33 @@ from app.services.subscribe.management.utils import gen_rss_note
 from app.utils import JsonUtils
 
 
-class TestRouterMediaType:
+class TestRouterProviderMediaType:
     def test_resolve_mtype_keeps_anime(self):
-        assert _resolve_mtype("anime") == MediaType.ANIME
-        assert _resolve_mtype("movie") == MediaType.MOVIE
-        assert _resolve_mtype("tv") == MediaType.TV
+        assert _resolve_mtype("anime") == ProviderMediaType.ANIME
+        assert _resolve_mtype("movie") == ProviderMediaType.MOVIE
+        assert _resolve_mtype("tv") == ProviderMediaType.SERIES
 
     def test_resolve_mtype_defaults_tv(self):
-        assert _resolve_mtype(None) == MediaType.TV
-        assert _resolve_mtype("") == MediaType.TV
-        assert _resolve_mtype("whatever") == MediaType.TV
+        assert _resolve_mtype(None) == ProviderMediaType.SERIES
+        assert _resolve_mtype("") == ProviderMediaType.SERIES
+        assert _resolve_mtype("whatever") == ProviderMediaType.SERIES
 
     def test_build_add_kwargs_keeps_anime(self):
         req = AddRssMediaRequest(name="克雷瓦提斯", year="2025", type="anime")
-        assert _build_add_kwargs(req)["mtype"] == MediaType.ANIME
+        assert _build_add_kwargs(req)["mtype"] == ProviderMediaType.ANIME
 
     def test_build_update_kwargs_keeps_anime(self):
         req = AddRssMediaRequest(rssid=1, name="克雷瓦提斯", year="2025", type="anime")
-        assert _build_update_kwargs(req)["mtype"] == MediaType.ANIME
+        assert _build_update_kwargs(req)["mtype"] == ProviderMediaType.ANIME
 
     def test_non_default_profile_uses_movie_carrier(self):
         mtype, profile = _resolve_type_and_profile("legacy-plugin-type", "demo")
-        assert mtype == MediaType.MOVIE
+        assert mtype == ProviderMediaType.MOVIE
         assert profile == "demo"
 
     def test_plugin_profile_defaults_to_movie_carrier(self):
         mtype, profile = _resolve_type_and_profile("demo", "demo")
-        assert mtype == MediaType.MOVIE
+        assert mtype == ProviderMediaType.MOVIE
         assert profile == "demo"
 
     def test_build_kwargs_carry_provider_and_profile(self):
@@ -60,7 +59,7 @@ class TestRouterMediaType:
             mediaid="content_id:SSIS-001",
         )
         add = _build_add_kwargs(req)
-        assert add["mtype"] == MediaType.MOVIE
+        assert add["mtype"] == ProviderMediaType.MOVIE
         assert add["content_profile"] == "demo"
         assert add["provider"] == "demo_meta"
         assert add["metadata_ref"] == "demo_meta:AbCdEf"
@@ -74,10 +73,10 @@ class TestGenericAnimeClassification:
         assert is_anime_genre([{"id": 16, "name": "Animation"}])
         assert is_anime_genre(["动画", "动作"])
         assert not is_anime_genre(["剧情"])
-        assert classify_media_type(MediaType.TV, ["动画"]) == (MediaType.ANIME, "anime")
-        assert classify_media_type(MediaType.TV, ["剧情"]) == (MediaType.TV, "default")
+        assert classify_media_type(ProviderMediaType.SERIES, ["动画"]) == (ProviderMediaType.ANIME, "anime")
+        assert classify_media_type(ProviderMediaType.SERIES, ["剧情"]) == (ProviderMediaType.SERIES, "default")
         # 电影保持电影，不因为动画题材被塞进电视剧表
-        assert classify_media_type(MediaType.MOVIE, ["动画"]) == (MediaType.MOVIE, "default")
+        assert classify_media_type(ProviderMediaType.MOVIE, ["动画"]) == (ProviderMediaType.MOVIE, "default")
 
     def test_provider_classification_uses_kind_and_keeps_anime(self):
         assert classify_provider_media_type(ProviderMediaType.SERIES, ["动画"]) == (
@@ -96,11 +95,11 @@ class TestGenericAnimeClassification:
         assert ProviderMediaType.ANIME.kind == MediaKind.EPISODIC
 
     def test_note_genres_resolve_anime_without_tmdb(self):
-        assert _resolve_subscribe_type("tv", None, ["动画"]) == MediaType.ANIME.value
-        assert _resolve_subscribe_type("tv", None, ["剧情"]) == MediaType.TV.value
+        assert _resolve_subscribe_type("tv", None, ["动画"]) == ProviderMediaType.ANIME.value
+        assert _resolve_subscribe_type("tv", None, ["剧情"]) == ProviderMediaType.SERIES.value
 
     def test_gen_rss_note_persists_genres(self):
-        media = MediaInfo(type=MediaType.ANIME, title="测试番剧", genres=["动画"])
+        media = MediaInfo(type=ProviderMediaType.ANIME, title="测试番剧", genres=["动画"])
         note = JsonUtils.loads(gen_rss_note(media))
         assert note["media_type"] == "anime"
         assert note["genres"] == ["动画"]
@@ -114,7 +113,7 @@ class TestSourceLabel:
         assert _source_label("content_id") == "插件"
 
 
-class TestNoteMediaType:
+class TestNoteProviderMediaType:
     def test_gen_rss_note_persists_media_type(self):
         from unittest.mock import MagicMock
 
@@ -122,7 +121,7 @@ class TestNoteMediaType:
         media.get_poster_image.return_value = "p.jpg"
         media.release_date = "2025-07-01"
         media.vote_average = 8.1
-        media.type = MediaType.ANIME
+        media.type = ProviderMediaType.ANIME
         note = JsonUtils.loads(gen_rss_note(media))
         assert note["media_type"] == "anime"
 
@@ -136,12 +135,12 @@ class TestNoteMediaType:
         assert _resolve_subscribe_type(None, 258348) == "unknown"
 
     def test_anime_maps_to_tv_table(self):
-        assert MediaTypeMapper.to_tmdb(MediaType.ANIME) == "tv"
+        assert ProviderMediaTypeMapper.to_tmdb(ProviderMediaType.ANIME) == "tv"
 
 
 def test_media_type_from_chinese_display_name():
-    from app.domain.mediatypes import MediaType
+    from app.domain.media_types import ProviderMediaType
 
-    assert MediaType.from_string("电影") == MediaType.MOVIE
-    assert MediaType.from_string("电视剧") == MediaType.TV
-    assert MediaType.from_string("动漫") == MediaType.ANIME
+    assert ProviderMediaType.from_value("电影") == ProviderMediaType.MOVIE
+    assert ProviderMediaType.from_value("电视剧") == ProviderMediaType.SERIES
+    assert ProviderMediaType.from_value("动漫") == ProviderMediaType.ANIME

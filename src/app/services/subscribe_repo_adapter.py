@@ -13,7 +13,7 @@ from app.domain.entities.rss import (
     SubscribeState,
     SubscribeTvEntity,
 )
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.schemas.auth import UserContext
 
@@ -112,11 +112,11 @@ class SubscribeMovieRepositoryAdapter:
 
     def update_filter_order(self, rssid: int, res_order: int) -> None:
 
-        self._repo.update_rss_filter_order(MediaType.MOVIE.value, rssid, str(res_order))
+        self._repo.update_rss_filter_order(ProviderMediaType.MOVIE.value, rssid, str(res_order))
 
     def get_filter_order(self, rssid: int) -> int:
 
-        return self._repo.get_rss_overedition_order(MediaType.MOVIE.value, rssid)
+        return self._repo.get_rss_overedition_order(ProviderMediaType.MOVIE.value, rssid)
 
     # 兼容旧Repository方法名
     def get_rss_overedition_order(self, rtype, rssid) -> int:
@@ -274,11 +274,11 @@ class SubscribeTvRepositoryAdapter:
 
     def update_filter_order(self, rssid: int, res_order: int) -> None:
 
-        self._repo.update_rss_filter_order(MediaType.TV.value, rssid, str(res_order))
+        self._repo.update_rss_filter_order(ProviderMediaType.SERIES.value, rssid, str(res_order))
 
     def get_filter_order(self, rssid: int) -> int:
 
-        return self._repo.get_rss_overedition_order(MediaType.TV.value, rssid)
+        return self._repo.get_rss_overedition_order(ProviderMediaType.SERIES.value, rssid)
 
     def delete(
         self,

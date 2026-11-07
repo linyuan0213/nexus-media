@@ -1,5 +1,4 @@
 from app.domain.media_types import ProviderMediaType, provider_media_type_of
-from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.media.lookup.base import BaseLookup, LookupResult
 
@@ -10,7 +9,7 @@ class DoubanLookup(BaseLookup):
     def __init__(self, api: DoubanApi | None = None):
         self._api = api or DoubanApi()
 
-    def lookup(self, parsed, hint_type: MediaType | None = None) -> LookupResult | None:
+    def lookup(self, parsed, hint_type: ProviderMediaType | None = None) -> LookupResult | None:
         name = parsed.title_en or parsed.title_cn
         if not name:
             return None

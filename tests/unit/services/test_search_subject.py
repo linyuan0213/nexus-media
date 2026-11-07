@@ -2,21 +2,21 @@
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.search_subject import SearchSubject
 
 
 @pytest.mark.parametrize(
     ("media_type", "profile", "provider", "external", "display", "provider_type", "mode"),
     [
-        ("movie", "default", "tmdb", "550", MediaType.MOVIE, MediaType.MOVIE, "title"),
-        ("tv", "default", "bangumi", "400602", MediaType.ANIME, MediaType.TV, "title"),
-        ("movie", "default", "bangumi", "400602", MediaType.MOVIE, MediaType.MOVIE, "title"),
-        ("anime", "anime", "tmdb", "283938", MediaType.ANIME, MediaType.TV, "title"),
-        (None, "anime", "tmdb", "283938", MediaType.ANIME, MediaType.TV, "title"),
-        ("movie", "demo", "content_id", "DEMO-660", MediaType.MOVIE, MediaType.MOVIE, "code"),
-        ("movie", "movie", "tmdb", "550", MediaType.MOVIE, MediaType.MOVIE, "title"),
-        ("movie", "demo", "demo_provider", "DEMO-969", MediaType.MOVIE, MediaType.MOVIE, "code"),
+        ("movie", "default", "tmdb", "550", ProviderMediaType.MOVIE, ProviderMediaType.MOVIE, "title"),
+        ("tv", "default", "bangumi", "400602", ProviderMediaType.ANIME, ProviderMediaType.SERIES, "title"),
+        ("movie", "default", "bangumi", "400602", ProviderMediaType.MOVIE, ProviderMediaType.MOVIE, "title"),
+        ("anime", "anime", "tmdb", "283938", ProviderMediaType.ANIME, ProviderMediaType.SERIES, "title"),
+        (None, "anime", "tmdb", "283938", ProviderMediaType.ANIME, ProviderMediaType.SERIES, "title"),
+        ("movie", "demo", "content_id", "DEMO-660", ProviderMediaType.MOVIE, ProviderMediaType.MOVIE, "code"),
+        ("movie", "movie", "tmdb", "550", ProviderMediaType.MOVIE, ProviderMediaType.MOVIE, "title"),
+        ("movie", "demo", "demo_provider", "DEMO-969", ProviderMediaType.MOVIE, ProviderMediaType.MOVIE, "code"),
         (None, "demo", "content_id", "DEMO-969", None, None, "code"),
     ],
 )

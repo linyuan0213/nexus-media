@@ -16,7 +16,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import log
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.media.metadata.registry import registry as metadata_registry
@@ -44,7 +44,7 @@ class ApiSiteSearcher:
         self,
         keyword: str = "",
         page: int = 0,
-        mtype: MediaType | None = None,
+        mtype: ProviderMediaType | None = None,
         page_size: int | None = None,
         content_profile: str | None = None,
     ) -> list[dict[str, Any]]:

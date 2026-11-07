@@ -1,4 +1,4 @@
-"""WebDAV 存储后端单元测试（href 路径转换与目录列表解析）. """
+"""WebDAV 存储后端单元测试（href 路径转换与目录列表解析）."""
 
 from types import SimpleNamespace
 

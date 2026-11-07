@@ -13,7 +13,7 @@ from collections.abc import Collection, Mapping
 from datetime import datetime, timezone
 from typing import Any
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 from .models import (
     Credit,
@@ -69,7 +69,7 @@ class MetadataComposer:
         *,
         content_profile: str = "default",
         scope: str = "default",
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         capabilities: CapabilityMap | None = None,
         locked: dict[str, FieldValue] | None = None,
     ) -> MediaMetadata:
@@ -95,8 +95,8 @@ class MetadataComposer:
         refs = _merge_refs(ordered)
 
         resolved_type = media_type or next(
-            (record.media_type for record in ordered if record.media_type != MediaType.UNKNOWN),
-            MediaType.UNKNOWN,
+            (record.media_type for record in ordered if record.media_type != ProviderMediaType.UNKNOWN),
+            ProviderMediaType.UNKNOWN,
         )
         extra = _merge_extra(ordered)
         conflicts = _detect_conflicts(ordered)

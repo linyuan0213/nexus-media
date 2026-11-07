@@ -12,8 +12,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.domain.enums import SearchType, channel_key
 from app.domain.interfaces.chat import ChatPort
-from app.domain.media_types import media_type_registry
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType, media_type_registry
 from app.media import meta_info
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.metadata.registry import registry as metadata_registry
@@ -177,7 +176,7 @@ class MessageSearchService:
         title = item.TITLE or item.TORRENT_NAME or "未知标题"
         year = item.YEAR or ""
 
-        mtype = MediaType.from_string(item.TYPE)
+        mtype = ProviderMediaType.from_value(item.TYPE)
 
         if self._metadata_gateway is None:
             self._message.send_channel_msg(channel=in_from, title="元数据网关不可用", user_id=user_id)
@@ -254,7 +253,7 @@ class MessageSearchService:
         title = name
         media_type = (
             media_type_registry.resolve_profile(profile) or media_type_registry.resolve(None, profile)
-        ).legacy_type
+        ).content_type
         if not is_id and profile == "default":
             if self._metadata_gateway is None:
                 self._message.send_channel_msg(channel=in_from, title="元数据服务未启用", user_id=user_id)

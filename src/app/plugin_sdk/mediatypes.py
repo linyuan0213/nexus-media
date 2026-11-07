@@ -5,13 +5,14 @@ from app.domain.media_types import (
     MediaTypeDescriptor,
     MediaTypeRef,
     MediaTypeRegistry,
+    ProviderMediaType,
     media_type_registry,
+    normalize_media_type_input,
 )
-from app.domain.mediatypes import MediaType, normalize_media_type_input
 
 __all__ = [
     "MediaKind",
-    "MediaType",
+    "ProviderMediaType",
     "MediaTypeDescriptor",
     "MediaTypeRef",
     "MediaTypeRegistry",

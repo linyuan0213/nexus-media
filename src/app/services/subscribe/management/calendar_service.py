@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.schemas.auth import UserContext
 
@@ -405,7 +405,7 @@ class SubscribeCalendarService:
                     provider,
                     external_id,
                     user,
-                    media_type=MediaType.MOVIE,
+                    media_type=ProviderMediaType.MOVIE,
                     scope="default",
                     allow_private=allow_private,
                     content_profile=profile,
@@ -423,7 +423,7 @@ class SubscribeCalendarService:
                         detail_provider,
                         str(movie.get("external_id")),
                         user,
-                        media_type=MediaType.MOVIE,
+                        media_type=ProviderMediaType.MOVIE,
                         scope="release",
                         allow_private=allow_private,
                         content_profile=profile,
@@ -474,7 +474,7 @@ class SubscribeCalendarService:
         if not name:
             return []
         profile = str(tv.get("content_profile") or "default")
-        media_type = MediaType.ANIME if profile == "anime" else MediaType.TV
+        media_type = ProviderMediaType.ANIME if profile == "anime" else ProviderMediaType.SERIES
         try:
             hits = self._metadata_gateway.search(
                 query=name,
@@ -510,7 +510,7 @@ class SubscribeCalendarService:
         for info in infos:
             if not info.get("id"):
                 continue
-            if media_type == MediaType.ANIME:
+            if media_type == ProviderMediaType.ANIME:
                 info["type"] = "anime"
             info["source_label"] = "TMDB"
             info["content_profile"] = str(tv.get("content_profile") or "default")

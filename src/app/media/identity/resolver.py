@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 import log
 from app.domain.enums import IdentifyStatus
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.identity.builder import get_identity_builder
 from app.media.identity.graph import get_edition_graph
 from app.media.identity.index import get_alias_index
@@ -315,7 +315,7 @@ class IdentityResolver:
         work = Work(
             source="tmdb",
             work_id=tmdb_id,
-            media_type="anime" if mtype == MediaType.ANIME else (mtype.value if mtype else "tv"),
+            media_type="anime" if mtype == ProviderMediaType.ANIME else (mtype.value if mtype else "tv"),
             year=int(year_str) if year_str.isdigit() else None,
             official_titles=[n for n in (getattr(info, "title", None), getattr(info, "original_title", None)) if n],
             aliases=[
@@ -342,14 +342,17 @@ class IdentityResolver:
         m_type = getattr(match_media, "type", None)
         g_type = group.get("type")
         if g_type and m_type and g_type != m_type:
-            if not ({g_type, m_type} <= {MediaType.TV, MediaType.ANIME}):
+            if not ({g_type, m_type} <= {ProviderMediaType.SERIES, ProviderMediaType.ANIME}):
                 return False
         g_year = str(group.get("year") or "")
         m_year = str(getattr(match_media, "year", "") or "")
         if not (g_year and m_year and g_year != m_year):
             return True
         # 剧集/动漫跨季、发行年与首播年不同，不作为硬冲突（与旧 BatchIdentifier 一致）
-        return m_type in (MediaType.TV, MediaType.ANIME) or g_type in (MediaType.TV, MediaType.ANIME)
+        return m_type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME) or g_type in (
+            ProviderMediaType.SERIES,
+            ProviderMediaType.ANIME,
+        )
 
     def _target_names(self, match_media: MediaInfo | None) -> list[str]:
         if not match_media or not str(getattr(match_media, "tmdb_id", "") or "").isdigit():
@@ -371,7 +374,7 @@ class IdentityResolver:
             if n
         ]
         try:
-            extra = self.media.get_all_names(match_media.tmdb_id, match_media.type or MediaType.TV) or []
+            extra = self.media.get_all_names(match_media.tmdb_id, match_media.type or ProviderMediaType.SERIES) or []
             for n in extra:
                 if n and n not in names:
                     names.append(n)

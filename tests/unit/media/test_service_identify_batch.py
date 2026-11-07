@@ -7,7 +7,6 @@
 from unittest.mock import MagicMock
 
 from app.domain.media_types import ProviderMediaType
-from app.domain.mediatypes import MediaType
 from app.media.lookup.base import LookupResult
 from app.media.parser.base import ParserResult
 from app.media.parser.regex import RegexParser
@@ -85,7 +84,7 @@ class TestIdentifyBatchAnimePromotion:
 
         info = svc.identify_batch([{"title": "Clevatess 2025 S01E01 1080p WEB-DL"}])[0]
 
-        assert info.type == MediaType.ANIME
+        assert info.type == ProviderMediaType.ANIME
 
     def test_non_anime_genre_stays_tv(self):
         svc = _service(
@@ -99,4 +98,4 @@ class TestIdentifyBatchAnimePromotion:
 
         info = svc.identify_batch([{"title": "Some Show 2025 S01E01 1080p WEB-DL"}])[0]
 
-        assert info.type == MediaType.TV
+        assert info.type == ProviderMediaType.SERIES

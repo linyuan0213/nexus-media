@@ -1,7 +1,7 @@
 from typing import Any, cast
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.models import DiscoveryItem
 from app.plugin_sdk.metadata import ProviderRef
 from app.services.library_presence_service import LibraryPresenceService
@@ -10,8 +10,8 @@ from app.services.library_presence_service import LibraryPresenceService
 def _item(code: str, *, title: str | None = None) -> DiscoveryItem:
     return DiscoveryItem(
         provider="demo",
-        ref=ProviderRef(provider="demo", external_id=f"slug-{code}", media_type=MediaType.MOVIE),
-        anchor_ref=ProviderRef(provider="content_id", external_id=code, media_type=MediaType.MOVIE),
+        ref=ProviderRef(provider="demo", external_id=f"slug-{code}", media_type=ProviderMediaType.MOVIE),
+        anchor_ref=ProviderRef(provider="content_id", external_id=code, media_type=ProviderMediaType.MOVIE),
         content_profile="custom",
         title=title or code,
     )
@@ -101,7 +101,6 @@ def test_content_id_anchor_resolves_through_identity_graph():
     assert items[0].extra["in_library"] is True
     cast(Any, service._identity_repo).find_by_ref.assert_called()
     cast(Any, service._transfer_repo).get_existing_identity_ids.assert_called_with(["identity-1"])
-
 
 
 def test_plugin_library_alias_is_consumed_generically():

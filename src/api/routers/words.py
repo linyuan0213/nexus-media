@@ -10,7 +10,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.db.repositories.category_repo_adapter import CategoryConfigRepositoryAdapter
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.schemas.common import CommonResponse
 from app.services.words_service import WordsService
 from app.utils import ExceptionUtils
@@ -291,8 +291,12 @@ def get_categories(
 ):
     adapter = CategoryConfigRepositoryAdapter()
     entities = adapter.get_all()
-    parsed = MediaType.from_string(req.type)
-    media_type_map = {MediaType.MOVIE: "movie", MediaType.TV: "tv", MediaType.ANIME: "anime"}
+    parsed = ProviderMediaType.from_value(req.type)
+    media_type_map = {
+        ProviderMediaType.MOVIE: "movie",
+        ProviderMediaType.SERIES: "tv",
+        ProviderMediaType.ANIME: "anime",
+    }
     target = media_type_map.get(parsed, "")
     categories = [e.name for e in entities if e.media_type == target]
     return success(

@@ -4,7 +4,7 @@
 纯逻辑、无状态，不依赖服务层。
 """
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 
 def _subscribe_id(subscribe, mtype, title: str, year, tmdbid):
@@ -41,7 +41,7 @@ def check_media_exists(
     """
     if not mtype or not title:
         return False, None, ""
-    subscribe_mtype = MediaType.MOVIE if str(mtype).lower() == "movie" else MediaType.TV
+    subscribe_mtype = ProviderMediaType.MOVIE if str(mtype).lower() == "movie" else ProviderMediaType.SERIES
     media_title = f"{title} ({year})" if (str(mtype).lower() != "movie" and year) else title
     if anchor_provider and anchor_external_id and hasattr(subscribe, "get_subscribe_by_anchor"):
         try:

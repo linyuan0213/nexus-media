@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.domain.enums import SearchType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.message.core.client_manager import ClientManager, parse_client_config
 from app.message.core.command_manager import CommandManager
 from app.message.core.dispatcher import MessageDispatcher
@@ -362,7 +362,7 @@ class TestMessageBuilder:
     def test_send_rss_finished_movie_skips(self):
         builder = MessageBuilder(MagicMock(), MagicMock(), MagicMock())
         media = MagicMock()
-        media.type = MediaType.MOVIE
+        media.type = ProviderMediaType.MOVIE
         builder.send_rss_finished_message(media)
 
     def test_send_mediaserver_message_empty(self):

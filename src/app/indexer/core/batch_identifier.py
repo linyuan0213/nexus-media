@@ -3,7 +3,7 @@ import re
 import log
 from app.core.settings import settings
 from app.domain.enums import IdentifyStatus, ProgressKey
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.domain.validators.media_title import is_valid_media_title
 from app.infrastructure.cache_system import get_cache_manager
 from app.infrastructure.progress import ProgressTracker
@@ -185,7 +185,9 @@ class BatchIdentifier:
         # 别名扩充：一次 TMDB API，有缓存；失败不影响搜索可用性
         if match_media and target_names:
             try:
-                extra = self.media.get_all_names(match_media.tmdb_id, match_media.type or MediaType.TV) or []
+                extra = (
+                    self.media.get_all_names(match_media.tmdb_id, match_media.type or ProviderMediaType.SERIES) or []
+                )
             except Exception as e:
                 log.warn(f"[BatchIdentifier]获取目标别名失败，直通降级为保守模式: {e}")
                 extra = []
@@ -335,7 +337,7 @@ class BatchIdentifier:
         m_type = getattr(match_media, "type", None)
         g_type = group.get("type")
         if g_type and m_type and g_type != m_type:
-            if not ({g_type, m_type} <= {MediaType.TV, MediaType.ANIME}):
+            if not ({g_type, m_type} <= {ProviderMediaType.SERIES, ProviderMediaType.ANIME}):
                 return False
         g_year = str(group.get("year") or "")
         m_year = str(getattr(match_media, "year", "") or "")
@@ -344,7 +346,10 @@ class BatchIdentifier:
         if g_year == m_year:
             return True
         # 剧集/动漫：年份不一致不作为硬冲突（多季/重制/发行年差异）
-        if m_type in (MediaType.TV, MediaType.ANIME) or g_type in (MediaType.TV, MediaType.ANIME):
+        if m_type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME) or g_type in (
+            ProviderMediaType.SERIES,
+            ProviderMediaType.ANIME,
+        ):
             return True
         return False
 

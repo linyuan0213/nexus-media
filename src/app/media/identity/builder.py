@@ -6,7 +6,7 @@
 """
 
 import log
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.external.bangumi import Bangumi
 from app.media.identity.index import AliasIndex, get_alias_index
 from app.media.identity.models import (
@@ -34,7 +34,7 @@ class IdentityIndexBuilder:
 
     # ---------- TMDB ----------
 
-    def ensure_tmdb_work(self, tmdb_id: int, mtype: MediaType) -> Work | None:
+    def ensure_tmdb_work(self, tmdb_id: int, mtype: ProviderMediaType) -> Work | None:
         """确保 TMDB 作品已索引：命中直接返回，未命中拉详情构建"""
         cached = self._index.get_work("tmdb", tmdb_id)
         if cached:
@@ -52,7 +52,7 @@ class IdentityIndexBuilder:
         return work
 
     @staticmethod
-    def _build_tmdb_work(tmdb_id: int, mtype: MediaType, info: dict) -> Work:
+    def _build_tmdb_work(tmdb_id: int, mtype: ProviderMediaType, info: dict) -> Work:
         name = info.get("name") or info.get("title") or ""
         original = info.get("original_name") or info.get("original_title") or ""
         date = info.get("first_air_date") or info.get("release_date") or ""
@@ -73,7 +73,7 @@ class IdentityIndexBuilder:
                 kind = ALIAS_ROMANIZATION if is_ja and not StringUtils.is_chinese(title) else ALIAS_TRANSLATION
                 aliases.append(Alias(text=title, lang=lang, kind=kind, source="tmdb:translations"))
 
-        media_type = "anime" if mtype == MediaType.ANIME else mtype.value
+        media_type = "anime" if mtype == ProviderMediaType.ANIME else mtype.value
         return Work(
             source="tmdb",
             work_id=tmdb_id,
@@ -119,7 +119,9 @@ class IdentityIndexBuilder:
 
     # ---------- 便捷方法 ----------
 
-    def get_work_names(self, source: str, work_id: int, mtype: MediaType = MediaType.TV) -> list[str] | None:
+    def get_work_names(
+        self, source: str, work_id: int, mtype: ProviderMediaType = ProviderMediaType.SERIES
+    ) -> list[str] | None:
         """兼容 get_all_names 语义：构建/命中后返回名称列表"""
         if source == "tmdb":
             work = self.ensure_tmdb_work(work_id, mtype)

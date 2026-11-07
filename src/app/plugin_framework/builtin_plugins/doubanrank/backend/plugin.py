@@ -11,7 +11,7 @@ import defusedxml.minidom  # type: ignore[import-untyped]
 
 import log
 from app.domain.enums import SearchType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.http.client import HttpClient
 from app.mediaserver.media_server import MediaServer
 from app.plugin_framework.builtin_plugins._ms_common.mediaserver_lifecycle import resolve_plugin_server_id
@@ -203,7 +203,7 @@ class DoubanRankPlugin:
                         continue
 
                     if self._subscribe.check_history(
-                        type_str="movie" if media_info.type == MediaType.MOVIE else "tv",
+                        type_str="movie" if media_info.type == ProviderMediaType.MOVIE else "tv",
                         name=media_info.title or "",
                         year=media_info.year,
                         season=media_info.get_season_string(),

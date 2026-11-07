@@ -55,8 +55,7 @@ def audit() -> dict:
             shadow = int(
                 db.query(func.count(func.distinct(MediaLifecycle.IDENTITY_ID)))
                 .filter(
-                    (MediaLifecycle.IDENTITY_ID.like("local:%"))
-                    | (MediaLifecycle.IDENTITY_ID.like("content_id:%"))
+                    (MediaLifecycle.IDENTITY_ID.like("local:%")) | (MediaLifecycle.IDENTITY_ID.like("content_id:%"))
                 )
                 .scalar()
                 or 0

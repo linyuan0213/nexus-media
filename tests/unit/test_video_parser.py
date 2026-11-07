@@ -1,6 +1,6 @@
 """测试统一解析引擎 — 电视剧/影视格式"""
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.media.parser._release_groups import ReleaseGroupsMatcher
 from app.media.parser.unified import UnifiedParser
@@ -15,7 +15,7 @@ class TestVideoParserFix:
     def test_bracket_episode(self):
         result = _parse("[05] Title 1080p.mkv")
         assert result.begin_episode == 5
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_bracket_episode_no_match_no_digits(self):
         result = _parse("[abc] Title 1080p.mkv")
@@ -26,13 +26,13 @@ class TestChineseSeasonDetection:
     def test_chinese_single_season(self):
         result = _parse("Show 第2季")
         assert result.begin_season == 2
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_chinese_season_range(self):
         result = _parse("Show 第1-3季")
         assert result.begin_season == 1
         assert result.end_season == 3
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_multitoken_chinese_season(self):
         result = _parse("Show [1080p] 第1季")
@@ -43,12 +43,12 @@ class TestChineseEpisodeDetection:
     def test_chinese_episode(self):
         result = _parse("Show 第05集")
         assert result.begin_episode == 5
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_chinese_episode_range(self):
         result = _parse("Show 第01-05集")
         assert result.begin_episode is not None
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_chinese_episode_with_tags(self):
         result = _parse("Show [1080p] 第08集.mkv")
@@ -58,11 +58,11 @@ class TestChineseEpisodeDetection:
 class TestWebSourceDetection:
     def test_amzn_source(self):
         result = _parse("Show.S01E01.AMZN.WEB-DL.1080p")
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_nf_source(self):
         result = _parse("Show.S01E01.NF.WEB-DL.1080p")
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
 
 class TestSeasonEpisodeStandard:
@@ -70,7 +70,7 @@ class TestSeasonEpisodeStandard:
         result = _parse("Show.S01E01.1080p")
         assert result.begin_season == 1
         assert result.begin_episode == 1
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_bare_multi_episode_range(self):
         result = _parse("Show.E01-E05.1080p")
@@ -86,7 +86,7 @@ class TestSeasonEpisodeStandard:
         result = _parse("Dr.STONE.S04.2025.1080p.BluRay.x265.10bit.FLAC.2.0.2Audio-ADE")
         assert result.begin_season == 4
         assert result.begin_episode is None
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
 
 class TestReleaseGroups:

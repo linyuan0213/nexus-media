@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 from app.domain.entities.rss import SubscribeState
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.subscribe.strategies.queue_search import QueueSearchStrategy
 
 
@@ -29,7 +29,7 @@ def _make_strategy():
 def _prepare(strategy, search_result, downloaded_count):
     media = MagicMock()
     media.provider_data = {"id": 123}
-    media.type = MediaType.MOVIE
+    media.type = ProviderMediaType.MOVIE
     media.get_title_string.return_value = "年会不能停2"
     strategy._service.get_subscribe_movies.return_value = {
         1: {

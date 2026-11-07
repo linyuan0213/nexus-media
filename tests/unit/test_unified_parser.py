@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.parser.unified import UnifiedParser
 
 
@@ -57,21 +57,21 @@ class TestTvFormat:
         assert result.season == 1
         assert result.episode == 5
         assert result.resource_pix == "1080p"
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_season_episode_keyword(self, parser):
         result = parser.parse("Show Name Season 2 Episode 3 1080p WEB-DL")
         assert result is not None
         assert result.season == 2
         assert result.episode == 3
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_chinese_season_episode(self, parser):
         result = parser.parse("庆余年 第2季 第5集 1080p")
         assert result is not None
         assert result.season == 2
         assert result.episode == 5
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_episode_title_after_sxxexx_not_merged_into_title(self, parser):
         """集标题不应并入主标题（Medalist.S02E09.It.Begins → Medalist）"""
@@ -80,7 +80,7 @@ class TestTvFormat:
         assert result.title_en == "Medalist"
         assert result.season == 2
         assert result.episode == 9
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
 
     def test_episode_title_with_words_after_sxxexx(self, parser):
         result = parser.parse("Golden.Kamuy.S05E01.Town.of.Reunions.1080p.CR.WEB-DL.DUAL.DDP2.0.H.264-Kitsune.mkv")
@@ -105,7 +105,7 @@ class TestMovieFormat:
         assert result is not None
         assert result.year == "1999"
         assert result.resource_pix == "1080p"
-        assert result.type == MediaType.MOVIE
+        assert result.type == ProviderMediaType.MOVIE
 
     def test_muhd_source_token_not_glued_into_name(self, parser):
         """FRDS 的 mUHD 标记不应粘进片名（Green Book → 而非 Green Book Muhd）"""
@@ -280,7 +280,7 @@ class TestRegressionIdentify:
         assert result is not None
         assert result.title_en == "Against The Current"
         assert result.season == 1
-        assert result.type == MediaType.TV
+        assert result.type == ProviderMediaType.SERIES
         assert result.resource_pix == "2160p"
         assert result.resource_team == "MWeb"
 

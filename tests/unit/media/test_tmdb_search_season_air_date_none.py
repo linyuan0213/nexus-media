@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.lookup.tmdb_search import TmdbSearch
 
 
@@ -16,7 +16,7 @@ def test_season_air_date_none_does_not_log_tmdb_error(monkeypatch):
 
     ts = TmdbSearch(client)
     info = {
-        "media_type": MediaType.TV,
+        "media_type": ProviderMediaType.SERIES,
         "name": "猛将",
         "original_name": "猛将",
         "first_air_date": "2026-01-01",

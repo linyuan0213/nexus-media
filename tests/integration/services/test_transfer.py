@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 
 from app.domain.enums import ProgressKey, SyncType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.transfer.cleanup_service import TransferCleanupService
 from app.services.transfer.existence_checker import MediaExistenceChecker
 from app.services.transfer.filetransfer_service import FileTransferService
@@ -158,13 +158,13 @@ class TestTransferPathResolver:
 
     def test_get_best_target_path_single(self):
         resolver = TransferPathResolver(movie_path=["/movies"])
-        assert resolver.get_best_target_path(MediaType.MOVIE) == "/movies"
+        assert resolver.get_best_target_path(ProviderMediaType.MOVIE) == "/movies"
 
     def test_get_best_target_path_by_commonpath(self):
         resolver = TransferPathResolver(
             movie_path=["/data/movies", "/backup/movies"],
         )
-        result = resolver.get_best_target_path(MediaType.MOVIE, in_path="/data/downloads")
+        result = resolver.get_best_target_path(ProviderMediaType.MOVIE, in_path="/data/downloads")
         assert result == "/data/movies"
 
     def test_is_target_dir_path(self):
@@ -194,7 +194,7 @@ class TestMediaExistenceChecker:
 
         checker = MediaExistenceChecker(resolver)
         media = MagicMock()
-        media.type = MediaType.MOVIE
+        media.type = ProviderMediaType.MOVIE
 
         with patch("os.path.exists", return_value=False):
             dir_exist, dir_path, file_exist, file_path = checker.is_media_exists("/movies", media)
@@ -211,7 +211,7 @@ class TestMediaExistenceChecker:
 
         checker = MediaExistenceChecker(resolver)
         media = MagicMock()
-        media.type = MediaType.MOVIE
+        media.type = ProviderMediaType.MOVIE
 
         with patch("os.path.exists", side_effect=lambda p: ".mp4" in p):
             dir_exist, dir_path, file_exist, file_path = checker.is_media_exists("/movies", media)
@@ -229,7 +229,7 @@ class TestMediaExistenceChecker:
 
         checker = MediaExistenceChecker(resolver)
         media = MagicMock()
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
         media.get_season_list.return_value = [1]
         media.get_episode_list.return_value = [1]
 
@@ -250,7 +250,7 @@ class TestMediaExistenceChecker:
         media_service = MagicMock()
         checker = MediaExistenceChecker(resolver, media_service=media_service)
         media = MagicMock()
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
         media.get_season_list.return_value = [8]
         media.get_episode_list.return_value = [7]
 
@@ -267,7 +267,7 @@ class TestMediaExistenceChecker:
         media_service = MagicMock()
         checker = MediaExistenceChecker(resolver, media_service=media_service)
         media = MagicMock()
-        media.type = MediaType.MOVIE
+        media.type = ProviderMediaType.MOVIE
 
         with patch("os.path.exists", return_value=False):
             checker.is_media_exists("/movies", media)
@@ -285,7 +285,7 @@ class TestMediaExistenceChecker:
         media_service = MagicMock()
         checker = MediaExistenceChecker(resolver, media_service=media_service)
         media = MagicMock()
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
 
         checker.get_no_exists_medias(media, meta_info_fn=MagicMock(), season=8, total_num=1)
 
@@ -801,7 +801,7 @@ class TestFileTransferService:
 
         tmdb_info, media_type, dl_season, dl_episode = mock_service._lookup_download_record("/downloads/movie.mkv")
         assert tmdb_info == {"id": 123}
-        assert media_type == MediaType.MOVIE
+        assert media_type == ProviderMediaType.MOVIE
         assert dl_season == 1
         assert dl_episode == 1
 
@@ -815,7 +815,7 @@ class TestFileTransferService:
 
         tmdb_info, media_type, dl_season, dl_episode = mock_service._lookup_download_record("/downloads/show.mkv")
         assert tmdb_info == {"id": 123}
-        assert media_type == MediaType.TV
+        assert media_type == ProviderMediaType.SERIES
         assert dl_season is None
         assert dl_episode is None
 
@@ -864,7 +864,7 @@ class TestFileTransferService:
         unique_path = f"/dl/anime-{uuid.uuid4().hex}"
         media_file = f"{unique_path}/anime.mkv"
         media = MagicMock()
-        media.type = MediaType.ANIME
+        media.type = ProviderMediaType.ANIME
         media.begin_season = 1
         media.begin_episode = None
         media.provider_data = {"id": 1}
@@ -912,7 +912,7 @@ class TestFileTransferService:
         unique_path = f"/dl/anime-{uuid.uuid4().hex}"
         media_file = f"{unique_path}/anime.mkv"
         media = MagicMock()
-        media.type = MediaType.ANIME
+        media.type = ProviderMediaType.ANIME
         media.begin_season = 1
         media.begin_episode = 6
         media.provider_data = {"id": 1}
@@ -960,7 +960,7 @@ class TestFileTransferService:
         unique_path = f"/dl/anime-{uuid.uuid4().hex}"
         media_file = f"{unique_path}/anime.mkv"
         media = MagicMock()
-        media.type = MediaType.ANIME
+        media.type = ProviderMediaType.ANIME
         media.begin_season = 1
         media.begin_episode = None
         media.tmdb_id = 1
@@ -1000,7 +1000,7 @@ class TestFileTransferService:
         unique_path = f"/dl/anime-{uuid.uuid4().hex}"
         media_file = f"{unique_path}/anime.mkv"
         media = MagicMock()
-        media.type = MediaType.ANIME
+        media.type = ProviderMediaType.ANIME
         media.begin_season = 1
         media.begin_episode = 6
         media.tmdb_id = 1
@@ -1045,7 +1045,7 @@ class TestFileTransferService:
 class TestTransferPathResolverMultiBackend:
     def _make_media(self):
         media = MagicMock()
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
         media.category = "电视剧"
         media.title = "测试剧"
         media.year = 2026
@@ -1072,7 +1072,7 @@ class TestTransferPathResolverMultiBackend:
 
         pathlib.Path(f"{dest_b}/测试剧 (2026)/Season 1").mkdir(parents=True)
         result = resolver.get_best_target_path(
-            MediaType.TV, in_path="/data/downloads", media=media, media_service=MagicMock()
+            ProviderMediaType.SERIES, in_path="/data/downloads", media=media, media_service=MagicMock()
         )
         assert result == dest_b
 
@@ -1084,7 +1084,7 @@ class TestTransferPathResolverMultiBackend:
         media = self._make_media()
         # 无已存在目录 → 走 commonpath（源路径在 /tv1 下）
         result = resolver.get_best_target_path(
-            MediaType.TV, in_path="/tv1/downloads", media=media, media_service=MagicMock()
+            ProviderMediaType.SERIES, in_path="/tv1/downloads", media=media, media_service=MagicMock()
         )
         assert result == "/tv1"
 
@@ -1135,7 +1135,7 @@ class TestTransferReplicateToBackends:
         mock_resolver.list_enabled_dest_backends.return_value = [("/data/tv2", backend_b)]
 
         media = MagicMock()
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
 
         mock_queue = MagicMock()
         with patch.object(module, "_get_mirror_queue", return_value=mock_queue):
@@ -1158,7 +1158,7 @@ class TestTransferReplicateToBackends:
         mock_resolver.list_enabled_dest_backends.return_value = [("/data/tv2", backend_b)]
 
         media = MagicMock()
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
 
         mock_queue = MagicMock()
         with patch.object(module, "_get_mirror_queue", return_value=mock_queue):
@@ -1174,7 +1174,7 @@ class TestTransferReplicateToBackends:
         mock_resolver.get_dest_path_by_info.return_value = "/data/tv2/测试剧 (2026)/Season 1"
 
         media = MagicMock()
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
 
         with patch("app.services.transfer.filetransfer_service.open", mock_open(read_data=b"data")):
             service._mirror_upload(media, "/data/tv1/S01E01.mkv", None, [("/data/tv2", backend_b)], "S01E01.mkv")
@@ -1191,7 +1191,7 @@ class TestTransferReplicateToBackends:
         mock_resolver.get_dest_path_by_info.return_value = "/data/tv2/测试剧 (2026)/Season 1"
 
         media = MagicMock()
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
 
         service._mirror_upload(media, "/data/tv1/S01E01.mkv", None, [("/data/tv2", backend_b)], "S01E01.mkv")
 

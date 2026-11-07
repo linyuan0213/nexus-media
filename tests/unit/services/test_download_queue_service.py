@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.task_queue.memory_queue import MemoryTaskQueue
 from app.media.models import MediaInfo
 from app.services import download_queue_service as dq_module
@@ -65,7 +65,7 @@ class _FakeHistory:
 
 def _media():
     return MediaInfo(
-        type=MediaType.MOVIE,
+        type=ProviderMediaType.MOVIE,
         title="Demo",
         org_string="DEMO-001",
         enclosure="magnet:?xt=urn:btih:abc123",
@@ -129,7 +129,7 @@ def test_download_core_returns_queued_task_without_calling_pipeline():
     queue_service.submit.return_value = Task.create("download:4", "download.add", {})
     core._download_queue = queue_service
 
-    media = MediaInfo(type=MediaType.MOVIE, title="Demo")
+    media = MediaInfo(type=ProviderMediaType.MOVIE, title="Demo")
     result = core.download(media)
 
     assert result[0] == "4"
@@ -158,7 +158,7 @@ def test_download_core_fails_closed_when_managed_queue_unavailable():
     queue_service.submit.side_effect = QueueUnavailableError("redis down")
     core._download_queue = queue_service
 
-    result = core.download(MediaInfo(type=MediaType.MOVIE, title="Demo"))
+    result = core.download(MediaInfo(type=ProviderMediaType.MOVIE, title="Demo"))
 
     assert result[1] is None
     assert "下载队列不可用" in result[2]

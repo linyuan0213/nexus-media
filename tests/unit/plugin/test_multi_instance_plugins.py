@@ -64,7 +64,7 @@ def test_speedlimiter_aggregates_sessions_from_multiple_instances():
     plugin._mediaserver = MagicMock()
     plugin._mediaserver.get_type.return_value = "emby"
     plugin._mediaserver.get_playing_sessions.side_effect = lambda server_id: [
-        {"NowPlayingItem": {"MediaType": "Video", "Bitrate": 100}}
+        {"NowPlayingItem": {"ProviderMediaType": "Video", "Bitrate": 100}}
     ]
     plugin._get_config = MagicMock(return_value={"server_ids": ["1", "2"]})
     plugin._unlimited_ips = {}

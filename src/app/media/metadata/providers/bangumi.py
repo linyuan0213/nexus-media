@@ -6,7 +6,6 @@ import re
 from typing import Any, Protocol
 
 from app.domain.media_types import MediaKind, ProviderMediaType, provider_media_type_of
-from app.domain.mediatypes import MediaType
 from app.media.external.bangumi import Bangumi
 
 from ..errors import ProviderNotFound
@@ -35,7 +34,7 @@ class _BangumiClientLike(Protocol):
 def bangumi_item_to_record(
     item: dict[str, Any],
     *,
-    media_type: MediaType = MediaType.ANIME,
+    media_type: ProviderMediaType = ProviderMediaType.ANIME,
     external_id: str | None = None,
     content_profile: str = "anime",
 ) -> ProviderRecord:
@@ -89,7 +88,7 @@ def bangumi_item_to_record(
                 provider_media_type=provider_type,
             )
         ],
-        media_type=provider_type.to_media_type(),
+        media_type=provider_type,
         content_profile=content_profile,
         locale="zh-CN",
         title=item.get("name_cn") or item.get("name") or None,
@@ -220,7 +219,7 @@ class BangumiProvider:
                     ),
                     title=item.get("name_cn") or item.get("name") or "",
                     year=str(air_date)[:4] or None,
-                    media_type=MediaType.ANIME,
+                    media_type=ProviderMediaType.ANIME,
                     content_profile="anime",
                     poster=images.get("large") or images.get("common"),
                     score=float(rating.get("score") or 0.0),

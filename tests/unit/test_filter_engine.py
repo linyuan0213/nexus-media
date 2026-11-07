@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.indexer.core.filter_engine import IndexerFilterEngine
 from app.indexer.core.result_filter import ResultFilter
 
@@ -33,41 +33,41 @@ class TestBookFilter:
     )
     def test_reject_manga_for_anime(self, title):
         meta = _meta(title)
-        match, _, msg = IndexerFilterEngine.check_torrent_filter(meta, {"type": MediaType.ANIME})
+        match, _, msg = IndexerFilterEngine.check_torrent_filter(meta, {"type": ProviderMediaType.ANIME})
         assert not match
         assert "漫画/书籍类资源" in msg
 
     def test_keep_anime_bdmv_volume(self):
         meta = _meta("あかね噺 第1巻 BD")
-        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": MediaType.ANIME})
+        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": ProviderMediaType.ANIME})
         assert match
 
     def test_keep_anime_episode(self):
         meta = _meta("Akane Banashi S01E12 1080p NF WEB-DL AAC2.0 H 264-VARYG")
-        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": MediaType.ANIME})
+        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": ProviderMediaType.ANIME})
         assert match
 
     def test_reject_raw_volume(self):
         meta = _meta("あかね噺 RAW 第13巻")
-        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": MediaType.ANIME})
+        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": ProviderMediaType.ANIME})
         assert not match
 
 
 class TestAudioFilter:
     def test_video_with_flac_audio_is_not_rejected(self):
         meta = _meta("[DBD-Raws][肖申克的救赎/The Shawshank Redemption][1080P][BDRip][HEVC-10bit][中英外挂][FLAC][MKV]")
-        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": MediaType.MOVIE})
+        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": ProviderMediaType.MOVIE})
         assert match
 
     def test_audio_only_flac_is_rejected(self):
         meta = _meta("[FLAC] Some Artist - Some Album")
-        match, _, msg = IndexerFilterEngine.check_torrent_filter(meta, {"type": MediaType.MOVIE})
+        match, _, msg = IndexerFilterEngine.check_torrent_filter(meta, {"type": ProviderMediaType.MOVIE})
         assert not match
         assert "音频文件" in msg
 
     def test_audio_extension_is_rejected(self):
         meta = _meta("Some Artist - Some Album.flac")
-        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": MediaType.MOVIE})
+        match, _, _ = IndexerFilterEngine.check_torrent_filter(meta, {"type": ProviderMediaType.MOVIE})
         assert not match
 
 

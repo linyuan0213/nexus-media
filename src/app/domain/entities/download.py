@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from app.domain.media_ref import canonical_metadata_ref, is_tmdb_media
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.utils.json_utils import JsonUtils
 
 
@@ -130,15 +130,15 @@ class DownloadHistoryEntity:
 
     @property
     def is_movie(self) -> bool:
-        return self.media_type == MediaType.MOVIE.value
+        return self.media_type == ProviderMediaType.MOVIE.value
 
     @property
     def is_tv(self) -> bool:
-        return self.media_type == MediaType.TV.value
+        return self.media_type == ProviderMediaType.SERIES.value
 
     @property
     def is_anime(self) -> bool:
-        return self.media_type == MediaType.ANIME.value
+        return self.media_type == ProviderMediaType.ANIME.value
 
     @property
     def parsed_season(self) -> int | None:

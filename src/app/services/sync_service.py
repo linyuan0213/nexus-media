@@ -21,7 +21,7 @@ from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepos
 from app.domain.entities.sync import SyncPathEntity
 from app.domain.entities.transfer import TransferUnknownEntity
 from app.domain.enums import SyncType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.thread import ThreadExecutor
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
@@ -175,16 +175,16 @@ class SyncService:
         return SimpleResultDTO(success=True)
 
     @staticmethod
-    def build_media_type(mtype: str) -> MediaType:
-        """根据前端类型字符串解析为 MediaType 枚举"""
-        return MediaType.from_string(mtype)
+    def build_media_type(mtype: str) -> ProviderMediaType:
+        """根据前端类型字符串解析为 ProviderMediaType 枚举"""
+        return ProviderMediaType.from_value(mtype)
 
     def manual_transfer(
         self,
         inpath: str,
         syncmod,
         outpath: str | None = None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         episode_format: str | None = None,
         episode_details: str | None = None,
         episode_part: str | None = None,
@@ -273,7 +273,7 @@ class SyncService:
 
     def _resolve_manual_provider_info(
         self,
-        media_type: MediaType | None,
+        media_type: ProviderMediaType | None,
         content_profile: str | None,
         provider: str,
         external_id: str,
@@ -283,7 +283,7 @@ class SyncService:
     ):
         """按插件 provider 构造转移元数据，不依赖 TMDB."""
         if self._metadata_gateway is None:
-            return None, media_type or MediaType.MOVIE
+            return None, media_type or ProviderMediaType.MOVIE
         record = self._metadata_gateway.lookup(
             provider,
             str(external_id),
@@ -297,11 +297,11 @@ class SyncService:
             content_profile=content_profile,
         )
         if not record:
-            return None, media_type or MediaType.MOVIE
+            return None, media_type or ProviderMediaType.MOVIE
 
-        resolved_type = media_type or MediaType.from_string(str(record.get("media_type") or ""))
-        if resolved_type == MediaType.UNKNOWN:
-            resolved_type = MediaType.MOVIE
+        resolved_type = media_type or ProviderMediaType.from_value(str(record.get("media_type") or ""))
+        if resolved_type == ProviderMediaType.UNKNOWN:
+            resolved_type = ProviderMediaType.MOVIE
         images = record.get("images") or {}
         posters = images.get("poster") or []
         poster = record.get("poster") or (posters[0].get("url") if posters else "")
@@ -331,9 +331,9 @@ class SyncService:
         优先**实时查询**（不依赖缓存是否命中），返回 (tmdb_info, media_type)；
         回退命中时返回纠正后的类型，避免入库到错误目录。
         """
-        primary = media_type or MediaType.MOVIE
+        primary = media_type or ProviderMediaType.MOVIE
         alternates = [primary]
-        alt = MediaType.TV if primary == MediaType.MOVIE else MediaType.MOVIE
+        alt = ProviderMediaType.SERIES if primary == ProviderMediaType.MOVIE else ProviderMediaType.MOVIE
         if alt not in alternates:
             alternates.append(alt)
         for mtype in alternates:
@@ -357,11 +357,11 @@ class SyncService:
     def _media_type_from_info(info, fallback):
         """以 TMDB 详情里的 media_type 为准纠正类型，缺失时用回退值"""
         mtype = info.get("media_type") if isinstance(info, dict) else None
-        if isinstance(mtype, MediaType):
+        if isinstance(mtype, ProviderMediaType):
             return mtype
         if mtype:
-            parsed = MediaType.from_string(str(mtype))
-            if parsed != MediaType.UNKNOWN:
+            parsed = ProviderMediaType.from_value(str(mtype))
+            if parsed != ProviderMediaType.UNKNOWN:
                 return parsed
         return fallback
 

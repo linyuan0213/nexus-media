@@ -14,7 +14,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from app.db.models import SEARCHRESULTINFO
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.identity_resolver import IdentityResolver
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.domain.metadata_policy import ANCHOR_POLICY
 from app.utils.json_utils import JsonUtils
 
@@ -59,13 +59,13 @@ class SearchRepository(BaseRepository):
             mappings = []
             resolver = IdentityResolver()
             for media_item in media_items:
-                if media_item.type == MediaType.ANIME:
-                    mtype = MediaType.ANIME.value
-                elif media_item.type == MediaType.MOVIE:
-                    mtype = MediaType.MOVIE.value
+                if media_item.type == ProviderMediaType.ANIME:
+                    mtype = ProviderMediaType.ANIME.value
+                elif media_item.type == ProviderMediaType.MOVIE:
+                    mtype = ProviderMediaType.MOVIE.value
                 else:
                     # TV/UNKNOWN/None 统一按 tv 存储，避免 UNKNOWN 被误标为动漫
-                    mtype = MediaType.TV.value
+                    mtype = ProviderMediaType.SERIES.value
 
                 # 截断超长 ENCLOSURE：去掉磁力链接中多余的 tracker，只保留核心 btih
                 enclosure = media_item.enclosure or ""

@@ -1,7 +1,6 @@
 """内置 provider 映射适配器测试（无网络）."""
 
 from app.domain.media_types import MediaKind, ProviderMediaType
-from app.domain.mediatypes import MediaType
 from app.media.metadata import ProviderRef, SearchQuery
 from app.media.metadata.providers import (
     douban_detail_to_record,
@@ -76,7 +75,7 @@ def _tmdb_tv() -> dict:
 def test_tmdb_movie_mapping():
     record = tmdb_detail_to_record(
         _tmdb_movie(),
-        media_type=MediaType.MOVIE,
+        media_type=ProviderMediaType.MOVIE,
         locale="zh-CN",
         image_url=lambda path: f"https://image{path}",
     )
@@ -103,7 +102,7 @@ def test_tmdb_movie_mapping():
 
 
 def test_tmdb_tv_mapping_uses_name_and_networks():
-    record = tmdb_detail_to_record(_tmdb_tv(), media_type=MediaType.TV)
+    record = tmdb_detail_to_record(_tmdb_tv(), media_type=ProviderMediaType.SERIES)
 
     assert record.title == "最后生还者"
     assert record.release_date == "2023-01-15"
@@ -115,24 +114,24 @@ def test_tmdb_tv_mapping_uses_name_and_networks():
 def test_tmdb_provider_media_type_mapping_keeps_series_and_anime():
     tv = tmdb_detail_to_record(_tmdb_tv(), media_type=ProviderMediaType.SERIES)
     assert tv.provider_media_type == ProviderMediaType.SERIES
-    assert tv.media_type == MediaType.TV
+    assert tv.media_type == ProviderMediaType.SERIES
     assert tv.media_kind == MediaKind.EPISODIC
 
     movie = tmdb_detail_to_record(_tmdb_movie(), media_type=ProviderMediaType.MOVIE)
     assert movie.provider_media_type == ProviderMediaType.MOVIE
-    assert movie.media_type == MediaType.MOVIE
+    assert movie.media_type == ProviderMediaType.MOVIE
     assert movie.media_kind == MediaKind.MOVIE
 
     anime = tmdb_detail_to_record(_tmdb_tv(), media_type=ProviderMediaType.ANIME)
     assert anime.provider_media_type == ProviderMediaType.ANIME
-    assert anime.media_type == MediaType.ANIME
+    assert anime.media_type == ProviderMediaType.ANIME
     assert anime.media_kind == MediaKind.EPISODIC
 
 
 def test_douban_unknown_media_type_is_not_default_movie():
     record = douban_detail_to_record(_douban_info(), media_type=ProviderMediaType.UNKNOWN)
     assert record.provider_media_type == ProviderMediaType.UNKNOWN
-    assert record.media_type == MediaType.UNKNOWN
+    assert record.media_type == ProviderMediaType.UNKNOWN
     assert record.media_kind == MediaKind.UNKNOWN
 
 
@@ -160,7 +159,7 @@ def _douban_info() -> dict:
 
 
 def test_douban_mapping_and_release_date_guard():
-    record = douban_detail_to_record(_douban_info(), media_type=MediaType.MOVIE)
+    record = douban_detail_to_record(_douban_info(), media_type=ProviderMediaType.MOVIE)
 
     assert record.title == "肖申克的救赎"
     assert record.aliases == ["月黑高飞(港)", "刺激1995(台)"]
@@ -245,7 +244,7 @@ def test_tmdb_provider_adapter_maps_detail_and_episodes():
         search=_FakeTmdbSearch(),
     )
     record = provider.detail(
-        ProviderRef(provider="tmdb", external_id="100088", media_type=MediaType.TV),
+        ProviderRef(provider="tmdb", external_id="100088", media_type=ProviderMediaType.SERIES),
         None,
     )
 
@@ -254,7 +253,7 @@ def test_tmdb_provider_adapter_maps_detail_and_episodes():
     assert [episode.episode_number for episode in record.episodes] == [1, 2]
     assert (
         provider.seasons(
-            ProviderRef(provider="tmdb", external_id="100088", media_type=MediaType.TV),
+            ProviderRef(provider="tmdb", external_id="100088", media_type=ProviderMediaType.SERIES),
             None,
         )[0].episode_count
         == 9
@@ -298,10 +297,10 @@ def test_douban_provider_search_skips_non_media_and_marks_anime():
     hits = provider.search(SearchQuery(query="FX战士久留美", limit=10), None)
 
     assert [hit.title for hit in hits] == ["FX战士久留美", "肖申克的救赎"]
-    assert hits[0].media_type == MediaType.ANIME
+    assert hits[0].media_type == ProviderMediaType.ANIME
     assert hits[0].content_profile == "anime"
     assert hits[0].ref.provider_media_type == ProviderMediaType.ANIME
-    assert hits[1].media_type == MediaType.MOVIE
+    assert hits[1].media_type == ProviderMediaType.MOVIE
 
 
 def test_douban_provider_adapter_uses_frodo_detail():
@@ -309,7 +308,7 @@ def test_douban_provider_adapter_uses_frodo_detail():
 
     provider = DoubanProvider(api=_FakeDoubanApi(_douban_info()))
     record = provider.detail(
-        ProviderRef(provider="douban", external_id="1292052", media_type=MediaType.MOVIE),
+        ProviderRef(provider="douban", external_id="1292052", media_type=ProviderMediaType.MOVIE),
         None,
     )
 
@@ -367,7 +366,7 @@ def test_douban_provider_attaches_html_episodes():
 
     provider = DoubanProvider(api=_FakeDoubanApi(_douban_info()), episode_scraper=_FakeEpisodeScraper())
     episodes = provider.episodes(
-        ProviderRef(provider="douban", external_id="1292052", media_type=MediaType.TV),
+        ProviderRef(provider="douban", external_id="1292052", media_type=ProviderMediaType.SERIES),
         1,
         None,
     )

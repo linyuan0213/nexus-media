@@ -25,11 +25,7 @@ class JsonUtils:
             except Exception as err:  # noqa: BLE001
                 log.debug(f"[JsonUtils]model_dump 失败，回退 __dict__: {err}")
         if hasattr(obj, "__dict__"):
-            return {
-                str(k): JsonUtils.to_jsonable(v)
-                for k, v in vars(obj).items()
-                if not str(k).startswith("_")
-            }
+            return {str(k): JsonUtils.to_jsonable(v) for k, v in vars(obj).items() if not str(k).startswith("_")}
         return str(obj)
 
     @staticmethod

@@ -28,7 +28,7 @@ from app.db.repositories.download_repo_adapter import (
     DownloadSettingRepositoryAdapter,
 )
 from app.db.repositories.indexer_site_config_repo_adapter import IndexerSiteConfigRepositoryAdapter
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.downloader.client_factory import DownloadClientFactory
 from app.downloader.pipeline import DownloadPipeline
 from app.downloader.strategy import RemoveStrategy
@@ -177,7 +177,7 @@ class DownloadCore:
 
     def check_exists_medias(self, meta_info, no_exists=None, total_ep=None):
         """检查媒体是否已存在于媒体库中."""
-        if meta_info.type == MediaType.MOVIE:
+        if meta_info.type == ProviderMediaType.MOVIE:
             exists = self._filetransfer.get_no_exists_medias(meta_info)
             if exists:
                 return True, {}, None

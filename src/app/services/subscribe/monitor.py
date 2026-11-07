@@ -10,7 +10,7 @@ import pytz
 import log
 from app.core.exceptions import DownloadError, IndexerError, MediaError, NetworkError, RepositoryError, ServiceError
 from app.core.settings import settings
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.system_config import SystemConfig
 from app.infrastructure.thread import ThreadExecutor
 from app.services.subscribe.coordinator import DownloadCoordinator
@@ -289,7 +289,7 @@ class SubscriptionMonitor:
             indexer_strategy=self._indexer_strategy,
             queue_strategy=self._queue_strategy,
         )
-        if MediaType.from_string(mtype) == MediaType.MOVIE:
+        if ProviderMediaType.from_value(mtype) == ProviderMediaType.MOVIE:
             self._thread_executor.submit(engine.subscribe_search_movie, rssid, force=True)
         else:
             self._thread_executor.submit(engine.subscribe_search_tv, rssid)

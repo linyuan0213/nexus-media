@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 from typing import Any, cast
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.schemas.auth import UserContext
 from app.services.media_info_service import MediaInfoService
 
@@ -82,7 +82,7 @@ class TestNameTestMultiSource:
         media_info = SimpleNamespace(
             cn_name="乱世千金",
             title="乱世千金",
-            type=MediaType.ANIME,
+            type=ProviderMediaType.ANIME,
             tmdb_id=None,
         )
         matches, preferred = _service()._identify_matches("乱世千金 第3集", media_info, _user())
@@ -99,7 +99,7 @@ class TestNameTestMultiSource:
         media_info = SimpleNamespace(
             cn_name="Spider-Man",
             title="Spider-Man",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             tmdb_id=None,
         )
         service = _service()

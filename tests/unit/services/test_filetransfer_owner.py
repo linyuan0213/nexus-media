@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.transfer.filetransfer_service import FileTransferService
 
 
@@ -27,7 +27,7 @@ def _service(download_repo, subscribe_repo):
 
 def _tv_media():
     media = MagicMock()
-    media.type = MediaType.TV
+    media.type = ProviderMediaType.SERIES
     media.tmdb_id = "308874"
     media.get_season_string.return_value = "S01"
     return media
@@ -58,7 +58,7 @@ class TestResolveOwnerUserId:
         subscribe_repo.find_movie_owner_user_id.return_value = 9
         svc = _service(download_repo, subscribe_repo)
         media = MagicMock()
-        media.type = MediaType.MOVIE
+        media.type = ProviderMediaType.MOVIE
         media.tmdb_id = "12345"
         assert svc._resolve_owner_user_id(None, media) == 9
 

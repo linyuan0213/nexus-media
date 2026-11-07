@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.transfer import filetransfer_service as module
 from app.services.transfer.filetransfer_service import FileTransferService
 
@@ -18,7 +18,7 @@ class _Category:
 
 def _snapshot(languages=None):
     return SimpleNamespace(
-        media_type=MediaType.MOVIE,
+        media_type=ProviderMediaType.MOVIE,
         content_profile="default",
         primary_provider="douban",
         refs=[SimpleNamespace(provider="douban")],
@@ -39,6 +39,6 @@ def test_snapshot_category_uses_unified_rules(monkeypatch):
         ],
     )
     svc = FileTransferService.__new__(FileTransferService)
-    media = SimpleNamespace(type=MediaType.MOVIE)
+    media = SimpleNamespace(type=ProviderMediaType.MOVIE)
     assert svc._category_from_snapshot(_snapshot(), media) == "外语电影"
     assert svc._category_from_snapshot(_snapshot(["zh"]), media) == "华语电影"

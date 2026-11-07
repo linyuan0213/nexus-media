@@ -2,9 +2,8 @@ import re
 
 import log
 from app.domain.episode_utils import infer_episode_key
-from app.domain.media_types import media_type_registry
+from app.domain.media_types import ProviderMediaType, media_type_registry
 from app.domain.media_utils import check_media_exists
-from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media import meta_info
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
@@ -39,7 +38,7 @@ class SearchResultService:
         external_id = str(getattr(item, "ANCHOR_EXTERNAL_ID", "") or "")
         if not provider or not external_id or self._metadata_gateway is None:
             return vote or "0"
-        media_type = MediaType.from_string(str(getattr(item, "TYPE", "") or ""))
+        media_type = ProviderMediaType.from_value(str(getattr(item, "TYPE", "") or ""))
         cache_key = (provider, external_id, media_type.value)
         if cache_key in rating_cache:
             return rating_cache[cache_key]
@@ -87,25 +86,29 @@ class SearchResultService:
             }
             title_string = f"{item.TITLE}"
             mtype = item.TYPE or ""
-            parsed_mtype = MediaType.from_string(mtype)
-            media_type = mtype or MediaType.UNKNOWN.value
+            parsed_mtype = ProviderMediaType.from_value(mtype)
+            media_type = mtype or ProviderMediaType.UNKNOWN.value
             # 兼容修复前落库的旧结果：TYPE/ES_STRING 为空时从种子名补解析，
             # 避免旧搜索会话把动漫/剧集全部归到 movie。
             if (not item.TYPE or not item.ES_STRING) and item.TORRENT_NAME:
                 parsed = meta_info(title=item.TORRENT_NAME, subtitle=item.DESCRIPTION or "")
                 if parsed is not None and not item.TYPE:
-                    parsed_mtype = parsed.type or MediaType.UNKNOWN
+                    parsed_mtype = parsed.type or ProviderMediaType.UNKNOWN
                     media_type = parsed.type.value if parsed.type is not None else media_type
                 if parsed is not None and not item.ES_STRING:
                     item.ES_STRING = parsed.get_season_episode_string() or ""
             # 剧集/动漫按标题聚合，避免同一部剧的 2025/2026 季标签拆成多张卡片；
             # 电影保留年份，用于区分同名翻拍。
-            if item.YEAR and parsed_mtype == MediaType.MOVIE:
+            if item.YEAR and parsed_mtype == ProviderMediaType.MOVIE:
                 title_string = f"{title_string} ({item.YEAR})"
-            se_key = item.ES_STRING if item.ES_STRING and parsed_mtype != MediaType.MOVIE else MediaType.MOVIE.value
-            if parsed_mtype != MediaType.MOVIE:
+            se_key = (
+                item.ES_STRING
+                if item.ES_STRING and parsed_mtype != ProviderMediaType.MOVIE
+                else ProviderMediaType.MOVIE.value
+            )
+            if parsed_mtype != ProviderMediaType.MOVIE:
                 se_key = infer_episode_key(se_key, item.TORRENT_NAME)
-            if parsed_mtype != MediaType.UNKNOWN:
+            if parsed_mtype != ProviderMediaType.UNKNOWN:
                 media_type = parsed_mtype.value
             labels = [label.strip() for label in str(item.NOTE).split("|") if label.strip()]
             torrent_item = {
@@ -131,7 +134,7 @@ class SearchResultService:
                 "name": MediaInfo.get_free_string(item.UPLOAD_VOLUME_FACTOR, item.DOWNLOAD_VOLUME_FACTOR),
             }
             releasegroup = item.OTHERINFO if item.OTHERINFO else "未知"
-            filter_season = se_key.split()[0] if se_key and se_key != MediaType.MOVIE.value else None
+            filter_season = se_key.split()[0] if se_key and se_key != ProviderMediaType.MOVIE.value else None
 
             if search_results_dict.get(title_string):
                 self._merge_into_existing(

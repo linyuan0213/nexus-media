@@ -9,7 +9,7 @@ from typing import Any
 import defusedxml.ElementTree as ET  # type: ignore[import-untyped]
 
 import log
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.storage.backends.base import StorageBackend
 
 _MAX_NFO_SIZE = 2 * 1024 * 1024
@@ -67,10 +67,10 @@ def collect_nfo(
     backend: StorageBackend,
     directory: str,
     base_name: str,
-    media_type: MediaType,
+    media_type: ProviderMediaType,
 ) -> dict[str, Any] | None:
     """按 ADR 约定查找并合并 NFO 字段."""
-    if media_type == MediaType.MOVIE:
+    if media_type == ProviderMediaType.MOVIE:
         return _collect_movie(backend, directory, base_name)
     return _collect_tv(backend, directory, base_name)
 

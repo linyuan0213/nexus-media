@@ -6,7 +6,7 @@ from typing import Any, cast
 from unittest.mock import MagicMock
 
 from app.domain.enums import SearchType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.services.search_context import SearchContext
 from app.services.search_orchestrator import SearchOrchestrator
@@ -163,7 +163,7 @@ class TestProviderIdentityRecovery:
             en_name="The Private Navy of Sgt. O'Farrell",
             original_title="The Private Navy of Sgt. O'Farrell",
             year="1968",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             tmdb_id=106449,
             provider_data={"id": 106449, "title": "The Private Navy of Sgt. O'Farrell"},
         )
@@ -174,7 +174,7 @@ class TestProviderIdentityRecovery:
             original_title="A Record of a Mortal's Journey to Immortality",
             original_language="zh",
             year="2020",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             tmdb_id=106449,
             provider_data={"id": 106449, "name": "凡人修仙传", "media_type": "tv"},
         )
@@ -190,7 +190,7 @@ class TestProviderIdentityRecovery:
         names, _, filter_args = orch._prepare_search(ctx)
 
         assert ctx.match_media is correct
-        assert filter_args["type"] == MediaType.TV.value
+        assert filter_args["type"] == ProviderMediaType.SERIES.value
         assert filter_args["year"] == "2020"
         assert "凡人修仙传" in names
         assert "A Record of a Mortal's Journey to Immortality" in names
@@ -203,7 +203,7 @@ class TestProviderIdentityRecovery:
             title="The Private Navy of Sgt. O'Farrell",
             en_name="The Private Navy of Sgt. O'Farrell",
             year="1968",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             tmdb_id=106449,
             provider_data={"id": 106449, "title": "The Private Navy of Sgt. O'Farrell"},
         )
@@ -225,10 +225,10 @@ class TestProviderIdentityRecovery:
 
 class TestSiteTier:
     def test_default_site_tier_beats_fallback_priority(self):
-        default_site = MediaInfo(title="A", type=MediaType.MOVIE)
+        default_site = MediaInfo(title="A", type=ProviderMediaType.MOVIE)
         default_site.site = "DefaultSite"
         default_site.site_order = 100
-        fallback = MediaInfo(title="B", type=MediaType.MOVIE)
+        fallback = MediaInfo(title="B", type=ProviderMediaType.MOVIE)
         fallback.site = "FallbackSite"
         fallback.site_order = 9999
 
@@ -237,7 +237,7 @@ class TestSiteTier:
         assert result[1].site_order > result[0].site_order
 
     def test_no_tier_keeps_site_order(self):
-        media = MediaInfo(title="A", type=MediaType.MOVIE)
+        media = MediaInfo(title="A", type=ProviderMediaType.MOVIE)
         media.site = "Site"
         media.site_order = 10
 
@@ -252,10 +252,10 @@ class TestContentIdSource:
         service = MagicMock()
         service.search.return_value = [{"ref": {"provider": "javdb", "external_id": "P0dyv"}}]
         orchestrator._metadata_gateway = service
-        resolved = MediaInfo(title="SSIS-522", type=MediaType.MOVIE)
+        resolved = MediaInfo(title="SSIS-522", type=ProviderMediaType.MOVIE)
         orchestrator.resolve_anchor_media = MagicMock(return_value=resolved)
 
-        media = orchestrator.resolve_content_id_media("javalibrary", "SSIS-522", media_type=MediaType.MOVIE)
+        media = orchestrator.resolve_content_id_media("javalibrary", "SSIS-522", media_type=ProviderMediaType.MOVIE)
 
         assert media is not None
         assert media.provider == "javdb"
@@ -276,7 +276,7 @@ class TestAnchorMediaTitle:
         }
         orchestrator._metadata_gateway = service
 
-        media = orchestrator.resolve_anchor_media("douban", "37068446", media_type=MediaType.MOVIE)
+        media = orchestrator.resolve_anchor_media("douban", "37068446", media_type=ProviderMediaType.MOVIE)
 
         assert media is not None
         assert media.title == "生化危机：爆发夜"
@@ -289,7 +289,7 @@ class TestAnchorMediaTitle:
         service.lookup.return_value = {"title": "Demo", "original_title": "Demo", "year": "0"}
         orchestrator._metadata_gateway = service
 
-        media = orchestrator.resolve_anchor_media("douban", "1", media_type=MediaType.MOVIE)
+        media = orchestrator.resolve_anchor_media("douban", "1", media_type=ProviderMediaType.MOVIE)
 
         assert media is not None
         assert media.year == ""
@@ -306,7 +306,7 @@ class TestSeasonSuffix:
         }
         orchestrator._metadata_gateway = service
 
-        media = orchestrator.resolve_anchor_media("douban", "1", media_type=MediaType.TV)
+        media = orchestrator.resolve_anchor_media("douban", "1", media_type=ProviderMediaType.SERIES)
 
         assert media is not None
         assert media.begin_season == 2
@@ -329,7 +329,7 @@ def test_anchor_media_carries_provider_rating():
     }
     orchestrator._metadata_gateway = service
 
-    media = orchestrator.resolve_anchor_media("douban", "37923549", media_type=MediaType.ANIME)
+    media = orchestrator.resolve_anchor_media("douban", "37923549", media_type=ProviderMediaType.ANIME)
 
     assert media is not None
     assert media.vote_average == 8.1

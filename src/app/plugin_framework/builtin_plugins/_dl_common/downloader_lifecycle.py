@@ -1,6 +1,5 @@
 """下载器插件的共享生命周期逻辑."""
 
-
 import log
 from app.db.repositories.config_repo_adapter import DownloaderRepositoryAdapter
 

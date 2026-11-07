@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.message.core.template_engine import TemplateEngine
 
@@ -23,7 +23,7 @@ def _item():
     return _Item(
         title="少女怪兽焦糖味",
         year="2026",
-        type=MediaType.TV,
+        type=ProviderMediaType.SERIES,
         begin_season=1,
         begin_episode=3,
         end_episode=3,
@@ -190,7 +190,7 @@ def test_rss_finished_default_movie_notifies_owner(engine):
     item = _Item(
         title="普通电影",
         year="2026",
-        type=MediaType.MOVIE,
+        type=ProviderMediaType.MOVIE,
         content_profile="default",
         user_id=7,
     )

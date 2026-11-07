@@ -12,7 +12,7 @@ from app.db.repositories.transfer_repository import TransferRepository
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SystemConfigKey
 from app.domain.lifecycle import LifecycleStatus
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media import MediaInfo
 from app.services.lifecycle_service import LifecycleProjector
 from app.services.subscribe.management.add_service import SubscribeAddService
@@ -165,9 +165,11 @@ class SubscribeService:
             if exist_flag:
                 return True
             # 动画订阅可能落在 tv/anime 任一库；主路径未命中时互换类型再查一次。
-            if media.type in (MediaType.TV, MediaType.ANIME):
+            if media.type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
                 original = media.type
-                media.type = MediaType.ANIME if original == MediaType.TV else MediaType.TV
+                media.type = (
+                    ProviderMediaType.ANIME if original == ProviderMediaType.SERIES else ProviderMediaType.SERIES
+                )
                 try:
                     exist_flag, _, _ = self._downloader.check_exists_medias(meta_info=media, total_ep=total_ep)
                     return bool(exist_flag)
@@ -227,7 +229,7 @@ class SubscribeService:
                 season = _parse_season_number(getattr(tv, "season", 1))
                 total = int(getattr(tv, "total", 0) or 0)
                 tv_profile = str(getattr(tv, "content_profile", "") or "").strip()
-                tv_mtype = MediaType.ANIME if tv_profile == "anime" else MediaType.TV
+                tv_mtype = ProviderMediaType.ANIME if tv_profile == "anime" else ProviderMediaType.SERIES
                 media = MediaInfo(type=tv_mtype, tmdb_id=str(getattr(tv, "tmdb_id", "") or ""))
                 media.title = getattr(tv, "name", "") or ""
                 media.year = getattr(tv, "year", "") or ""
@@ -243,7 +245,7 @@ class SubscribeService:
                 if self.media_exists(media, total_ep={season: total}):
                     self.finalize_tv_by_rssid(tv.id, tv_mtype)
                 elif self._pending_stale(getattr(tv, "tmdb_id", ""), cutoff):
-                    self.update_rss_state(MediaType.TV, tv.id, SubscribeState.RUNNING.value)
+                    self.update_rss_state(ProviderMediaType.SERIES, tv.id, SubscribeState.RUNNING.value)
                     log.info(f"[Subscribe]待转移超时，重开订阅 rssid={tv.id}（{media.title}）")
             except Exception as e:  # noqa: BLE001
                 log.warn(f"[Subscribe]待转移电视剧清理失败 rssid={getattr(tv, 'id', None)}: {e!s}")
@@ -278,7 +280,7 @@ class SubscribeService:
                 state = getattr(mv, "state", None)
                 if state not in (None, "", SubscribeState.COMPLETED.value):
                     continue
-                media = MediaInfo(type=MediaType.MOVIE, tmdb_id=str(getattr(mv, "tmdb_id", "") or ""))
+                media = MediaInfo(type=ProviderMediaType.MOVIE, tmdb_id=str(getattr(mv, "tmdb_id", "") or ""))
                 media.title = getattr(mv, "name", "") or ""
                 media.year = getattr(mv, "year", "") or ""
                 media.content_profile = str(getattr(mv, "content_profile", "") or "default")
@@ -294,7 +296,7 @@ class SubscribeService:
                     anchor_provider=provider,
                     anchor_external_id=external,
                 ):
-                    self.update_rss_state(MediaType.MOVIE, mv.id, SubscribeState.RUNNING.value)
+                    self.update_rss_state(ProviderMediaType.MOVIE, mv.id, SubscribeState.RUNNING.value)
                     log.info(f"[Subscribe]待转移超时，重开电影订阅 rssid={mv.id}（{media.title}）")
             except Exception as e:  # noqa: BLE001
                 log.warn(f"[Subscribe]待转移电影清理失败 rssid={getattr(mv, 'id', None)}: {e!s}")
@@ -315,7 +317,7 @@ class SubscribeService:
         self,
         anchor_provider: str | None,
         anchor_external_id: str | None,
-        mtype: MediaType,
+        mtype: ProviderMediaType,
         user: Any = None,
     ) -> dict | None:
         return self._query_svc.get_subscribe_by_anchor(anchor_provider, anchor_external_id, mtype, user=user)
@@ -388,7 +390,7 @@ class SubscribeService:
             )
         if not rssid:
             return []
-        if mtype == MediaType.MOVIE:
+        if mtype == ProviderMediaType.MOVIE:
             data = self.get_subscribe_movies(rid=int(rssid), user=user)
         else:
             data = self.get_subscribe_tvs(rid=int(rssid), user=user)
@@ -435,7 +437,7 @@ class SubscribeService:
         norm = _norm_title(title)
         if not norm:
             return None
-        for sub_type in (mtype,) if mtype else (MediaType.TV, MediaType.MOVIE):
+        for sub_type in (mtype,) if mtype else (ProviderMediaType.SERIES, ProviderMediaType.MOVIE):
             mapping = self._build_alias_map(sub_type)
             rid = mapping.get(norm)
             if rid:
@@ -451,7 +453,7 @@ class SubscribeService:
         if cached and cached[0] > time.time():
             return cached[1]
         mapping: dict[str, int] = {}
-        subs = self.get_subscribe_movies() if mtype == MediaType.MOVIE else self.get_subscribe_tvs()
+        subs = self.get_subscribe_movies() if mtype == ProviderMediaType.MOVIE else self.get_subscribe_tvs()
         for rid, info in (subs or {}).items():
             tmdbid = (info or {}).get("tmdbid")
             if not tmdbid or not str(tmdbid).isdigit():
@@ -506,7 +508,7 @@ class SubscribeService:
         return self._movie_repo.reset_stale_searching(cutoff)
 
     def update_rss_state(self, rtype, rssid, state):
-        if rtype == MediaType.MOVIE:
+        if rtype == ProviderMediaType.MOVIE:
             movies = self._movie_repo.get_all(rssid=rssid)
             if not movies:
                 return
@@ -542,13 +544,13 @@ class SubscribeService:
     def update_subscribe_over_edition(self, rtype, rssid, media):
         if not rssid or not media.res_order or not media.filter_rule:
             return False
-        if rtype == MediaType.MOVIE:
+        if rtype == ProviderMediaType.MOVIE:
             self._movie_repo.update_filter_order(rssid=rssid, res_order=media.res_order)
         else:
             self._tv_repo.update_filter_order(rssid=rssid, res_order=media.res_order)
         over_edition_order = self._filter.get_rule_first_order(rulegroup=media.filter_rule)
         if int(media.res_order) >= int(over_edition_order):
-            if rtype == MediaType.MOVIE:
+            if rtype == ProviderMediaType.MOVIE:
                 # 电影洗版同样只登记待转移，入库确认后再定稿删除订阅
                 self.update_rss_state(rtype=rtype, rssid=rssid, state=SubscribeState.COMPLETED.value)
             else:
@@ -559,7 +561,7 @@ class SubscribeService:
         return False
 
     def check_subscribe_over_edition(self, rtype, rssid, res_order):
-        if rtype == MediaType.MOVIE:
+        if rtype == ProviderMediaType.MOVIE:
             pre_res_order = self._movie_repo.get_filter_order(rssid=rssid)
         else:
             pre_res_order = self._tv_repo.get_filter_order(rssid=rssid)

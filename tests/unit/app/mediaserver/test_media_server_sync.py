@@ -4,30 +4,30 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.mediaserver.client.fnos import FnOS
 from app.mediaserver.media_server import MediaServer
 
 
-class TestMediaTypeFromString:
-    """MediaType.from_string 应能识别各媒体服务器返回的类型别名."""
+class TestProviderMediaTypeFromString:
+    """ProviderMediaType.from_value 应能识别各媒体服务器返回的类型别名."""
 
     @pytest.mark.parametrize(
         ("raw", "expected"),
         [
-            ("Movie", MediaType.MOVIE),
-            ("movie", MediaType.MOVIE),
-            ("TV", MediaType.TV),
-            ("tv", MediaType.TV),
-            ("Series", MediaType.TV),
-            ("show", MediaType.TV),
-            ("anime", MediaType.ANIME),
-            ("unknown", MediaType.UNKNOWN),
-            ("", MediaType.UNKNOWN),
+            ("Movie", ProviderMediaType.MOVIE),
+            ("movie", ProviderMediaType.MOVIE),
+            ("TV", ProviderMediaType.SERIES),
+            ("tv", ProviderMediaType.SERIES),
+            ("Series", ProviderMediaType.SERIES),
+            ("show", ProviderMediaType.SERIES),
+            ("anime", ProviderMediaType.ANIME),
+            ("unknown", ProviderMediaType.UNKNOWN),
+            ("", ProviderMediaType.UNKNOWN),
         ],
     )
     def test_from_string_recognizes_server_type_aliases(self, raw, expected):
-        assert MediaType.from_string(raw) == expected
+        assert ProviderMediaType.from_value(raw) == expected
 
 
 class TestFnOSGetItems:
@@ -68,7 +68,7 @@ class TestFnOSGetItems:
 
         assert len(items) == 1
         assert items[0]["id"] == "movie-1"
-        assert items[0]["type"] == MediaType.MOVIE.value
+        assert items[0]["type"] == ProviderMediaType.MOVIE.value
         assert items[0]["library"] == "lib-movie"
 
         # 确认回退到全量获取
@@ -94,7 +94,7 @@ class TestFnOSGetItems:
         items = [item for item in client.get_items("lib-tv") if item]
 
         assert len(items) == 1
-        assert items[0]["type"] == MediaType.TV.value
+        assert items[0]["type"] == ProviderMediaType.SERIES.value
 
 
 class TestMediaServerSync:

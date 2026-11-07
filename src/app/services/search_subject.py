@@ -3,17 +3,16 @@
 from dataclasses import dataclass
 from typing import Literal
 
-from app.domain.media_types import MediaKind, media_type_registry
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import MediaKind, ProviderMediaType, media_type_registry
 
 _TITLE_PROFILES = {"default", "anime", "tv", "movie"}
 
 
 @dataclass(frozen=True)
 class SearchSubject:
-    raw_type: MediaType | None
-    display_type: MediaType | None
-    provider_type: MediaType | None
+    raw_type: ProviderMediaType | None
+    display_type: ProviderMediaType | None
+    provider_type: ProviderMediaType | None
     content_profile: str
     code_identity: bool
     search_mode: Literal["code", "title"]
@@ -26,8 +25,8 @@ class SearchSubject:
         anchor_provider: object = "",
         external_id: object = "",
     ) -> "SearchSubject":
-        raw = MediaType.from_string(str(media_type or ""))
-        raw_type = raw if raw != MediaType.UNKNOWN else None
+        raw = ProviderMediaType.from_value(str(media_type or ""))
+        raw_type = raw if raw != ProviderMediaType.UNKNOWN else None
         profile = str(content_profile or "").strip() or "default"
         provider = str(anchor_provider or "").strip()
         external = str(external_id or "").strip()
@@ -39,20 +38,20 @@ class SearchSubject:
             or provider == "content_id"
             or external.startswith("content_id:")
         )
-        if provider == "bangumi" and raw_type != MediaType.MOVIE:
-            display = MediaType.ANIME
-        elif profile == "anime" or raw_type == MediaType.ANIME or descriptor.key == "anime":
-            display = MediaType.ANIME
-        elif raw_type in (MediaType.MOVIE, MediaType.TV):
+        if provider == "bangumi" and raw_type != ProviderMediaType.MOVIE:
+            display = ProviderMediaType.ANIME
+        elif profile == "anime" or raw_type == ProviderMediaType.ANIME or descriptor.key == "anime":
+            display = ProviderMediaType.ANIME
+        elif raw_type in (ProviderMediaType.MOVIE, ProviderMediaType.SERIES):
             display = raw_type
         elif descriptor.kind == MediaKind.MOVIE:
-            display = MediaType.MOVIE
+            display = ProviderMediaType.MOVIE
         elif descriptor.kind == MediaKind.EPISODIC:
-            display = MediaType.TV
+            display = ProviderMediaType.SERIES
         else:
             display = None
-        if display == MediaType.ANIME:
-            provider_type = MediaType.TV
+        if display == ProviderMediaType.ANIME:
+            provider_type = ProviderMediaType.SERIES
         else:
             provider_type = display
         return cls(

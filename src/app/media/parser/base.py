@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 
 class ParserResult(BaseModel):
@@ -18,7 +18,7 @@ class ParserResult(BaseModel):
     video_encode: str | None = None
     audio_encode: str | None = None
     resource_team: str | None = None
-    type: MediaType | None = None
+    type: ProviderMediaType | None = None
     confidence: float = 0.0
     org_string: str | None = None
     content_profile: str = "default"

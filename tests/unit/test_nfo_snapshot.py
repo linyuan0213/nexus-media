@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata import (
     Credit,
     EpisodeRecord,
@@ -29,7 +29,7 @@ class _FakeDownloader:
 def _snapshot(**overrides) -> MediaMetadata:
     data = {
         "identity_id": "01J00000000000000000000000",
-        "media_type": MediaType.MOVIE,
+        "media_type": ProviderMediaType.MOVIE,
         "content_profile": "default",
         "primary_provider": "douban",
         "refs": [
@@ -85,7 +85,7 @@ def test_tv_season_and_episode_nfo_from_snapshot(tmp_path):
     downloader = _FakeDownloader()
     generator = NfoGenerator(downloader)
     snapshot = _snapshot(
-        media_type=MediaType.TV,
+        media_type=ProviderMediaType.SERIES,
         primary_provider="tmdb",
         seasons=[SeasonRecord(season_number=1, title="第一季", air_date="2023-01-15", episode_count=9)],
         episodes=[

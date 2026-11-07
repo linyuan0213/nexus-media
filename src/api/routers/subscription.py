@@ -20,9 +20,8 @@ from api.deps import (
 )
 from app.core.error_codes import ErrorCode
 from app.domain.entities.custom_rss import custom_rss_id
-from app.domain.media_type_utils import MediaTypeMapper
-from app.domain.media_types import media_type_registry
-from app.domain.mediatypes import MediaType, normalize_media_type_input
+from app.domain.media_type_utils import ProviderMediaTypeMapper
+from app.domain.media_types import ProviderMediaType, media_type_registry, normalize_media_type_input
 from app.infrastructure.system_config import SystemConfig
 from app.media import meta_info
 from app.schemas.auth import UserContext
@@ -164,18 +163,18 @@ class GetSubscribeHistoryRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _resolve_type_and_profile(type_str: str | None, content_profile: str | None) -> tuple[MediaType, str]:
+def _resolve_type_and_profile(type_str: str | None, content_profile: str | None) -> tuple[ProviderMediaType, str]:
     """统一解析展示类型与内容画像：支持 av 等插件展示别名，未知类型回退到载体默认."""
     normalized, profile = normalize_media_type_input(type_str, content_profile)
-    parsed = MediaType.from_string(normalized or "")
-    if parsed in (MediaType.MOVIE, MediaType.TV, MediaType.ANIME):
+    parsed = ProviderMediaType.from_value(normalized or "")
+    if parsed in (ProviderMediaType.MOVIE, ProviderMediaType.SERIES, ProviderMediaType.ANIME):
         return parsed, profile
     if profile not in ("", "default"):
-        return MediaType.MOVIE, profile
-    return MediaType.TV, profile
+        return ProviderMediaType.MOVIE, profile
+    return ProviderMediaType.SERIES, profile
 
 
-def _resolve_mtype(type_str: str | None) -> MediaType:
+def _resolve_mtype(type_str: str | None) -> ProviderMediaType:
     """兼容旧调用：仅解析载体媒体类型。"""
     return _resolve_type_and_profile(type_str, None)[0]
 
@@ -460,7 +459,7 @@ def re_rss_history(
 ):
     mtype, profile = _resolve_type_and_profile(req.type, req.content_profile)
     # 动漫订阅历史存于电视剧表：按 to_tmdb 映射（ANIME -> tv），避免误判为电影
-    rtype = MediaTypeMapper.to_tmdb(mtype) or MediaType.TV.value
+    rtype = ProviderMediaTypeMapper.to_tmdb(mtype) or ProviderMediaType.SERIES.value
     code, msg = svc.redo(rssid=req.rssid, rtype=rtype, user=user, content_profile=profile)
     if code == 0:
         return success(message=msg)
@@ -475,7 +474,7 @@ def refresh_rss(
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
     mtype, _profile = _resolve_type_and_profile(req.type, req.content_profile)
-    if mtype == MediaType.MOVIE:
+    if mtype == ProviderMediaType.MOVIE:
         owned = svc.get_subscribe_movies(rid=req.rssid, user=user)
     else:
         owned = svc.get_subscribe_tvs(rid=req.rssid, user=user)
@@ -509,12 +508,12 @@ def remove_rss_media(
         deleted = int(svc.cancel_subscribe(mtype=mtype, rssid=rssid, user=user) or 0)
         if deleted == 0 and not str(req.type or "").strip() and not str(req.content_profile or "").strip():
             # 只有调用方未指定类型时，才尝试另一张表。
-            other = MediaType.TV if mtype == MediaType.MOVIE else MediaType.MOVIE
+            other = ProviderMediaType.SERIES if mtype == ProviderMediaType.MOVIE else ProviderMediaType.MOVIE
             deleted = int(svc.cancel_subscribe(mtype=other, rssid=rssid, user=user) or 0)
-    elif mtype == MediaType.MOVIE:
+    elif mtype == ProviderMediaType.MOVIE:
         deleted = int(
             svc.cancel_subscribe(
-                mtype=MediaType.MOVIE,
+                mtype=ProviderMediaType.MOVIE,
                 title=name or "",
                 year=req.year,
                 rssid=rssid,
@@ -523,11 +522,11 @@ def remove_rss_media(
             )
             or 0
         )
-    elif mtype in (MediaType.TV, MediaType.ANIME):
+    elif mtype in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
         # 动漫订阅存于电视剧表，删除同样走 TV
         deleted = int(
             svc.cancel_subscribe(
-                mtype=MediaType.TV,
+                mtype=ProviderMediaType.SERIES,
                 title=name or "",
                 season=_normalize_season(req.season),
                 rssid=rssid,
@@ -546,12 +545,14 @@ def rss_detail(
     svc: SubscribeService = Depends(get_subscribe_service),
 ):
     parsed, _profile = _resolve_type_and_profile(req.rsstype, req.content_profile)
-    if parsed == MediaType.MOVIE:
+    if parsed == ProviderMediaType.MOVIE:
         rssdetail = svc.get_subscribe_movies(rid=req.rssid, user=user)
-        mtype_value = MediaType.MOVIE.value
+        mtype_value = ProviderMediaType.MOVIE.value
     else:
         rssdetail = svc.get_subscribe_tvs(rid=req.rssid, user=user)
-        mtype_value = MediaType.ANIME.value if parsed == MediaType.ANIME else MediaType.TV.value
+        mtype_value = (
+            ProviderMediaType.ANIME.value if parsed == ProviderMediaType.ANIME else ProviderMediaType.SERIES.value
+        )
     if not rssdetail:
         return fail()
     detail = list(rssdetail.values())[0]
@@ -679,7 +680,7 @@ def get_rss_history(
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
     parsed, profile = _resolve_type_and_profile(req.type, req.content_profile)
-    mtype = MediaType.MOVIE.value if parsed == MediaType.MOVIE else MediaType.TV.value
+    mtype = ProviderMediaType.MOVIE.value if parsed == ProviderMediaType.MOVIE else ProviderMediaType.SERIES.value
     return success(data=svc.get_history(mtype=mtype, user=user, content_profile=profile))
 
 

@@ -9,7 +9,6 @@ from app.domain.media_types import (
     media_kind_of,
     provider_media_type_of,
 )
-from app.domain.mediatypes import MediaType
 from app.infrastructure.cache_system.metadata_cache import MetadataCache
 from app.infrastructure.http.exceptions import HttpRateLimitError
 from app.infrastructure.image_proxy import ImageProxy
@@ -50,7 +49,11 @@ class TmdbLookup(BaseLookup):
         self._lookup_cache = MetadataCache(prefix="lookup")
 
     def lookup(
-        self, parsed, hint_type: MediaType | None = None, strict: bool | None = None, language: str | None = None
+        self,
+        parsed,
+        hint_type: ProviderMediaType | None = None,
+        strict: bool | None = None,
+        language: str | None = None,
     ) -> LookupResult | None:
         if not parsed.title_en and not parsed.title_cn:
             return None
@@ -74,7 +77,7 @@ class TmdbLookup(BaseLookup):
 
             if language:
                 self.client.set_language(language or "")
-            search_type = provider_media_type_of(hint_type or parsed.type or MediaType.UNKNOWN)
+            search_type = provider_media_type_of(hint_type or parsed.type or ProviderMediaType.UNKNOWN)
 
             # 优先使用中文名搜索（中文搜索结果通常更精确，避免外传/主系列混淆）
             result = None
@@ -171,12 +174,12 @@ class TmdbLookup(BaseLookup):
         if provider_type == ProviderMediaType.MOVIE:
             info = self.search.search_movie(name, parsed.year)
             if info and info.get("id"):
-                info["media_type"] = provider_type.to_media_type()
+                info["media_type"] = provider_type
             return info or {}
         if provider_type == ProviderMediaType.SERIES:
             info = self.search.search_tv(name, parsed.year, parsed.season, parsed.episode)
             if info and info.get("id"):
-                info["media_type"] = provider_type.to_media_type()
+                info["media_type"] = provider_type
             return info or {}
         return self.search.search_multi(name) or {}
 
@@ -238,7 +241,7 @@ class TmdbLookup(BaseLookup):
                 log.debug(f"[Meta]正在识别{provider_type.value}：{name}, 年份={year} ...")
                 info = self.search.search_movie(name, year)
                 if info:
-                    info["media_type"] = provider_type.to_media_type()
+                    info["media_type"] = provider_type
                     log.info(
                         "[Meta]{} 识别到 电影：TMDBID={}, 名称={}, 上映日期={}".format(
                             name, info.get("id"), info.get("title"), info.get("release_date")
@@ -247,7 +250,7 @@ class TmdbLookup(BaseLookup):
                     if not strict:
                         cross_info = self.search.search_tv(name, first_year, season_number, episode)
                         if cross_info and cross_info.get("id"):
-                            cross_info["media_type"] = ProviderMediaType.SERIES.to_media_type()
+                            cross_info["media_type"] = ProviderMediaType.SERIES
                             _, mv_names = self.search._fetch_allnames(ProviderMediaType.MOVIE, info.get("id"))
                             _, tv_names = self.search._fetch_allnames(ProviderMediaType.SERIES, cross_info.get("id"))
                             mv_score = _score_fuzzy_match(name, info, mv_names)
@@ -265,7 +268,7 @@ class TmdbLookup(BaseLookup):
                 log.debug(f"[Meta]正在识别{provider_type.value}：{name}, 去掉年份再查 ...")
                 info = self.search.search_movie(name, None)
                 if info:
-                    info["media_type"] = provider_type.to_media_type()
+                    info["media_type"] = provider_type
                     log.info(
                         "[Meta]{} 识别到 电影：TMDBID={}, 名称={}, 上映日期={}".format(
                             name, info.get("id"), info.get("title"), info.get("release_date")
@@ -286,7 +289,7 @@ class TmdbLookup(BaseLookup):
                 log.debug(f"[Meta]正在识别{provider_type.value}：{name}, 年份={StringUtils.xstr(year)} ...")
                 info = self.search.search_tv(name, year, season_number, episode)
                 if info:
-                    info["media_type"] = ProviderMediaType.SERIES.to_media_type()
+                    info["media_type"] = ProviderMediaType.SERIES
                     log.info(
                         "[Meta]{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(
                             name, info.get("id"), info.get("name"), info.get("first_air_date")
@@ -299,7 +302,7 @@ class TmdbLookup(BaseLookup):
                         else:
                             cross_info = self.search.search_movie(name, first_year)
                             if cross_info and cross_info.get("id"):
-                                cross_info["media_type"] = ProviderMediaType.MOVIE.to_media_type()
+                                cross_info["media_type"] = ProviderMediaType.MOVIE
                                 _, tv_names = self.search._fetch_allnames(ProviderMediaType.SERIES, info.get("id"))
                                 _, mv_names = self.search._fetch_allnames(ProviderMediaType.MOVIE, cross_info.get("id"))
                                 tv_score = _score_fuzzy_match(name, info, tv_names, season_number)
@@ -322,7 +325,7 @@ class TmdbLookup(BaseLookup):
                 log.debug(f"[Meta]正在识别{provider_type.value}：{name}, 去掉年份再查 ...")
                 info = self.search.search_tv(name, None, season_number, episode)
                 if info:
-                    info["media_type"] = ProviderMediaType.SERIES.to_media_type()
+                    info["media_type"] = ProviderMediaType.SERIES
                     log.info(
                         "[Meta]{} 识别到 电视剧：TMDBID={}, 名称={}, 首播日期={}".format(
                             name, info.get("id"), info.get("name"), info.get("first_air_date")
@@ -350,7 +353,7 @@ class TmdbLookup(BaseLookup):
                         detail = self.search._get_detail(item.get("id"), provider_type)
                         if not detail:
                             continue
-                        detail["media_type"] = provider_type.to_media_type()
+                        detail["media_type"] = provider_type
                         _, alt_names = self.search._fetch_allnames(provider_type, item.get("id"))
                         score = _score_fuzzy_match(name, detail, alt_names or [item_name], season_number)
                         scored_candidates.append((score, detail))
@@ -373,7 +376,7 @@ class TmdbLookup(BaseLookup):
             info = self.search.search_multi(name)
             if info:
                 fallback_type = provider_media_type_of(info.get("media_type"))
-                info["media_type"] = fallback_type.to_media_type()
+                info["media_type"] = fallback_type
                 log.info("[Meta]{} 识别到 {}：TMDBID={}".format(name, fallback_type.value, info.get("id")))
                 return info
 
@@ -383,12 +386,12 @@ class TmdbLookup(BaseLookup):
             if provider_type == ProviderMediaType.MOVIE:
                 info = self.search.search_tv(name, None)
                 if info:
-                    info["media_type"] = ProviderMediaType.SERIES.to_media_type()
+                    info["media_type"] = ProviderMediaType.SERIES
                     return info
             else:
                 info = self.search.search_movie(name, None)
                 if info:
-                    info["media_type"] = ProviderMediaType.MOVIE.to_media_type()
+                    info["media_type"] = ProviderMediaType.MOVIE
                     return info
 
         if not info:

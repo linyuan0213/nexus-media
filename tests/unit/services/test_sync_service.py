@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.core.exceptions import ValidationError
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.schemas.sync import ManualTransferResultDTO
 from app.services.sync_service import SyncService
 
@@ -90,7 +90,7 @@ class TestSyncServiceTransfer:
             "/src/movie.mkv",
             "copy",
             outpath="/dst",
-            media_type=MediaType.MOVIE,
+            media_type=ProviderMediaType.MOVIE,
             tmdbid=123,
         )
         assert result.success
@@ -104,9 +104,9 @@ class TestSyncServiceTransfer:
         assert not result.success
 
     def test_build_media_type(self):
-        assert SyncService.build_media_type("movie") == MediaType.MOVIE
-        assert SyncService.build_media_type("tv") == MediaType.TV
-        assert SyncService.build_media_type("unknown") == MediaType.UNKNOWN
+        assert SyncService.build_media_type("movie") == ProviderMediaType.MOVIE
+        assert SyncService.build_media_type("tv") == ProviderMediaType.SERIES
+        assert SyncService.build_media_type("unknown") == ProviderMediaType.UNKNOWN
 
 
 class TestSyncServiceReIdentify:

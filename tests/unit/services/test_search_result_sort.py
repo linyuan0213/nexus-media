@@ -1,12 +1,12 @@
 """搜索结果排序：站点优先后必须先比做种数，再做规则顺序."""
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.services.search_service import SearchResultProcessor
 
 
 def _movie(title: str, *, site_order: int, seeders: int, res_order: int) -> MediaInfo:
-    media = MediaInfo(title=title, type=MediaType.MOVIE)
+    media = MediaInfo(title=title, type=ProviderMediaType.MOVIE)
     media.site_order = site_order
     media.seeders = seeders
     media.res_order = res_order

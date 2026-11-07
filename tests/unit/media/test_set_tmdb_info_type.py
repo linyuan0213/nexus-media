@@ -2,11 +2,11 @@
 
 from unittest.mock import MagicMock, patch
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media import meta_info
 
 
-def _media(mtype: MediaType):
+def _media(mtype: ProviderMediaType):
     m = meta_info(title="Draw This Then Die S01E10 1080p WEB-DL")
     m.type = mtype
     return m
@@ -21,43 +21,43 @@ def _patch_categories():
 class TestSetTmdbInfoType:
     def test_missing_genres_preserves_anime(self):
         with _patch_categories():
-            m = _media(MediaType.ANIME)
-            m.set_provider_data({"media_type": MediaType.TV, "id": 287028})
-        assert m.type == MediaType.ANIME
+            m = _media(ProviderMediaType.ANIME)
+            m.set_provider_data({"media_type": ProviderMediaType.SERIES, "id": 287028})
+        assert m.type == ProviderMediaType.ANIME
 
     def test_anime_genre_sets_anime(self):
         with _patch_categories():
-            m = _media(MediaType.TV)
-            m.set_provider_data({"media_type": MediaType.TV, "id": 287028, "genre_ids": [16, 35]})
-        assert m.type == MediaType.ANIME
+            m = _media(ProviderMediaType.SERIES)
+            m.set_provider_data({"media_type": ProviderMediaType.SERIES, "id": 287028, "genre_ids": [16, 35]})
+        assert m.type == ProviderMediaType.ANIME
 
     def test_non_anime_genre_sets_tv(self):
         with _patch_categories():
-            m = _media(MediaType.ANIME)
-            m.set_provider_data({"media_type": MediaType.TV, "id": 1, "genre_ids": [35]})
-        assert m.type == MediaType.TV
+            m = _media(ProviderMediaType.ANIME)
+            m.set_provider_data({"media_type": ProviderMediaType.SERIES, "id": 1, "genre_ids": [35]})
+        assert m.type == ProviderMediaType.SERIES
 
     def test_movie_promoted_to_tv_when_genres_missing(self):
         with _patch_categories():
-            m = _media(MediaType.MOVIE)
-            m.set_provider_data({"media_type": MediaType.TV, "id": 2})
-        assert m.type == MediaType.TV
+            m = _media(ProviderMediaType.MOVIE)
+            m.set_provider_data({"media_type": ProviderMediaType.SERIES, "id": 2})
+        assert m.type == ProviderMediaType.SERIES
 
 
-class TestStringMediaTypeNormalization:
+class TestStringProviderMediaTypeNormalization:
     """TMDB 缓存/批量路径的 media_type 为字符串时也应按 genre 判定动漫."""
 
     def test_string_tv_with_anime_genre_promotes(self):
         with _patch_categories():
-            m = _media(MediaType.TV)
+            m = _media(ProviderMediaType.SERIES)
             m.set_provider_data({"media_type": "tv", "id": 9, "genre_ids": [16]})
-        assert m.type == MediaType.ANIME
+        assert m.type == ProviderMediaType.ANIME
 
     def test_string_tv_without_anime_genre_stays_tv(self):
         with _patch_categories():
-            m = _media(MediaType.TV)
+            m = _media(ProviderMediaType.SERIES)
             m.set_provider_data({"media_type": "tv", "id": 10, "genre_ids": [35]})
-        assert m.type == MediaType.TV
+        assert m.type == ProviderMediaType.SERIES
 
 
 def test_set_provider_data_accepts_string_genres():
@@ -77,7 +77,7 @@ def test_set_provider_data_accepts_string_genres():
 
 
 def test_to_dict_exposes_resolved_type_metadata():
-    media = meta_info(title="Demo", mtype=MediaType.TV)
+    media = meta_info(title="Demo", mtype=ProviderMediaType.SERIES)
     media.content_profile = "anime"
 
     data = media.to_dict()

@@ -9,7 +9,7 @@ from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.domain.enums import ProgressKey
-from app.domain.mediatypes import normalize_media_type_input
+from app.domain.media_types import normalize_media_type_input
 from app.infrastructure.external.doubanapi import DoubanApi
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig

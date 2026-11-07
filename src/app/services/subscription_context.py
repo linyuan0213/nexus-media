@@ -5,8 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from app.domain.media_types import media_type_registry
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType, media_type_registry
 from app.services.subscribe_repo_adapter import (
     SubscribeMovieRepositoryAdapter,
     SubscribeTvRepositoryAdapter,
@@ -23,12 +22,12 @@ def _value(row: Any, *names: str):
 
 def _is_tv(item: Any) -> bool:
     value = getattr(item, "type", None)
-    if value in (MediaType.TV, MediaType.ANIME):
+    if value in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
         return True
     return str(value or "").lower() in {"tv", "anime", "show", "series"}
 
 
-def _context(row: Any, media_type: MediaType) -> SimpleNamespace:
+def _context(row: Any, media_type: ProviderMediaType) -> SimpleNamespace:
     return SimpleNamespace(
         id=_value(row, "ID", "id"),
         name=_value(row, "NAME", "name") or "",
@@ -61,8 +60,14 @@ def resolve_subscription_context(item: Any):
     """按 rssid → identity/anchor → tmdb → 标题+年份 查找订阅上下文."""
     profile = getattr(item, "content_profile", None)
     resolved = media_type_registry.resolve_profile(profile)
-    media_type = resolved.legacy_type if resolved is not None else (MediaType.TV if _is_tv(item) else MediaType.MOVIE)
-    repo = SubscribeTvRepositoryAdapter() if media_type == MediaType.TV else SubscribeMovieRepositoryAdapter()
+    media_type = (
+        resolved.content_type
+        if resolved is not None
+        else (ProviderMediaType.SERIES if _is_tv(item) else ProviderMediaType.MOVIE)
+    )
+    repo = (
+        SubscribeTvRepositoryAdapter() if media_type == ProviderMediaType.SERIES else SubscribeMovieRepositoryAdapter()
+    )
     try:
         rssid = getattr(item, "rssid", None)
         rows = repo.get_all(rssid=int(rssid)) if rssid else []

@@ -16,7 +16,7 @@ from api.deps import (
     get_system_config_service,
 )
 from api.routers import subscription as subscription_router
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.schemas.auth import UserContext
 
 
@@ -203,8 +203,8 @@ class TestSubscriptionRouter:
         assert resp.status_code == 200
         assert mock_subscribe_service.cancel_subscribe.call_count == 2
         mtypes = {c.kwargs["mtype"] for c in mock_subscribe_service.cancel_subscribe.call_args_list}
-        assert MediaType.MOVIE in mtypes
-        assert MediaType.TV in mtypes
+        assert ProviderMediaType.MOVIE in mtypes
+        assert ProviderMediaType.SERIES in mtypes
 
     def test_rss_detail_movie(self, client, mock_subscribe_service):
         resp = client.post("/api/v1/subscription/detail", json={"rssid": "1", "rsstype": "movie"})

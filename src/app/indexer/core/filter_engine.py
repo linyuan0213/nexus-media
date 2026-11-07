@@ -10,7 +10,7 @@ import re
 import log
 from app.core.module_config import ModuleConf
 from app.core.settings import settings
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media import ReleaseGroupsMatcher
 from app.utils import StringUtils
 
@@ -71,8 +71,8 @@ class IndexerFilterEngine:
         # 过滤漫画/书籍类资源（仅检查标题，不检查 description 避免误杀）
         target_type = filter_args.get("type")
         if isinstance(target_type, str):
-            target_type = MediaType.from_string(target_type)
-        if target_type in (MediaType.TV, MediaType.MOVIE, MediaType.ANIME):
+            target_type = ProviderMediaType.from_value(target_type)
+        if target_type in (ProviderMediaType.SERIES, ProviderMediaType.MOVIE, ProviderMediaType.ANIME):
             _book_patterns = [
                 r"(?:漫画|コミック|单行本|Manga|Comic|巻相当|Graphic Novel)",
                 r"(?:raw|RAW)\b.*第\s*\d+\s*巻",
@@ -84,7 +84,7 @@ class IndexerFilterEngine:
                     return False, 0, f"{meta_info.org_string} 为漫画/书籍类资源，不匹配视频订阅"
 
         # 过滤过小文件（字幕/样本等非视频资源）
-        if target_type in (MediaType.TV, MediaType.MOVIE, MediaType.ANIME):
+        if target_type in (ProviderMediaType.SERIES, ProviderMediaType.MOVIE, ProviderMediaType.ANIME):
             min_filesize_mb = (settings.get("media") or {}).get("min_filesize", 150)
             if min_filesize_mb and meta_info.size:
                 size_bytes = StringUtils.num_filesize(meta_info.size)
@@ -233,7 +233,7 @@ class IndexerFilterEngine:
                         begin_size = 0
                         end_size = float(sizes.strip()) if StringUtils.is_numeric(sizes) else 0
 
-                    if meta_info.type == MediaType.MOVIE:
+                    if meta_info.type == ProviderMediaType.MOVIE:
                         if not begin_size * (1024**3) <= int(meta_info.size) <= end_size * (1024**3):
                             rule_match = False
                     else:

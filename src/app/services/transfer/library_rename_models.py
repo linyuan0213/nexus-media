@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.storage.backends.base import StorageBackend
 
@@ -12,7 +12,7 @@ from app.storage.backends.base import StorageBackend
 class LibraryRoot:
     """一个媒体库根目录及其存储后端."""
 
-    media_type: MediaType
+    media_type: ProviderMediaType
     root: str
     backend_id: str
     backend: StorageBackend
@@ -22,7 +22,9 @@ class LibraryRoot:
 class RenameScope:
     """批量重命名范围与开关."""
 
-    media_types: list[MediaType] = field(default_factory=lambda: [MediaType.MOVIE, MediaType.TV, MediaType.ANIME])
+    media_types: list[ProviderMediaType] = field(
+        default_factory=lambda: [ProviderMediaType.MOVIE, ProviderMediaType.SERIES, ProviderMediaType.ANIME]
+    )
     roots: list[str] = field(default_factory=list)
     layout_mode: str = "full"
     preserve_current_category: bool = True

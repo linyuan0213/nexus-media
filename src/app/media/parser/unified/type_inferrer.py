@@ -4,43 +4,43 @@ from __future__ import annotations
 
 import re
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 from .types import ParseContext
 
 
-def infer_type(ctx: ParseContext) -> MediaType:
+def infer_type(ctx: ParseContext) -> ProviderMediaType:
     """基于解析结果推断媒体类型"""
     # 命名模式库命中时直接返回
     if ctx.has("media_type"):
         for elem in ctx.get_elements("media_type"):
-            if isinstance(elem.value, MediaType):
+            if isinstance(elem.value, ProviderMediaType):
                 return elem.value
 
     # SxxExx 格式 → TV
     if ctx.season and ctx.episode:
-        return MediaType.TV
+        return ProviderMediaType.SERIES
 
     # 有季数但无集数 → TV（如 S04 季度包）
     if ctx.season and not ctx.episode:
-        return MediaType.TV
+        return ProviderMediaType.SERIES
 
     # 有集数但无季数
     if ctx.episode and not ctx.season:
         if _is_anime_pattern(ctx):
-            return MediaType.ANIME
-        return MediaType.TV
+            return ProviderMediaType.ANIME
+        return ProviderMediaType.SERIES
 
     # 无集数 + 有年份 → MOVIE（无论是否有分辨率）
     if ctx.year and not ctx.episode and not ctx.season:
-        return MediaType.MOVIE
+        return ProviderMediaType.MOVIE
 
     # 无集数 + 有来源 (BluRay/WEB-DL 等) → MOVIE
     if ctx.source and not ctx.episode and not ctx.season:
-        return MediaType.MOVIE
+        return ProviderMediaType.MOVIE
 
     # 默认 TV
-    return MediaType.TV
+    return ProviderMediaType.SERIES
 
 
 def _is_anime_pattern(ctx: ParseContext) -> bool:

@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services import subscription_context
 
 
@@ -25,7 +25,7 @@ def test_tv_context_maps_orm_fields_and_image(monkeypatch):
             return [row] if rssid == 7 else []
 
     monkeypatch.setattr(subscription_context, "SubscribeTvRepositoryAdapter", Repo)
-    item = SimpleNamespace(type=MediaType.TV, rssid=7)
+    item = SimpleNamespace(type=ProviderMediaType.SERIES, rssid=7)
 
     ctx = subscription_context.resolve_subscription_context(item)
 
@@ -33,7 +33,7 @@ def test_tv_context_maps_orm_fields_and_image(monkeypatch):
     assert ctx.name == "龙珠超 比鲁斯"
     assert ctx.image == "https://img/poster.jpg"
     assert ctx.anchor_provider == "tmdb"
-    assert ctx.type == MediaType.TV
+    assert ctx.type == ProviderMediaType.SERIES
 
 
 def test_context_falls_back_to_tmdb_when_rssid_missing(monkeypatch):

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 from .models import ProviderRef
 from .refs import parse_media_ref
 
 
-def parse_legacy_ref(raw_id: str | None, media_type: MediaType) -> ProviderRef | None:
+def parse_legacy_ref(raw_id: str | None, media_type: ProviderMediaType) -> ProviderRef | None:
     """解析旧字段；纯数字按 TMDB 处理，未知格式返回 None."""
     if raw_id is None:
         return None

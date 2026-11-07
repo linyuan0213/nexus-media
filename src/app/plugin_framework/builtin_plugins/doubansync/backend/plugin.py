@@ -10,7 +10,7 @@ from threading import Event, Lock
 from typing import Any
 
 from app.domain.enums import SearchType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.cache_system import get_cache_manager
 from app.media import meta_info
 from app.media.external.douban import DouBan
@@ -295,9 +295,9 @@ class DoubanSyncPlugin:
             self.ctx.warn(f"{doubanid} 无权限访问，需要配置豆瓣Cookie")
             return
 
-        resolved_type = MediaType.from_string(str(douban_info.get("media_type") or ""))
-        if resolved_type == MediaType.UNKNOWN:
-            resolved_type = MediaType.TV if douban_info.get("episodes_count") else MediaType.MOVIE
+        resolved_type = ProviderMediaType.from_value(str(douban_info.get("media_type") or ""))
+        if resolved_type == ProviderMediaType.UNKNOWN:
+            resolved_type = ProviderMediaType.SERIES if douban_info.get("episodes_count") else ProviderMediaType.MOVIE
         media_type = resolved_type
         mi = meta_info(title="{} {}".format(douban_info.get("title"), douban_info.get("year") or ""))
         mi.douban_id = doubanid

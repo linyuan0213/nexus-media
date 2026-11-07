@@ -8,7 +8,6 @@ import pytest
 
 from app.domain.enums import IdentifyStatus
 from app.domain.media_types import ProviderMediaType
-from app.domain.mediatypes import MediaType
 from app.indexer.core.batch_identifier import BatchIdentifier
 from app.indexer.core.models import SearchCandidate
 from app.infrastructure.cache_system import get_cache_manager
@@ -21,7 +20,7 @@ from app.media.service import MediaService
 _cache_seq = itertools.count()
 
 
-def _meta(cn=None, en=None, year: str | None = "2026", mtype=MediaType.TV, seasons=(1,), episodes=(4,)):
+def _meta(cn=None, en=None, year: str | None = "2026", mtype=ProviderMediaType.SERIES, seasons=(1,), episodes=(4,)):
     return SimpleNamespace(
         cn_name=cn,
         en_name=en,
@@ -89,7 +88,7 @@ class TestDirectPass:
             title="穹庐下的魔女",
             original_title="天幕のジャードゥーガル",
             year=year,
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             tmdb_id=288971,
             provider_data={"id": 288971, "title": "穹庐下的魔女"},
         )
@@ -124,7 +123,7 @@ class TestDirectPass:
         cands = [
             _cand(
                 "Ghostbusters 2016 1080p",
-                _meta(cn="超能敢死队", en="Ghostbusters", year="2016", mtype=MediaType.MOVIE),
+                _meta(cn="超能敢死队", en="Ghostbusters", year="2016", mtype=ProviderMediaType.MOVIE),
             )
         ]
         movie_match = MediaInfo(
@@ -132,7 +131,7 @@ class TestDirectPass:
             title="捉鬼敢死队",
             en_name="Ghostbusters",
             year="1984",
-            type=MediaType.MOVIE,
+            type=ProviderMediaType.MOVIE,
             tmdb_id=123,
         )
 
@@ -151,7 +150,7 @@ class TestDirectPass:
             title="攻壳机动队",
             original_title="攻殻機動隊",
             year="2026",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             tmdb_id=999999,
             provider_data={"id": 999999},
         )
@@ -201,7 +200,7 @@ class TestDirectPass:
             cn_name="攻壳机动队",
             title="攻壳机动队",
             year="2026",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             tmdb_id=999999,
             provider_data={"id": 999999},
         )
@@ -262,7 +261,7 @@ class TestIdentifyGroups:
             "cn_name": "穹庐下的魔女",
             "en_name": "Jaadugar",
             "year": "2026",
-            "type": MediaType.TV,
+            "type": ProviderMediaType.SERIES,
             "seasons": [1],
             "episodes": [1],
             "title": "org title",
@@ -386,7 +385,9 @@ class TestConfidencePropagation:
     """ADR-014 置信度端到端透传：ResolveResult.confidence → 缓存 MediaInfo"""
 
     def _match_media(self):
-        return MediaInfo(cn_name="攻壳机动队", title="攻壳机动队", year="2026", type=MediaType.TV, tmdb_id=255358)
+        return MediaInfo(
+            cn_name="攻壳机动队", title="攻壳机动队", year="2026", type=ProviderMediaType.SERIES, tmdb_id=255358
+        )
 
     def test_resolver_hit_writes_confidence(self, identifier):
         cands = [_cand("攻壳机动队 S01E04 2026", _meta(cn="攻壳机动队"))]

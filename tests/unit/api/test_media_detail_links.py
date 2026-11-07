@@ -3,7 +3,7 @@
 from types import SimpleNamespace
 
 from api.routers.media import _record_detail_data
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata import registry as metadata_registry
 
 
@@ -29,7 +29,7 @@ def test_custom_profile_record_builds_provider_links(monkeypatch):
             {"provider": "tmdb", "external_id": "999"},
         ],
     }
-    data = _record_detail_data(record, MediaType.ANIME, None)
+    data = _record_detail_data(record, ProviderMediaType.ANIME, None)
     assert data["links"] == [
         {
             "provider": "bangumi",
@@ -54,7 +54,7 @@ def test_custom_profile_without_refs_uses_primary_provider(monkeypatch):
     )
     data = _record_detail_data(
         {"provider": "bangumi", "external_id": "511936", "title": "测试"},
-        MediaType.ANIME,
+        ProviderMediaType.ANIME,
         None,
     )
     assert data["link"] == "https://example.test/511936"

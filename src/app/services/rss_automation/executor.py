@@ -9,8 +9,8 @@ from app.core.exceptions import RepositoryError, ServiceError
 from app.core.settings import settings
 from app.domain.enums import SearchType, UserRssTaskUseType
 from app.domain.media_ref import media_series_scope_key
-from app.domain.media_type_utils import MediaTypeMapper
-from app.domain.mediatypes import MediaType
+from app.domain.media_type_utils import ProviderMediaTypeMapper
+from app.domain.media_types import ProviderMediaType
 from app.events.bus import EventBus
 from app.events.constants import RSS_AUTO_SUBSCRIBE_REQUESTED
 from app.events.payloads import RssAutoSubscribeRequestedPayload
@@ -55,7 +55,7 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
                 year = year[:4]
             mediatype = res.get("type")
             if mediatype:
-                mediatype = MediaType.from_string(mediatype)
+                mediatype = ProviderMediaType.from_value(mediatype)
 
             log.info(f"[RssTaskService]开始处理：{title}")
 
@@ -75,7 +75,7 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
                     if not media_info.provider_data:
                         log.info(f"[RssTaskService]{title} 识别为 {media_info.get_name()} 未匹配到媒体信息")
                         continue
-                    if media_info.type == MediaType.MOVIE:
+                    if media_info.type == ProviderMediaType.MOVIE:
                         exist_flag, no_exists, _ = service.downloader.check_exists_medias(
                             meta_info=media_info, no_exists=no_exists
                         )
@@ -121,7 +121,7 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
                             media_info.set_provider_data(
                                 service.metadata_gateway.details("tmdb", media_info.tmdb_id, media_type=media_info.type)
                             )
-                        if media_info.type != MediaType.MOVIE:
+                        if media_info.type != ProviderMediaType.MOVIE:
                             service.config_repo.insert_userrss_mediainfos(taskid, media_info)
                     else:
                         log.info(f"[RssTaskService]{title}  匹配成功")
@@ -141,7 +141,7 @@ def _check_task_rss(service, taskid: int | None, event_bus: EventBus | None = No
                     log.info(f"[RssTaskService]{match_msg}")
                     continue
                 if service.rss_repo.check_rss_history(
-                    type_str=MediaTypeMapper.to_tmdb(media_info.type),  # type: ignore[reportArgumentType]
+                    type_str=ProviderMediaTypeMapper.to_tmdb(media_info.type),  # type: ignore[reportArgumentType]
                     name=media_info.title,
                     year=media_info.year,
                     season=media_info.get_season_string(),

@@ -4,7 +4,7 @@ import os
 
 import log
 from app.core.constants import RMT_FAVTYPE, RMT_MEDIAEXT
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.transfer.path_resolver import safe_category_name
 from app.utils import PathUtils
 
@@ -79,7 +79,7 @@ class MediaExistenceChecker:
         ret_dir_path = None
         ret_file_path = None
 
-        if media.type == MediaType.MOVIE:
+        if media.type == ProviderMediaType.MOVIE:
             dir_name, file_name = self._path_resolver.get_movie_dest_path(media, self._media)
             category = safe_category_name(getattr(media, "category", ""))
             candidates = self._layout_dirs(
@@ -107,7 +107,7 @@ class MediaExistenceChecker:
             # 与 TransferPathResolver.get_dest_path_by_info 使用同一套布局开关。
             category = safe_category_name(getattr(media, "category", ""))
             add_category = bool(self._path_resolver.tv_category_flag)
-            if media.type == MediaType.ANIME:
+            if media.type == ProviderMediaType.ANIME:
                 add_category = bool(self._path_resolver.anime_category_flag)
             if media.get_season_list():
                 for media_path in self._layout_dirs(media_dest, dir_name, category, add_category):
@@ -134,7 +134,7 @@ class MediaExistenceChecker:
         根据媒体库目录结构，判断媒体是否存在.
         :return: 电影返回已存在的电影清单，剧集返回不存在的集的清单.
         """
-        if meta_info_obj.type == MediaType.MOVIE:
+        if meta_info_obj.type == ProviderMediaType.MOVIE:
             dir_name, _ = self._path_resolver.get_movie_dest_path(meta_info_obj, self._media)
             backends = self._path_resolver._movie_backend or []
             for idx, dest_path in enumerate(self._path_resolver.movie_path):
@@ -153,7 +153,7 @@ class MediaExistenceChecker:
             dir_name, season_name, _ = self._path_resolver.get_tv_dest_path(meta_info_obj, self._media)
             if not season or not total_num:
                 return []
-            if meta_info_obj.type == MediaType.ANIME:
+            if meta_info_obj.type == ProviderMediaType.ANIME:
                 dest_paths = self._path_resolver.anime_path
                 category_flag = self._path_resolver.anime_category_flag
                 backends = self._path_resolver._anime_backend or []

@@ -22,7 +22,7 @@ from app.domain.enums import ProgressKey, SearchType, channel_key, channel_name
 from app.domain.episode_utils import extract_episode_number
 from app.domain.interfaces.download_repo import IDownloadHistoryRepository
 from app.domain.interfaces.search_repo import ISearchRepository
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import SEARCH_START
@@ -276,7 +276,7 @@ class SearchResultProcessor:
             if episode_count > 1:
                 collection_priority = 2
             elif (
-                getattr(x, "type", None) in (MediaType.TV, MediaType.ANIME)
+                getattr(x, "type", None) in (ProviderMediaType.SERIES, ProviderMediaType.ANIME)
                 and getattr(x, "begin_season", None) is not None
                 and getattr(x, "begin_episode", None) is None
             ):
@@ -322,7 +322,7 @@ class SearchResultProcessor:
     def fill_missing_episode(media_item) -> None:
         """种子标题未带季集时从原始标题补全单集；合集/多集资源保持原样."""
         if (
-            getattr(media_item, "type", None) == MediaType.MOVIE
+            getattr(media_item, "type", None) == ProviderMediaType.MOVIE
             or getattr(media_item, "begin_episode", None) is not None
         ):
             return
@@ -600,7 +600,7 @@ class Searcher:
         log.info(f"[Searcher]实际下载了 {len(download_items)} 个资源")
         # 电影没有"缺失集"概念：剩余候选只是同一部片的其它站点资源，不代表未完成。
         # 返回已下载项，避免订阅/搜索链路误判为"无结果"而重复下载或重复建订阅。
-        if left_medias and getattr(media_info, "type", None) != MediaType.MOVIE:
+        if left_medias and getattr(media_info, "type", None) != ProviderMediaType.MOVIE:
             return None, no_exists, len(media_list), len(download_items)
         return download_items[0], no_exists, len(media_list), len(download_items)
 

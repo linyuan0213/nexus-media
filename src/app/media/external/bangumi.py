@@ -4,7 +4,7 @@ from datetime import datetime
 import log
 from app.core.settings import settings
 from app.domain import media_metadata
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
@@ -160,7 +160,7 @@ class Bangumi:
             "title": title,
             "year": air_date[:4] if air_date else "",
             "type": "tv",
-            "media_type": MediaType.TV.value,
+            "media_type": ProviderMediaType.SERIES.value,
             "vote": score,
             "image": image,
             "overview": summary,

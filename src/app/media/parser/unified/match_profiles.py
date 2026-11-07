@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 from ...metadata.models import Detection, MatchResult
 from ...metadata.registry import MetadataRegistry
@@ -12,7 +12,7 @@ from .types import ParseContext
 
 
 class _BuiltinMatchProfile:
-    base_media_type = MediaType.TV
+    base_media_type = ProviderMediaType.SERIES
     content_profile = "default"
     priority = 10
 
@@ -31,19 +31,19 @@ class _BuiltinMatchProfile:
 
 class MovieMatchProfile(_BuiltinMatchProfile):
     key = "movie"
-    base_media_type = MediaType.MOVIE
+    base_media_type = ProviderMediaType.MOVIE
     priority = 10
 
 
 class TvMatchProfile(_BuiltinMatchProfile):
     key = "tv"
-    base_media_type = MediaType.TV
+    base_media_type = ProviderMediaType.SERIES
     priority = 20
 
 
 class AnimeMatchProfile(_BuiltinMatchProfile):
     key = "anime"
-    base_media_type = MediaType.ANIME
+    base_media_type = ProviderMediaType.ANIME
     content_profile = "anime"
     priority = 30
 

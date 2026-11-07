@@ -20,7 +20,7 @@ from app.db.models.subscribe import SubscribeMovies, SubscribeTvs
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.legacy import parse_legacy_ref
 from app.utils import JsonUtils
 
@@ -253,19 +253,19 @@ class MultiSourceMigrationService(BaseRepository):
         return True, created
 
     @staticmethod
-    def _media_type(row: Any) -> MediaType:
+    def _media_type(row: Any) -> ProviderMediaType:
         table = str(getattr(row, "__tablename__", "") or "").upper()
         if "SUBSCRIBE_TVS" in table:
             profile = str(getattr(row, "CONTENT_PROFILE", "") or "").strip().lower()
-            return MediaType.ANIME if profile == "anime" else MediaType.TV
+            return ProviderMediaType.ANIME if profile == "anime" else ProviderMediaType.SERIES
         if "SUBSCRIBE_MOVIES" in table:
-            return MediaType.MOVIE
+            return ProviderMediaType.MOVIE
         raw = str(getattr(row, "TYPE", "") or "").strip().lower()
         if raw in {"tv", "series", "show"} or "剧" in raw or "综艺" in raw:
-            return MediaType.TV
+            return ProviderMediaType.SERIES
         if raw in {"anime", "动画", "动漫"} or "动漫" in raw:
-            return MediaType.ANIME
-        return MediaType.MOVIE
+            return ProviderMediaType.ANIME
+        return ProviderMediaType.MOVIE
 
     @staticmethod
     def _content_profile(row: Any, provider: str) -> str:

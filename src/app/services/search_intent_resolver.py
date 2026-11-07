@@ -2,13 +2,13 @@
 
 import log
 from app.domain.interfaces.intent import IntentResolver, SearchIntent
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.utils import StringUtils
 
 _MEDIA_TYPE_STR = {
-    MediaType.MOVIE: "movie",
-    MediaType.TV: "tv",
-    MediaType.ANIME: "anime",
+    ProviderMediaType.MOVIE: "movie",
+    ProviderMediaType.SERIES: "tv",
+    ProviderMediaType.ANIME: "anime",
 }
 
 

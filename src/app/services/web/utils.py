@@ -2,8 +2,7 @@ from typing import Any
 
 import cn2an
 
-from app.domain.media_types import media_type_registry
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType, media_type_registry
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.security import generate_password_hash
@@ -99,9 +98,11 @@ class WebUtils:
         title = str(record.get("title") or "").strip()
         if not title:
             return None
-        resolved_type = MediaType.from_string(str(record.get("media_type") or ""))
-        if resolved_type == MediaType.UNKNOWN:
-            resolved_type = media_type or (MediaType.TV if provider == "bangumi" else MediaType.MOVIE)
+        resolved_type = ProviderMediaType.from_value(str(record.get("media_type") or ""))
+        if resolved_type == ProviderMediaType.UNKNOWN:
+            resolved_type = media_type or (
+                ProviderMediaType.SERIES if provider == "bangumi" else ProviderMediaType.MOVIE
+            )
         info = meta_info(title=title, mtype=resolved_type)
         info.title = title
         has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in title)
@@ -131,7 +132,7 @@ class WebUtils:
                 if str(value or "").isdigit():
                     info.total_episodes = int(str(value))
                     break
-        if resolved_type in (MediaType.TV, MediaType.ANIME) and not info.begin_season:
+        if resolved_type in (ProviderMediaType.SERIES, ProviderMediaType.ANIME) and not info.begin_season:
             info.begin_season = 1
         images = record.get("images") or {}
         posters = images.get("poster") or []
@@ -154,10 +155,10 @@ class WebUtils:
             return self._media_info_from_record(record, "douban", douban_id, mtype) if record else None
         if raw_id.startswith("BG:"):
             bangumi_id = raw_id[3:]
-            record = self._lookup_record("bangumi", bangumi_id, mtype or MediaType.TV)
+            record = self._lookup_record("bangumi", bangumi_id, mtype or ProviderMediaType.SERIES)
             if not record:
                 return None
-            return self._media_info_from_record(record, "bangumi", bangumi_id, mtype or MediaType.TV)
+            return self._media_info_from_record(record, "bangumi", bangumi_id, mtype or ProviderMediaType.SERIES)
         if ":" in raw_id:
             provider_key, external_id = raw_id.split(":", 1)
             provider_key = provider_key.strip().lower()
@@ -171,7 +172,7 @@ class WebUtils:
         info = self._metadata_gateway.details("tmdb", mediaid, media_type=mtype, append_to_response="all")
         if not info:
             return None
-        title = str(info.get("title") if mtype == MediaType.MOVIE else info.get("name") or "")
+        title = str(info.get("title") if mtype == ProviderMediaType.MOVIE else info.get("name") or "")
         media_info = meta_info(title=title)
         media_info.set_provider_data(info)
         return media_info
@@ -206,7 +207,7 @@ class WebUtils:
             for tmdbinfo in tmdbinfos:
                 tmp_info = meta_info(title=keyword)
                 tmp_info.set_provider_data(tmdbinfo)
-                if tmp_info.type == MediaType.MOVIE and (season_num or episode_num):
+                if tmp_info.type == ProviderMediaType.MOVIE and (season_num or episode_num):
                     continue
                 if tmp_info.begin_season:
                     tmp_info.title = "{} 第{}季".format(tmp_info.title, cn2an.an2cn(mi.begin_season or 0, mode="low"))
@@ -238,8 +239,8 @@ class WebUtils:
                 title = str(hit.get("title") or "").strip()
                 if not title:
                     continue
-                hit_type = MediaType.from_string(str(hit.get("media_type") or ""))
-                info = meta_info(title=title, mtype=hit_type if hit_type != MediaType.UNKNOWN else mtype)
+                hit_type = ProviderMediaType.from_value(str(hit.get("media_type") or ""))
+                info = meta_info(title=title, mtype=hit_type if hit_type != ProviderMediaType.UNKNOWN else mtype)
                 info.title = title
                 info.cn_name = title
                 info.year = str(hit.get("year") or "")

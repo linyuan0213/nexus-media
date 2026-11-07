@@ -80,9 +80,11 @@ def merge() -> dict[str, int]:
                 continue
             scored = []
             for identity in identities:
-                rows = db.query(func.count(MediaLifecycle.ID)).filter(
-                    MediaLifecycle.IDENTITY_ID == identity.IDENTITY_ID
-                ).scalar()
+                rows = (
+                    db.query(func.count(MediaLifecycle.ID))
+                    .filter(MediaLifecycle.IDENTITY_ID == identity.IDENTITY_ID)
+                    .scalar()
+                )
                 scored.append((int(rows or 0), identity.CREATED_AT or datetime.min, identity))
             scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
             target = scored[0][2]
@@ -90,9 +92,7 @@ def merge() -> dict[str, int]:
             for _, _, source in scored[1:]:
                 source_id = source.IDENTITY_ID
                 target_id = target.IDENTITY_ID
-                for source_ref in (
-                    db.query(MediaExternalRef).filter(MediaExternalRef.IDENTITY_ID == source_id).all()
-                ):
+                for source_ref in db.query(MediaExternalRef).filter(MediaExternalRef.IDENTITY_ID == source_id).all():
                     exists = (
                         db.query(MediaExternalRef.ID)
                         .filter(
@@ -135,9 +135,7 @@ def merge() -> dict[str, int]:
                 )
                 moved, deleted = _merge_snapshots(db, source_id, target_id)
                 counts["rows"] += moved + deleted
-                db.query(MediaIdentity).filter(MediaIdentity.IDENTITY_ID == source_id).delete(
-                    synchronize_session=False
-                )
+                db.query(MediaIdentity).filter(MediaIdentity.IDENTITY_ID == source_id).delete(synchronize_session=False)
                 counts["identities"] += 1
         db.commit()
     return counts

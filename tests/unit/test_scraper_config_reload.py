@@ -42,9 +42,9 @@ class TestScraperConfigHotReload:
         }
         # 再次调用应读取到新配置并继续执行到 _scrape_tv
         media.type = MagicMock()
-        from app.domain.mediatypes import MediaType
+        from app.domain.media_types import ProviderMediaType
 
-        media.type = MediaType.TV
+        media.type = ProviderMediaType.SERIES
         scraper._scrape_tv = MagicMock()
         scraper.gen_scraper_files(media=media, dir_path="/tmp", file_name="f", file_ext=".mkv")
         scraper._scrape_tv.assert_called_once()

@@ -19,11 +19,7 @@ def repair() -> dict[str, int]:
             for row in db.query(model).all():
                 counts["scanned"] += 1
                 old_id = str(row.IDENTITY_ID or "")
-                has_ref = bool(
-                    db.query(MediaExternalRef.ID)
-                    .filter(MediaExternalRef.IDENTITY_ID == old_id)
-                    .first()
-                )
+                has_ref = bool(db.query(MediaExternalRef.ID).filter(MediaExternalRef.IDENTITY_ID == old_id).first())
                 if old_id and old_id != "preview" and old_id in canonical and has_ref:
                     continue
                 resolved = resolver.resolve_values(

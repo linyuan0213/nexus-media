@@ -3,8 +3,8 @@
 from typing import Any, cast
 from unittest.mock import MagicMock
 
+from app.domain.media_types import ProviderMediaType
 from app.domain.media_utils import check_media_exists
-from app.domain.mediatypes import MediaType
 from app.services.subscribe.management.query_service import _resolve_subscribe_type
 from app.services.subscribe.strategies.base_search import BaseSearchStrategy
 
@@ -108,7 +108,7 @@ class TestGetMediaInfoReidentify:
         gateway.cached_details.return_value = None
         strategy._metadata_gateway = gateway
 
-        info = strategy._get_media_info(258348, "克雷瓦提斯", "2025", MediaType.TV)
+        info = strategy._get_media_info(258348, "克雷瓦提斯", "2025", ProviderMediaType.SERIES)
 
         assert info is identified
         strategy._media_service.identify.assert_called_once()
@@ -259,14 +259,14 @@ class TestSubscribeAliasMatch:
             {"20": {"tmdbid": "287028"}},
         )
 
-        assert svc.get_subscribe_id_by_alias("画完这个再去死", MediaType.TV) == 20
+        assert svc.get_subscribe_id_by_alias("画完这个再去死", ProviderMediaType.SERIES) == 20
         # 二次查询命中缓存，不再请求 TMDB 别名
-        assert svc.get_subscribe_id_by_alias("描绘直至生命尽头", MediaType.TV) == 20
+        assert svc.get_subscribe_id_by_alias("描绘直至生命尽头", ProviderMediaType.SERIES) == 20
         assert media.all_names.call_count == 1
 
     def test_alias_returns_none_when_unknown(self):
         svc, _media = self._service({}, {"20": {"tmdbid": "287028"}})
-        assert svc.get_subscribe_id_by_alias("不存在的别名", MediaType.TV) is None
+        assert svc.get_subscribe_id_by_alias("不存在的别名", ProviderMediaType.SERIES) is None
 
 
 class TestAliasFallbackInCheckMediaExists:
@@ -314,4 +314,4 @@ class TestCheckMediaExistsByAnchor:
 
         assert fav == "1"
         assert rssid == "77"
-        subscribe.get_subscribe_by_anchor.assert_called_once_with("douban", "37923549", MediaType.TV)
+        subscribe.get_subscribe_by_anchor.assert_called_once_with("douban", "37923549", ProviderMediaType.SERIES)

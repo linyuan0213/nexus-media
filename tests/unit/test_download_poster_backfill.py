@@ -36,17 +36,16 @@ def test_downloading_poster_backfills_from_subscription():
 
 
 def test_task_media_type_preserves_anime():
-    from app.domain.mediatypes import MediaType
+    from app.domain.media_types import ProviderMediaType
     from app.services.download_service import DownloadService
 
-    assert DownloadService._task_media_type(type("T", (), {"media_type": "anime"})()) == MediaType.ANIME
-    assert DownloadService._task_media_type(type("T", (), {"media_type": "tv"})()) == MediaType.TV
-    assert DownloadService._task_media_type(type("T", (), {"media_type": "movie"})()) == MediaType.MOVIE
+    assert DownloadService._task_media_type(type("T", (), {"media_type": "anime"})()) == ProviderMediaType.ANIME
+    assert DownloadService._task_media_type(type("T", (), {"media_type": "tv"})()) == ProviderMediaType.SERIES
+    assert DownloadService._task_media_type(type("T", (), {"media_type": "movie"})()) == ProviderMediaType.MOVIE
 
 
 def test_task_media_type_uses_plugin_descriptor():
-    from app.domain.media_types import MediaKind, MediaTypeDescriptor, media_type_registry
-    from app.domain.mediatypes import MediaType
+    from app.domain.media_types import MediaKind, MediaTypeDescriptor, ProviderMediaType, media_type_registry
     from app.services.download_service import DownloadService
 
     descriptor = MediaTypeDescriptor(
@@ -58,14 +57,14 @@ def test_task_media_type_uses_plugin_descriptor():
     media_type_registry.register(descriptor)
     try:
         task = type("T", (), {"media_type": "plugin-type", "content_profile": "test_profile"})()
-        assert DownloadService._task_media_type(task) == MediaType.TV
+        assert DownloadService._task_media_type(task) == ProviderMediaType.SERIES
     finally:
         media_type_registry.unregister_namespace("test")
 
 
 def test_task_media_type_keeps_unknown():
-    from app.domain.mediatypes import MediaType
+    from app.domain.media_types import ProviderMediaType
     from app.services.download_service import DownloadService
 
     task = type("T", (), {"media_type": "mystery", "content_profile": "default"})()
-    assert DownloadService._task_media_type(task) == MediaType.UNKNOWN
+    assert DownloadService._task_media_type(task) == ProviderMediaType.UNKNOWN

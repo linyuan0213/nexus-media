@@ -6,7 +6,7 @@ Emby删除媒体后同步删除历史记录或源文件
 import os
 import time
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.plugin_framework.context import PluginContext
 from app.services.transfer.filetransfer_service import FileTransferService
 
@@ -257,7 +257,7 @@ class MediaSyncDelPlugin:
                 )
             else:
                 image_url = self.ctx.media_service.get_tmdb_backdrop(
-                    mtype=MediaType.MOVIE if media_type == "Movie" else MediaType.TV, tmdbid=tmdb_id
+                    mtype=ProviderMediaType.MOVIE if media_type == "Movie" else ProviderMediaType.SERIES, tmdbid=tmdb_id
                 )
             now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
             self.ctx.notify(

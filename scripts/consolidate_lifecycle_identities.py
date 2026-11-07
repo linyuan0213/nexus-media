@@ -199,9 +199,7 @@ def consolidate(apply: bool) -> dict[str, int]:
         _merge_code_groups(db, apply, counts)
         if apply:
             db.commit()
-            counts["identities_after"] = (
-                db.query(MediaLifecycle.IDENTITY_ID).distinct().count()
-            )
+            counts["identities_after"] = db.query(MediaLifecycle.IDENTITY_ID).distinct().count()
     return counts
 
 

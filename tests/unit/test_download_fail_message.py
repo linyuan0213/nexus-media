@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.message.core.message_builder import MessageBuilder, _fail_notify_cache, _source_provider
 
@@ -36,7 +36,7 @@ class TestDownloadFailMessage:
         item = _Item(
             title="少女怪兽焦糖味",
             year="2026",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             begin_season=1,
             begin_episode=3,
             end_episode=3,
@@ -58,7 +58,7 @@ class TestDownloadFailMessage:
         item = _Item(
             title="某剧",
             year="2026",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             begin_season=1,
             site="观众",
             org_string="某剧 S01 全12集",
@@ -75,7 +75,7 @@ class TestDownloadFailMessage:
         item = _Item(
             title="某剧",
             year="2026",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             begin_season=1,
             begin_episode=5,
             end_episode=5,
@@ -100,7 +100,7 @@ def test_subscription_profile_is_propagated_to_item(builder, monkeypatch):
         id=9,
     )
     monkeypatch.setattr(builder, "_subscription_context", lambda item: subscription)
-    item = _Item(title="魔法少女", type=MediaType.TV, content_profile="default")
+    item = _Item(title="魔法少女", type=ProviderMediaType.SERIES, content_profile="default")
 
     enriched = builder._enrich_from_subscription(item)
 
@@ -124,7 +124,7 @@ def test_fail_message_inherits_anime_profile(builder, monkeypatch):
     item = _Item(
         title="魔法少女",
         year="2026",
-        type=MediaType.TV,
+        type=ProviderMediaType.SERIES,
         begin_season=1,
         begin_episode=1,
         site="动漫花园",
@@ -151,7 +151,7 @@ def test_subscription_note_backfills_poster_and_source(builder, monkeypatch):
         id=9,
     )
     monkeypatch.setattr(builder, "_subscription_context", lambda item: subscription)
-    item = _Item(title="ABC-123", type=MediaType.MOVIE, content_profile="default")
+    item = _Item(title="ABC-123", type=ProviderMediaType.MOVIE, content_profile="default")
 
     builder._enrich_from_subscription(item)
 

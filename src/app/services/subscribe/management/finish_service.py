@@ -5,8 +5,8 @@ from typing import Any
 
 import log
 from app.domain.lifecycle import LifecycleStatus
-from app.domain.media_type_utils import MediaTypeMapper
-from app.domain.mediatypes import MediaType
+from app.domain.media_type_utils import ProviderMediaTypeMapper
+from app.domain.media_types import ProviderMediaType
 from app.events import Event
 from app.events.constants import SUBSCRIBE_FINISHED
 from app.events.payloads import SubscribeFinishedPayload
@@ -110,15 +110,15 @@ class SubscribeFinishService:
                 continue
             log.info(f"[Subscribe]联动完成兄弟订阅 rssid={sid}（同一媒体共享下载）")
             _record_subscription_completed(row, int(sid), "tv")
-            delete_subscribe_fn(mtype=MediaType.TV, rssid=sid)
+            delete_subscribe_fn(mtype=ProviderMediaType.SERIES, rssid=sid)
 
     def finish_rss_subscribe(self, rssid: int | None, media: Any, delete_subscribe_fn) -> None:
         """完成订阅"""
         if not rssid or not media:
             return
-        rtype = MediaTypeMapper.to_tmdb(media.type)
+        rtype = ProviderMediaTypeMapper.to_tmdb(media.type)
         over_edition = False
-        if media.type == MediaType.MOVIE:
+        if media.type == ProviderMediaType.MOVIE:
             rss = self._movie_repo.get_all(rssid=rssid)
             if not rss:
                 return
@@ -144,7 +144,7 @@ class SubscribeFinishService:
                 **_history_scope(row),
             )
             _record_subscription_completed(row, rssid, "movie")
-            delete_subscribe_fn(mtype=MediaType.MOVIE, rssid=rssid)
+            delete_subscribe_fn(mtype=ProviderMediaType.MOVIE, rssid=rssid)
         else:
             rss = self._tv_repo.get_all(rssid=rssid)
             if not rss:
@@ -178,13 +178,13 @@ class SubscribeFinishService:
                 **_history_scope(row),
             )
             _record_subscription_completed(row, rssid, "tv")
-            delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
+            delete_subscribe_fn(mtype=ProviderMediaType.SERIES, rssid=rssid)
             self._finish_sibling_tvs(row, media, delete_subscribe_fn)
 
         # 仅洗版订阅完成后清理下载历史（允许后续升级重下）；
         # 普通订阅保留下载历史，避免重新订阅时重复下载已完成的剧集
-        if self._download_repo and (media.type == MediaType.MOVIE or over_edition):
-            season_prefix = media.get_season_string() if media.type != MediaType.MOVIE else None
+        if self._download_repo and (media.type == ProviderMediaType.MOVIE or over_edition):
+            season_prefix = media.get_season_string() if media.type != ProviderMediaType.MOVIE else None
             identity_id = str(getattr(row, "IDENTITY_ID", "") or "")
             anchor_provider = str(getattr(row, "ANCHOR_PROVIDER", "") or "")
             anchor_external = str(getattr(row, "ANCHOR_EXTERNAL_ID", "") or "")
@@ -209,7 +209,7 @@ class SubscribeFinishService:
         )
         self._message.send_rss_finished_message(media_info=media, owner_user_id=owner_user_id)
 
-    def finalize_tv_by_rssid(self, rssid: int | None, mtype: MediaType | None, delete_subscribe_fn) -> None:
+    def finalize_tv_by_rssid(self, rssid: int | None, mtype: ProviderMediaType | None, delete_subscribe_fn) -> None:
         """转移确认后按订阅行定稿：写历史、删订阅、联动兄弟、发通知。
 
         与 finish_rss_subscribe 不同，无需完整 media 对象：转移事件仅携带 tmdb/季/集，
@@ -229,11 +229,11 @@ class SubscribeFinishService:
             if not rss:
                 return
             row = rss[0]
-            resolved_type = mtype or MediaType.TV
+            resolved_type = mtype or ProviderMediaType.SERIES
             row_profile = str(getattr(row, "CONTENT_PROFILE", "") or "").strip()
-            if row_profile == "anime" and resolved_type != MediaType.ANIME:
-                resolved_type = MediaType.ANIME
-            elif resolved_type == MediaType.ANIME and row_profile in ("", "default"):
+            if row_profile == "anime" and resolved_type != ProviderMediaType.ANIME:
+                resolved_type = ProviderMediaType.ANIME
+            elif resolved_type == ProviderMediaType.ANIME and row_profile in ("", "default"):
                 row_profile = "anime"
             media = MediaInfo(
                 type=resolved_type,
@@ -257,11 +257,14 @@ class SubscribeFinishService:
             media.total_episodes = int(row.TOTAL or 0)
             total = row.TOTAL or row.TOTAL_EP
             scope = _history_scope(row)
-            if resolved_type == MediaType.ANIME and str(scope.get("content_profile") or "").strip() in ("", "default"):
+            if resolved_type == ProviderMediaType.ANIME and str(scope.get("content_profile") or "").strip() in (
+                "",
+                "default",
+            ):
                 scope["content_profile"] = "anime"
             self._history_repo.upsert(
                 rssid=rssid,
-                rtype=MediaTypeMapper.to_tmdb(resolved_type),
+                rtype=ProviderMediaTypeMapper.to_tmdb(resolved_type),
                 name=row.NAME,
                 year=row.YEAR,
                 season=row.SEASON,
@@ -274,7 +277,7 @@ class SubscribeFinishService:
                 **scope,
             )
             _record_subscription_completed(row, rssid, resolved_type.value)
-            delete_subscribe_fn(mtype=MediaType.TV, rssid=rssid)
+            delete_subscribe_fn(mtype=ProviderMediaType.SERIES, rssid=rssid)
             self._finish_sibling_tvs(row, media, delete_subscribe_fn)
             if self._download_repo and media.over_edition:
                 identity_id = str(getattr(row, "IDENTITY_ID", "") or "")
@@ -322,7 +325,7 @@ class SubscribeFinishService:
             # 删除订阅前固化通知/历史所需字段（尤其是 IMAGE 海报）。
             image = str(getattr(row, "IMAGE", "") or "")
             media = MediaInfo(
-                type=MediaType.MOVIE,
+                type=ProviderMediaType.MOVIE,
                 tmdb_id=str(row.TMDBID or "") if _row_ref(row).startswith("tmdb:") else "",
             )
             media.title = row.NAME
@@ -338,7 +341,7 @@ class SubscribeFinishService:
             media.metadata_ref = getattr(row, "METADATA_REF", None)
             self._history_repo.upsert(
                 rssid=rssid,
-                rtype=MediaTypeMapper.to_tmdb(MediaType.MOVIE),
+                rtype=ProviderMediaTypeMapper.to_tmdb(ProviderMediaType.MOVIE),
                 name=row.NAME,
                 year=row.YEAR,
                 tmdbid=row.TMDBID if _row_ref(row).startswith("tmdb:") else "",
@@ -348,7 +351,7 @@ class SubscribeFinishService:
                 **_history_scope(row),
             )
             _record_subscription_completed(row, rssid, "movie")
-            delete_subscribe_fn(mtype=MediaType.MOVIE, rssid=rssid)
+            delete_subscribe_fn(mtype=ProviderMediaType.MOVIE, rssid=rssid)
             # 仅洗版电影完成后清理下载历史（允许后续升级重下），优先按多元身份清理。
             if self._download_repo and over_edition:
                 identity_id = str(getattr(row, "IDENTITY_ID", "") or "")

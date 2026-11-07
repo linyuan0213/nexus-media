@@ -15,7 +15,7 @@ from app.db.models import SYNCHISTORY, TRANSFERBLACKLIST, TRANSFERHISTORY, TRANS
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.episode_progress import contiguous_episodes
 from app.db.repositories.identity_resolver import IdentityResolver
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.schemas.media import TransferMediaDTO
 from app.utils.string_utils import StringUtils
 
@@ -499,7 +499,7 @@ class TransferRepository(BaseRepository):
         with self.session() as db:
             date_str = func.substr(TRANSFERHISTORY.DATE, 1, 10).label("date_str")
             query = db.query(date_str, func.count(func.distinct(TRANSFERHISTORY.TMDBID))).filter(
-                TRANSFERHISTORY.TYPE == MediaType.TV.value,
+                TRANSFERHISTORY.TYPE == ProviderMediaType.SERIES.value,
                 TRANSFERHISTORY.TMDBID > 0,
             )
             if days > 0:

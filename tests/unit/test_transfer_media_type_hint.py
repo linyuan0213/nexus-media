@@ -2,12 +2,12 @@
 
 from types import SimpleNamespace
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.transfer.filetransfer_service import FileTransferService
 
 
 def test_download_record_type_overrides_parser_type():
-    media = SimpleNamespace(type=MediaType.TV, anchor_provider=None, content_profile=None, poster_path=None)
+    media = SimpleNamespace(type=ProviderMediaType.SERIES, anchor_provider=None, content_profile=None, poster_path=None)
     record = SimpleNamespace(
         TYPE="movie",
         ANCHOR_PROVIDER="content_id",
@@ -18,12 +18,12 @@ def test_download_record_type_overrides_parser_type():
         TITLE="Demo title",
     )
     FileTransferService._apply_download_record_hint(media, record)
-    assert media.type == MediaType.MOVIE
+    assert media.type == ProviderMediaType.MOVIE
 
 
 def test_anime_profile_overrides_legacy_tv_record_type():
     """历史动漫下载记录 TYPE=tv 时，按动画画像纠正为动漫，避免进电视剧库."""
-    media = SimpleNamespace(type=MediaType.TV, anchor_provider=None, content_profile=None, poster_path=None)
+    media = SimpleNamespace(type=ProviderMediaType.SERIES, anchor_provider=None, content_profile=None, poster_path=None)
     record = SimpleNamespace(
         TYPE="tv",
         ANCHOR_PROVIDER="bangumi",
@@ -34,4 +34,4 @@ def test_anime_profile_overrides_legacy_tv_record_type():
         TITLE="Demo anime",
     )
     FileTransferService._apply_download_record_hint(media, record)
-    assert media.type == MediaType.ANIME
+    assert media.type == ProviderMediaType.ANIME

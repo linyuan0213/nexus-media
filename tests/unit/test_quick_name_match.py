@@ -2,19 +2,19 @@
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.indexer.core.result_filter import ResultFilter
 from app.media import meta_info
 
 
 def _make_expected():
     """构造预期媒体 — 攻壳机动队 (2026)"""
-    mi = meta_info(title="攻壳机动队 2026", mtype=MediaType.ANIME)
+    mi = meta_info(title="攻壳机动队 2026", mtype=ProviderMediaType.ANIME)
     mi.cn_name = "攻壳机动队"
     mi.en_name = "THE GHOST IN THE SHELL"
     mi.title = "攻壳机动队"
     mi.year = "2026"
-    mi.type = MediaType.ANIME
+    mi.type = ProviderMediaType.ANIME
     mi.tmdb_id = 255358
     return mi
 
@@ -304,7 +304,7 @@ def test_tag_prefix_contamination(expected, cn_name, should_match, label):
         cn_name=cn_name,
         en_name="Ghost in the Shell Stand Alone Complex",
         year=None,
-        type=MediaType.TV,
+        type=ProviderMediaType.SERIES,
         org_string="Ghost in the Shell Stand Alone Complex S04 1080p NF WEB-DL",
         rev_string=None,
     )

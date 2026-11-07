@@ -14,7 +14,7 @@ from app.db.models.media_identity import MediaIdentity, MediaMetadataSnapshot
 from app.db.models.subscribe import SubscribeMovies, SubscribeTvs
 from app.db.repositories.base_repository import BaseRepository
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.aliases import select_aliases
 from app.media.metadata.gateway import MetadataContext
 from app.media.metadata.models import MediaMetadata
@@ -115,7 +115,7 @@ def main() -> int:
                 gateway.lookup(
                     str(ref.PROVIDER),
                     str(ref.EXTERNAL_ID),
-                    media_type=MediaType.from_string(str(getattr(ref, "MEDIA_TYPE", "") or identity.MEDIA_TYPE)),
+                    media_type=ProviderMediaType.from_value(str(getattr(ref, "MEDIA_TYPE", "") or identity.MEDIA_TYPE)),
                     context=MetadataContext(
                         purpose="alias-backfill",
                         allow_private=True,

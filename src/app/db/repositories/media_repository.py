@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 
 @dataclass
@@ -9,7 +9,7 @@ class MediaRecord:
     """已识别媒体记录"""
 
     tmdbid: str
-    type: MediaType
+    type: ProviderMediaType
     title: str = ""
     year: str = ""
     season: int | None = None
@@ -40,7 +40,7 @@ class MediaInfoRepository:
     def _to_record(entity) -> MediaRecord | None:
         if not entity or not entity.tmdb_id:
             return None
-        mtype = MediaType.MOVIE if entity.type == MediaType.MOVIE.value else MediaType.TV
+        mtype = ProviderMediaType.MOVIE if entity.type == ProviderMediaType.MOVIE.value else ProviderMediaType.SERIES
         return MediaRecord(
             tmdbid=str(entity.tmdb_id),
             type=mtype,

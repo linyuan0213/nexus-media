@@ -14,7 +14,7 @@ from app.db.repositories.config_repo_adapter import MediaServerRepositoryAdapter
 from app.db.repositories.media_library_route_repo_adapter import MediaLibraryRouteRepositoryAdapter
 from app.db.repositories.media_sync_repo_adapter import MediaSyncRepositoryAdapter
 from app.domain.enums import ProgressKey, SystemConfigKey
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.message_queue.base import MessageQueue
 from app.infrastructure.progress import ProgressTracker
@@ -512,10 +512,10 @@ class MediaServer:
                     # 更新进度
                     seasoninfo = []
                     total_count += 1
-                    item_type = MediaType.from_string(item.get("type") or "")
-                    if item_type == MediaType.MOVIE:
+                    item_type = ProviderMediaType.from_value(item.get("type") or "")
+                    if item_type == ProviderMediaType.MOVIE:
                         movie_count += 1
-                    elif item_type == MediaType.TV:
+                    elif item_type == ProviderMediaType.SERIES:
                         tv_count += 1
                         # 查询剧集信息
                         seasoninfo = self.get_tv_episodes(item.get("id"), server_id=server_id)
@@ -644,7 +644,7 @@ class MediaServer:
             return None
 
         # 剧集没有季时默认为第1季
-        if mtype != MediaType.MOVIE and not season:
+        if mtype != ProviderMediaType.MOVIE and not season:
             season = 1
         if season:
             # 匹配剧集是否存在

@@ -8,8 +8,7 @@ from typing import Any
 
 import log
 from app.db.repositories.rbac.rbac_user_repo_adapter import RBACUserRepositoryAdapter
-from app.domain.media_types import media_type_registry
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType, media_type_registry
 from app.media.metadata.registry import registry as metadata_registry
 from app.message.template_registry import message_template_registry
 from app.schemas.auth import SUPERADMIN_ROLE_CODE
@@ -520,7 +519,7 @@ class MessageBuilder:
 
     def send_subscribe_success_message(self, in_from: Enum, media_info) -> None:
         self._enrich_from_subscription(media_info)
-        if media_info.type == MediaType.MOVIE:
+        if media_info.type == ProviderMediaType.MOVIE:
             msg_title = f"📌 {media_info.get_title_string()} 已添加订阅"
         else:
             msg_title = f"📌 {media_info.get_title_string()} {media_info.get_season_string()} 已添加订阅"
@@ -550,7 +549,7 @@ class MessageBuilder:
                 msg_title,
                 msg_str,
                 image=media_info.get_message_image(),
-                url="movie_rss" if media_info.type == MediaType.MOVIE else "tv_rss",
+                url="movie_rss" if media_info.type == ProviderMediaType.MOVIE else "tv_rss",
                 msg_type="rss_added",
                 variables=variables,
                 template_engine=self._template_engine,
@@ -564,7 +563,7 @@ class MessageBuilder:
                     title=msg_title,
                     text=msg_str,
                     image=media_info.get_message_image(),
-                    url="movie_rss" if media_info.type == MediaType.MOVIE else "tv_rss",
+                    url="movie_rss" if media_info.type == ProviderMediaType.MOVIE else "tv_rss",
                     msg_type="rss_added",
                     variables=variables,
                     template_engine=self._template_engine,
@@ -787,12 +786,12 @@ class MessageBuilder:
         if not _webhook_actions.get(event_info.get("event") or ""):
             return
         item_type = event_info.get("item_type") or ""
-        parsed = MediaType.from_string(item_type)
+        parsed = ProviderMediaType.from_value(item_type)
         action = _webhook_actions.get(event_info.get("event") or "<unknown>")
-        if parsed in (MediaType.TV, MediaType.ANIME) or item_type == "show":
-            message_title = f"{action}{MediaType.TV.display_name} {event_info.get('item_name')}"
-        elif parsed == MediaType.MOVIE:
-            message_title = f"{action}{MediaType.MOVIE.display_name} {event_info.get('item_name')}"
+        if parsed in (ProviderMediaType.SERIES, ProviderMediaType.ANIME) or item_type == "show":
+            message_title = f"{action}{ProviderMediaType.SERIES.display_name} {event_info.get('item_name')}"
+        elif parsed == ProviderMediaType.MOVIE:
+            message_title = f"{action}{ProviderMediaType.MOVIE.display_name} {event_info.get('item_name')}"
         elif event_info.get("item_type") == "AUD":
             message_title = f"{action}有声书 {event_info.get('item_name')}"
         else:

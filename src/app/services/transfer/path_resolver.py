@@ -9,7 +9,7 @@ import log
 from app.core.constants import DEFAULT_MOVIE_FORMAT, DEFAULT_TV_FORMAT
 from app.core.settings import settings
 from app.db.repositories.storage_backend_repo_adapter import StorageBackendRepositoryAdapter
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.naming import (
     list_naming_profiles,
     naming_field_keys,
@@ -248,10 +248,10 @@ class TransferPathResolver:
         """查询一个最好的目录返回."""
         if not mtype:
             return None
-        if mtype == MediaType.MOVIE:
+        if mtype == ProviderMediaType.MOVIE:
             dest_paths = self._movie_path
             backends = self._movie_backend
-        elif mtype == MediaType.TV:
+        elif mtype == ProviderMediaType.SERIES:
             dest_paths = self._tv_path
             backends = self._tv_backend
         else:
@@ -264,7 +264,7 @@ class TransferPathResolver:
         if isinstance(dest_paths, list) and len(dest_paths) == 1:
             return dest_paths[0]
         # 多后端集数更新：剧集已存在于某后端时，优先选择该目录，避免同一剧集分散到多个后端
-        if media is not None and mtype in (MediaType.TV, MediaType.ANIME):
+        if media is not None and mtype in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
             existing = self._find_existing_media_path(dest_paths, backends, media, media_service)
             if existing:
                 return existing
@@ -326,12 +326,12 @@ class TransferPathResolver:
                 return backend_list[idx] or "local"
         return "local"
 
-    def resolve_dst_backend(self, dist_path: str, mtype: MediaType):
+    def resolve_dst_backend(self, dist_path: str, mtype: ProviderMediaType):
         """根据目标路径和媒体类型解析目标存储后端."""
         backend_id = "local"
-        if mtype == MediaType.MOVIE:
+        if mtype == ProviderMediaType.MOVIE:
             backend_id = self._get_backend_for_path(dist_path, self._movie_path, self._movie_backend)
-        elif mtype == MediaType.TV:
+        elif mtype == ProviderMediaType.SERIES:
             backend_id = self._get_backend_for_path(dist_path, self._tv_path, self._tv_backend)
         else:
             backend_id = self._get_backend_for_path(dist_path, self._anime_path, self._anime_backend)
@@ -374,12 +374,12 @@ class TransferPathResolver:
         self._backend_cache[backend_id] = backend
         return backend
 
-    def list_enabled_dest_backends(self, mtype: MediaType) -> list[tuple[str, Any]]:
+    def list_enabled_dest_backends(self, mtype: ProviderMediaType) -> list[tuple[str, Any]]:
         """返回媒体类型下已启用（且非本地）的目标目录与后端实例列表，用于多后端镜像"""
-        if mtype == MediaType.MOVIE:
+        if mtype == ProviderMediaType.MOVIE:
             dest_paths = self._movie_path
             backend_ids = self._movie_backend
-        elif mtype == MediaType.TV:
+        elif mtype == ProviderMediaType.SERIES:
             dest_paths = self._tv_path
             backend_ids = self._tv_backend
         else:
@@ -452,7 +452,9 @@ class TransferPathResolver:
                 "provider": provider,
                 "provider_id": provider_id,
                 "content_profile": (
-                    snapshot.content_profile if snapshot else ("anime" if media.type == MediaType.ANIME else "default")
+                    snapshot.content_profile
+                    if snapshot
+                    else ("anime" if media.type == ProviderMediaType.ANIME else "default")
                 ),
                 "release_date": _snapshot_value(snapshot, "release_date", getattr(media, "release_date", None)),
                 "rating_douban": _snapshot_rating(snapshot, "douban"),
@@ -520,13 +522,13 @@ class TransferPathResolver:
         if not dest or not meta_info:
             return None
         category = safe_category_name(getattr(meta_info, "category", ""))
-        if meta_info.type == MediaType.MOVIE:
+        if meta_info.type == ProviderMediaType.MOVIE:
             dir_name, _ = self.get_movie_dest_path(meta_info, media_service, snapshot)
             if self._movie_category_flag and category:
                 return os.path.join(dest, category, dir_name)
             return os.path.join(dest, dir_name)
         dir_name, season_name, _ = self.get_tv_dest_path(meta_info, media_service, snapshot)
-        if meta_info.type == MediaType.TV:
+        if meta_info.type == ProviderMediaType.SERIES:
             if self._tv_category_flag and category:
                 return os.path.join(dest, category, dir_name, season_name)
             return os.path.join(dest, dir_name, season_name)

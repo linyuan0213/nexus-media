@@ -6,9 +6,8 @@ from app.domain.media_metadata import (
     normalize_genres,
     normalize_languages,
 )
-from app.domain.media_types import media_type_registry
+from app.domain.media_types import ProviderMediaType, media_type_registry
 from app.domain.media_utils import check_media_exists
-from app.domain.mediatypes import MediaType
 from app.infrastructure.image_proxy import ImageProxy
 from app.media import Bangumi, DouBan
 from app.media.metadata.gateway import MetadataGateway
@@ -41,7 +40,7 @@ class MediaRecommendationService:
         self._metadata_gateway = metadata_gateway
         self._genre_cache: dict[str, dict[int, str]] = {}
 
-    def _get_genre_map(self, mtype: MediaType) -> dict[int, str]:
+    def _get_genre_map(self, mtype: ProviderMediaType) -> dict[int, str]:
         key = mtype.value
         if key not in self._genre_cache:
             try:
@@ -60,7 +59,7 @@ class MediaRecommendationService:
                 self._genre_cache[key] = {}
         return self._genre_cache[key]
 
-    def _genre_ids_to_names(self, genre_ids: list, mtype: MediaType) -> list[str]:
+    def _genre_ids_to_names(self, genre_ids: list, mtype: ProviderMediaType) -> list[str]:
         if not genre_ids:
             return []
         genre_map = self._get_genre_map(mtype)
@@ -82,7 +81,7 @@ class MediaRecommendationService:
         genres = [g for g in genre_part.split() if g in _CHINESE_GENRES]
         return normalize_genres(genres), normalize_countries(country)
 
-    def _enrich_recommend_items(self, items: list[dict], mtype: MediaType | None) -> list[dict]:
+    def _enrich_recommend_items(self, items: list[dict], mtype: ProviderMediaType | None) -> list[dict]:
         for item in items:
             if not item:
                 continue
@@ -98,7 +97,7 @@ class MediaRecommendationService:
                 item["countries"] = normalize_countries(["JP"])
                 item["languages"] = normalize_languages("ja")
             elif genre_ids:
-                item_type = mtype or MediaType.from_string(item.get("type") or "movie")
+                item_type = mtype or ProviderMediaType.from_value(item.get("type") or "movie")
                 item["genres"] = self._genre_ids_to_names(genre_ids, item_type)
                 item["countries"] = normalize_countries(origin_country)
                 item["languages"] = normalize_languages(original_language)
@@ -130,7 +129,7 @@ class MediaRecommendationService:
         current_page = int(data.get("page", 1))
         res_list = []
 
-        if type_ in [MediaType.MOVIE.value, MediaType.TV.value, "ALL"]:
+        if type_ in [ProviderMediaType.MOVIE.value, ProviderMediaType.SERIES.value, "ALL"]:
             category_map = {
                 "hm": "hot_movies",
                 "ht": "hot_tvs",
@@ -203,7 +202,11 @@ class MediaRecommendationService:
                 else []
             )
         elif type_ == "DISCOVER":
-            mtype = MediaType.MOVIE if MediaType.from_string(subtype or "") == MediaType.MOVIE else MediaType.TV
+            mtype = (
+                ProviderMediaType.MOVIE
+                if ProviderMediaType.from_value(subtype or "") == ProviderMediaType.MOVIE
+                else ProviderMediaType.SERIES
+            )
             params = data.get("params") or {}
             res_list = (
                 self._metadata_gateway.discover_items("discover", media_type=mtype, page=current_page, params=params)
@@ -211,7 +214,11 @@ class MediaRecommendationService:
                 else []
             )
         elif type_ == "DOUBANTAG":
-            mtype = MediaType.MOVIE if MediaType.from_string(subtype or "") == MediaType.MOVIE else MediaType.TV
+            mtype = (
+                ProviderMediaType.MOVIE
+                if ProviderMediaType.from_value(subtype or "") == ProviderMediaType.MOVIE
+                else ProviderMediaType.SERIES
+            )
             params = data.get("params") or {}
             sort = params.get("sort") or "R"
             tags = params.get("tags") or ""
@@ -252,7 +259,7 @@ class MediaRecommendationService:
                 "type": (
                     resolved := media_type_registry.resolve_profile(getattr(item, "CONTENT_PROFILE", None))
                     or media_type_registry.resolve(item.TYPE, getattr(item, "CONTENT_PROFILE", None))
-                ).legacy_type.value,
+                ).content_type.value,
                 "media_type": resolved.display_name,
                 "media_type_key": resolved.key,
                 "media_type_name": resolved.display_name,

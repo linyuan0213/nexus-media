@@ -3,8 +3,7 @@
 from app.agent.tools.base import ToolResult
 from app.agent.tools.context import ToolContext
 from app.domain.enums import SearchType
-from app.domain.media_types import media_type_registry
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType, media_type_registry
 from app.media.metadata.gateway import MetadataContext
 from app.media.metadata.registry import registry as metadata_registry
 from app.services.subscription_intent import resolve_subscription
@@ -51,7 +50,7 @@ def _resolve_aggregate_ref(
     title: str,
     external_id: str,
     content_id: str,
-    mtype: MediaType,
+    mtype: ProviderMediaType,
     profile: str,
     allow_private: bool,
     permissions: set[str],
@@ -132,7 +131,7 @@ def subscribe_add(
 
     mtype = (
         media_type_registry.resolve_profile(profile) or media_type_registry.resolve(media_type, profile)
-    ).legacy_type
+    ).content_type
     user = ctx.user_context(user_id)
     permissions = set(getattr(user, "permissions", []) or [])
     allow_private = bool(user and (getattr(user, "is_superadmin", False) or "metadata:private:view" in permissions))
@@ -273,7 +272,7 @@ def subscribe_list(
 def subscribe_delete(
     ctx: ToolContext, sub_id: int, media_type: str = "movie", user_id: str | None = None
 ) -> ToolResult:
-    mtype = media_type_registry.resolve(media_type).legacy_type
+    mtype = media_type_registry.resolve(media_type).content_type
     ctx.subscribe_service.cancel_subscribe(mtype=mtype, rssid=sub_id, user=ctx.user_context(user_id))
     return ToolResult(success=True, data={"sub_id": sub_id, "deleted": True})
 

@@ -3,13 +3,13 @@ import os
 import regex as re
 
 import log
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.domain.word_processor import get_words_info, process_title
 from app.media.models import MediaInfo
 from app.media.parser.unified import UnifiedParser
 
 
-def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None = None) -> MediaInfo:
+def meta_info(title: str, subtitle: str | None = None, mtype: ProviderMediaType | None = None) -> MediaInfo:
     org_title = title
     if title:
         # 路径 → 取文件名；裸数字文件名(1.mp4) → 父目录作标题
@@ -60,8 +60,8 @@ def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None =
     parser = UnifiedParser()
     parsed = parser.parse(rev_title, subtitle or "")
     if parsed:
-        if mtype == MediaType.ANIME:
-            parsed.type = MediaType.ANIME
+        if mtype == ProviderMediaType.ANIME:
+            parsed.type = ProviderMediaType.ANIME
         media_info = MediaInfo.from_parser(parsed)
     else:
         media_info = MediaInfo()
@@ -107,6 +107,6 @@ def meta_info(title: str, subtitle: str | None = None, mtype: MediaType | None =
     ):
         media_info.cn_name = None
         media_info.en_name = None
-        media_info.type = MediaType.UNKNOWN
+        media_info.type = ProviderMediaType.UNKNOWN
 
     return media_info

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.gateway import MetadataGateway
 from app.schemas.auth import UserContext
 from app.services.rss_processor import RssHelper
@@ -76,9 +76,9 @@ class SubscribeHistoryService:
             return -1, "订阅历史记录不存在"
         row = history[0]
         profile = str(content_profile or row.content_profile or "default")
-        mtype = MediaType.MOVIE if rtype == MediaType.MOVIE.value else MediaType.TV
+        mtype = ProviderMediaType.MOVIE if rtype == ProviderMediaType.MOVIE.value else ProviderMediaType.SERIES
         if profile == "anime":
-            mtype = MediaType.ANIME
+            mtype = ProviderMediaType.ANIME
         if row.season:
             season = int(str(row.season).replace("S", ""))
         else:

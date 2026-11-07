@@ -153,14 +153,14 @@ class SpeedLimiterPlugin:
                 for session in playing_sessions:
                     if (
                         not SecurityChecker.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
-                        and session.get("NowPlayingItem", {}).get("MediaType") == "Video"
+                        and session.get("NowPlayingItem", {}).get("ProviderMediaType") == "Video"
                     ):
                         total_bit_rate += int(session.get("NowPlayingItem", {}).get("Bitrate") or 0)
             elif mediaserver_type == "jellyfin":
                 for session in playing_sessions:
                     if (
                         not SecurityChecker.allow_access(self._unlimited_ips, session.get("RemoteEndPoint"))
-                        and session.get("NowPlayingItem", {}).get("MediaType") == "Video"
+                        and session.get("NowPlayingItem", {}).get("ProviderMediaType") == "Video"
                     ):
                         media_streams = session.get("NowPlayingItem", {}).get("MediaStreams") or []
                         for media_stream in media_streams:

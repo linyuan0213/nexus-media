@@ -797,13 +797,13 @@ def test_active_subscription_without_lifecycle_rows_is_visible():
 
 
 def test_record_media_projects_each_episode():
-    from app.domain.mediatypes import MediaType
+    from app.domain.media_types import ProviderMediaType
     from app.media.models import MediaInfo
 
     repo = LifecycleRepository()
     projector = LifecycleProjector(repo)
     media = MediaInfo(
-        type=MediaType.TV,
+        type=ProviderMediaType.SERIES,
         title="DEMO-EPISODE",
         begin_season=1,
         begin_episode=3,

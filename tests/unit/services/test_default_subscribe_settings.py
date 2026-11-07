@@ -1,6 +1,6 @@
 """默认订阅设置的用户维度键与回退测试."""
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.subscribe.default_settings import default_setting_key, get_default_setting
 
 
@@ -16,16 +16,16 @@ class _Config:
 
 class TestDefaultSettingKey:
     def test_movie_global_key(self):
-        assert default_setting_key(MediaType.MOVIE) == "DefaultSubscribeSettingMovie"
+        assert default_setting_key(ProviderMediaType.MOVIE) == "DefaultSubscribeSettingMovie"
 
     def test_movie_profile_key(self):
-        assert default_setting_key(MediaType.MOVIE, "adult") == "DefaultSubscribeSettingMovie::adult"
+        assert default_setting_key(ProviderMediaType.MOVIE, "adult") == "DefaultSubscribeSettingMovie::adult"
 
     def test_user_scope_appended(self):
-        assert default_setting_key(MediaType.MOVIE, "adult", 7) == "DefaultSubscribeSettingMovie::adult::u7"
+        assert default_setting_key(ProviderMediaType.MOVIE, "adult", 7) == "DefaultSubscribeSettingMovie::adult::u7"
 
     def test_tv_user_scope(self):
-        assert default_setting_key(MediaType.TV, None, 7) == "DefaultSubscribeSettingTV::u7"
+        assert default_setting_key(ProviderMediaType.SERIES, None, 7) == "DefaultSubscribeSettingTV::u7"
 
 
 class TestGetDefaultSetting:
@@ -37,12 +37,12 @@ class TestGetDefaultSetting:
             }
         )
 
-        assert get_default_setting(cfg, MediaType.MOVIE, None, 7) == {"rule": 2}
+        assert get_default_setting(cfg, ProviderMediaType.MOVIE, None, 7) == {"rule": 2}
 
     def test_missing_user_value_falls_back_to_global(self):
         cfg = _Config({"DefaultSubscribeSettingMovie": {"rule": 1}})
 
-        assert get_default_setting(cfg, MediaType.MOVIE, None, 7) == {"rule": 1}
+        assert get_default_setting(cfg, ProviderMediaType.MOVIE, None, 7) == {"rule": 1}
 
     def test_no_config_returns_empty(self):
-        assert get_default_setting(None, MediaType.MOVIE) == {}
+        assert get_default_setting(None, ProviderMediaType.MOVIE) == {}

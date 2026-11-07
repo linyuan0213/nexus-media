@@ -1,6 +1,6 @@
 """下载策略单元测试"""
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.download_strategies import EpisodeStrategy, MovieDownloadStrategy, SeasonPackStrategy
 
 
@@ -8,7 +8,7 @@ class MockMediaItem:
     """Mock 媒体信息对象"""
 
     def __init__(self, **kwargs):
-        self.type = kwargs.get("type", MediaType.TV)
+        self.type = kwargs.get("type", ProviderMediaType.SERIES)
         self.title = kwargs.get("title", "Test")
         self.tmdb_id = kwargs.get("tmdb_id", 123)
         self.enclosure = kwargs.get("enclosure", "")
@@ -28,9 +28,9 @@ class MockMediaItem:
 
 class TestMovieDownloadStrategy:
     def test_download_movies(self):
-        movie1 = MockMediaItem(type=MediaType.MOVIE, enclosure="url1", title="Movie A", tmdb_id=1)
-        movie2 = MockMediaItem(type=MediaType.MOVIE, enclosure="", title="Movie B", tmdb_id=2)
-        tv = MockMediaItem(type=MediaType.TV)
+        movie1 = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="url1", title="Movie A", tmdb_id=1)
+        movie2 = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="", title="Movie B", tmdb_id=2)
+        tv = MockMediaItem(type=ProviderMediaType.SERIES)
 
         downloaded = []
 
@@ -49,8 +49,8 @@ class TestMovieDownloadStrategy:
 
     def test_download_movies_same_title_falls_back_on_failure(self):
         """同一电影多个候选：失败后回退到下一个，成功后不再重复下载"""
-        bad = MockMediaItem(type=MediaType.MOVIE, enclosure="bad", title="Same Movie", tmdb_id=9)
-        good = MockMediaItem(type=MediaType.MOVIE, enclosure="good", title="Same Movie", tmdb_id=9)
+        bad = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="bad", title="Same Movie", tmdb_id=9)
+        good = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="good", title="Same Movie", tmdb_id=9)
         attempted = []
 
         def download_cb(item, torrent_file=None, tag=None, is_paused=None):
@@ -65,8 +65,8 @@ class TestMovieDownloadStrategy:
 
     def test_download_movies_same_identity_different_title_stops_after_success(self):
         """同一电影不同版本的标题/年份不同，也只能下载一个候选."""
-        hd = MockMediaItem(type=MediaType.MOVIE, enclosure="hd", title="Movie 2023", tmdb_id=9)
-        uhd = MockMediaItem(type=MediaType.MOVIE, enclosure="uhd", title="Movie 2024", tmdb_id=9)
+        hd = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="hd", title="Movie 2023", tmdb_id=9)
+        uhd = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="uhd", title="Movie 2024", tmdb_id=9)
         attempted = []
 
         def download_cb(item, torrent_file=None, tag=None, is_paused=None):
@@ -79,8 +79,8 @@ class TestMovieDownloadStrategy:
         assert result == [hd]
 
     def test_download_movies_same_title_stops_after_success(self):
-        first = MockMediaItem(type=MediaType.MOVIE, enclosure="first", title="Same Movie", tmdb_id=9)
-        second = MockMediaItem(type=MediaType.MOVIE, enclosure="second", title="Same Movie", tmdb_id=9)
+        first = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="first", title="Same Movie", tmdb_id=9)
+        second = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="second", title="Same Movie", tmdb_id=9)
         attempted = []
 
         def download_cb(item, torrent_file=None, tag=None, is_paused=None):
@@ -93,8 +93,8 @@ class TestMovieDownloadStrategy:
 
     def test_download_movies_per_candidate_outcome_overall_success(self):
         """不同电影各自记录成败：一个失败不影响另一个成功，整体只要有成功即返回."""
-        bad = MockMediaItem(type=MediaType.MOVIE, enclosure="bad", title="Movie Bad", tmdb_id=1)
-        good = MockMediaItem(type=MediaType.MOVIE, enclosure="good", title="Movie Good", tmdb_id=2)
+        bad = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="bad", title="Movie Bad", tmdb_id=1)
+        good = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="good", title="Movie Good", tmdb_id=2)
         attempted = []
 
         def download_cb(item, torrent_file=None, tag=None, is_paused=None):
@@ -108,8 +108,8 @@ class TestMovieDownloadStrategy:
         assert result == [good]
 
     def test_download_movies_all_failed_returns_empty(self):
-        first = MockMediaItem(type=MediaType.MOVIE, enclosure="a", title="A", tmdb_id=1)
-        second = MockMediaItem(type=MediaType.MOVIE, enclosure="b", title="B", tmdb_id=2)
+        first = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="a", title="A", tmdb_id=1)
+        second = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="b", title="B", tmdb_id=2)
 
         def download_cb(item, torrent_file=None, tag=None, is_paused=None):
             return None, None, "下载器错误"
@@ -117,7 +117,7 @@ class TestMovieDownloadStrategy:
         assert MovieDownloadStrategy.download_movies([first, second], download_cb, lambda x: x) == []
 
     def test_download_movies_failure(self):
-        movie = MockMediaItem(type=MediaType.MOVIE, enclosure="url1")
+        movie = MockMediaItem(type=ProviderMediaType.MOVIE, enclosure="url1")
 
         def download_cb(item, torrent_file=None, tag=None, is_paused=None):
             return None, None, "error"

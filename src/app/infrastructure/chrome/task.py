@@ -92,9 +92,7 @@ class BrowserPage:
                 self.task._last_url = str(data.get("url") or url)
                 return html
             last_error = "Cloudflare/挑战未通过"
-            log.warn(
-                f"[BrowserPage] 挑战未通过 attempt={attempt + 1}/{self.retries + 1}: {url}"
-            )
+            log.warn(f"[BrowserPage] 挑战未通过 attempt={attempt + 1}/{self.retries + 1}: {url}")
         raise BrowserPageError(last_error or f"页面加载失败: {url}")
 
     def refresh(self) -> str:

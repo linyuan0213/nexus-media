@@ -29,8 +29,7 @@ from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.db.repositories.sync_repo_adapter import SyncPathRepositoryAdapter
 from app.domain.enums import ProgressKey, SyncType
 from app.domain.media_ref import canonical_metadata_ref
-from app.domain.media_types import MediaKind, media_type_registry
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import MediaKind, ProviderMediaType, media_type_registry
 from app.events import Event
 from app.events.bus import EventBus
 from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, SUBTITLE_DOWNLOAD, TRANSFER_FAIL
@@ -198,7 +197,7 @@ class FileTransferService:
             return
         media_type = getattr(media, "type", None)
         type_value = str(getattr(media_type, "value", media_type) or "").lower()
-        if type_value and type_value != MediaType.MOVIE.value:
+        if type_value and type_value != ProviderMediaType.MOVIE.value:
             return
         provider = str(getattr(media, "anchor_provider", "") or "")
         external = str(getattr(media, "anchor_external_id", "") or "")
@@ -247,7 +246,7 @@ class FileTransferService:
         try:
             tmdb_id = str(getattr(media, "tmdb_id", "") or "")
             if tmdb_id:
-                if getattr(media, "type", None) == MediaType.MOVIE:
+                if getattr(media, "type", None) == ProviderMediaType.MOVIE:
                     owner = self._subscribe_repo.find_movie_owner_user_id(tmdb_id)
                 else:
                     season = media.get_season_string() if hasattr(media, "get_season_string") else None
@@ -261,7 +260,7 @@ class FileTransferService:
             external = raw_external.strip() if isinstance(raw_external, str) else ""
             if provider and external:
                 return self._subscribe_repo.find_owner_by_anchor(
-                    provider, external, getattr(media, "type", None) or MediaType.MOVIE
+                    provider, external, getattr(media, "type", None) or ProviderMediaType.MOVIE
                 )
             return None
         except Exception:  # noqa: BLE001
@@ -277,7 +276,7 @@ class FileTransferService:
     def get_no_exists_medias(self, meta_info, season=None, total_num=None):
         # 先查转移历史 DB：已转移过的剧集视为已存在
         # 仅信任源路径仍存在的历史记录（调试/测试残留的假记录源已删除，不参与判断）
-        if meta_info.type != MediaType.MOVIE and season and total_num:
+        if meta_info.type != ProviderMediaType.MOVIE and season and total_num:
             try:
                 match = re.search(r"\d+", str(season))
                 season_num = int(match.group()) if match else int(season)
@@ -613,7 +612,7 @@ class FileTransferService:
                 )
                 _info = meta_info_fn(
                     str(parsed_code or os.path.splitext(os.path.basename(_path))[0]),
-                    mtype=getattr(parsed_profile, "type", None) or MediaType.MOVIE,
+                    mtype=getattr(parsed_profile, "type", None) or ProviderMediaType.MOVIE,
                 )
                 _info.org_string = os.path.basename(_path)
                 _info.content_profile = parsed_profile.content_profile
@@ -680,7 +679,11 @@ class FileTransferService:
             fallback_ep = fallback_episode if fallback_episode is not None else dl_episode
             if fallback_season is not None or fallback_ep is not None:
                 for _path, _info in medias.items():
-                    if fallback_season is not None and _info.begin_season is None and _info.type != MediaType.MOVIE:
+                    if (
+                        fallback_season is not None
+                        and _info.begin_season is None
+                        and _info.type != ProviderMediaType.MOVIE
+                    ):
                         _info.begin_season = fallback_season
                     if fallback_ep is not None and _info.begin_episode is None:
                         _info.begin_episode = fallback_ep
@@ -1137,7 +1140,7 @@ class FileTransferService:
         if download_info is None:
             download_info = self._find_download_record(in_path)
         if download_info:
-            parsed_type = MediaType.from_string(download_info.TYPE)
+            parsed_type = ProviderMediaType.from_value(download_info.TYPE)
             dl_season, dl_episode = None, None
             se = getattr(download_info, "SE", "") or ""
             if se:
@@ -1171,7 +1174,11 @@ class FileTransferService:
             provider,
             external,
         )
-        mtype = subject.display_type or MediaType.from_string(str(getattr(record, "TYPE", "") or "")) or MediaType.MOVIE
+        mtype = (
+            subject.display_type
+            or ProviderMediaType.from_value(str(getattr(record, "TYPE", "") or ""))
+            or ProviderMediaType.MOVIE
+        )
         record_data = None
         if self._metadata is not None:
             try:
@@ -1235,12 +1242,12 @@ class FileTransferService:
             return
         media.media_type_key = ref.key
         media.media_kind = ref.kind.value
-        if ref.key == MediaType.ANIME.value:
-            media.type = MediaType.ANIME
+        if ref.key == ProviderMediaType.ANIME.value:
+            media.type = ProviderMediaType.ANIME
         elif ref.kind == MediaKind.MOVIE:
-            media.type = MediaType.MOVIE
+            media.type = ProviderMediaType.MOVIE
         elif ref.kind == MediaKind.EPISODIC:
-            media.type = MediaType.TV
+            media.type = ProviderMediaType.SERIES
 
     def _ensure_identity(self, media) -> None:
         """执行边界统一解析并回写身份，禁止仅依赖调用方是否提前赋值."""
@@ -1270,7 +1277,7 @@ class FileTransferService:
             provider,
             external,
         )
-        record_type = subject.display_type or MediaType.from_string(str(getattr(record, "TYPE", "") or ""))
+        record_type = subject.display_type or ProviderMediaType.from_value(str(getattr(record, "TYPE", "") or ""))
         current_type = getattr(media, "type", None)
         if record_type and current_type != record_type:
             log.info(f"[Rmt]按下载记录纠正媒体类型：{current_type} -> {record_type}")
@@ -1617,7 +1624,7 @@ class FileTransferService:
                     resolved_backend,
                 )
 
-                if media.type == MediaType.MOVIE:
+                if media.type == ProviderMediaType.MOVIE:
                     media.user_id = self._resolve_owner_user_id(reg_path, media)
                 else:
                     message_key = f"{media.get_title_string()}-{media.get_season_string()}"
@@ -1979,7 +1986,7 @@ class FileTransferService:
         # 避免目标路径规则变化（如分类子目录调整）导致重复入库。
         # 仅信任源路径仍存在的历史记录：调试/测试残留（源已删除，如 /tmp 假记录）不参与去重，
         # 避免真实文件被误判"已转移"而跳过实际转移
-        if media.type != MediaType.MOVIE and media.begin_season and media.begin_episode is not None:
+        if media.type != ProviderMediaType.MOVIE and media.begin_season and media.begin_episode is not None:
             try:
                 season_str = f"S{media.begin_season:02d}"
                 history = (

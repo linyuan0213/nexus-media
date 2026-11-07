@@ -6,7 +6,7 @@ from urllib.parse import quote
 
 import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError  # noqa: F401
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.cache_system import get_cache_manager
 from app.media.display_image_policy import transform_display_image
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
@@ -133,7 +133,7 @@ class TransferHistoryService:
         if self._subscribe_repo is None:
             return ""
         history_type = str(history.get("TYPE") or "").lower()
-        if history_type and history_type != MediaType.MOVIE.value:
+        if history_type and history_type != ProviderMediaType.MOVIE.value:
             return ""
         try:
             hint = self._subscribe_repo.get_movie_subscription_hint(
@@ -155,7 +155,7 @@ class TransferHistoryService:
             return ""
         try:
             media = SimpleNamespace(
-                type=MediaType.from_string(str(history.get("TYPE") or "")),
+                type=ProviderMediaType.from_value(str(history.get("TYPE") or "")),
                 anchor_provider=history.get("ANCHOR_PROVIDER"),
                 anchor_external_id=history.get("ANCHOR_EXTERNAL_ID"),
                 identity_id=history.get("IDENTITY_ID"),
@@ -255,15 +255,15 @@ class TransferHistoryService:
             if not statistic[2]:
                 continue
             label = statistic[1]
-            parsed = MediaType.from_string(statistic[0])
-            if parsed not in (MediaType.MOVIE, MediaType.TV, MediaType.ANIME):
+            parsed = ProviderMediaType.from_value(statistic[0])
+            if parsed not in (ProviderMediaType.MOVIE, ProviderMediaType.SERIES, ProviderMediaType.ANIME):
                 continue
             entry = data.setdefault(label, {"movie": 0, "tv": 0, "anime": 0})
-            if parsed == MediaType.MOVIE:
+            if parsed == ProviderMediaType.MOVIE:
                 entry["movie"] = statistic[2]
-            elif parsed == MediaType.TV:
+            elif parsed == ProviderMediaType.SERIES:
                 entry["tv"] = statistic[2]
-            elif parsed == MediaType.ANIME:
+            elif parsed == ProviderMediaType.ANIME:
                 entry["anime"] = statistic[2]
         labels = list(data.keys())
         # 按天去重剧数（仅电视剧，用于首页卡片趋势口径对齐）

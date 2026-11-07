@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.indexer.core.pipeline import SearchPipeline
 from app.indexer.core.result_filter import ResultFilter
 from app.media import meta_info as parse_title
@@ -88,7 +88,7 @@ def _gits_2026():
         title="攻壳机动队",
         en_name="THE GHOST IN THE SHELL",
         year="2026",
-        type=MediaType.ANIME,
+        type=ProviderMediaType.ANIME,
         tmdb_id=255358,
     )
 
@@ -146,7 +146,7 @@ class TestLocalFilterQnmRecallGate:
         mi.cn_name = None
         mi.en_name = "FROZEN PLANET II"
         mi.year = "2016"
-        mi.type = MediaType.TV
+        mi.type = ProviderMediaType.SERIES
         mock_parse.return_value = mi
         match = _gits_2026()
         assert ResultFilter.quick_name_match(mi, match) is False
@@ -164,10 +164,10 @@ class TestLocalFilterQnmRecallGate:
         mi.cn_name = None
         mi.en_name = "Ghostbusters"
         mi.year = "2016"
-        mi.type = MediaType.MOVIE
+        mi.type = ProviderMediaType.MOVIE
         mock_parse.return_value = mi
         match = MediaInfo(
-            cn_name="捉鬼敢死队", title="捉鬼敢死队", en_name="Ghostbusters", year="1984", type=MediaType.MOVIE
+            cn_name="捉鬼敢死队", title="捉鬼敢死队", en_name="Ghostbusters", year="1984", type=ProviderMediaType.MOVIE
         )
         assert ResultFilter.quick_name_match(mi, match) is False
         rf = _make_filter()
@@ -183,10 +183,10 @@ class TestLocalFilterQnmRecallGate:
         mi.cn_name = None
         mi.en_name = "The Mandalorian"
         mi.year = None
-        mi.type = MediaType.TV
+        mi.type = ProviderMediaType.SERIES
         mock_parse.return_value = mi
         match = MediaInfo(
-            cn_name="泰坦尼克号", title="泰坦尼克号", en_name="Titanic", year="1997", type=MediaType.MOVIE
+            cn_name="泰坦尼克号", title="泰坦尼克号", en_name="Titanic", year="1997", type=ProviderMediaType.MOVIE
         )
         assert ResultFilter.quick_name_match(mi, match) is False
         rf = _make_filter()
@@ -285,14 +285,14 @@ def test_multilingual_torrent_survives_rule_and_identity_pipeline(title):
         en_name="A Record of a Mortal's Journey to Immortality",
         original_title="A Record of a Mortal's Journey to Immortality",
         year="2020",
-        type=MediaType.TV,
+        type=ProviderMediaType.SERIES,
         tmdb_id=106449,
         provider_data={"id": 106449, "name": "凡人修仙传", "media_type": "tv"},
     )
 
     result = pipeline.process(
         all_results=[_item(title, description="凡人修仙传 国语中字")],
-        filter_args={"rule": 1, "year": "2020", "type": MediaType.TV.value},
+        filter_args={"rule": 1, "year": "2020", "type": ProviderMediaType.SERIES.value},
         match_media=match_media,
         search_name="凡人修仙传",
     )
@@ -343,7 +343,7 @@ def test_quick_name_match_ignores_zero_year():
         en_name="Resident Evil",
         description="",
         year="2026",
-        type=MediaType.MOVIE,
+        type=ProviderMediaType.MOVIE,
         rev_string="",
         org_string="",
     )
@@ -353,7 +353,7 @@ def test_quick_name_match_ignores_zero_year():
         en_name="Resident Evil",
         original_title="Resident Evil",
         year="0",
-        type=MediaType.MOVIE,
+        type=ProviderMediaType.MOVIE,
     )
     assert ResultFilter.quick_name_match(meta, match)
 

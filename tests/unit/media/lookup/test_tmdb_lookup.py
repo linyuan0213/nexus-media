@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.cache_system import get_cache_manager
 from app.media.lookup.tmdb_lookup import TmdbLookup
 from app.media.models import MediaInfo
@@ -62,7 +62,7 @@ class TestTrimmedTailRetry:
             cache.clear()
 
     @staticmethod
-    def _parsed(title_en, year="2026", mtype=MediaType.MOVIE):
+    def _parsed(title_en, year="2026", mtype=ProviderMediaType.MOVIE):
         return ParserResult(title_en=title_en, year=year, type=mtype)
 
     def test_trim_tail_finds_match(self):
@@ -77,7 +77,7 @@ class TestTrimmedTailRetry:
                     "id": 1101383,
                     "title": "The Of Oak Street",
                     "release_date": "2026-01-01",
-                    "media_type": MediaType.MOVIE,
+                    "media_type": ProviderMediaType.MOVIE,
                     "genres": [{"id": 18}],
                 }
             return {}
@@ -101,7 +101,7 @@ class TestTrimmedTailRetry:
                 "id": 7,
                 "title": "Completely Different Movie",
                 "release_date": "2026-01-01",
-                "media_type": MediaType.MOVIE,
+                "media_type": ProviderMediaType.MOVIE,
                 "genres": [{"id": 18}],
             }
 
@@ -122,7 +122,7 @@ class TestTrimmedTailRetry:
                 "id": 8,
                 "title": "Some Real Title",
                 "release_date": "1995-01-01",
-                "media_type": MediaType.MOVIE,
+                "media_type": ProviderMediaType.MOVIE,
                 "genres": [{"id": 18}],
             }
 
@@ -158,13 +158,13 @@ class TestMergeMediaInfo:
         """搜索结果缺少图片时应从原始匹配媒体复制图片字段."""
         target = MediaInfo(
             title="攻壳机动队",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             year="2026",
             tmdb_id=123456,
         )
         source = MediaInfo(
             title="攻壳机动队",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             year="2026",
             tmdb_id=123456,
             poster_path="https://image.tmdb.org/t/p/w500/abc.jpg",
@@ -182,12 +182,12 @@ class TestMergeMediaInfo:
         """目标本身有图片时保留目标的图片."""
         target = MediaInfo(
             title="攻壳机动队",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             poster_path="https://target.poster.jpg",
         )
         source = MediaInfo(
             title="攻壳机动队",
-            type=MediaType.TV,
+            type=ProviderMediaType.SERIES,
             poster_path="https://source.poster.jpg",
         )
 
@@ -197,12 +197,12 @@ class TestMergeMediaInfo:
 
     def test_merge_media_info_returns_target_when_source_is_none(self):
         """source 为空时返回 target."""
-        target = MediaInfo(title="Test", type=MediaType.MOVIE)
+        target = MediaInfo(title="Test", type=ProviderMediaType.MOVIE)
         assert TmdbLookup.merge_media_info(target, None) is target
 
     def test_merge_media_info_returns_target_when_target_is_none(self):
         """target 为空时返回 target."""
-        source = MediaInfo(title="Test", type=MediaType.MOVIE)
+        source = MediaInfo(title="Test", type=ProviderMediaType.MOVIE)
         assert TmdbLookup.merge_media_info(None, source) is None
 
 
@@ -226,10 +226,10 @@ class TestEpisodeIndependentLookupCache:
             "id": 106449,
             "name": "Mortal Journey",
             "first_air_date": "2020-01-01",
-            "media_type": MediaType.TV,
+            "media_type": ProviderMediaType.SERIES,
             "genres": [{"name": "动画"}],
         }
         with patch.object(lookup, "_lookup_tmdb", return_value=payload) as mock_lookup:
-            assert lookup.lookup(first, hint_type=MediaType.TV) is not None
-            assert lookup.lookup(second, hint_type=MediaType.TV) is not None
+            assert lookup.lookup(first, hint_type=ProviderMediaType.SERIES) is not None
+            assert lookup.lookup(second, hint_type=ProviderMediaType.SERIES) is not None
             assert mock_lookup.call_count == 1

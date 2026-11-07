@@ -10,7 +10,7 @@ from app.core.exceptions import ResourceNotFoundError, ValidationError
 from app.core.module_config import ModuleConf
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
 from app.db.sql_adapter import adapt_sql_for_engine
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media import ReleaseGroupsMatcher, meta_info
 from app.utils import StringUtils
 from app.utils.json_utils import JsonUtils
@@ -86,7 +86,7 @@ class FilterRuleEngine:
                         begin_size = 0
                         end_size = float(sizes.strip()) if StringUtils.is_numeric(sizes) else 0
 
-                    if meta_info.type == MediaType.MOVIE:
+                    if meta_info.type == ProviderMediaType.MOVIE:
                         if not begin_size * (1024**3) <= int(meta_info.size) <= end_size * (1024**3):
                             rule_match = False
                     else:

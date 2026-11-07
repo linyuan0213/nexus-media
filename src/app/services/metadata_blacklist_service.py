@@ -3,7 +3,7 @@
 from typing import Any
 
 from app.db.repositories.plugin_repo_adapter import MetadataBlacklistRepositoryAdapter
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.infrastructure.cache_system import get_cache_manager
 from app.media.metadata.gateway import MetadataGateway
 from app.media.parser._metainfo import meta_info
@@ -46,7 +46,7 @@ class MetadataBlacklistService:
         end = start + count
         formatted_items = []
         for item in all_items[start:end]:
-            _mtype = MediaType.from_string(item.MEDIA_TYPE)
+            _mtype = ProviderMediaType.from_value(item.MEDIA_TYPE)
             formatted_items.append(
                 {
                     "backdrop_path": item.BACKDROP_PATH,
@@ -67,7 +67,7 @@ class MetadataBlacklistService:
         """添加到黑名单；详情统一从 MetadataGateway 读取."""
         if not external_id:
             raise ValueError("external_id 不能为空")
-        mtype = MediaType.from_string(media_type)
+        mtype = ProviderMediaType.from_value(media_type)
         info = self._metadata.details(provider, external_id, media_type=mtype)
         if not info:
             raise ValueError(f"元数据信息获取失败：provider={provider}, external_id={external_id}, type={media_type}")

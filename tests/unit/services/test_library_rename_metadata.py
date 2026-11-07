@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
 from app.services.transfer.library_rename_nfo import collect_nfo
 from app.services.transfer.library_rename_sources import (
@@ -33,7 +33,7 @@ def test_parse_season_episode_variants():
 
 def test_detect_part_and_apply_source():
     assert detect_part("Movie.2020.Part.1.1080p.mkv") == "Part 1"
-    meta = MediaInfo(type=MediaType.MOVIE, title="Movie", year="2020")
+    meta = MediaInfo(type=ProviderMediaType.MOVIE, title="Movie", year="2020")
     apply_source(meta, "Movie.2020.1080p.BluRay.x264-GROUP.mkv")
     assert meta.org_string == "Movie.2020.1080p.BluRay.x264-GROUP.mkv"
     assert meta.resource_pix == "1080p"
@@ -42,8 +42,8 @@ def test_detect_part_and_apply_source():
 
 
 def test_merge_missing_does_not_override_identity():
-    target = MediaInfo(type=MediaType.TV, title="历史标题", year="2020", tmdb_id=100)
-    source = MediaInfo(type=MediaType.TV, title="另一个标题", year="2021", tmdb_id=200, imdb_id="tt1")
+    target = MediaInfo(type=ProviderMediaType.SERIES, title="历史标题", year="2020", tmdb_id=100)
+    source = MediaInfo(type=ProviderMediaType.SERIES, title="另一个标题", year="2021", tmdb_id=200, imdb_id="tt1")
     merge_missing(target, source)
     assert target.title == "历史标题"
     assert target.tmdb_id == 100
@@ -62,7 +62,7 @@ def test_nfo_tv_uses_series_tmdb_and_episode_fields(tmp_path):
         "<uniqueid type='tmdb'>999</uniqueid></episodedetails>",
         encoding="utf-8",
     )
-    data = collect_nfo(_backend(), str(directory), "Show.S01E02", MediaType.TV)
+    data = collect_nfo(_backend(), str(directory), "Show.S01E02", ProviderMediaType.SERIES)
     assert data is not None
     assert data["title"] == "Show"
     assert data["tmdbid"] == "100"
@@ -78,7 +78,7 @@ def test_nfo_tv_keeps_content_id_identity(tmp_path):
         "<tvshow><title>Show</title><uniqueid type='content_id'>CUSTOM-0001</uniqueid></tvshow>",
         encoding="utf-8",
     )
-    data = collect_nfo(_backend(), str(directory), "Show.S01E02", MediaType.TV)
+    data = collect_nfo(_backend(), str(directory), "Show.S01E02", ProviderMediaType.SERIES)
     assert data is not None
     assert data["content_id"] == "CUSTOM-0001"
     assert data["unique_ids"]["content_id"] == "CUSTOM-0001"
@@ -91,7 +91,7 @@ def test_season_nfo_title_is_not_show_title(tmp_path):
         "<season><title>Season 1</title><seasonnumber>1</seasonnumber><year>2020</year></season>",
         encoding="utf-8",
     )
-    data = collect_nfo(_backend(), str(directory), "Show.S01E02", MediaType.TV)
+    data = collect_nfo(_backend(), str(directory), "Show.S01E02", ProviderMediaType.SERIES)
     assert data is not None
     assert "title" not in data
     assert data["season"] == 1
@@ -106,16 +106,16 @@ def test_from_download_history_sets_source_only_when_name_matches():
         season_episode="",
         torrent="Movie.2020.1080p-GROUP.mkv",
     )
-    matched = from_download_history(entity, "Movie.2020.1080p-GROUP.mkv", MediaType.MOVIE, exact=True)
+    matched = from_download_history(entity, "Movie.2020.1080p-GROUP.mkv", ProviderMediaType.MOVIE, exact=True)
     assert matched is not None
     assert matched.source_filename == "Movie.2020.1080p-GROUP.mkv"
-    unmatched = from_download_history(entity, "Other.Name.mkv", MediaType.MOVIE, exact=False)
+    unmatched = from_download_history(entity, "Other.Name.mkv", ProviderMediaType.MOVIE, exact=False)
     assert unmatched is not None
     assert unmatched.source_filename is None
 
 
 def test_from_filename_does_not_set_original_name():
-    resolved = from_filename("/library/The.Matrix.1999.1080p.BluRay.x264-GROUP.mkv", MediaType.MOVIE)
+    resolved = from_filename("/library/The.Matrix.1999.1080p.BluRay.x264-GROUP.mkv", ProviderMediaType.MOVIE)
     assert resolved is not None
     assert resolved.media.org_string is None
     assert resolved.media.rev_string is None

@@ -9,7 +9,7 @@ from typing import Any
 
 from app.core.exceptions import ResourceAlreadyExistsError, ResourceNotFoundError, ValidationError
 from app.domain.entities.word import CustomWordEntity
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.domain.word_processor import process_title, set_words_info
 from app.infrastructure.cache_system import get_cache_manager
 from app.media.metadata.gateway import MetadataGateway
@@ -79,7 +79,7 @@ class WordsService:
         if tmdb_type == "tv":
             if self.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=2):
                 raise ResourceAlreadyExistsError("识别词组（TMDB ID）已存在")
-            tmdb_info = self._metadata_gateway.details("tmdb", tmdb_id, media_type=MediaType.TV)
+            tmdb_info = self._metadata_gateway.details("tmdb", tmdb_id, media_type=ProviderMediaType.SERIES)
             if not tmdb_info:
                 raise ResourceNotFoundError("添加失败，无法查询到TMDB信息")
             air_date = tmdb_info.get("first_air_date") or ""
@@ -93,7 +93,7 @@ class WordsService:
         elif tmdb_type == "movie":
             if self.is_custom_word_group_existed(tmdbid=tmdb_id, gtype=1):
                 raise ResourceAlreadyExistsError("识别词组（TMDB ID）已存在")
-            tmdb_info = self._metadata_gateway.details("tmdb", tmdb_id, media_type=MediaType.MOVIE)
+            tmdb_info = self._metadata_gateway.details("tmdb", tmdb_id, media_type=ProviderMediaType.MOVIE)
             if not tmdb_info:
                 raise ResourceNotFoundError("添加失败，无法查询到TMDB信息")
             release_date = tmdb_info.get("release_date") or ""

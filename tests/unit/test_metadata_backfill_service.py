@@ -11,7 +11,7 @@ from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.legacy_media_ref_repository import LegacyMediaRefRepository
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
 from app.db.session import SessionManager
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.legacy import parse_legacy_ref
 from app.services.metadata_backfill_service import MetadataBackfillService
 
@@ -79,19 +79,19 @@ def _seed(engine):
 
 def test_parse_legacy_ref_variants():
     cases = [
-        ("278", MediaType.MOVIE, "tmdb", "278"),
-        ("DB:1292052", MediaType.MOVIE, "douban", "1292052"),
-        ("BG:400602", MediaType.ANIME, "bangumi", "400602"),
-        ("BGM:1", MediaType.ANIME, "bangumi", "1"),
-        ("TMDB:278", MediaType.MOVIE, "tmdb", "278"),
+        ("278", ProviderMediaType.MOVIE, "tmdb", "278"),
+        ("DB:1292052", ProviderMediaType.MOVIE, "douban", "1292052"),
+        ("BG:400602", ProviderMediaType.ANIME, "bangumi", "400602"),
+        ("BGM:1", ProviderMediaType.ANIME, "bangumi", "1"),
+        ("TMDB:278", ProviderMediaType.MOVIE, "tmdb", "278"),
     ]
     for raw, media_type, provider, external_id in cases:
         ref = parse_legacy_ref(raw, media_type)
         assert ref is not None
         assert (ref.provider, ref.external_id) == (provider, external_id)
 
-    assert parse_legacy_ref("0", MediaType.MOVIE) is None
-    assert parse_legacy_ref("unknown", MediaType.MOVIE) is None
+    assert parse_legacy_ref("0", ProviderMediaType.MOVIE) is None
+    assert parse_legacy_ref("unknown", ProviderMediaType.MOVIE) is None
 
 
 def test_dry_run_does_not_write(repos):

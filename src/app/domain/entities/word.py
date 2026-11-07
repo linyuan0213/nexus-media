@@ -8,7 +8,7 @@ from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Any, Optional
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 
 class CustomWordType(Enum):
@@ -52,9 +52,9 @@ class WordGroupType(Enum):
     @property
     def display_name(self) -> str:
         if self == WordGroupType.MOVIE:
-            return MediaType.MOVIE.display_name
+            return ProviderMediaType.MOVIE.display_name
         if self == WordGroupType.TV:
-            return MediaType.TV.display_name
+            return ProviderMediaType.SERIES.display_name
         return "未知"
 
 

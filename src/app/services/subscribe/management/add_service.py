@@ -9,7 +9,7 @@ import httpx
 import log
 from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SubscribeType, SystemConfigKey
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.events import Event
 from app.events.constants import SUBSCRIBE_ADD
 from app.events.payloads import SubscribeAddPayload
@@ -223,7 +223,7 @@ class SubscribeAddService:
         content_profile: str | None,
         allow_private: bool,
         permissions: set[str] | None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
     ):
         if self._metadata_gateway is None:
             return None
@@ -246,7 +246,7 @@ class SubscribeAddService:
         external_id: str,
         title: str,
         year: str | None,
-        media_type: MediaType,
+        media_type: ProviderMediaType,
         season: int,
         content_profile: str,
         allow_private: bool,
@@ -311,7 +311,7 @@ class SubscribeAddService:
         content_profile: str | None,
         allow_private: bool,
         permissions: set[str] | None,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         season: int | None = None,
     ):
         """用插件 provider 的详情构造 MediaInfo，自定义画像不走 TMDB 查询."""
@@ -344,9 +344,11 @@ class SubscribeAddService:
             provider,
             external_id,
         )
-        resolved_type = subject.display_type or media_type or MediaType.from_string(str(record.get("media_type") or ""))
-        if resolved_type not in (MediaType.MOVIE, MediaType.TV, MediaType.ANIME):
-            resolved_type = MediaType.MOVIE
+        resolved_type = (
+            subject.display_type or media_type or ProviderMediaType.from_value(str(record.get("media_type") or ""))
+        )
+        if resolved_type not in (ProviderMediaType.MOVIE, ProviderMediaType.SERIES, ProviderMediaType.ANIME):
+            resolved_type = ProviderMediaType.MOVIE
         media_info = meta_info(title=title, mtype=resolved_type)
         media_info.title = title
         media_info.cn_name = title
@@ -585,7 +587,7 @@ class SubscribeAddService:
                             if poster:
                                 media_info.poster_path = poster
                     # 元数据来源判定为动漫时同步切换内容画像，避免落库成默认电视剧。
-                    if mtype == MediaType.ANIME and str(content_profile or "").strip() in ("", "default"):
+                    if mtype == ProviderMediaType.ANIME and str(content_profile or "").strip() in ("", "default"):
                         content_profile = "anime"
                         media_info.content_profile = "anime"
                     anchor_ref = _split_provider_ref(mediaid)
@@ -661,7 +663,7 @@ class SubscribeAddService:
             )
             if not has_source:
                 return 1, "无法查询到媒体信息", None
-            if media_info.type != MediaType.MOVIE:
+            if media_info.type != ProviderMediaType.MOVIE:
                 if not season:
                     if media_info.provider_data:
                         total_seasoninfo = (
@@ -726,7 +728,7 @@ class SubscribeAddService:
                 media_info.begin_season = _season_number(season, 0)
                 media_info.total_episodes = int(total_episode or 0)
                 series_key = None
-                if mtype in (MediaType.TV, MediaType.ANIME):
+                if mtype in (ProviderMediaType.SERIES, ProviderMediaType.ANIME):
                     series_provider = str(
                         getattr(media_info, "anchor_provider", "")
                         or getattr(media_info, "provider", "")
@@ -908,7 +910,7 @@ class SubscribeAddService:
             media_info = meta_info(title=name, mtype=mtype)
             media_info.title = name
             media_info.type = mtype
-            if mtype == MediaType.ANIME and str(content_profile or "").strip() in ("", "default"):
+            if mtype == ProviderMediaType.ANIME and str(content_profile or "").strip() in ("", "default"):
                 content_profile = "anime"
             media_info.content_profile = content_profile or "default"
             media_info.keyword = keyword
@@ -921,7 +923,7 @@ class SubscribeAddService:
                 media_info.year = str(year)
             if season and not getattr(media_info, "series_key", None):
                 media_info.begin_season = _season_number(season)
-            if mtype == MediaType.MOVIE:
+            if mtype == ProviderMediaType.MOVIE:
                 identity_fields = self._identity_fields(
                     media_info,
                     mtype,

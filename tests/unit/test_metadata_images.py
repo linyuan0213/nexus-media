@@ -1,6 +1,6 @@
 """ImageResolver 单元测试."""
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata import (
     Credit,
     ImageAsset,
@@ -13,7 +13,7 @@ from app.media.metadata import (
 def _snapshot() -> MediaMetadata:
     return MediaMetadata(
         identity_id="id-1",
-        media_type=MediaType.MOVIE,
+        media_type=ProviderMediaType.MOVIE,
         primary_provider="douban",
         refs=[
             ProviderRef(provider="douban", external_id="1"),

@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from app.domain.entities.rss import SubscribeState
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.events import Event
 from app.events.constants import MEDIA_EPISODE_TRANSFERRED, MEDIA_TRANSFER_FINISHED, TRANSFER_FAIL
 from app.events.payloads import (
@@ -48,11 +48,11 @@ def test_finalize_tv_by_rssid_writes_history_deletes_and_notifies():
     svc = SubscribeFinishService(MagicMock(), tv_repo, history_repo, message, bus)
     delete_fn = MagicMock()
 
-    svc.finalize_tv_by_rssid(5, MediaType.ANIME, delete_fn)
+    svc.finalize_tv_by_rssid(5, ProviderMediaType.ANIME, delete_fn)
 
     history_repo.upsert.assert_called_once()
     assert history_repo.upsert.call_args.kwargs["rtype"] == "tv"
-    delete_fn.assert_called_once_with(mtype=MediaType.TV, rssid=5)
+    delete_fn.assert_called_once_with(mtype=ProviderMediaType.SERIES, rssid=5)
     bus.publish.assert_called_once()
     message.send_rss_finished_message.assert_called_once()
 
@@ -65,7 +65,7 @@ def test_finalize_tv_anime_profile_is_persisted_to_history():
     history_repo = MagicMock()
     svc = SubscribeFinishService(MagicMock(), tv_repo, history_repo, MagicMock(), MagicMock())
 
-    svc.finalize_tv_by_rssid(5, MediaType.TV, MagicMock())
+    svc.finalize_tv_by_rssid(5, ProviderMediaType.SERIES, MagicMock())
 
     assert history_repo.upsert.call_args.kwargs["content_profile"] == "anime"
 
@@ -85,7 +85,7 @@ def test_finalize_movie_by_rssid_writes_history_deletes():
 
     history.upsert.assert_called_once()
     assert history.upsert.call_args.kwargs["image"] == "i"
-    delete.assert_called_once_with(mtype=MediaType.MOVIE, rssid=7)
+    delete.assert_called_once_with(mtype=ProviderMediaType.MOVIE, rssid=7)
     bus.publish.assert_called_once()
     message.send_rss_finished_message.assert_called_once()
     notified = message.send_rss_finished_message.call_args.kwargs
@@ -110,7 +110,7 @@ def test_finish_rss_subscribe_captures_poster_before_delete():
     movie_repo.get_all.return_value = [row]
     message = MagicMock()
     svc = SubscribeFinishService(movie_repo, MagicMock(), MagicMock(), message, MagicMock())
-    media = MediaInfo(type=MediaType.MOVIE, tmdb_id="9")
+    media = MediaInfo(type=ProviderMediaType.MOVIE, tmdb_id="9")
     captured = {}
 
     def _delete(**kwargs):
@@ -246,7 +246,7 @@ def test_transfer_fail_reopens_subscription_and_resets_history():
         rp.return_value.parse.return_value = SimpleNamespace(season=1, episode=5, end_episode=6)
         handler(event)
 
-    svc.update_rss_state.assert_called_once_with(MediaType.TV, 9, SubscribeState.RUNNING.value)
+    svc.update_rss_state.assert_called_once_with(ProviderMediaType.SERIES, 9, SubscribeState.RUNNING.value)
     # 失败集 5-6 回补缺失（已有 7）
     tha.return_value.update_lack.assert_called_once_with(
         title=None, year=None, season=None, rssid=9, lack_episodes=[5, 6, 7]
@@ -291,7 +291,7 @@ def test_transfer_fail_reopens_tv_subscription_by_anchor():
         rp.return_value.parse.return_value = SimpleNamespace(season=1, episode=1, end_episode=None)
         handler(event)
 
-    svc.update_rss_state.assert_called_once_with(MediaType.TV, 12, SubscribeState.RUNNING.value)
+    svc.update_rss_state.assert_called_once_with(ProviderMediaType.SERIES, 12, SubscribeState.RUNNING.value)
     tha.return_value.update_lack.assert_called_once_with(
         title=None, year=None, season=None, rssid=12, lack_episodes=[1]
     )
@@ -317,7 +317,7 @@ def test_transfer_fail_reopens_movie_subscription():
         rp.return_value.parse.return_value = SimpleNamespace(season=None, episode=None, end_episode=None)
         handler(event)
 
-    svc.update_rss_state.assert_called_once_with(MediaType.MOVIE, 11, SubscribeState.RUNNING.value)
+    svc.update_rss_state.assert_called_once_with(ProviderMediaType.MOVIE, 11, SubscribeState.RUNNING.value)
 
 
 def test_transfer_fail_reopens_movie_subscription_by_anchor():
@@ -354,7 +354,7 @@ def test_transfer_fail_reopens_movie_subscription_by_anchor():
         rp.return_value.parse.return_value = SimpleNamespace(season=None, episode=None, end_episode=None)
         handler(event)
 
-    svc.update_rss_state.assert_called_once_with(MediaType.MOVIE, 12, SubscribeState.RUNNING.value)
+    svc.update_rss_state.assert_called_once_with(ProviderMediaType.MOVIE, 12, SubscribeState.RUNNING.value)
 
 
 def test_movie_transfer_finished_finalizes_movie_subscription():
@@ -368,7 +368,7 @@ def test_movie_transfer_finished_finalizes_movie_subscription():
             file=None,
             target_path=None,
             dest=None,
-            media_info={"type": MediaType.MOVIE.value, "tmdb_id": "55"},
+            media_info={"type": ProviderMediaType.MOVIE.value, "tmdb_id": "55"},
         ),
     )
     with patch.object(handlers, "SubscribeMovieRepositoryAdapter") as mra:
@@ -397,7 +397,7 @@ def test_movie_transfer_finished_finalizes_by_anchor_when_provider_is_aggregate(
             target_path=None,
             dest=None,
             media_info={
-                "type": MediaType.MOVIE.value,
+                "type": ProviderMediaType.MOVIE.value,
                 "content_profile": "custom",
                 "anchor_provider": "demo",
                 "anchor_external_id": "ABC-123",
@@ -422,7 +422,7 @@ def test_movie_transfer_finished_finalizes_once_for_duplicate_rows():
             file=None,
             target_path=None,
             dest=None,
-            media_info={"type": MediaType.MOVIE.value, "tmdb_id": "55"},
+            media_info={"type": ProviderMediaType.MOVIE.value, "tmdb_id": "55"},
         ),
     )
     with patch.object(handlers, "SubscribeMovieRepositoryAdapter") as mra:
@@ -445,7 +445,7 @@ def test_movie_transfer_finished_ignores_tv():
             file=None,
             target_path=None,
             dest=None,
-            media_info={"type": MediaType.TV.value, "tmdb_id": "55"},
+            media_info={"type": ProviderMediaType.SERIES.value, "tmdb_id": "55"},
         ),
     )
     with patch.object(handlers, "SubscribeMovieRepositoryAdapter") as mra:
@@ -479,7 +479,7 @@ def test_transfer_fail_reopen_scoped_to_owner():
         rp.return_value.parse.return_value = SimpleNamespace(season=None, episode=None, end_episode=None)
         handler(event)
 
-    svc.update_rss_state.assert_called_once_with(MediaType.TV, 9, SubscribeState.RUNNING.value)
+    svc.update_rss_state.assert_called_once_with(ProviderMediaType.SERIES, 9, SubscribeState.RUNNING.value)
 
 
 def test_movie_transfer_finished_skips_when_not_in_library():
@@ -494,7 +494,7 @@ def test_movie_transfer_finished_skips_when_not_in_library():
             file=None,
             target_path=None,
             dest=None,
-            media_info={"type": MediaType.MOVIE.value, "tmdb_id": "55", "title": "M", "year": "2020"},
+            media_info={"type": ProviderMediaType.MOVIE.value, "tmdb_id": "55", "title": "M", "year": "2020"},
         ),
     )
     with patch.object(handlers, "SubscribeMovieRepositoryAdapter") as mra:
@@ -529,7 +529,7 @@ def test_reconcile_finalizes_when_library_has_media():
 
     svc.reconcile_pending_transfers(now=datetime.datetime(2026, 1, 1))
 
-    final_tv.assert_called_once_with(5, MediaType.TV)
+    final_tv.assert_called_once_with(5, ProviderMediaType.SERIES)
     reopen.assert_not_called()
 
 
@@ -547,7 +547,7 @@ def test_reconcile_reopens_stale_pending():
     svc.reconcile_pending_transfers(now=datetime.datetime(2026, 1, 1))
 
     final_tv.assert_not_called()
-    reopen.assert_called_once_with(MediaType.TV, 5, SubscribeState.RUNNING.value)
+    reopen.assert_called_once_with(ProviderMediaType.SERIES, 5, SubscribeState.RUNNING.value)
 
 
 def test_reconcile_finalizes_anime_tv_with_anime_type():
@@ -561,7 +561,7 @@ def test_reconcile_finalizes_anime_tv_with_anime_type():
 
     svc.reconcile_pending_transfers(now=datetime.datetime(2026, 1, 1))
 
-    final_tv.assert_called_once_with(5, MediaType.ANIME)
+    final_tv.assert_called_once_with(5, ProviderMediaType.ANIME)
     reopen.assert_not_called()
 
 
@@ -592,7 +592,7 @@ def test_reconcile_reopens_stale_movie_pending_by_anchor():
     svc._download_repo.get_by_identity.assert_called_once_with(
         identity_id="id-1", anchor_provider="demo", anchor_external_id="ABC-123"
     )
-    reopen.assert_called_once_with(MediaType.MOVIE, 12, SubscribeState.RUNNING.value)
+    reopen.assert_called_once_with(ProviderMediaType.MOVIE, 12, SubscribeState.RUNNING.value)
 
 
 def test_reconcile_leaves_fresh_pending():
@@ -719,5 +719,5 @@ def test_reconcile_handles_season_string_prefix():
 
     svc.reconcile_pending_transfers(now=datetime.datetime(2026, 1, 1))
 
-    final_tv.assert_called_once_with(43, MediaType.TV)
+    final_tv.assert_called_once_with(43, ProviderMediaType.SERIES)
     reopen.assert_not_called()

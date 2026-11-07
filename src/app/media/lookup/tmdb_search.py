@@ -10,10 +10,8 @@ from app.core.exceptions import TMDBError
 from app.domain.media_types import (
     ProviderMediaType,
     external_protocol_type,
-    legacy_media_type_of,
     provider_media_type_of,
 )
-from app.domain.mediatypes import MediaType
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpRateLimitError
@@ -456,7 +454,7 @@ class TmdbSearch:
         for multi in multis:
             provider_type = provider_media_type_of(multi.get("media_type"))
             if provider_type in (ProviderMediaType.MOVIE, ProviderMediaType.SERIES):
-                multi["media_type"] = legacy_media_type_of(provider_type)
+                multi["media_type"] = provider_media_type_of(provider_type)
                 ret_infos.append(multi)
         return ret_infos
 
@@ -482,7 +480,7 @@ class TmdbSearch:
             return []
         ret_infos = []
         for movie in movies:
-            movie["media_type"] = legacy_media_type_of(ProviderMediaType.MOVIE)
+            movie["media_type"] = provider_media_type_of(ProviderMediaType.MOVIE)
             ret_infos.append(movie)
         return ret_infos
 
@@ -508,11 +506,11 @@ class TmdbSearch:
             return []
         ret_infos = []
         for tv in tvs:
-            tv["media_type"] = legacy_media_type_of(ProviderMediaType.SERIES)
+            tv["media_type"] = provider_media_type_of(ProviderMediaType.SERIES)
             ret_infos.append(tv)
         return ret_infos
 
-    def search_web(self, name: str, mtype: MediaType | ProviderMediaType) -> Any:
+    def search_web(self, name: str, mtype: ProviderMediaType | ProviderMediaType) -> Any:
         if not name or StringUtils.is_chinese(name):
             return None
         hint_type = provider_media_type_of(mtype)

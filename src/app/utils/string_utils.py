@@ -12,7 +12,7 @@ import dateparser
 import dateutil.parser
 
 from app.domain.enums import SubscribeType
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.utils.exception_utils import ExceptionUtils
 
 _MAGNET_RE = re.compile(r"magnet:\?[^\s\"'<>]+", re.IGNORECASE)
@@ -357,9 +357,9 @@ class StringUtils:
             return None, None, None, None, None, None
         # 去掉查询中的电影或电视剧关键字
         if re.search(r"^动漫|\s+动漫", content):
-            mtype = MediaType.ANIME
+            mtype = ProviderMediaType.ANIME
         elif re.search(r"^电视剧|\s+电视剧", content):
-            mtype = MediaType.TV
+            mtype = ProviderMediaType.SERIES
         else:
             mtype = None
         content = re.sub(r"^电影|^电视剧|^动漫|\s+电影|\s+电视剧|\s+动漫", "", content).strip()
@@ -370,11 +370,11 @@ class StringUtils:
         # 中文季/集（第X季 / 第X集）
         season_re = re.search(r"第\s*([0-9一二三四五六七八九十]+)\s*季", content, re.IGNORECASE)
         if season_re:
-            mtype = MediaType.TV
+            mtype = ProviderMediaType.SERIES
             season_num = int(cn2an.cn2an(season_re.group(1), mode="smart"))
         episode_re = re.search(r"第\s*([0-9一二三四五六七八九十百零]+)\s*集", content, re.IGNORECASE)
         if episode_re:
-            mtype = MediaType.TV
+            mtype = ProviderMediaType.SERIES
             episode_num = int(cn2an.cn2an(episode_re.group(1), mode="smart"))
         # 英文季/集：S02E06 / S02 / Season 2 / E06 / Episode 6
         season_ep_en = re.search(
@@ -384,7 +384,7 @@ class StringUtils:
             re.IGNORECASE,
         )
         if season_ep_en:
-            mtype = MediaType.TV
+            mtype = ProviderMediaType.SERIES
             nums = re.findall(r"\d+", season_ep_en.group(0))
             if len(nums) >= 2:
                 season_num = int(nums[0])
@@ -392,11 +392,11 @@ class StringUtils:
         else:
             season_en = re.search(r"(?:[Ss]|Season\s*)\s*(\d{1,2})\b", content, re.IGNORECASE)
             if season_en:
-                mtype = MediaType.TV
+                mtype = ProviderMediaType.SERIES
                 season_num = int(season_en.group(1))
             episode_en = re.search(r"(?:[Ee]|Episode\s*)\s*(\d{1,3})\b", content, re.IGNORECASE)
             if episode_en:
-                mtype = MediaType.TV
+                mtype = ProviderMediaType.SERIES
                 episode_num = int(episode_en.group(1))
         if episode_num and not season_num:
             season_num = 1

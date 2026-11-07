@@ -6,7 +6,6 @@ from typing import Any, Iterable
 
 from app.core.constants import ANIME_GENREIDS
 from app.domain.media_types import MediaKind, ProviderMediaType, provider_media_type_of
-from app.domain.mediatypes import MediaType
 
 _ANIME_GENRE_NAMES = {"动画", "動畫", "アニメ", "animation"}
 _ANIME_GENRE_IDS = set(ANIME_GENREIDS)
@@ -42,14 +41,14 @@ def classify_provider_media_type(
 
 
 def classify_media_type(
-    media_type: MediaType,
+    media_type: ProviderMediaType,
     genres: Iterable[Any] | None,
     content_profile: str = "default",
-) -> tuple[MediaType, str]:
+) -> tuple[ProviderMediaType, str]:
     """兼容旧调用的内部类型分类入口."""
     provider_type, profile = classify_provider_media_type(
         provider_media_type_of(media_type),
         genres,
         content_profile,
     )
-    return provider_type.to_media_type(), profile
+    return provider_type, profile

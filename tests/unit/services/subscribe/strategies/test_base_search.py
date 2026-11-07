@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.services.subscribe.strategies.base_search import BaseSearchStrategy
 
 
@@ -166,16 +166,16 @@ class TestBaseSearchStrategy:
         strategy._metadata_gateway.cached_details.return_value = {"id": 123}
         with patch("app.services.subscribe.strategies.base_search.meta_info") as mock_meta:
             mock_meta.return_value = media
-            result = strategy._get_media_info(123, "Name", "2024", MediaType.MOVIE)
+            result = strategy._get_media_info(123, "Name", "2024", ProviderMediaType.MOVIE)
             assert result is media
 
     def test_get_media_info_without_tmdbid(self, strategy):
         media = _MediaInfo()
         strategy._media_service.identify.return_value = media
-        result = strategy._get_media_info(None, "Name", "2024", MediaType.MOVIE)
+        result = strategy._get_media_info(None, "Name", "2024", ProviderMediaType.MOVIE)
         assert result is media
         # 第二次调用应走缓存，identify 只调用一次
-        result2 = strategy._get_media_info(None, "Name", "2024", MediaType.MOVIE)
+        result2 = strategy._get_media_info(None, "Name", "2024", ProviderMediaType.MOVIE)
         assert result2 is not media
         assert result2.title == media.title
         strategy._media_service.identify.assert_called_once()
@@ -185,10 +185,10 @@ class TestBaseSearchStrategy:
         strategy._metadata_gateway.cached_details.return_value = {"id": 123}
         with patch("app.services.subscribe.strategies.base_search.meta_info") as mock_meta:
             mock_meta.return_value = media
-            result = strategy._get_media_info(123, "Name", "2024", MediaType.MOVIE)
+            result = strategy._get_media_info(123, "Name", "2024", ProviderMediaType.MOVIE)
             assert result.tmdb_id == media.tmdb_id
             strategy._metadata_gateway.cached_details.assert_called_once()
-            result2 = strategy._get_media_info(123, "Name", "2024", MediaType.MOVIE)
+            result2 = strategy._get_media_info(123, "Name", "2024", ProviderMediaType.MOVIE)
             assert result2.tmdb_id == media.tmdb_id
 
     def test_get_media_info_different_keys_not_shared(self, strategy):
@@ -196,14 +196,14 @@ class TestBaseSearchStrategy:
         media2 = _MediaInfo()
         media2.tmdb_id = 456
         strategy._media_service.identify.side_effect = [media1, media2]
-        r1 = strategy._get_media_info(None, "Name1", "2024", MediaType.MOVIE)
-        r2 = strategy._get_media_info(None, "Name2", "2024", MediaType.MOVIE)
+        r1 = strategy._get_media_info(None, "Name1", "2024", ProviderMediaType.MOVIE)
+        r2 = strategy._get_media_info(None, "Name2", "2024", ProviderMediaType.MOVIE)
         assert r1 is media1
         assert r2 is media2
         assert strategy._media_service.identify.call_count == 2
 
     def test_get_media_info_douban_prefix_does_not_identify_tmdb(self, strategy):
-        result = strategy._get_media_info("DB:123", "Name", "2024", MediaType.MOVIE)
+        result = strategy._get_media_info("DB:123", "Name", "2024", ProviderMediaType.MOVIE)
         assert result is not None
         assert result.tmdb_id == ""
         assert result.douban_id == "123"
@@ -214,7 +214,7 @@ class TestBaseSearchStrategy:
 class TestEffectiveSearchSites:
     def test_uses_subscribe_configured_sites(self, strategy):
         strategy._system_config = MagicMock()
-        result = strategy._get_effective_search_sites({"search_sites": ["s1", "s2"]}, MediaType.TV)
+        result = strategy._get_effective_search_sites({"search_sites": ["s1", "s2"]}, ProviderMediaType.SERIES)
         assert result == ["s1", "s2"]
         strategy._system_config.get.assert_not_called()
 
@@ -222,7 +222,7 @@ class TestEffectiveSearchSites:
         sys_config = MagicMock()
         sys_config.get.return_value = {"search_sites": ["defaultA"]}
         strategy._system_config = sys_config
-        result = strategy._get_effective_search_sites({"search_sites": None}, MediaType.TV)
+        result = strategy._get_effective_search_sites({"search_sites": None}, ProviderMediaType.SERIES)
         assert result == ["defaultA"]
 
     def test_empty_list_triggers_fallback_not_zero_sites(self, strategy):
@@ -230,33 +230,33 @@ class TestEffectiveSearchSites:
         sys_config = MagicMock()
         sys_config.get.return_value = {"search_sites": ["defaultB"]}
         strategy._system_config = sys_config
-        result = strategy._get_effective_search_sites({"search_sites": []}, MediaType.TV)
+        result = strategy._get_effective_search_sites({"search_sites": []}, ProviderMediaType.SERIES)
         assert result == ["defaultB"]
 
     def test_movie_uses_movie_default_setting(self, strategy):
         sys_config = MagicMock()
         sys_config.get.return_value = {"search_sites": ["movieSite"]}
         strategy._system_config = sys_config
-        result = strategy._get_effective_search_sites({"search_sites": None}, MediaType.MOVIE)
+        result = strategy._get_effective_search_sites({"search_sites": None}, ProviderMediaType.MOVIE)
         assert result == ["movieSite"]
 
     def test_no_system_config_returns_none(self, strategy):
         """无默认设置 → None（全部可见站点）"""
         strategy._system_config = None
-        assert strategy._get_effective_search_sites({"search_sites": None}, MediaType.TV) is None
+        assert strategy._get_effective_search_sites({"search_sites": None}, ProviderMediaType.SERIES) is None
 
     def test_invalid_default_setting_returns_none(self, strategy):
         sys_config = MagicMock()
         sys_config.get.return_value = "not_a_dict"
         strategy._system_config = sys_config
-        assert strategy._get_effective_search_sites({"search_sites": None}, MediaType.TV) is None
+        assert strategy._get_effective_search_sites({"search_sites": None}, ProviderMediaType.SERIES) is None
 
     def test_empty_default_sites_returns_none(self, strategy):
         """默认设置未配站点 → None（而非零站点）"""
         sys_config = MagicMock()
         sys_config.get.return_value = {"search_sites": []}
         strategy._system_config = sys_config
-        assert strategy._get_effective_search_sites({"search_sites": []}, MediaType.TV) is None
+        assert strategy._get_effective_search_sites({"search_sites": []}, ProviderMediaType.SERIES) is None
 
 
 class TestSubscribeSearchEnforcesOwnerScope:
@@ -319,14 +319,14 @@ class TestSubscribeSearchEnforcesOwnerScope:
             strategy._search_tvs()
 
         kwargs = strategy._searcher.search_one_media.call_args.kwargs
-        assert media.type == MediaType.ANIME
+        assert media.type == ProviderMediaType.ANIME
         entry = kwargs["no_exists"]["series:demo:S03"][0]
         assert entry["episode_offset"] == 24
 
 
 class TestProviderRefSearch:
     def test_get_media_info_content_id_skips_tmdb(self, strategy):
-        media = strategy._get_media_info("content_id:START-660", "タイトル", "2026", MediaType.MOVIE)
+        media = strategy._get_media_info("content_id:START-660", "タイトル", "2026", ProviderMediaType.MOVIE)
 
         assert media is not None
         assert media.tmdb_id == ""
@@ -365,7 +365,7 @@ def test_plugin_anchor_never_queries_tmdb(strategy):
         "123",
         "JUR-897",
         "2026",
-        MediaType.MOVIE,
+        ProviderMediaType.MOVIE,
         anchor_provider="demo_meta",
         anchor_external_id="JUR-897",
         content_profile="demo",
@@ -387,7 +387,7 @@ def test_douban_anchor_can_use_tmdb_supplement(strategy):
         123,
         "七龙珠超：比鲁斯",
         "2026",
-        MediaType.TV,
+        ProviderMediaType.SERIES,
         anchor_provider="douban",
         anchor_external_id="38221205",
     )

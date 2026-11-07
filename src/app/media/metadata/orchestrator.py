@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 
 from .composer import MetadataComposer
 from .errors import (
@@ -70,7 +70,7 @@ class MetadataOrchestrator:
         refs: list[ProviderRef],
         policy: MetadataPolicy,
         *,
-        media_type: MediaType | None = None,
+        media_type: ProviderMediaType | None = None,
         content_profile: str = "default",
         scope: str = "default",
         locked: dict[str, FieldValue] | None = None,

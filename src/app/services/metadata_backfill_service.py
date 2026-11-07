@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from app.db.repositories.legacy_media_ref_repository import LegacyMediaRefRepository
 from app.db.repositories.media_identity_repository import MediaIdentityRepository
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import ProviderMediaType
 from app.media.metadata.legacy import parse_legacy_ref
 
 
@@ -60,7 +60,7 @@ class MetadataBackfillService:
         for row in rows:
             report.scanned += 1
             report.source_counts[row.source] = report.source_counts.get(row.source, 0) + 1
-            ref = parse_legacy_ref(row.raw_id, MediaType.from_string(row.media_type))
+            ref = parse_legacy_ref(row.raw_id, ProviderMediaType.from_value(row.media_type))
             if ref is None:
                 report.skipped += 1
                 reason = "empty_or_unknown_id"
