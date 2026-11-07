@@ -11,7 +11,7 @@ from typing import Any, Protocol
 
 import log
 from app.core.settings import settings
-from app.domain.media_types import ProviderMediaType, provider_media_type_of
+from app.domain.media_types import MediaKind, ProviderMediaType, provider_media_type_of
 from app.domain.mediatypes import MediaType
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.infrastructure.external.doubanapi.episode_queue import episode_queue
@@ -221,7 +221,7 @@ class DoubanProvider:
         display_name="豆瓣",
         ref_prefixes=frozenset({"DB", "DOUBAN"}),
         subscription_id_format="DB:{id}",
-        default_media_type=MediaType.MOVIE,
+        default_provider_media_type=ProviderMediaType.MOVIE,
         detail_url_template="https://movie.douban.com/subject/{external_id}",
         capabilities=frozenset(
             {
@@ -233,7 +233,8 @@ class DoubanProvider:
                 ProviderCapability.DISCOVERY,
             }
         ),
-        media_types=frozenset({MediaType.MOVIE, MediaType.TV, MediaType.ANIME}),
+        provider_media_types=frozenset({ProviderMediaType.MOVIE, ProviderMediaType.SERIES, ProviderMediaType.ANIME}),
+        media_kinds=frozenset({MediaKind.MOVIE, MediaKind.EPISODIC}),
         rate_limit_per_minute=RATE,
         source_tiers=frozenset({SourceTier.API, SourceTier.HTML}),
     )

@@ -19,7 +19,7 @@
 - Provider 契约：新增 `ProviderMediaType`，`MediaRef`/`ProviderRef`/`ProviderRecord` 增加 `provider_media_type`/`media_kind`；Emby/Plex/Jellyfin/FnOS 与 TMDB/豆瓣/Bangumi provider 引用改用外部协议类型。
 
 
-- 外部适配：`LookupResult` 改为 `provider_media_type`/`media_kind`，TMDB/豆瓣/Bangumi lookup 与 Provider 统一使用外部协议类型，新增 adapter 静态守卫。
+- 外部适配：`LookupResult` 改为 `provider_media_type`/`media_kind`，TMDB/豆瓣/Bangumi lookup 与 Provider 统一使用外部协议类型；`ProviderDescriptor` 改为 `provider_media_types`/`media_kinds`/`default_provider_media_type`。
 
 ## v5.8.2 (2026-11-07)
 

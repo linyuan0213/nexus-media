@@ -57,7 +57,11 @@ def resolve_subscription(
         }
         if profiles:
             profile = sorted(profiles)[0]
-    media_type = descriptor.default_media_type or (MediaType.TV if profile == "anime" else MediaType.MOVIE)
+    media_type = (
+        descriptor.default_provider_media_type.to_media_type()
+        if descriptor.default_provider_media_type is not None
+        else (MediaType.TV if profile == "anime" else MediaType.MOVIE)
+    )
     declared_format = str(getattr(descriptor, "subscription_id_format", "") or "")
     id_format = declared_format or ("{provider}:{id}" if profile != "default" else "{id}")
     mediaid = id_format.format(provider=provider, id=external_id)

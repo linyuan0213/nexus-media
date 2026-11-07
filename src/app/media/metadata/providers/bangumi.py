@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Protocol
 
-from app.domain.media_types import ProviderMediaType, provider_media_type_of
+from app.domain.media_types import MediaKind, ProviderMediaType, provider_media_type_of
 from app.domain.mediatypes import MediaType
 from app.media.external.bangumi import Bangumi
 
@@ -176,7 +176,7 @@ class BangumiProvider:
         display_name="Bangumi",
         ref_prefixes=frozenset({"BG", "BGM", "BANGUMI"}),
         subscription_id_format="BG:{id}",
-        default_media_type=MediaType.TV,
+        default_provider_media_type=ProviderMediaType.SERIES,
         default_content_profile="anime",
         detail_url_template="https://bgm.tv/subject/{external_id}",
         capabilities=frozenset(
@@ -189,7 +189,8 @@ class BangumiProvider:
                 ProviderCapability.DISCOVERY,
             }
         ),
-        media_types=frozenset({MediaType.ANIME, MediaType.TV}),
+        provider_media_types=frozenset({ProviderMediaType.ANIME, ProviderMediaType.SERIES}),
+        media_kinds=frozenset({MediaKind.EPISODIC}),
         content_profiles=frozenset({"anime"}),
         source_tiers=frozenset({SourceTier.API}),
         allowed_hosts=frozenset(HOSTS),

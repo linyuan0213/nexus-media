@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.domain.mediatypes import MediaType
+from app.domain.media_types import MediaKind, ProviderMediaType
 from app.media.metadata import (
     ProviderCapability,
     ProviderDescriptor,
@@ -18,7 +18,8 @@ class _DummyProvider:
             provider_key=key,
             display_name=key,
             capabilities=frozenset(capabilities),
-            media_types=frozenset({MediaType.MOVIE, MediaType.TV}),
+            provider_media_types=frozenset({ProviderMediaType.MOVIE, ProviderMediaType.SERIES}),
+            media_kinds=frozenset({MediaKind.MOVIE, MediaKind.EPISODIC}),
             **kwargs,
         )
 

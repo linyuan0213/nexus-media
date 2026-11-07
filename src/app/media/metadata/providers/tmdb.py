@@ -265,7 +265,7 @@ class TmdbProvider:
         display_name="TMDB",
         ref_prefixes=frozenset({"TMDB"}),
         subscription_id_format="{id}",
-        default_media_type=MediaType.MOVIE,
+        default_provider_media_type=ProviderMediaType.MOVIE,
         detail_url_template="https://www.themoviedb.org/{media_type}/{external_id}",
         capabilities=frozenset(
             {
@@ -279,7 +279,8 @@ class TmdbProvider:
                 ProviderCapability.RELEASE_DATES,
             }
         ),
-        media_types=frozenset({MediaType.MOVIE, MediaType.TV, MediaType.ANIME}),
+        provider_media_types=frozenset({ProviderMediaType.MOVIE, ProviderMediaType.SERIES, ProviderMediaType.ANIME}),
+        media_kinds=frozenset({MediaKind.MOVIE, MediaKind.EPISODIC}),
         source_tiers=frozenset({SourceTier.API}),
         allowed_hosts=frozenset(HOSTS),
         rate_limit_per_minute=RATE,

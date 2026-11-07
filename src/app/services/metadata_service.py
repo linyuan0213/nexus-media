@@ -1531,7 +1531,11 @@ class MetadataService:
         ref = ProviderRef(
             provider=provider,
             external_id=str(external_id),
-            media_type=target.descriptor.default_media_type or MediaType.TV,
+            media_type=(
+                target.descriptor.default_provider_media_type.to_media_type()
+                if target.descriptor.default_provider_media_type is not None
+                else MediaType.TV
+            ),
             scope="default",
         )
         self._check_visibility([ref], allow_private=allow_private, permissions=permissions)
@@ -1825,7 +1829,8 @@ class MetadataService:
                     "provider": descriptor.provider_key,
                     "name": descriptor.display_name,
                     "capabilities": sorted(str(item) for item in descriptor.capabilities),
-                    "media_types": sorted(str(item) for item in descriptor.media_types),
+                    "provider_media_types": sorted(str(item) for item in descriptor.provider_media_types),
+                    "media_kinds": sorted(str(item) for item in descriptor.media_kinds),
                     "content_profiles": sorted(descriptor.content_profiles),
                     "visibility": descriptor.visibility,
                     "required_permission": descriptor.required_permission,

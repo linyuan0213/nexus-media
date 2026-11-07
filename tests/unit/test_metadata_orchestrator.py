@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 
+from app.domain.media_types import MediaKind, ProviderMediaType
 from app.domain.mediatypes import MediaType
 from app.media.metadata import (
     EpisodeRecord,
@@ -22,7 +23,8 @@ class _FakeProvider:
             provider_key=key,
             display_name=key,
             capabilities=frozenset(capabilities or {ProviderCapability.DETAIL}),
-            media_types=frozenset({MediaType.TV}),
+            provider_media_types=frozenset({ProviderMediaType.SERIES}),
+            media_kinds=frozenset({MediaKind.EPISODIC}),
         )
         self._record = record
         self._error = error

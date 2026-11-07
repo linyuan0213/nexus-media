@@ -13,6 +13,7 @@ import threading
 from dataclasses import dataclass
 from typing import Any
 
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType
 
 from .models import ProviderCapability, ProviderDescriptor
@@ -297,7 +298,11 @@ def _provider_matches(
             return False
     if content_profile and descriptor.content_profiles and content_profile not in descriptor.content_profiles:
         return False
-    if media_type and descriptor.media_types and media_type not in descriptor.media_types:
+    if (
+        media_type
+        and descriptor.media_kinds
+        and media_type_registry.resolve(media_type).kind not in descriptor.media_kinds
+    ):
         return False
     return not (visibility and descriptor.visibility != visibility)
 

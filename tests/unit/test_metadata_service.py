@@ -5,6 +5,7 @@ from typing import Any, Literal
 import pytest
 
 from app.core.exceptions import ValidationError
+from app.domain.media_types import MediaKind, ProviderMediaType, media_kind_of
 from app.domain.mediatypes import MediaType
 from app.media.metadata import (
     ProviderCapability,
@@ -32,7 +33,10 @@ class _FakeProvider:
             provider_key=key,
             display_name=key,
             capabilities=frozenset(capabilities or {ProviderCapability.DETAIL}),
-            media_types=frozenset(media_types or {media_type}),
+            provider_media_types=frozenset(
+                {ProviderMediaType.from_value(getattr(x, "value", x)) for x in (media_types or {media_type})}
+            ),
+            media_kinds=frozenset({media_kind_of(x) for x in (media_types or {media_type})}),
             visibility=visibility,
         )
         self._title = title
@@ -601,8 +605,6 @@ def test_system_default_policy_reads_current_settings(monkeypatch):
 def test_identify_anchor_follows_policy(monkeypatch):
     from types import SimpleNamespace
 
-    from app.domain.mediatypes import MediaType
-
     svc = MetadataService(register_builtins=True)
     svc._ensure_builtin()
     calls = []
@@ -624,8 +626,6 @@ def test_identify_anchor_follows_policy(monkeypatch):
 def test_identify_anchor_falls_back_when_primary_misses(monkeypatch):
     from types import SimpleNamespace
 
-    from app.domain.mediatypes import MediaType
-
     svc = MetadataService(register_builtins=True)
     svc._ensure_builtin()
 
@@ -646,8 +646,6 @@ def test_identify_anchor_singleflight(monkeypatch):
     import time
     from concurrent.futures import ThreadPoolExecutor
     from types import SimpleNamespace
-
-    from app.domain.mediatypes import MediaType
 
     svc = MetadataService(register_builtins=True)
     svc._ensure_builtin()
@@ -804,7 +802,8 @@ class _PrivateSearchProvider:
             provider_key="private_demo",
             display_name="Private Demo",
             capabilities=frozenset({ProviderCapability.SEARCH}),
-            media_types=frozenset({MediaType.MOVIE}),
+            provider_media_types=frozenset({ProviderMediaType.MOVIE}),
+            media_kinds=frozenset({MediaKind.MOVIE}),
             visibility="private",
         )
 

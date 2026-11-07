@@ -77,7 +77,8 @@ class ProviderDescriptor(BaseModel):
     display_name: str
     detail_url_template: str = ""
     capabilities: frozenset[ProviderCapability] = frozenset()
-    media_types: frozenset[MediaType] = frozenset()
+    provider_media_types: frozenset[ProviderMediaType] = frozenset()
+    media_kinds: frozenset[MediaKind] = frozenset()
     content_profiles: frozenset[str] = frozenset()
     ref_prefixes: frozenset[str] = frozenset()
     search_mode: str = ""
@@ -95,7 +96,7 @@ class ProviderDescriptor(BaseModel):
     circuit_cooldown_seconds: int = 60
     subscription_id_format: str = ""
     subscription_ref: bool = False
-    default_media_type: MediaType | None = None
+    default_provider_media_type: ProviderMediaType | None = None
     default_content_profile: str = "default"
     subscription_order: int = 100
     default_subscription_policy: str = ""
