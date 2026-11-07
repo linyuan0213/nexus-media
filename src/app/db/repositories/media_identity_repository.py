@@ -19,6 +19,7 @@ from app.db.models.media_identity import (
 from app.db.models.subscribe import SubscribeMovies, SubscribeTvs
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
+from app.domain.media_types import media_type_registry
 from app.utils.ulid import new_ulid
 
 
@@ -138,6 +139,7 @@ class MediaIdentityRepository(BaseRepository):
                 identity = MediaIdentity(
                     IDENTITY_ID=target_id,
                     MEDIA_TYPE=media_type,
+                    MEDIA_KIND=media_type_registry.resolve(media_type, content_profile).kind.value,
                     CONTENT_PROFILE=content_profile,
                     CANONICAL_TITLE=title,
                     YEAR=year,
@@ -158,6 +160,7 @@ class MediaIdentityRepository(BaseRepository):
                 changed = True
             if media_type and media_type != "unknown" and identity.MEDIA_TYPE != media_type:
                 identity.MEDIA_TYPE = media_type
+                identity.MEDIA_KIND = media_type_registry.resolve(media_type, content_profile).kind.value
                 changed = True
             if content_profile and identity.CONTENT_PROFILE != content_profile:
                 identity.CONTENT_PROFILE = content_profile

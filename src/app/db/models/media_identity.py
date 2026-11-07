@@ -18,6 +18,7 @@ class MediaIdentity(Base):
 
     IDENTITY_ID: Mapped[str] = mapped_column(String(26), primary_key=True)
     MEDIA_TYPE: Mapped[str] = mapped_column(String(128), nullable=False, default="unknown")
+    MEDIA_KIND: Mapped[str] = mapped_column(String(16), nullable=False, default="unknown")
     CONTENT_PROFILE: Mapped[str] = mapped_column(String(64), nullable=False, default="default")
     CANONICAL_TITLE: Mapped[str | None] = mapped_column(String(255), nullable=True)
     YEAR: Mapped[str | None] = mapped_column(String(8), nullable=True)

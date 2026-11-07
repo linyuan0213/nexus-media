@@ -157,3 +157,10 @@ def test_replace_aliases_trims_old_values(repo):
     repo.update_aliases(identity.IDENTITY_ID, ["旧1", "旧2", "Old"])
     assert repo.replace_aliases(identity.IDENTITY_ID, ["中文", "Native", "English"]) is True
     assert repo.get_aliases(identity.IDENTITY_ID) == ["中文", "Native", "English"]
+
+
+def test_identity_tracks_structural_media_kind(repo):
+    identity = repo.ensure_identity(title="Kind Demo", media_type="anime")
+    assert identity.MEDIA_KIND == "episodic"
+    updated = repo.ensure_identity(identity_id=identity.IDENTITY_ID, media_type="movie")
+    assert updated.MEDIA_KIND == "movie"

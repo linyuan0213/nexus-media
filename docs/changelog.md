@@ -10,7 +10,8 @@
 ### 新增
 
 - 媒体类型：新增 `MediaKind` / `MediaTypeDescriptor` / `MediaTypeRef` / `MediaTypeRegistry`；下载进度、生命周期、搜索/RSS 接入注册表，插件 manifest 可声明 `media_types`，未知类型保持 `UNKNOWN`。
-- 数据库：`MEDIA_TYPE` 扩展到 128 字符，支持 `plugin:` 命名空间。
+- 数据库：`MEDIA_TYPE` 扩展到 128 字符，`MEDIA_IDENTITY` 增加 `MEDIA_KIND`，历史类型回填 movie/episodic/unknown。
+- 生命周期：分组媒体类型和 kind 优先使用 identity 的规范值，插件 descriptor 不可用时仍保留结构类型。
 
 
 ## v5.8.2 (2026-11-07)

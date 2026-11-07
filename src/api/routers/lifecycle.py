@@ -41,7 +41,8 @@ def _row_payload(row) -> dict[str, Any]:
             media_type_registry.resolve_profile(data.get("CONTENT_PROFILE"))
             or media_type_registry.resolve(data.get("MEDIA_TYPE"), data.get("CONTENT_PROFILE"))
         ).display_name,
-        "media_kind": (
+        "media_kind": data.get("MEDIA_KIND")
+        or (
             media_type_registry.resolve_profile(data.get("CONTENT_PROFILE"))
             or media_type_registry.resolve(data.get("MEDIA_TYPE"), data.get("CONTENT_PROFILE"))
         ).kind.value,

@@ -11,6 +11,7 @@ from sqlalchemy import func
 import log
 from app.db.models.download import DOWNLOADHISTORY
 from app.db.models.lifecycle import MediaLifecycle, MediaLifecycleEvent
+from app.db.models.media_identity import MediaIdentity
 from app.db.models.subscribe import SubscribeHistory, SubscribeMovies, SubscribeTvEpisodes, SubscribeTvs
 from app.db.models.transfer import TRANSFERHISTORY
 from app.db.repositories.base_repository import BaseRepository
@@ -297,6 +298,12 @@ class LifecycleRepository(BaseRepository):
                     key = str(identity)
                     if key not in activity or occurred > activity[key]:
                         activity[key] = occurred
+            identity_kind_map = {
+                str(identity_id): str(kind or "unknown")
+                for identity_id, kind in db.query(MediaIdentity.IDENTITY_ID, MediaIdentity.MEDIA_KIND)
+                .filter(MediaIdentity.IDENTITY_ID.in_(identities))
+                .all()
+            }
             subscription_map = _subscription_map(db, identities)
             active_identities = _active_subscription_identities(db, identities)
             completed_identities = _completed_subscription_identities(db, identities)
@@ -304,6 +311,7 @@ class LifecycleRepository(BaseRepository):
             grouped = _group_lifecycle_rows(rows)
             for item in grouped:
                 item["ACTIVITY_AT"] = activity.get(str(item.get("IDENTITY_ID")), datetime.min)
+                item["MEDIA_KIND"] = identity_kind_map.get(str(item.get("IDENTITY_ID")), "unknown")
             _apply_subscription_state(
                 grouped, subscription_map, active_identities, completed_identities, cancelled_identities
             )
