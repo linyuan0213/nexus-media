@@ -6,6 +6,12 @@
 
 - 生命周期：下载进度投影保留 anime 类型，E0 工作行继承同身份分集的 poster/元数据；分组类型/画像优先采用分集行，修复动漫被 E0 工作行标成电影。
 
+
+### 新增
+
+- 媒体类型：新增 `MediaKind` / `MediaTypeDescriptor` / `MediaTypeRef` / `MediaTypeRegistry`，插件类型使用 `plugin:` 命名空间，未知类型保持 `UNKNOWN`。
+
+
 ## v5.8.2 (2026-11-07)
 
 ### 修复
