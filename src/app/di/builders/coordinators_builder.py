@@ -6,6 +6,8 @@ from app.agent.tools.context import ToolContext
 from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryAdapter
 from app.di.builders.agent_builder import AgentRagObjects
 from app.di.models import BusinessFacades, CoordinatorObjects, InfrastructureObjects, ServiceObjects
+from app.events.bus import EventBus
+from app.events.decorators import auto_register
 from app.infrastructure.system_config import SystemConfig
 from app.infrastructure.thread import ThreadExecutor
 from app.message.agent_enhancer import AgentMessageEnhancer
@@ -24,10 +26,27 @@ from app.services.subscribe.strategies.indexer_search import IndexerSearchStrate
 from app.services.subscribe.strategies.queue_search import QueueSearchStrategy
 from app.services.subscribe.strategies.rss_feed import RssFeedStrategy
 from app.services.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
+from app.services.subscribe_service import SubscribeService
 from app.services.system.config import SystemConfigService
 from app.services.system.lifecycle import SystemLifecycleService
 from app.services.transfer.kb_ingest_handler import register_kb_ingest_handler
 from app.sites import SiteConf
+
+
+def register_subscription_handlers(
+    *,
+    event_bus: EventBus,
+    subscribe_service: SubscribeService,
+    queue_strategy: QueueSearchStrategy,
+    thread_executor: ThreadExecutor,
+) -> None:
+    """注册订阅生命周期处理器，并 flush 构建阶段新增的 pending handlers."""
+    build_rss_auto_subscribe_handler(subscribe_service)
+    build_subscribe_add_search_handler(queue_strategy, thread_executor)
+    build_media_episode_transferred_handler(subscribe_service)
+    build_movie_transfer_finalize_handler(subscribe_service)
+    build_transfer_fail_reopen_handler(subscribe_service)
+    auto_register(event_bus)
 
 
 def build_coordinators(
@@ -199,16 +218,12 @@ def build_coordinators(
     if facades.agent_service.ready:
         infra.message.set_agent_enhancer(AgentMessageEnhancer(facades.agent_service, get_notify_config()))
 
-    # 注册 RSS 自动订阅事件处理器
-    build_rss_auto_subscribe_handler(subscribe_service)
-    # 注册订阅添加/更新后自动触发队列搜索的事件处理器
-    build_subscribe_add_search_handler(queue_strategy, thread_executor)
-    # 转移落盘确认后定稿订阅（写历史、删订阅、联动兄弟）
-    build_media_episode_transferred_handler(subscribe_service)
-    # 电影转移落盘确认后定稿
-    build_movie_transfer_finalize_handler(subscribe_service)
-    # 转移失败后回滚：重开订阅并复位下载历史，允许重新下载
-    build_transfer_fail_reopen_handler(subscribe_service)
+    register_subscription_handlers(
+        event_bus=infra.event_bus,
+        subscribe_service=subscribe_service,
+        queue_strategy=queue_strategy,
+        thread_executor=thread_executor,
+    )
 
     return CoordinatorObjects(
         subscription_monitor=subscription_monitor,
