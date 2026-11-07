@@ -91,3 +91,54 @@ def test_default_layouts_are_category_for_movie_tv_and_flat_for_anime():
     assert MediaConfigService._parse_layout(None, "movie") == "category"
     assert MediaConfigService._parse_layout(None, "tv") == "category"
     assert MediaConfigService._parse_layout(None, "anime") == "flat"
+
+
+def test_existence_checker_returns_category_dir_for_new_movie(tmp_path):
+    """新文件必须落主布局（分类子目录），不能因为候选顺序落到平铺路径."""
+    checker = MediaExistenceChecker(_resolver(movie_category_flag=True))
+    media = _media(ProviderMediaType.MOVIE, category="华语电影", title="门牙")
+    dir_exist, ret_dir, file_exist, ret_file = checker.is_media_exists(str(tmp_path), media)
+    assert dir_exist is False
+    assert file_exist is False
+    assert ret_dir == str(tmp_path / "华语电影" / "门牙 (2024)")
+    assert ret_file == str(tmp_path / "华语电影" / "门牙 (2024)" / "门牙")
+
+
+def test_existence_checker_returns_flat_dir_for_new_movie_when_flat(tmp_path):
+    checker = MediaExistenceChecker(_resolver(movie_category_flag=False))
+    media = _media(ProviderMediaType.MOVIE, category="华语电影", title="门牙")
+    dir_exist, ret_dir, file_exist, ret_file = checker.is_media_exists(str(tmp_path), media)
+    assert dir_exist is False
+    assert file_exist is False
+    assert ret_dir == str(tmp_path / "门牙 (2024)")
+
+
+def test_existence_checker_finds_legacy_flat_file(tmp_path):
+    """旧平铺路径已存在文件时仍能命中，避免切换布局后重复入库."""
+    flat_dir = tmp_path / "门牙 (2024)"
+    flat_dir.mkdir()
+    (flat_dir / "门牙.mkv").write_text("x")
+    checker = MediaExistenceChecker(_resolver(movie_category_flag=True))
+    media = _media(ProviderMediaType.MOVIE, category="华语电影", title="门牙")
+    _, ret_dir, file_exist, ret_file = checker.is_media_exists(str(tmp_path), media)
+    assert file_exist is True
+    assert ret_dir == str(flat_dir)
+    assert ret_file == str(flat_dir / "门牙.mkv")
+
+
+def test_existence_checker_returns_category_season_dir_for_new_episode(tmp_path):
+    checker = MediaExistenceChecker(_resolver(tv_category_flag=True))
+    media = _media(ProviderMediaType.SERIES, category="国产剧", title="门牙")
+    dir_exist, ret_dir, file_exist, _ = checker.is_media_exists(str(tmp_path), media)
+    assert dir_exist is False
+    assert file_exist is False
+    assert ret_dir == str(tmp_path / "国产剧" / "门牙 (2024)" / "Season 1")
+
+
+def test_existence_checker_anime_defaults_to_flat(tmp_path):
+    resolver = _resolver(anime_category_flag=False)
+    checker = MediaExistenceChecker(resolver)
+    media = _media(ProviderMediaType.ANIME, category="动漫", title="门牙")
+    _, ret_dir, file_exist, _ = checker.is_media_exists(str(tmp_path), media)
+    assert file_exist is False
+    assert ret_dir == str(tmp_path / "门牙 (2024)" / "Season 1")

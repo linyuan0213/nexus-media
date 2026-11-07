@@ -82,26 +82,26 @@ class MediaExistenceChecker:
         if media.type == ProviderMediaType.MOVIE:
             dir_name, file_name = self._path_resolver.get_movie_dest_path(media, self._media)
             category = safe_category_name(getattr(media, "category", ""))
-            candidates = self._layout_dirs(
+            layout_dirs = self._layout_dirs(
                 media_dest, dir_name, category, bool(self._path_resolver.movie_category_flag)
             )
-            favorite_path = os.path.join(media_dest, RMT_FAVTYPE, dir_name)
-            if favorite_path not in candidates:
-                candidates.insert(0, favorite_path)
-            for file_path in candidates:
-                ret_dir_path = file_path
-                if _exists(file_path):
-                    dir_exist_flag = True
+            # 新文件始终落主布局；精选目录和旧布局只用于发现已存在的文件
+            ret_dir_path = layout_dirs[0]
+            ret_file_path = os.path.join(ret_dir_path, file_name)
+            for file_path in [os.path.join(media_dest, RMT_FAVTYPE, dir_name), *layout_dirs]:
                 file_dest = os.path.join(file_path, file_name)
-                ret_file_path = file_dest
+                found = None
                 for ext in RMT_MEDIAEXT:
                     ext_dest = f"{file_dest}{ext}"
                     if _exists(ext_dest):
-                        file_exist_flag = True
-                        ret_file_path = ext_dest
+                        found = ext_dest
                         break
-                if file_exist_flag:
+                if found:
+                    file_exist_flag = True
+                    ret_dir_path = file_path
+                    ret_file_path = found
                     break
+            dir_exist_flag = _exists(ret_dir_path)
         else:
             dir_name, season_name, file_name = self._path_resolver.get_tv_dest_path(media, self._media)
             # 与 TransferPathResolver.get_dest_path_by_info 使用同一套布局开关。
@@ -109,24 +109,26 @@ class MediaExistenceChecker:
             add_category = bool(self._path_resolver.tv_category_flag)
             if media.type == ProviderMediaType.ANIME:
                 add_category = bool(self._path_resolver.anime_category_flag)
-            if media.get_season_list():
-                for media_path in self._layout_dirs(media_dest, dir_name, category, add_category):
+            layout_dirs = self._layout_dirs(media_dest, dir_name, category, add_category)
+            # 新文件始终落主布局；旧布局只用于发现已存在的文件
+            ret_dir_path = os.path.join(layout_dirs[0], season_name)
+            if media.get_episode_list():
+                ret_file_path = os.path.join(ret_dir_path, file_name)
+                for media_path in layout_dirs:
                     season_dir = os.path.join(media_path, season_name)
-                    ret_dir_path = season_dir
-                    if _exists(season_dir):
-                        dir_exist_flag = True
-                    episodes = media.get_episode_list()
-                    if episodes:
-                        file_path = os.path.join(season_dir, file_name)
-                        ret_file_path = file_path
-                        for ext in RMT_MEDIAEXT:
-                            ext_dest = f"{file_path}{ext}"
-                            if _exists(ext_dest):
-                                file_exist_flag = True
-                                ret_file_path = ext_dest
-                                break
-                    if file_exist_flag:
+                    file_path = os.path.join(season_dir, file_name)
+                    found = None
+                    for ext in RMT_MEDIAEXT:
+                        ext_dest = f"{file_path}{ext}"
+                        if _exists(ext_dest):
+                            found = ext_dest
+                            break
+                    if found:
+                        file_exist_flag = True
+                        ret_dir_path = season_dir
+                        ret_file_path = found
                         break
+            dir_exist_flag = _exists(ret_dir_path)
         return dir_exist_flag, ret_dir_path, file_exist_flag, ret_file_path
 
     def get_no_exists_medias(self, meta_info_obj, meta_info_fn, season=None, total_num=None):
