@@ -1,0 +1,2084 @@
+<!DOCTYPE html><html lang="zh" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Nexus Media 多功能媒体库管理工具使用文档">
+      
+      
+      
+        <link rel="canonical" href="https://linyuan0213.github.io/nexus-media/decisions/ADR-024-library-batch-rename/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>ADR-024: 媒体库批量重命名（命名规则变更后处理存量文件） - Nexus Media 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-024-媒体库批量重命名命名规则变更后处理存量文件" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="Nexus Media 文档" class="md-header__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Nexus Media 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-024: 媒体库批量重命名（命名规则变更后处理存量文件）
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到深色模式" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换到深色模式" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到浅色模式" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换到浅色模式" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Nexus Media 文档" class="md-nav__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    Nexus Media 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装部署
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    使用指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    使用指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    基础配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    资源搜索与探索
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sites/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    站点配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../filter_rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    过滤规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../download_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../downloaders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体服务器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../directory_sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    目录同步
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_organization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体整理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rss/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RSS 订阅
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../indexers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    索引器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通知渠道配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../message_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    消息通知模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务与调度
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    存储后端
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    用户与权限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    插件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件使用
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugin_development_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发者
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    开发者
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    本地开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent-mvp-detailed-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    常见问题
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    更新日志
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#背景" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        背景
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#决策" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        决策
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="决策">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#非目标v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        非目标（v1）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#详细设计" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        详细设计
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="详细设计">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-术语与操作范围" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 术语与操作范围
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-元数据来源与可恢复性" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 元数据来源与可恢复性
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. 元数据来源与可恢复性">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-来源优先级" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 来源优先级
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-可恢复性矩阵" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 可恢复性矩阵
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-nfo-解析" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 NFO 解析
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-无历史文件库内已有但不在-transfer_history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 无历史文件（库内已有但不在 TRANSFER_HISTORY）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-路径计算" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 路径计算
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-数据模型与历史同步" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 数据模型与历史同步
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. 数据模型与历史同步">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#library_rename_job" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBRARY_RENAME_JOB
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#library_rename_item" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBRARY_RENAME_ITEM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#library_media_metadata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LIBRARY_MEDIA_METADATA
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-扫描与计划" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 扫描与计划
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-执行回滚与崩溃恢复" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 执行、回滚与崩溃恢复
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-并发与锁" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 并发与锁
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-接口与前端" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. 接口与前端
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-多用户与权限adr-021" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. 多用户与权限（ADR-021）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-实施影响面预估" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. 实施影响面（预估）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-测试" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. 测试
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#风险--待决" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        风险 / 待决
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/linyuan0213/nexus-media/edit/master/docs/decisions/ADR-024-library-batch-rename.md" title="编辑此页" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="adr-024-媒体库批量重命名命名规则变更后处理存量文件">ADR-024: 媒体库批量重命名（命名规则变更后处理存量文件）<a class="headerlink" href="#adr-024-媒体库批量重命名命名规则变更后处理存量文件" title="Permanent link">¶</a></h1>
+<blockquote>
+<p>状态：Draft（2026-10-18 评审后修订，未实施）</p>
+</blockquote>
+<h2 id="背景">背景<a class="headerlink" href="#背景" title="Permanent link">¶</a></h2>
+<p>命名规则（<code>movie_name_format</code> / <code>tv_name_format</code>，<code>src/app/core/settings.py</code>）只在<strong>转移入库时</strong>用于计算目标路径。用户修改规则后：</p>
+<ul>
+<li><strong>新入库</strong>的文件按新规则命名；</li>
+<li><strong>已入库</strong>的存量文件保持旧名，无任何自动迁移。</li>
+</ul>
+<p>这导致库里命名风格不一致，且无法通过现有能力批量纠正。需要一种<strong>安全、离线、可预览、可恢复</strong>的方式对存量文件按当前规则重命名。</p>
+<p>已核对的关键事实：</p>
+<ul>
+<li>命名计算复用 <code>TransferPathResolver.get_format_dict</code>（<code>src/app/services/transfer/path_resolver.py:375</code>）+ <code>name_format</code>，与转移流程保持一致。</li>
+<li><code>TRANSFER_HISTORY</code>（<code>src/app/db/models/transfer.py:21</code>）保存 <code>TYPE/TITLE/YEAR/TMDBID/SEASON_EPISODE/CATEGORY/DEST/DEST_PATH/DEST_FILENAME/MODE/DST_BACKEND</code>，但它是<strong>转移日志</strong>，不是媒体库元数据表；<code>MODE</code> 被重新识别流程当作 <code>operation</code> 使用（<code>src/app/services/sync_service.py:471</code>），统计接口按 <code>TYPE/DATE</code> 聚合（<code>src/app/db/repositories/transfer_repository.py:296</code>、<code>:310</code>）。</li>
+<li>仓库中<strong>不存在</strong> <code>delete_transfer_history_by_dest</code>；现有更新接口只有 <code>update_transfer_history_date</code>（<code>transfer_repository.py:50</code>），<code>insert_transfer_history</code> 在 <code>in_path</code> 为空时直接返回（<code>:78</code>）。</li>
+<li>转移时生成 NFO 是<strong>有条件</strong>的：<code>media.nfo_poster</code> 未开启时不会生成（<code>src/app/media/scraper/__init__.py:61</code>、<code>:207</code>）；命名包括 <code>movie.nfo</code>、<code>&lt;base&gt;.nfo</code>、<code>tvshow.nfo</code>、<code>season.nfo</code>，并非全部与视频同基名。</li>
+<li>默认命名格式包含 <code>{part}</code>（<code>src/app/core/constants.py:103-106</code>、<code>src/app/core/settings.py:162-163</code>），而 <code>part</code> 来自手动转移参数（<code>src/app/media/service.py:886</code>、<code>:1061</code>），<code>TRANSFER_HISTORY</code> 未存储。</li>
+</ul>
+<h2 id="决策">决策<a class="headerlink" href="#决策" title="Permanent link">¶</a></h2>
+<p>新增<strong>媒体库批量重命名</strong>能力，采用「<strong>预览计划 → 确认执行 → 后台任务 → 可恢复日志</strong>」四段式流程，遵循以下原则：</p>
+<ol>
+<li><strong>离线优先</strong>：预览默认不访问 TMDB、不重新识别；使用历史、下载历史、NFO、文件名和本地媒体服务器元数据。联网补全/重新识别必须显式开启，并在<strong>计划阶段</strong>完成、落快照；执行阶段不再发起新的联网请求。</li>
+<li><strong>幂等</strong>：同一规则重复执行必须不产生任何变更；禁止把「当前文件名」当作 <code>original_name</code> / <code>rev_name</code> / <code>part</code> 等身份字段的来源，避免越改越长。</li>
+<li><strong>元数据来源分级</strong>：有历史时 <code>TRANSFER_HISTORY</code> → <code>SOURCE_FILENAME</code>（原始下载名重解析）→ NFO；无历史时 <code>LIBRARY_MEDIA_METADATA</code> → <code>DOWNLOAD_HISTORY</code> → NFO → 媒体服务器 → 文件名解析/在线识别 → 人工映射。<code>DEST_FILENAME</code> <strong>不作为身份/剧情字段的来源</strong>；仅在无源名、无 NFO 时作为发布信息（分辨率/编码/片源/发布组等）的最后兜底，并标注来源。</li>
+<li><strong>同根、同后端、保留分类</strong>：锁定原 <code>DEST</code> 根目录与 <code>DST_BACKEND</code>，不跨根、不换后端；默认保留当前分类/「精选」目录，不因改名重新分类。</li>
+<li><strong>不改写转移历史语义</strong>：不补插伪转移记录，不修改 <code>MODE</code>。命中历史时只更新 <code>DEST_PATH</code> / <code>DEST_FILENAME</code>；未命中时只写独立的 rename journal。</li>
+<li><strong>统一文件操作入口</strong>：所有移动/改名通过 <code>StorageBackend</code> 完成，支持本地/远程后端；不直接 <code>shutil.move</code>，不复用会写黑名单的 <code>TransferEngine.transfer()</code>。</li>
+<li><strong>安全闭环</strong>：计划快照、批内冲突检测、路径白名单、单条失败隔离、持久化回滚日志、崩溃恢复、缓存失效。</li>
+<li><strong>附属资产与目录级资产分开处理</strong>：同基名字幕/音轨跟随改名；<code>movie.nfo</code>/<code>tvshow.nfo</code>/<code>season.nfo</code>/海报等目录级资产按目录整体移动，不按单文件误改。</li>
+<li><strong>并发协调</strong>：批量任务与转移/同步共享目标级锁；批量任务自身全局单飞。</li>
+<li><strong>媒体服务器刷新尽力而为</strong>：Plex 支持按路径刷新，Emby 按媒体库/剧集刷新，Jellyfin/FnOS 只能整库刷新；批量结束后合并刷新旧/新路径，并如实提示。</li>
+</ol>
+<h3 id="非目标v1">非目标（v1）<a class="headerlink" href="#非目标v1" title="Permanent link">¶</a></h3>
+<ul>
+<li>不默认重新识别、不默认联网补全 TMDB 元数据。</li>
+<li>不跨媒体库根目录迁移，不切换存储后端。</li>
+<li>不处理多后端镜像副本；只处理扫描到的主副本，不保证镜像副本同步改名（见「风险」）。</li>
+<li>不自动重新分类；默认保留当前分类/精选目录。</li>
+<li>不为无历史文件伪造 <code>TRANSFER_HISTORY</code> 记录。</li>
+<li>不提供「从旧文件名截取联网占位符原片段」模式；该方案不可靠，留待后续评估。</li>
+</ul>
+<h2 id="详细设计">详细设计<a class="headerlink" href="#详细设计" title="Permanent link">¶</a></h2>
+<h3 id="1-术语与操作范围">1. 术语与操作范围<a class="headerlink" href="#1-术语与操作范围" title="Permanent link">¶</a></h3>
+<p>批量重命名实际是「<strong>按当前规则重新布局 + 改名</strong>」，可能同时改变目录层级和文件名。提供 <code>layout_mode</code>：</p>
+<ul>
+<li><code>full</code>（默认）：按当前目录/季/文件格式重算完整相对路径。</li>
+<li><code>filename_only</code>：只重算文件名，保持当前目录不变；适合只想统一文件名的用户。</li>
+</ul>
+<p>预览必须明确展示每个条目的「旧路径 → 新路径」，避免用户误以为只改文件名。</p>
+<h3 id="2-元数据来源与可恢复性">2. 元数据来源与可恢复性<a class="headerlink" href="#2-元数据来源与可恢复性" title="Permanent link">¶</a></h3>
+<h4 id="21-来源优先级">2.1 来源优先级<a class="headerlink" href="#21-来源优先级" title="Permanent link">¶</a></h4>
+<p><strong>A. 有 <code>TRANSFER_HISTORY</code>（按 <code>DEST_PATH + DEST_FILENAME</code> 精确命中）</strong></p>
+<ol>
+<li><strong><code>TRANSFER_HISTORY</code></strong>：以历史字段为准。同一路径命中多条时，取最新一条作为元数据来源；执行时按旧路径批量更新全部命中记录，避免重复记录继续指向旧路径。</li>
+<li><strong><code>SOURCE_FILENAME</code> 重解析</strong>：若含路径只取 basename，用 <code>meta_info()</code>（<code>MediaInfo</code>）解析原始下载名，补充 <code>resource_type</code> / <code>resource_effect</code> / <code>resource_pix</code> / <code>video_encode</code> / <code>audio_encode</code> / <code>resource_team</code> / <code>customization</code> 等发布信息。</li>
+<li><strong>NFO</strong>：补充历史中缺失的 <code>original_title</code> / <code>imdbid</code> / <code>episode_title</code> 等。</li>
+<li><strong>当前文件名（仅发布信息）</strong>：无源名、无 NFO 时，仅用于补齐分辨率/编码/片源/发布组等发布信息，不用于身份、标题、年份、季集、TMDBID。</li>
+<li><strong>仍缺失</strong>：身份字段缺失则跳过；联网字段在未开启联网时跳过。</li>
+</ol>
+<p><strong>B. 无 <code>TRANSFER_HISTORY</code>（库内已有，但不在转移历史）</strong></p>
+<p>这类文件必须能处理，否则「媒体库目录有、数据库没有」的存量文件永远无法整理。按以下顺序兜底：</p>
+<ol>
+<li><strong><code>LIBRARY_MEDIA_METADATA</code></strong>：人工确认（<code>IS_MANUAL=1</code>）的映射优先；自动缓存仅在高置信度且路径仍存在时复用，否则按下列来源重新解析。</li>
+<li><strong><code>DOWNLOAD_HISTORY</code></strong>：按 <code>SAVE_PATH</code> 精确匹配；不中时按 <code>TORRENT</code>（原始下载名）/<code>TITLE</code>+<code>YEAR</code>+<code>TYPE</code> 唯一匹配。可取 <code>TMDBID</code>、<code>SE</code>、<code>TORRENT</code> 作为 <code>SOURCE_FILENAME</code> 的替代。</li>
+<li><strong>NFO</strong>：同 2.3。</li>
+<li><strong>媒体服务器</strong>：按文件路径向已配置的 Emby/Jellyfin/Plex 查询条目元数据；电影取条目 TMDB ID，剧集取所属 Series 的 TMDB ID + 文件名/NFO 的季集。</li>
+<li><strong>文件名解析</strong>：解析标题/年份/季集/发布信息；识别文件名中的 <code>tmdb-12345</code> / <code>tmdbid=12345</code> 等 TMDB ID 标记。</li>
+<li><strong>在线识别</strong>（<code>reidentify_no_metadata=true</code>）：用文件名解析结果走 <code>MediaService</code>/TMDB 识别。</li>
+<li><strong>人工映射</strong>：以上都无法确定时，预览标记 <code>needs_metadata</code>，用户在界面选择/输入 TMDB ID 和季集，写入 <code>LIBRARY_MEDIA_METADATA</code> 后重新生成计划。</li>
+</ol>
+<p>解析结果先写入计划条目的 <code>METADATA_SNAPSHOT</code>；只有执行成功后才 upsert 到 <code>LIBRARY_MEDIA_METADATA</code>，避免预览阶段写入未确认或低置信度缓存。详细规则见 2.4。</p>
+<h4 id="22-可恢复性矩阵">2.2 可恢复性矩阵<a class="headerlink" href="#22-可恢复性矩阵" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>占位符</th>
+<th>有历史时的来源</th>
+<th>无历史时的来源</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>title</code> / <code>year</code> / <code>tmdbid</code> / <code>media_type</code></td>
+<td>历史</td>
+<td><code>LIBRARY_MEDIA_METADATA</code> / <code>DOWNLOAD_HISTORY</code> / NFO（电影用 <code>movie.nfo</code>，剧集用 <code>tvshow.nfo</code>）/ 媒体服务器（剧集用 Series TMDB ID）/ 文件名+在线识别 / 人工映射</td>
+<td>无历史时必须至少确定 <code>title</code>+<code>type</code>；规则引用 <code>{year}</code>/<code>{tmdbid}</code> 时对应字段缺失则跳过；<strong>集 NFO 的 tmdbid 是单集 ID，不能当剧集 ID</strong></td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td>当前路径 / 历史</td>
+<td>当前路径</td>
+<td>默认保留当前分类或「精选」；不按历史 <code>CATEGORY</code> 强制重分类</td>
+</tr>
+<tr>
+<td><code>season</code> / <code>episode</code> / <code>season_episode</code></td>
+<td>历史 <code>SEASON_EPISODE</code></td>
+<td>NFO / 媒体服务器 / 文件名 / <code>DOWNLOAD_HISTORY.SE</code></td>
+<td>历史存在时以历史为准；不从当前文件名重新解析，避免动漫绝对集号/多集文件被改错。无历史时才由上述来源解析</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>TITLE</code> 映射</td>
+<td>同左</td>
+<td><code>TITLE</code> 赋给 <code>cn_name</code> 或 <code>en_name</code> 后再走 <code>get_name()</code>；是<strong>确定性近似</strong>，不保证等于转移时的原值</td>
+</tr>
+<tr>
+<td><code>original_name</code> / <code>rev_name</code></td>
+<td><code>SOURCE_FILENAME</code></td>
+<td><code>DOWNLOAD_HISTORY.TORRENT</code></td>
+<td>只从原始下载名重解析；两者都没有时<strong>不可恢复</strong>，规则引用则跳过</td>
+</tr>
+<tr>
+<td><code>part</code></td>
+<td>原始下载名启发式 / 人工确认</td>
+<td><code>DOWNLOAD_HISTORY.TORRENT</code> 启发式 / 人工确认</td>
+<td>历史未存，<code>meta_info</code> 也不产出 <code>part</code>；只有原下载名含明确 <code>Part 1</code>/<code>CD1</code>/<code>Disc 1</code> 等标记时才可启发式提取。不可从 <code>DEST_FILENAME</code> 推导；无法确认且旧名疑似含分集标识时跳过，否则按空处理</td>
+</tr>
+<tr>
+<td><code>edition</code> / <code>videoFormat</code> / <code>source</code> / <code>videoCodec</code> / <code>audioCodec</code> / <code>releaseGroup</code> / <code>customization</code> / <code>effect</code></td>
+<td><code>SOURCE_FILENAME</code> → 当前文件名兜底</td>
+<td><code>DOWNLOAD_HISTORY.TORRENT</code> → 当前文件名兜底</td>
+<td>优先从原始下载名重解析；无源名时允许从当前文件名做<strong>发布信息</strong>兜底；仍缺失按空处理并在预览标注。不得据此覆盖标题/年份/季集/TMDBID</td>
+</tr>
+<tr>
+<td><code>original_title</code></td>
+<td>NFO / TMDB</td>
+<td>NFO / 媒体服务器 / TMDB</td>
+<td>NFO 的 <code>originaltitle</code>、媒体服务器条目的 <code>originalTitle</code> 可用；否则需联网</td>
+</tr>
+<tr>
+<td><code>imdbid</code></td>
+<td>NFO / TMDB</td>
+<td>NFO / 媒体服务器 / TMDB</td>
+<td>NFO 的 <code>imdbid</code> / <code>uniqueid[@type="imdb"]</code>、媒体服务器 <code>ProviderIds.Imdb</code> 可用；否则需联网</td>
+</tr>
+<tr>
+<td><code>episode_title</code></td>
+<td>NFO / TMDB</td>
+<td>NFO / 媒体服务器 / TMDB</td>
+<td>集 NFO 或媒体服务器的 episode title 可用；否则需联网</td>
+</tr>
+<tr>
+<td><code>en_title</code></td>
+<td>TMDB</td>
+<td>TMDB</td>
+<td>媒体服务器的 <code>originalTitle</code> 不一定是英文标题；离线不可算</td>
+</tr>
+<tr>
+<td><code>studio</code> / <code>networks</code> / <code>vote_average</code></td>
+<td>—</td>
+<td>—</td>
+<td><strong>不是合法占位符</strong>，<code>name_format.validate()</code> 会拒绝</td>
+</tr>
+</tbody>
+</table>
+<p>补充约束：</p>
+<ul>
+<li>剧集条目必须能确定季号和集号；无法确定时进入 <code>needs_metadata</code>，不能依赖 <code>MediaInfo</code> 的默认 <code>S01</code>。</li>
+<li><code>episode</code> 的补零位数依赖 <code>MediaInfo.get_episode_bit()</code>（<code>src/app/media/models.py:212</code>）和 <code>tmdb_info</code> 的季集数。离线只能用 <code>begin_episode</code> / <code>end_episode</code>；超过 99 集时可能无法完全复现转移时的位数，预览需标注该限制。</li>
+<li>多集文件历史值为 <code>S01 E01-E05</code>（<code>get_season_episode_string</code>，<code>models.py:267</code>），文件名格式可能是 <code>S01E01E05</code>（<code>get_episode_items</code>，<code>models.py:240</code>）；解析时必须同时兼容两种表达，并兼容季范围（如 <code>S01-S02</code>）。</li>
+<li><code>name</code> 与 <code>TITLE</code> 的映射写入 rename item 的 <code>metadata_source</code>，便于审计；它不是原值的精确复现。</li>
+</ul>
+<h4 id="23-nfo-解析">2.3 NFO 解析<a class="headerlink" href="#23-nfo-解析" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>后端感知</strong>：本地用 <code>defusedxml</code>；远程后端先通过 <code>StorageBackend.read_stream</code> 读取，再交给 <code>defusedxml</code> 解析。禁止直接对不可信 NFO 使用默认 lxml 实体解析（XXE/实体膨胀）。</li>
+<li><strong>查找顺序</strong>（不是「命中一个就停」，而是合并字段；身份字段优先级更高）：</li>
+<li>电影：<code>&lt;dir&gt;/movie.nfo</code> → <code>&lt;dir&gt;/&lt;base&gt;.nfo</code>；</li>
+<li>剧集：<code>&lt;dir&gt;/&lt;base&gt;.nfo</code> → <code>&lt;dir&gt;/season.nfo</code> → <code>&lt;dir&gt;/tvshow.nfo</code> → <code>&lt;parent&gt;/tvshow.nfo</code>；</li>
+<li>若 <code>&lt;base&gt;.nfo</code> 不存在，可在同目录扫描其他 <code>.nfo</code>（排除 <code>movie.nfo</code>/<code>tvshow.nfo</code>/<code>season.nfo</code>），仅当其 <code>season/episode</code> 与文件名解析结果一致且唯一时采用。</li>
+<li><strong>字段合并规则</strong>：</li>
+<li>电影：<code>movie.nfo</code> / <code>&lt;base&gt;.nfo</code> 提供 title/year/tmdbid/imdbid/originaltitle；</li>
+<li>剧集：<code>tvshow.nfo</code> 提供<strong>剧集级</strong> title/year/tmdbid/imdbid；<code>episodedetails</code> 提供 <code>episode_title</code>/season/episode；<code>season.nfo</code> 只提供季号/季标题/季播出年，不得把 “Season 1” 当作剧集标题、剧集年份或 TMDB ID；</li>
+<li><strong><code>episodedetails.tmdbid</code> 是单集 TMDB ID，不是剧集 TMDB ID</strong>，禁止写入 <code>media.tmdb_id</code>；剧集 TMDB ID 只能来自 <code>tvshow.nfo</code>、媒体服务器 Series 条目或下载历史。只有集 NFO 而无剧集 TMDB ID 时，<code>{tmdbid}</code> 相关能力和在线补全跳过；</li>
+<li><code>episodedetails.title</code> 只写入 <code>episode_title</code>，不得覆盖剧集 <code>title</code>；<code>tvshow.nfo</code> 的 <code>season=-1</code>/<code>episode=-1</code> 是占位值，不参与季集解析；</li>
+<li>同一字段冲突时，<code>movie.nfo</code>/<code>tvshow.nfo</code> 的身份字段优先，剧集 NFO 的 episode 字段优先。</li>
+<li><strong>有效性</strong>：至少包含一个可用身份字段（<code>title</code>/<code>tmdbid</code>），或剧集包含 <code>season</code>+<code>episode</code>；<code>season.nfo</code> 的 title/year <strong>不计入身份字段</strong>，只用于提供 <code>seasonnumber</code>。解析失败、字段为空、文件过大或 XML 异常视为无效。</li>
+<li><strong>类型推断</strong>：NFO 无法区分 <code>tv</code> 与 <code>anime</code>，必须按当前文件所在媒体库根配置推断；无法确定时跳过。</li>
+<li><strong>多集文件</strong>：NFO 生成处对 <code>int(get_episode_seq())</code> 可能失败（<code>src/app/media/scraper/__init__.py:314</code>），多集文件可能没有 NFO；此时回退到 <code>SOURCE_FILENAME</code> 解析或跳过。</li>
+<li><strong>陈旧 NFO</strong>：优先比较 <code>tmdbid</code>、<code>season</code>、<code>episode</code>、<code>year</code>；标题语言不同不算冲突（例如中文 NFO + 英文文件名）。只有 ID/季集/年份明显矛盾时才标记「NFO 可能过期」，默认跳过并等待人工确认。</li>
+</ul>
+<h4 id="24-无历史文件库内已有但不在-transfer_history">2.4 无历史文件（库内已有但不在 <code>TRANSFER_HISTORY</code>）<a class="headerlink" href="#24-无历史文件库内已有但不在-transfer_history" title="Permanent link">¶</a></h4>
+<p>这是常见场景：手工放入媒体库、转移历史被清理、从旧系统迁移、旧版本入库等。处理目标不是简单跳过，而是「尽量自动解析 + 明确人工补录」：</p>
+<ol>
+<li><strong><code>LIBRARY_MEDIA_METADATA</code> 缓存</strong>：人工确认的映射优先；自动缓存仅在高置信度且路径仍存在时复用，否则继续下面的来源。</li>
+<li><strong><code>DOWNLOAD_HISTORY</code> 下载历史</strong>（本项目下载的文件通常有记录）：</li>
+<li>先按 <code>SAVE_PATH == 当前文件路径</code> 或 <code>== 父目录</code> 精确匹配；</li>
+<li>不中时按 <code>TORRENT</code>（原始下载名）的 basename 与当前文件 basename 匹配；</li>
+<li>再不中时按文件名解析出的 <code>TITLE + YEAR + TYPE</code> 匹配；</li>
+<li>只有<strong>唯一命中</strong>才采用；多条记录且无法用年份/类型/季集消歧时视为不可用；</li>
+<li>可取 <code>TMDBID</code>、<code>SE</code>（季集）和 <code>TITLE/YEAR/TYPE</code>；<code>TORRENT</code> 仅当其 basename 与当前文件 basename 匹配（或能确认是同一单文件）时才作为 <code>SOURCE_FILENAME</code> 的替代，季包/目录名不能当作单集原始名。</li>
+<li><strong>NFO</strong>：按 2.3 解析；电影用 <code>movie.nfo</code> 的 <code>title/year/tmdbid</code>，剧集用 <code>tvshow.nfo</code> 的剧集级 <code>title/year/tmdbid</code> 加集 NFO 的 <code>season/episode/episode_title</code>，是库内文件最可靠的离线来源之一。</li>
+<li><strong>媒体服务器元数据</strong>（<code>use_mediaserver_metadata=true</code>，默认）：</li>
+<li>对已配置的 Emby/Jellyfin/Plex 建立一次「文件路径 → 条目元数据」索引，避免逐文件请求；</li>
+<li>Plex：遍历 section 条目的 <code>locations</code> 匹配路径；电影取条目 <code>tmdbid</code>，剧集取所属 <code>show</code> 的 guids（Series TMDB ID）+ 条目 <code>season/episode</code>，不得使用单集 guids；</li>
+<li>Jellyfin/Emby：按路径递归查询 <code>Movie/Episode</code> 条目；电影取条目的 <code>ProviderIds.Tmdb</code>/<code>ProviderIds.Imdb</code>，剧集必须取所属 Series 的 <code>ProviderIds</code>，不能使用单集 ProviderIds；</li>
+<li><strong>只按路径匹配，不按标题猜测</strong>；路径不匹配时视为无结果；同一路径匹配到多个条目且 TMDB ID 不一致时视为不唯一，进入 <code>needs_metadata</code>。媒体服务器不可用/超时只告警，不阻断计划。</li>
+<li><strong>文件名解析</strong>：</li>
+<li>用 <code>meta_info()</code> 解析标题/年份/季集/发布信息；</li>
+<li>额外识别常见 TMDB ID 标记：<code>tmdb-12345</code>、<code>tmdbid=12345</code>、<code>{tmdb-12345}</code> 等（正则提取）；</li>
+<li>类型由媒体库根配置推断；无法确定时跳过。</li>
+<li><strong>在线识别</strong>（<code>reidentify_no_metadata=true</code>）：用文件名解析结果走 <code>MediaService</code>/TMDB 识别；必须显式开启。</li>
+<li><strong>人工映射</strong>：以上都无法确定时，预览标记 <code>needs_metadata</code>；用户在界面搜索 TMDB 或输入 TMDB ID/季集，写入 <code>LIBRARY_MEDIA_METADATA</code>，然后重新生成计划。人工映射是该文件的长期元数据来源。</li>
+</ol>
+<p>两个联网开关的职责不同：</p>
+<ul>
+<li><code>allow_online_metadata=true</code>：只对<strong>已有 TMDBID</strong> 的条目补全 <code>en_title</code> / <code>episode_title</code> / <code>original_title</code> / <code>imdbid</code> / 季集数等信息，不负责识别未知文件；</li>
+<li><code>reidentify_no_metadata=true</code>：对无 TMDBID 的文件用文件名识别，成功后也会补全上述字段；</li>
+<li>两者都在<strong>计划阶段</strong>执行并写入计划快照；执行阶段不重复联网。</li>
+</ul>
+<p>置信度与持久化：</p>
+<ul>
+<li><code>LIBRARY_MEDIA_METADATA</code>（人工/缓存）、NFO、媒体服务器精确路径、<code>DOWNLOAD_HISTORY.SAVE_PATH</code> 精确匹配：高置信度；</li>
+<li><code>DOWNLOAD_HISTORY.TORRENT</code>/<code>TITLE+YEAR+TYPE</code> 唯一匹配、文件名+在线识别：中置信度；</li>
+<li>自动缓存复用前校验路径存在且 <code>FILE_SIZE</code>/<code>FILE_MTIME</code> 一致（远程后端可跳过 mtime）；不一致则缓存失效并重新解析；人工映射不因文件大小变化自动失效；</li>
+<li>匹配不唯一或字段冲突：不采用，进入 <code>needs_metadata</code>；</li>
+<li>解析结果先写入计划条目快照；<strong>执行成功后</strong>才 upsert 到 <code>LIBRARY_MEDIA_METADATA</code>，后续计划可离线复用。人工补录则立即 upsert；</li>
+<li><strong>人工映射（<code>IS_MANUAL=1</code>）不得被自动解析覆盖</strong>，只能由用户显式重新映射；自动 upsert 也不得把已有 <code>high</code> 置信度降级为 <code>medium</code>；</li>
+<li>无 <code>SOURCE_FILENAME</code> / <code>DOWNLOAD_HISTORY.TORRENT</code> 时，<code>original_name</code>/<code>rev_name</code>/<code>part</code> 仍不可恢复；规则引用这些字段的条目跳过。</li>
+</ul>
+<p><strong>结论</strong>：「媒体库目录有、数据库没有」不是死路；默认至少可以通过 NFO、下载历史、媒体服务器或文件名解析处理。只有完全无法识别且用户也不补录的文件才会被跳过。</p>
+<h3 id="3-路径计算">3. 路径计算<a class="headerlink" href="#3-路径计算" title="Permanent link">¶</a></h3>
+<ul>
+<li>在任务开始时创建<strong>独立的 <code>TransferPathResolver</code> 快照</strong>（<code>from_settings</code> 后只读），不要复用 DI 中的共享实例。共享实例会被转移任务按 TTL <code>refresh()</code>（<code>path_resolver.py:138</code>、<code>filetransfer_service.py:377</code>），导致同一批次前后规则不一致。</li>
+<li>启动前对 <code>movie_name_format</code> / <code>tv_name_format</code> 及拆分后的目录/季/文件格式调用 <code>name_format.validate()</code>；未知字段直接拒绝执行。</li>
+<li>用 <code>name_format.parse_fields()</code> 识别规则引用的字段，结合第 2.2 节判断是否可离线恢复。处理策略：</li>
+<li><strong>身份字段</strong> <code>original_name</code> / <code>rev_name</code> 无法恢复且被引用 → 跳过，预览标注 <code>unrecoverable_field:xxx</code>；</li>
+<li><strong><code>part</code></strong> 无法恢复且旧名疑似含分集标识 → 跳过；否则按空处理；</li>
+<li><strong>发布信息字段</strong>（分辨率/编码/片源/发布组等）无法恢复 → 按空处理，预览标注 <code>missing_release_field:xxx</code>；</li>
+<li><strong>联网字段</strong> 未开启联网 → 跳过，预览标注 <code>requires_online:xxx</code>。</li>
+<li>可选片段 <code>{field:...}</code> 语法可让字段为空时整段消失；即使使用可选片段，也必须在预览中标注该字段缺失。</li>
+<li><strong>禁止使用 <code>DEST_FILENAME</code> 作为 <code>original_name</code> / <code>rev_name</code> / <code>part</code> 的来源</strong>；这三类字段只能来自 <code>SOURCE_FILENAME</code> 或人工确认。</li>
+<li><code>get_format_dict</code> 通过一个<strong>只读元数据适配器</strong>提供 <code>episode_title</code> / <code>en_title</code>（以及联网补全结果）；适配器只读计划快照，不发起网络请求。<code>get_format_dict</code> 自身仍复用现有实现，避免与转移流程产生两套命名逻辑。</li>
+<li>新文件扩展名沿用旧文件扩展名；<code>get_movie_dest_path</code> / <code>get_tv_dest_path</code> 返回的是不含扩展名的文件名。</li>
+<li><strong>保留分类/精选</strong>（默认开启）：</li>
+<li>从当前相对路径识别首段是否为 <code>RMT_FAVTYPE</code>（可配置的「精选」）或已配置分类；</li>
+<li>新路径保留该分类前缀，再拼接当前规则生成的子目录；</li>
+<li><code>reorganize_category=true</code> 时改为按历史 <code>CATEGORY</code> 重新分类，并在预览中高亮；该选项与 <code>preserve_current_category</code> 互斥，<code>reorganize_category</code> 优先。</li>
+<li><strong>目标根目录（无历史时）</strong>：按当前配置的媒体库根做最长前缀匹配，并解析对应 <code>DST_BACKEND</code>；匹配不到、根已从配置删除或后端不可用时跳过。</li>
+<li><strong>历史 <code>DST_BACKEND</code> 为空时</strong>：按 <code>DEST</code> 根匹配当前配置的媒体库根/后端；仍无法唯一确定时跳过，不能默认按本地后端处理。</li>
+<li><strong>安全校验</strong>：</li>
+<li>目标路径必须位于原根目录内，且属于配置的媒体库根/历史 <code>DEST</code> 白名单；</li>
+<li>拒绝空文件名、<code>..</code>、绝对路径、Windows 保留名、尾部空格/点、超长路径；</li>
+<li>目标目录/文件不得覆盖已有内容；</li>
+<li>大小写不敏感文件系统上，本地后端用 <code>samefile</code>、远程后端用后端规范化路径判断「仅大小写变化」，不能直接判定为冲突；</li>
+<li>目标路径按后端大小写规则规范化后再做批内去重，避免同一目标出现大小写不同的两条计划。</li>
+<li><strong>幂等判断</strong>：规范化后新旧路径相同则记为 <code>unchanged</code>，不执行任何文件操作。</li>
+</ul>
+<h3 id="4-数据模型与历史同步">4. 数据模型与历史同步<a class="headerlink" href="#4-数据模型与历史同步" title="Permanent link">¶</a></h3>
+<p>新增独立表，不复用 <code>TRANSFER_HISTORY</code> 作为任务日志：</p>
+<h4 id="library_rename_job"><code>LIBRARY_RENAME_JOB</code><a class="headerlink" href="#library_rename_job" title="Permanent link">¶</a></h4>
+<ul>
+<li><code>ID</code>、<code>PLAN_ID</code>（UUID）、<code>STATUS</code>（<code>planned/running/cancelled/completed/failed/interrupted</code>）</li>
+<li><code>SCOPE</code>（JSON：媒体类型、根目录、<code>layout_mode</code>、是否允许联网等）</li>
+<li><code>RULE_SNAPSHOT</code>（JSON：生成计划时的目录/季/文件格式、分类开关、媒体库根与后端映射）</li>
+<li><code>CREATED_BY</code>、<code>CREATED_AT</code>、<code>STARTED_AT</code>、<code>FINISHED_AT</code></li>
+<li>统计字段：<code>TOTAL</code>、<code>CHANGED</code>、<code>UNCHANGED</code>、<code>SKIPPED</code>、<code>CONFLICT</code>、<code>NEEDS_METADATA</code>、<code>FAILED</code></li>
+</ul>
+<h4 id="library_rename_item"><code>LIBRARY_RENAME_ITEM</code><a class="headerlink" href="#library_rename_item" title="Permanent link">¶</a></h4>
+<ul>
+<li><code>ID</code>、<code>JOB_ID</code></li>
+<li><code>BACKEND_ID</code>、<code>ROOT</code></li>
+<li><code>OLD_PATH</code>、<code>NEW_PATH</code>、<code>OLD_PATH_HASH</code>（按规范化旧路径计算 sha256，用于唯一约束与长路径索引）</li>
+<li><code>OLD_SIZE</code>、<code>OLD_MTIME</code>（用于执行前一致性校验，远程后端可为空）</li>
+<li><code>METADATA_SOURCE</code>（<code>history/source_name/download_history/nfo/mediaserver/filename/filename_fallback/reidentify/online/manual/title_fallback</code>）</li>
+<li><code>METADATA_SNAPSHOT</code>（JSON，保存本次使用的标题/年份/季集/TMDBID/发布字段/<code>SOURCE_FILENAME</code>，以及影响命名的 <code>tmdb_info</code> 最小字段（如季集数），便于审计与执行阶段复用）</li>
+<li><code>ACTION</code>（<code>rename/unchanged/skip/conflict/needs_metadata</code>）、<code>STATUS</code>（<code>planned/running/done/failed/rolled_back/manual_intervention</code>）</li>
+<li><code>DIRECTORY_MOVE_ID</code>（目录整体移动时共享的事务标识）</li>
+<li><code>REASON</code>、<code>ERROR</code>、<code>ROLLBACK_STATUS</code></li>
+<li>唯一约束：<code>(JOB_ID, OLD_PATH_HASH)</code>（长路径用哈希列，避免 MySQL 唯一索引超键长）</li>
+</ul>
+<h4 id="library_media_metadata"><code>LIBRARY_MEDIA_METADATA</code><a class="headerlink" href="#library_media_metadata" title="Permanent link">¶</a></h4>
+<p>用于持久化「库内文件 → 元数据」映射，解决无历史文件以及跨计划复用问题：</p>
+<ul>
+<li><code>ID</code>、<code>BACKEND_ID</code>、<code>PATH</code>、<code>PATH_HASH</code>（按规范化路径计算 sha256，唯一索引 <code>(BACKEND_ID, PATH_HASH)</code>）</li>
+<li><code>TYPE</code>、<code>TITLE</code>、<code>YEAR</code>、<code>TMDBID</code>、<code>SEASON</code>、<code>EPISODE</code>（季/集允许范围字符串，如 <code>1</code>、<code>1-5</code>）、<code>SEASON_EPISODE_COUNT</code>（用于还原 <code>get_episode_bit()</code> 所需的总集数，可为空）；<code>TMDBID</code> 对剧集必须是 Series TMDB ID，不得存单集 ID</li>
+<li><code>SOURCE_FILENAME</code>（可来自 <code>TRANSFER_HISTORY.SOURCE_FILENAME</code> 或 <code>DOWNLOAD_HISTORY.TORRENT</code>；若为路径，只保存 basename）</li>
+<li><code>METADATA_SOURCE</code>（<code>history/download_history/nfo/mediaserver/filename/online/manual</code>）</li>
+<li><code>CONFIDENCE</code>（<code>high/medium</code>）、<code>IS_MANUAL</code></li>
+<li><code>FILE_SIZE</code>、<code>FILE_MTIME</code>（用于判断自动缓存是否仍对应当前文件；远程后端可为空）</li>
+<li><code>RAW</code>（JSON，保存解析上下文，便于审计）</li>
+<li><code>CREATED_AT</code>、<code>UPDATED_AT</code>、<code>UPDATED_BY</code></li>
+</ul>
+<p>写入/更新时机：</p>
+<ul>
+<li>计划阶段只写 <code>LIBRARY_RENAME_ITEM.METADATA_SNAPSHOT</code>，不写全局缓存；</li>
+<li>改名成功（文件移动 + 历史更新完成）后 upsert，并把 <code>PATH</code> 直接写为新路径；</li>
+<li>人工补录时立即 upsert 并标记 <code>IS_MANUAL=1</code>；</li>
+<li>文件删除/移出媒体库时可选清理；清理失败不影响主流程。</li>
+</ul>
+<p>迁移要求：</p>
+<ul>
+<li>新增上述表及必要索引；</li>
+<li>为 <code>TRANSFER_HISTORY</code> 增加 <code>(DEST_PATH, DEST_FILENAME)</code> 复合索引，避免逐文件全表扫描（现有 255 长度下满足 MySQL InnoDB 键长限制）；</li>
+<li>v1 不扩列：执行前拒绝 <code>DEST_PATH</code> / <code>DEST_FILENAME</code> 超过 255 的条目。后续如需支持更长路径，必须同时设计前缀索引或哈希列，不能只扩列导致索引超键长。</li>
+</ul>
+<p>历史同步规则：</p>
+<ul>
+<li>新增 repository 方法：按 <code>(DEST_PATH, DEST_FILENAME)</code> 查询历史、按 ID 批量更新 <code>DEST_PATH</code> / <code>DEST_FILENAME</code>；</li>
+<li>命中历史：按旧路径查询全部命中记录并批量更新 <code>DEST_PATH</code> / <code>DEST_FILENAME</code>；默认<strong>不修改</strong> <code>DEST</code>、<code>CATEGORY</code>、<code>MODE</code>、<code>DATE</code>、<code>DST_BACKEND</code>。仅 <code>reorganize_category=true</code> 且分类实际变化时更新 <code>CATEGORY</code>；</li>
+<li>未命中历史：<strong>不插入</strong> <code>TRANSFER_HISTORY</code>，执行成功后写 <code>LIBRARY_MEDIA_METADATA</code>（<code>PATH</code> 直接为新路径），计划阶段只写 <code>LIBRARY_RENAME_ITEM.metadata_snapshot</code>；</li>
+<li>命中历史且执行成功：同步更新 <code>DEST_PATH</code>/<code>DEST_FILENAME</code>，并在同一事务/步骤内 upsert <code>LIBRARY_MEDIA_METADATA</code>（旧路径 → 新路径），保证下次计划可离线命中；</li>
+<li><code>SYNC_HISTORY</code> 保持不动（它记录源文件路径与目标根，不记录媒体库文件名）；</li>
+<li>完成后失效 <code>TransferHistoryService</code> 的 30 秒内存缓存及相关媒体库列表缓存。</li>
+</ul>
+<h3 id="5-扫描与计划">5. 扫描与计划<a class="headerlink" href="#5-扫描与计划" title="Permanent link">¶</a></h3>
+<ul>
+<li>复用 <code>MediaLibrary.get_library_files</code>（<code>src/app/media/scraper/media_library.py:18</code>）按后端递归遍历，仅处理 <code>RMT_MEDIAEXT</code> 媒体文件。</li>
+<li>排除规则：隐藏目录、回收站（<code>#recycle</code>、<code>.Trash</code>）、<code>@eaDir</code>、未识别的下载临时目录、配置中排除的路径。</li>
+<li>扫描结果按 <code>(backend_id, 规范化路径)</code> 去重，避免根目录嵌套/多个 scope 重叠导致同一文件被计划两次；不跟随目录符号链接，避免循环或重复。</li>
+<li><code>scope</code> 必须结构化：</li>
+<li><code>media_types</code>：<code>movie/tv/anime</code>，至少一项；</li>
+<li><code>roots</code>：可选，必须是配置的媒体库根或历史 <code>DEST</code>；</li>
+<li><code>layout_mode</code>：<code>full/filename_only</code>；</li>
+<li><code>preserve_current_category</code>：默认 <code>true</code>；</li>
+<li><code>reorganize_category</code>：默认 <code>false</code>；开启后按历史 <code>CATEGORY</code> 重新分类；</li>
+<li><code>use_mediaserver_metadata</code>：默认 <code>true</code>；只查询已配置的本地 Emby/Jellyfin/Plex，按路径匹配；</li>
+<li><code>allow_online_metadata</code>：默认 <code>false</code>；</li>
+<li><code>reidentify_no_metadata</code>：默认 <code>false</code>；</li>
+<li><code>limit</code>：单次计划/单批执行上限，必须有服务端上限。</li>
+<li>计划阶段完成：</li>
+<li>元数据解析：历史命中 → <code>LIBRARY_MEDIA_METADATA</code> → 无历史兜底链（2.4）；</li>
+<li>新路径计算；</li>
+<li><strong>批内目标去重/预留</strong>：两个源文件映射到同一目标时全部标记 <code>conflict</code>，不能先到先得；</li>
+<li>已有目标检测、目录冲突检测、路径/长度/权限预检；</li>
+<li>无法解析的条目标记 <code>needs_metadata</code>，保留在计划中供人工补录；执行时跳过，直到补录后重新生成计划；</li>
+<li>生成 <code>LIBRARY_RENAME_ITEM</code> 快照，返回 <code>plan_id</code>。</li>
+<li>计划有效期默认 24 小时；执行入口必须校验计划未过期。执行阶段用 <code>RULE_SNAPSHOT</code> 重建只读 resolver，避免执行期间改配置导致预览与执行不一致。配置变更后旧计划只能查看或重新生成。</li>
+</ul>
+<h3 id="6-执行回滚与崩溃恢复">6. 执行、回滚与崩溃恢复<a class="headerlink" href="#6-执行回滚与崩溃恢复" title="Permanent link">¶</a></h3>
+<p>执行顺序（单条目）：</p>
+<ol>
+<li>读取并校验 rename item：文件仍存在、大小/mtime 与计划一致、目标仍空闲、后端仍可用；</li>
+<li>获取目标级锁；</li>
+<li>记日志状态 <code>running</code>；</li>
+<li>移动/改名视频；</li>
+<li>处理同基名字幕/音轨；</li>
+<li>更新历史（命中时）并更新 item 状态；</li>
+<li>释放锁。</li>
+</ol>
+<p>文件操作约定：</p>
+<ul>
+<li>统一通过 <code>StorageBackend</code>：同一后端优先 <code>move</code>/服务端改名；本地同分区为 rename，跨分区为 <code>copy2 + remove</code>；远程后端按其 <code>move</code> 语义执行。</li>
+<li>不调用 <code>TransferEngine.transfer()</code>，避免写入 <code>TRANSFER_BLACKLIST</code>（<code>src/app/services/transfer_engine.py:279</code>）。</li>
+<li>硬链接安全仅对本地后端成立：本地 rename 保持 inode；远程 <code>link</code> 会降级为 copy（<code>transfer_engine.py:55</code>），预览需标注。</li>
+<li>目录移动策略：</li>
+<li>仅当一个旧目录内的<strong>所有媒体文件</strong>都被本计划覆盖、且 action 均为 <code>rename</code>（都映射到同一新目录）、新目录不存在时，才整体移动目录；存在 <code>skip</code>/<code>needs_metadata</code>/<code>conflict</code>、或目录内有未被 <code>limit</code>/<code>scope</code> 覆盖的媒体文件时，禁止整体移动；</li>
+<li>满足条件时，<code>tvshow.nfo</code>/<code>season.nfo</code>/海报/字幕随目录一起移动；</li>
+<li>否则逐文件移动，只移动同基名字幕/音轨，目录级共享海报/NFO 保留并告警；</li>
+<li>不按单文件重命名 <code>poster.jpg</code>、<code>fanart.jpg</code>、<code>seasonXX-poster.jpg</code> 等共享资产。</li>
+<li>旧目录清理：仅在所有文件处理完成、目录为空、位于媒体库根内、且不是根/分类根/精选根时删除；失败不阻断主流程，仅告警。</li>
+<li>媒体服务器刷新：收集所有条目的旧/新视频<strong>文件路径</strong>并去重，按各 client 需要组装（Plex 用 <code>file_path</code>，内部取父目录刷新；Emby 用 <code>title/year/type</code> 定位媒体库或剧集；Jellyfin/FnOS 退化为整库刷新）；刷新失败只告警，不回滚文件操作。</li>
+</ul>
+<p>回滚：</p>
+<ul>
+<li>每条目在移动前先写 journal；失败按逆序回滚（历史 → 元数据缓存路径 → 附属文件 → 视频 → 清理新建空目录）。</li>
+<li>整体移动目录时，以目录为回滚单元：所有关联 item 共享同一 <code>directory_move_id</code>，目录搬回后统一恢复 item 状态和元数据缓存路径。</li>
+<li><strong>跨分区 copy+delete 不能通过「删除新文件」回滚</strong>，必须把新文件搬回旧路径；搬回失败标记 <code>manual_intervention</code> 并保留 journal。</li>
+<li>崩溃恢复：启动时把 <code>running</code> 状态的 job 标记为 <code>interrupted</code>；提供「继续未完成项」和「回滚已完成项」两个入口。恢复时根据 <code>OLD_PATH</code>/<code>NEW_PATH</code> 的实际存在性判断：新路径在、旧路径不在则补写历史/元数据缓存；旧路径在、新路径不在则重试移动；两者都在或都不在则标记 <code>manual_intervention</code>。未确认前不自动删除任何文件。</li>
+<li>回滚只针对本 job 记录的操作；用户手工改名后的路径不自动猜测。</li>
+</ul>
+<h3 id="7-并发与锁">7. 并发与锁<a class="headerlink" href="#7-并发与锁" title="Permanent link">¶</a></h3>
+<ul>
+<li>批量任务全局单飞：<code>library:rename:job</code>，避免两个计划同时操作同一媒体库。</li>
+<li>目标级锁：<code>library:target:{backend_id}:{root}:{tmdbid}:{season}</code>，按条目获取，TTL 覆盖单条操作；同一剧集的多集共享同一把锁。无 TMDBID 时用目标父目录的规范化哈希作为维度。</li>
+<li>现有转移锁按源路径生成（<code>filetransfer_service.py:362</code>），与目标级锁不是同一 key。<strong>实施本 ADR 时必须把转移/同步写入媒体库的路径也接入同一目标锁</strong>；否则「避免与转移/同步同改同一目标」不成立。若暂不改造，ADR 必须降级为「仅保证批量任务内部互斥」并在预览中提示。</li>
+<li>多目标锁按固定顺序获取，避免死锁。</li>
+<li>不使用 DI 共享的 resolver；每个任务使用自己的规则快照。</li>
+</ul>
+<h3 id="8-接口与前端">8. 接口与前端<a class="headerlink" href="#8-接口与前端" title="Permanent link">¶</a></h3>
+<p>后端（建议放在媒体库域，避免与 <code>/api/sync/rename</code> 手动转移混淆）：</p>
+<ul>
+<li><code>POST /api/media/library/rename/preview</code>：生成计划；参数为第 5 节的 <code>scope</code>；返回 <code>plan_id</code>、统计和第一页条目。</li>
+<li><code>GET /api/media/library/rename/plans/{plan_id}/items</code>：分页查看计划条目。</li>
+<li><code>POST /api/media/library/metadata</code>：人工补录/修正某个库内文件的元数据（<code>backend_id</code>、<code>path</code>、<code>type</code>、<code>tmdbid</code>、<code>season</code>、<code>episode</code>、<code>title</code>、<code>year</code>），写入 <code>LIBRARY_MEDIA_METADATA</code> 并标记 <code>IS_MANUAL=1</code>；必须校验路径属于媒体库根；补录后重新生成计划。</li>
+<li><code>POST /api/media/library/rename/plans/{plan_id}/execute</code>：确认执行；后台任务，返回 <code>job_id</code>。</li>
+<li><code>GET /api/media/library/rename/jobs/{job_id}</code>：进度与统计。</li>
+<li><code>POST /api/media/library/rename/jobs/{job_id}/cancel</code>：请求取消；当前条目完成后停止。</li>
+<li><code>POST /api/media/library/rename/jobs/{job_id}/rollback</code>：回滚未完成/已完成条目，需二次确认。</li>
+<li>权限：<code>library:manage</code>（RBAC 现有码，见 <code>rbac/init/constants.py:23</code>）。</li>
+<li>审计人取当前登录用户，写入 <code>LIBRARY_RENAME_JOB.CREATED_BY</code>；不再接受单独的 <code>user</code> 参数。</li>
+<li>预览不产生任何文件操作或 <code>TRANSFER_HISTORY</code> 写入，也不写 <code>LIBRARY_MEDIA_METADATA</code>；只会写入计划和条目快照（用于确认执行），需要在文档/界面中说明。人工补录元数据是显式写操作，会立即写 <code>LIBRARY_MEDIA_METADATA</code>。</li>
+<li><code>allow_online_metadata</code> / <code>reidentify_no_metadata</code> 默认 <code>false</code>。关闭时计划阶段不访问 TMDB，引用联网字段的条目跳过；媒体服务器查询由 <code>use_mediaserver_metadata</code> 单独控制。开启时<strong>在计划阶段</strong>完成 TMDB 查询/识别并写入 <code>METADATA_SNAPSHOT</code>，UI 必须明确提示会联网及预计耗时。执行阶段只使用快照，不再发起新的联网请求，从而保证「预览与执行一致」。</li>
+<li>返回字段：<code>old_path</code>、<code>new_path</code>、<code>action</code>、<code>reason</code>、<code>metadata_source</code>、<code>online_fields</code>、<code>backend</code>、<code>status</code>、<code>job_id</code>。</li>
+</ul>
+<p>前端：</p>
+<ul>
+<li>媒体库/同步页新增「按当前命名规则重命名旧文件」。</li>
+<li>第一步展示 dry-run 清单：旧/新路径、跳过的原因、冲突、不可恢复占位符、联网占位符、目录整体移动/逐文件移动。</li>
+<li><code>needs_metadata</code> 条目提供「补充元数据」入口：可搜索 TMDB 或直接输入 TMDB ID/季集；保存后自动重新生成计划。</li>
+<li>第二步需显式确认 <code>plan_id</code> 后执行；展示进度、失败项、回滚按钮。</li>
+<li>对 <code>{part}</code>、<code>original_name</code>、<code>en_title</code> 等高风险字段做解释提示。</li>
+</ul>
+<h3 id="9-多用户与权限adr-021">9. 多用户与权限（ADR-021）<a class="headerlink" href="#9-多用户与权限adr-021" title="Permanent link">¶</a></h3>
+<p>批量重命名属<strong>全局媒体库闸门</strong>操作，按系统上下文执行；接口受 <code>library:manage</code> 写权限保护；不涉及用户私有数据行级过滤。操作人记录在 rename job 中用于审计，但不改变数据归属模型。<code>DOWNLOAD_HISTORY</code> 仅用于读取 TMDB/标题/季集等媒体元数据，不向接口返回用户下载记录。</p>
+<h3 id="10-实施影响面预估">10. 实施影响面（预估）<a class="headerlink" href="#10-实施影响面预估" title="Permanent link">¶</a></h3>
+<ul>
+<li>模型/迁移：新增 rename job/item 与 <code>LIBRARY_MEDIA_METADATA</code> 模型及 Alembic 迁移；<code>src/app/db/models/transfer.py</code> 增加复合索引。</li>
+<li>仓储：<code>src/app/db/repositories/transfer_repository.py</code> 与领域接口 <code>src/app/domain/interfaces/transfer_repo.py</code> 增加按目标路径查询、按 ID 更新目标路径的方法；新增 <code>LIBRARY_MEDIA_METADATA</code> 仓储。</li>
+<li>服务：新增媒体库重命名服务（建议 <code>src/app/services/transfer/library_rename_service.py</code>），复用 <code>TransferPathResolver</code>、<code>MediaLibrary</code>、<code>StorageBackend</code>、<code>name_format</code>；复用 <code>DownloadHistoryRepositoryAdapter</code> 和 scraper 的 NFO 读取能力。</li>
+<li>媒体服务器：为 <code>src/app/mediaserver/client/_base.py</code> 及 Emby/Jellyfin/Plex 增加按路径查询条目元数据的方法（或一次性构建路径索引）。</li>
+<li>接口/DI：新增媒体库路由并注册到 <code>src/api/main.py</code>；工厂装配加入 <code>src/app/di/builders/services_builder.py</code>。</li>
+<li>并发改造：<code>src/app/services/transfer/filetransfer_service.py</code> 与 <code>src/app/services/sync_engine.py</code> 接入共享目标锁。</li>
+<li>刷新/缓存：<code>src/app/mediaserver/media_server.py</code> 复用按路径刷新；<code>src/app/services/transfer_history_service.py</code> 增加缓存失效入口。</li>
+<li>前端（独立仓库）：计划预览、<code>needs_metadata</code> 补录、执行进度、失败/回滚页面。</li>
+</ul>
+<h3 id="11-测试">11. 测试<a class="headerlink" href="#11-测试" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>幂等</strong>：同一规则连续预览/执行两次，第二次 <code>changed=0</code>；含 <code>{original_name}</code>、<code>{part}</code> 的规则不漂移。</li>
+<li><strong>元数据来源</strong>：历史精确命中；<code>SOURCE_FILENAME</code> 重解析；NFO 兜底；优先级与字段不被低优先级来源覆盖。</li>
+<li><strong>无历史文件</strong>：NFO、<code>DOWNLOAD_HISTORY</code>（路径精确/原始名匹配/标题唯一匹配）、媒体服务器路径索引、文件名+TMDB ID 标记、在线识别、人工映射各自可命中；多义匹配不采用；<code>needs_metadata</code> 可在补录后重新生成计划。</li>
+<li><strong>元数据缓存</strong>：预览只写计划快照，不写全局缓存；执行成功后自动解析结果与人工补录写入 <code>LIBRARY_MEDIA_METADATA</code>；改名后路径更新；后续计划离线复用；缓存失效/冲突时回退到实时解析。</li>
+<li><strong>不可恢复字段</strong>：<code>original_name</code>/<code>rev_name</code> 无源名/<code>TORRENT</code> 时跳过；<code>part</code> 疑似存在但无法恢复时跳过；联网字段离线时跳过并在预览标注。</li>
+<li><strong>NFO</strong>：电影/剧集/<code>movie.nfo</code>/<code>&lt;base&gt;.nfo</code>/<code>tvshow.nfo</code>/<code>season.nfo</code>；平铺剧集目录（<code>Show/tvshow.nfo</code>）与季目录（<code>Show/Season 01/tvshow.nfo</code> 在上级）都能命中；剧集 NFO 的字段合并；集 NFO 的 <code>tmdbid</code> 不得覆盖 Series TMDB ID；仅有集 NFO 时 <code>{tmdbid}</code> 相关字段跳过；NFO 关闭、仅有 credits、XML 异常、远程 NFO、XXE/超大文件防护。</li>
+<li><strong>路径</strong>：与当前规则一致；<code>filename_only</code>/<code>full</code>；同根约束；分类/精选保留；无历史时根前缀匹配；不换后端。</li>
+<li><strong>冲突</strong>：目标已存在、批内两个源映射同一目标、目录已存在、仅大小写改名、Windows 保留名/长路径。</li>
+<li><strong>附属资产</strong>：语言后缀字幕、音轨、目录级 NFO/海报；目录整体移动与逐文件移动；空目录清理安全。</li>
+<li><strong>历史</strong>：命中时默认只更新 <code>DEST_PATH</code>/<code>DEST_FILENAME</code>，<code>reorganize_category</code> 时按实际变化更新 <code>CATEGORY</code>；未命中不插入伪记录；<code>MODE</code> 不被当作 operation；统计接口不虚增。</li>
+<li><strong>回滚/崩溃</strong>：逐条逆序回滚；跨分区 copy+delete 回滚必须搬回；模拟进程中断后 job 标记 <code>interrupted</code>，可继续/回滚。</li>
+<li><strong>并发</strong>：批量任务单飞；与转移/同步共享目标锁时不并发写同一目标；锁顺序无死锁。</li>
+<li><strong>dry-run</strong>：默认预览不移动文件、不写历史、不访问 TMDB；媒体服务器查询可 mock 或通过 <code>use_mediaserver_metadata=false</code> 关闭；开启联网选项时仅计划阶段联网并落快照，执行阶段不重复联网；预览后文件变化时执行跳过并提示重新预览。</li>
+<li><strong>硬链接</strong>：本地改名后 inode 不变、源文件仍存在；远程后端 link 降级为 copy 的行为符合预期。</li>
+<li><strong>媒体服务器刷新</strong>：旧/新文件路径都被收集并去重；Plex 路径刷新、Emby 媒体库/剧集刷新、Jellyfin/FnOS 全库刷新被正确调用。</li>
+</ul>
+<h2 id="风险--待决">风险 / 待决<a class="headerlink" href="#风险--待决" title="Permanent link">¶</a></h2>
+<ul>
+<li><strong>NFO 可用性</strong>：NFO 依赖 <code>media.nfo_poster</code> 与刮削配置，很多库可能没有 NFO；无历史文件需要依赖下载历史/媒体服务器/文件名/人工映射。</li>
+<li><strong>下载历史匹配</strong>：<code>DOWNLOAD_HISTORY.SAVE_PATH</code> 是下载目录而非媒体库路径，通常无法直接命中；<code>TORRENT</code>/标题匹配可能多义。只采用唯一匹配，避免把错误 TMDB ID 写进文件名。实现上应先用已索引的 <code>TITLE</code> 缩小候选，再比对 <code>TORRENT</code>，避免逐文件全表扫描。</li>
+<li><strong>媒体服务器元数据</strong>：Jellyfin/Emby 的 episode 按路径查询、Plex 的 section 全量遍历都需要新增客户端能力；大型库的全量索引可能耗时，建议按根分页缓存并设置超时。媒体服务器内部的挂载路径与 StorageBackend 路径不一致时按路径匹配会失败，此时只能走 NFO/下载历史/文件名/人工映射。</li>
+<li><strong>人工映射依赖</strong>：完全无法识别的文件需要用户在预览中补录 TMDB ID；补录前保持 <code>needs_metadata</code>，不会执行改名。</li>
+<li><strong><code>part</code> 与身份字段</strong>：<code>part</code>、<code>original_name</code>、<code>rev_name</code> 无法从当前文件名稳定恢复；本 ADR 选择「不可恢复则跳过」而不是猜测。</li>
+<li><strong>发布信息兜底</strong>：无源名时允许从当前文件名恢复分辨率/编码/发布组等；如果旧文件名本身不含这些信息，新规则会得到空值，预览必须明确标注 <code>missing_release_field</code>。</li>
+<li><strong>联网计划成本</strong>：开启 <code>allow_online_metadata</code> / <code>reidentify_no_metadata</code> 后，计划阶段会批量查询 TMDB，可能耗时并触发限流；必须展示进度、支持取消，且按站点/TMDB 限流配置执行。</li>
+<li><strong>超 99 集</strong>：离线缺少 <code>tmdb_info</code> 的季集数，补零位数可能与转移时不同；预览需提示，必要时人工确认。</li>
+<li><strong>多集文件 NFO</strong>：NFO 生成可能失败；以 <code>SOURCE_FILENAME</code> / 历史为准，NFO 仅兜底。</li>
+<li><strong>多后端镜像</strong>：本 ADR 只改 <code>TRANSFER_HISTORY</code> 记录的主副本；镜像副本不会自动改名。后续如需支持，必须增加按媒体库根扫描所有后端并识别镜像关系的机制。</li>
+<li><strong>远程后端</strong>：SMB/WebDAV/S3/OpenList 的 <code>move</code> 语义、原子性、TTL 与权限差异较大；跨后端/跨分区可能退化为复制+删除，需预留空间并处理失败清理。</li>
+<li><strong>媒体服务器刷新成本</strong>：Jellyfin/FnOS 只能整库刷新，Emby 只能按媒体库/剧集刷新；大量改名会触发大范围扫描，需分批、合并刷新并允许错峰。</li>
+<li><strong>长路径</strong>：<code>DEST_PATH</code> / <code>DEST_FILENAME</code> 为 255；v1 预检拒绝超长项。若要扩列，必须同时处理复合索引键长（前缀索引或哈希列），否则 MySQL 迁移会失败。</li>
+<li><strong>并发</strong>：若不改造转移/同步以共享目标锁，只能保证批量任务内部互斥；ADR 实施时必须明确这一前置条件。</li>
+<li><strong>元数据缓存失效</strong>：<code>LIBRARY_MEDIA_METADATA</code> 可能因用户替换文件、手工改名、媒体服务器重新识别而过期；计划阶段需校验路径存在性，必要时回退到实时解析，人工映射优先。</li>
+<li><strong>分类识别</strong>：从当前路径推断分类/精选依赖目录命名约定；无法识别时按历史 <code>CATEGORY</code>，并在预览标注。</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "content.action.edit", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>

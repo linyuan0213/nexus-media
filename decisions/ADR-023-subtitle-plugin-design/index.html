@@ -1,0 +1,2928 @@
+<!DOCTYPE html><html lang="zh" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Nexus Media 多功能媒体库管理工具使用文档">
+      
+      
+      
+        <link rel="canonical" href="https://linyuan0213.github.io/nexus-media/decisions/ADR-023-subtitle-plugin-design/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>ADR-023: 字幕插件（自动下载 + 手动上传重命名）设计 - Nexus Media 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-023-字幕插件自动下载--手动上传重命名设计" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="Nexus Media 文档" class="md-header__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Nexus Media 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-023: 字幕插件（自动下载 + 手动上传重命名）设计
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到深色模式" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换到深色模式" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到浅色模式" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换到浅色模式" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Nexus Media 文档" class="md-nav__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    Nexus Media 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装部署
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    使用指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    使用指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    基础配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    资源搜索与探索
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sites/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    站点配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../filter_rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    过滤规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../download_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../downloaders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体服务器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../directory_sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    目录同步
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_organization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体整理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rss/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RSS 订阅
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../indexers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    索引器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通知渠道配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../message_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    消息通知模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务与调度
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    存储后端
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    用户与权限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    插件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件使用
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugin_development_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发者
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    开发者
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    本地开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent-mvp-detailed-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    常见问题
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    更新日志
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#背景" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        背景
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#决策" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        决策
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="决策">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v1-非目标" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1 非目标
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#插件仓库与目录结构" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        插件仓库与目录结构
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#配置项manifest-frontendsettingsfields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        配置项（manifest frontend.settings.fields）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#后端-apiregister_api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        后端 API（register_api）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="后端 API（register_api）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api-线程模型" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API 线程模型
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#后端详细设计" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        后端详细设计
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="后端详细设计">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-数据模型backendmodelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 数据模型（backend/models.py）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-插件入口backendpluginpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 插件入口（backend/plugin.py）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#21-agent-工具manifest-backendtools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Agent 工具（manifest backend.tools）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-存储后端解析" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 存储后端解析
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-源适配sourcesbasepy--assrtpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 源适配（sources/base.py + assrt.py）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-匹配打分backendmatcherpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 匹配打分（backend/matcher.py）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-落盘backendplacerpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 落盘（backend/placer.py）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-定位backendmedia_locatorpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. 定位（backend/media_locator.py）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#71-手动上传的媒体匹配策略" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.1 手动上传的媒体匹配策略
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#72-多语言多字幕与识别重命名" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.2 多语言、多字幕与识别重命名
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7.2 多语言、多字幕与识别重命名">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#语言与标记" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        语言与标记
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#多字幕" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        多字幕
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#识别重命名已有字幕" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        识别重命名（已有字幕）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#73-时间轴偏移与自动同步" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.3 时间轴偏移与自动同步
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#74-蓝光原盘" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.4 蓝光原盘
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#75-已有中文字幕检测" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.5 已有中文字幕检测
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#76-媒体库全量补字幕" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7.6 媒体库全量补字幕
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-register_api-handlers请求响应" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. register_api handlers（请求/响应）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-storepy数据目录-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. store.py（数据目录 JSON）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-di-依赖sandbox-注入键" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. DI 依赖（sandbox 注入键）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-实施影响面" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. 实施影响面
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-测试" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. 测试
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#详细页面设计" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        详细页面设计
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="详细页面设计">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#页面-a设置settingspagemanifest-settings-自动渲染" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        页面 A：设置（SettingsPage，manifest settings 自动渲染）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#页面-b上传--重命名uploadpage路由-pluginsubtitleupload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        页面 B：上传 / 重命名（UploadPage，路由 /plugin/subtitle/upload）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#页面-c识别重命名renamepage路由-pluginsubtitlerename" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        页面 C：识别重命名（RenamePage，路由 /plugin/subtitle/rename）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#页面-d可选历史historypage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        页面 D（可选）：历史（HistoryPage）
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#交互状态要点" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        交互/状态要点
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#错误处理" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        错误处理
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#依赖" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        依赖
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#里程碑增量落地" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        里程碑（增量落地）
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#风险--待决" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        风险 / 待决
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/linyuan0213/nexus-media/edit/master/docs/decisions/ADR-023-subtitle-plugin-design.md" title="编辑此页" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="adr-023-字幕插件自动下载--手动上传重命名设计">ADR-023: 字幕插件（自动下载 + 手动上传重命名）设计<a class="headerlink" href="#adr-023-字幕插件自动下载--手动上传重命名设计" title="Permanent link">¶</a></h1>
+<h2 id="背景">背景<a class="headerlink" href="#背景" title="Permanent link">¶</a></h2>
+<p>实现 Nexus Media 的字幕能力：</p>
+<ul>
+<li>媒体「转移」完成后自动到字幕源搜索、下载并放到视频同目录侧挂（同名 + 语言后缀）；</li>
+<li>支持手动上传字幕到媒体库目录并正确重命名（手动指定或按 TMDB ID 自动定位）。</li>
+</ul>
+<p>插件代码托管在 <code>~/python/nexus-media/nexus-media-plugins/plugins/subtitle</code>，作为<strong>可安装插件</strong>分发，
+不进入后端主仓库；通过插件框架安装/升级，运行时复用事件 hook、<code>register_api</code>、
+ESM 前端页面、DI 注入的 <code>mediaserver</code>/<code>media_service</code> 与 manifest 声明式 Agent 工具。</p>
+<p>当前事件与存储能力边界：</p>
+<ul>
+<li>转移流程同时发布 <code>subtitle.download</code> 与 <code>media.transfer_finished</code>
+  （<code>filetransfer_service.py:949-950</code>）。<code>subtitle.download</code> 是专门为字幕准备的事件，
+  payload 含 <code>media_info/file/file_ext/bluray</code>（<code>events/payloads.py:178</code>）。</li>
+<li>蓝光原盘场景 <code>subtitle.download.file</code> 可能为 <code>None</code>（<code>filetransfer_service.py:993</code>）。</li>
+<li>媒体库可能位于本地、SMB、WebDAV、S3、OpenList 等后端，字幕写入必须走后端接口，
+  不能假设本地 <code>os.path</code>/<code>open</code> 可直接使用。</li>
+<li>媒体服务器客户端的现有查询接口主要返回标题/季集信息，不直接返回视频文件路径：
+  <code>get_movies</code> 返回 <code>title/year</code>，<code>get_tv_episodes</code> 返回季集号
+  （<code>jellyfin.py:350-355,407-412</code>；Plex 同理）。</li>
+</ul>
+<h2 id="决策">决策<a class="headerlink" href="#决策" title="Permanent link">¶</a></h2>
+<p>新建可安装插件 <code>subtitle</code>，只订阅 <code>subtitle.download</code> 事件自动下载字幕，
+并提供手动上传/重命名页面。字幕源抽象为可插拔 <code>SubtitleSource</code>，首期实现 Assrt，
+Assrt、Thunder CID 与 Zimuku（字幕库，验证码）三路字幕源。</p>
+<p>关键设计：</p>
+<ol>
+<li><strong>事件触发（按类型分流）</strong>：manifest <code>backend.hooks</code> 订阅
+   <code>subtitle.download</code> 与 <code>media.transfer_finished</code>。</li>
+<li>普通文件只处理 <code>subtitle.download</code>；</li>
+<li>蓝光原盘 <code>subtitle.download.file</code> 为空，改由 <code>media.transfer_finished</code> 的
+     <code>target_path</code>（目录）触发；</li>
+<li>两者按事件/路径类型分流，避免同一文件重复下载。
+   <code>on_hook</code> 只做轻量参数整理，随后把任务提交到插件自己的线程池。</li>
+<li>蓝光目录：在 <code>BDMV/STREAM</code> 中选最大 <code>.m2ts</code> 作为主视频，再检测/下载。</li>
+<li><strong>源适配层</strong>：<code>SubtitleSource</code> 协议（<code>search</code>/<code>download</code>），<code>AssrtSource</code> 先落地，
+   <code>ThunderSource</code>（CID 首尾分块哈希 + 名称搜索）、<code>ZimukuSource</code>（网页 + 验证码）
+   与 OpenSubtitles/SubDL 后续扩展。</li>
+<li><strong>存储后端</strong>：插件不直接使用本地文件 API 操作媒体库。所有存在性检查、读取、
+   写入、移动、目录遍历都通过 <code>StorageBackend</code>；后端由媒体库根目录配置解析。
+   本地后端可以使用 <code>os</code> 实现原子替换，远程后端使用其 <code>write_stream</code>/<code>move</code> 能力。</li>
+<li><strong>匹配打分</strong>：标题归一化相似度 + 年份差 + 季集精确 + 语言 + 格式优先级，低于
+   <code>min_score</code> 丢弃；下载前校验内容（非空/非 HTML/含字幕语法），统一转 UTF-8。</li>
+<li><strong>手动与识别重命名</strong>：前端 ESM 页面走 <code>register_api</code>（POST 需 <code>plugin:manage</code>），
+   支持「手动指定目标」与「按 TMDB ID / 文件名自动定位」；同时支持对已有字幕做
+   「识别语言/字幕标记 → 预览 → 重命名」，以及用户逐条手动指定语言/标记后重命名。</li>
+<li><strong>多语言、多字幕命名</strong>：一个视频可以有多条字幕（不同语言、强制、SDH、双语等）。
+   语言使用 BCP-47 规范（<code>zh-Hans</code>/<code>zh-Hant</code>/<code>en</code>/<code>ja</code>/<code>mul</code>/<code>und</code>），
+   字幕标记使用 <code>forced</code>/<code>sdh</code>/<code>cc</code>/<code>commentary</code> 等；输出风格支持
+   <code>nexus</code>（<code>.chi.zh-cn/.zh-tw/.eng/.und</code>，兼容存量库）、<code>bcp47</code>（<code>.zh-Hans/.zh-Hant/.en</code>）
+   与 <code>iso639</code>（<code>.zh/.en</code>）。命名规则抽到共享 <code>subtitle_naming</code> 工具，
+   转移引擎与插件共用，禁止插件内复制第二套映射。</li>
+<li><strong>安全</strong>：落盘路径白名单（<code>library_roots</code>/视频所在目录）防目录穿越；
+   压缩包解压拒绝绝对路径、<code>..</code>、符号链接、超限条目/压缩比；Token 日志脱敏。</li>
+<li><strong>已有中文字幕检测</strong>：下载前先检查外挂字幕、容器内软字幕和硬字幕；
+   命中中文则跳过，避免重复下载。硬字幕使用文件名特征或可选抽帧 OCR，
+   默认只启用文件名特征。</li>
+<li><strong>全量补字幕</strong>：支持扫描配置的媒体库根，逐视频检测并按语言下载；
+   后台 job、进度、取消、dry-run，避免一次性同步请求阻塞。</li>
+<li><strong>定时全量扫描</strong>：支持 cron 定时触发全量补字幕；同一时间只允许一个
+    全量 job，避免重复扫描和请求配额竞争。</li>
+<li><strong>多用户（ADR-021）</strong>：字幕落库属全局闸门，后台任务按系统上下文；
+   插件不绕过 repository 读写用户数据。</li>
+</ol>
+<h3 id="v1-非目标">v1 非目标<a class="headerlink" href="#v1-非目标" title="Permanent link">¶</a></h3>
+<ul>
+<li>不做跨媒体服务器/跨后端路径自动映射；媒体服务器路径无法对应后端时回退手动选择。</li>
+<li>不自动覆盖已有字幕；默认 <code>skip</code>。</li>
+</ul>
+<h2 id="插件仓库与目录结构">插件仓库与目录结构<a class="headerlink" href="#插件仓库与目录结构" title="Permanent link">¶</a></h2>
+<p>插件源码放在独立仓库 <code>~/python/nexus-media/nexus-media-plugins/plugins/subtitle</code>：</p>
+<div class="highlight"><pre><span></span><code>nexus-media-plugins/
+├── tools/build_catalog.py   # 市场仓库统一打包/校验 CLI
+├── tests/                   # 插件测试（不打包进 zip）
+├── dist/                    # 生成的 zip
+└── plugins/subtitle/
+    ├── manifest.json        # hooks / frontend.routes+settings / backend.tools
+    ├── frontend/index.mjs   # 设置页 + 上传/重命名页（ESM，host 注入）
+    ├── assets/icon.png
+    ├── backend/
+    │   ├── plugin.py        # SubtitlePlugin：on_hook / register_api / 线程池/agent_tool
+    │   ├── config.py        # 默认配置与校验
+    │   ├── models.py        # Candidate/SearchQuery/PlaceResult/RenameRule/SyncAdjustment
+    │   ├── matcher.py       # 归一化/打分/去重排序
+    │   ├── placer.py        # 路径推导/命名/后缀/覆盖/白名单（StorageBackend）
+    │   ├── media_locator.py # TMDB ID → 媒体库视频路径（mediasync/path_resolver）
+    │   ├── media_match.py   # 手动上传：字幕文件名/目录 → 视频候选
+    │   ├── store.py         # 数据目录 JSON（历史/指纹缓存，原子写+分布式锁）
+    │   └── sources/
+    │       ├── base.py      # SubtitleSource 协议
+    │       ├── assrt.py     # Assrt 搜索/下载/解压(zip|rar)
+    │       ├── thunder.py   # Thunder CID + 名称搜索
+    │       └── zimuku.py    # Zimuku 网页搜索 + 云锁验证码
+    ├── pyproject.toml       # 插件独立开发依赖（可选）
+</code></pre></div>
+<p>安装与升级：</p>
+<ul>
+<li>在插件市场仓库根目录执行 <code>python3 tools/build_catalog.py .</code>，生成
+  <code>dist/subtitle-&lt;version&gt;.zip</code>、<code>plugins/subtitle/detail.json</code> 与 <code>catalog.json</code>
+  （zip 根目录必须含 <code>manifest.json</code>）。</li>
+<li>通过插件管理界面或安装 API 上传 zip；框架解压到 <code>data/plugins/subtitle-&lt;version&gt;</code>，
+  安装 manifest 声明的依赖，更新数据库清单。</li>
+<li>升级时提高 <code>manifest.version</code>，框架会用新版本目录替换旧目录。</li>
+<li>可选依赖（<code>rarfile</code>、<code>pysubs2</code>）在 manifest <code>backend.dependencies</code> 或
+  <code>requirements.txt</code> 中声明，但必须允许缺失：缺失时对应能力降级而不是插件加载失败。</li>
+</ul>
+<p>共享命名工具放在 <code>src/app/services/transfer/subtitle_naming.py</code>，由插件与
+<code>TransferEngine</code> 共同使用；插件目录不保留重复实现。</p>
+<p>manifest 关键字段：</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subtitle"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"backend"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"entry"</span><span class="p">:</span><span class="w"> </span><span class="s2">"backend.plugin:SubtitlePlugin"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"hooks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"subtitle.download"</span><span class="p">],</span>
+<span class="w">    </span><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="nt">"frontend"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"routes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">      </span><span class="p">{</span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"upload"</span><span class="p">,</span><span class="w"> </span><span class="nt">"component"</span><span class="p">:</span><span class="w"> </span><span class="s2">"UploadPage"</span><span class="p">,</span><span class="w"> </span><span class="nt">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"字幕管理"</span><span class="p">,</span><span class="w"> </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">"lucide:subtitles"</span><span class="p">},</span>
+<span class="w">      </span><span class="p">{</span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rename"</span><span class="p">,</span><span class="w"> </span><span class="nt">"component"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RenamePage"</span><span class="p">,</span><span class="w"> </span><span class="nt">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"识别重命名"</span><span class="p">,</span><span class="w"> </span><span class="nt">"icon"</span><span class="p">:</span><span class="w"> </span><span class="s2">"lucide:file-pen-line"</span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h2 id="配置项manifest-frontendsettingsfields">配置项（manifest frontend.settings.fields）<a class="headerlink" href="#配置项manifest-frontendsettingsfields" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>key</th>
+<th>type</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto_on_transfer</code></td>
+<td>switch</td>
+<td>转移后自动下载（默认开）</td>
+</tr>
+<tr>
+<td><code>languages</code></td>
+<td>multi_select</td>
+<td>优先语言（zh-Hans/zh-Hant/en/ja/ko），决定后缀与排序</td>
+</tr>
+<tr>
+<td><code>sources</code></td>
+<td>multi_select</td>
+<td>启用源（assrt/thunder）</td>
+</tr>
+<tr>
+<td><code>assrt_token</code></td>
+<td>password</td>
+<td>Assrt Token（脱敏）</td>
+</tr>
+<tr>
+<td><code>min_score</code></td>
+<td>input</td>
+<td>最低匹配分（默认 60）</td>
+</tr>
+<tr>
+<td><code>suffix_style</code></td>
+<td>select</td>
+<td>后缀风格：<code>nexus</code>(.chi.zh-cn) / <code>bcp47</code>(.zh-Hans) / <code>iso639</code>(.zh)</td>
+</tr>
+<tr>
+<td><code>overwrite_policy</code></td>
+<td>select</td>
+<td>已存在：skip / suffix / overwrite（默认 skip）</td>
+</tr>
+<tr>
+<td><code>sync_policy</code></td>
+<td>select</td>
+<td>时间轴：off / manual / auto_reference / auto_audio（默认 off）</td>
+</tr>
+<tr>
+<td><code>sync_max_offset_ms</code></td>
+<td>input</td>
+<td>自动检测允许的最大偏移（默认 60000）</td>
+</tr>
+<tr>
+<td><code>sync_min_confidence</code></td>
+<td>input</td>
+<td>自动同步最低置信度（默认 0.75）</td>
+</tr>
+<tr>
+<td><code>skip_if_chinese_subtitle</code></td>
+<td>switch</td>
+<td>已有中文字幕时跳过（默认开）</td>
+</tr>
+<tr>
+<td><code>hard_sub_detection</code></td>
+<td>select</td>
+<td>off / filename（默认）/ ocr</td>
+</tr>
+<tr>
+<td><code>library_roots</code></td>
+<td>textarea</td>
+<td>允许写入的库根目录白名单（每行一个，按后端解析）</td>
+</tr>
+<tr>
+<td><code>library_delay_seconds</code></td>
+<td>number</td>
+<td>全量扫描每条之间的延迟（默认 1 秒，按源配额调整）</td>
+</tr>
+<tr>
+<td><code>auto_scan_enabled</code></td>
+<td>switch</td>
+<td>是否启用定时全量扫描（默认关）</td>
+</tr>
+<tr>
+<td><code>auto_scan_cron</code></td>
+<td>cron</td>
+<td>定时表达式（默认 <code>0 4 * * *</code>）</td>
+</tr>
+<tr>
+<td><code>max_workers</code></td>
+<td>input</td>
+<td>自动下载并发数（默认 2）</td>
+</tr>
+<tr>
+<td><code>request_timeout</code></td>
+<td>input</td>
+<td>源请求超时秒数（默认 20）</td>
+</tr>
+</tbody>
+</table>
+<p><code>library_roots</code> 为空时：
+- 自动下载：仅允许事件给出的视频同目录，且必须先通过 <code>StorageBackend</code> 校验路径；
+- 手动上传：目标视频必须位于已配置的媒体库根目录内，否则拒绝并要求先配置白名单。</p>
+<h2 id="后端-apiregister_api">后端 API（register_api）<a class="headerlink" href="#后端-apiregister_api" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>path</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>search</code></td>
+<td>搜索候选（不入库），在线程池执行</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>download</code></td>
+<td>下载最佳候选并落盘，在线程池执行</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>upload</code></td>
+<td>上传字幕文本/Base64 + 目标/规则，落盘（≤5MB）</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>locate</code></td>
+<td>按 TMDB 定位媒体库视频文件（返回可选项）</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>rename</code></td>
+<td>对已有字幕按视频名/模板重命名</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>list_targets</code></td>
+<td>浏览白名单内目标目录/视频</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>history</code></td>
+<td>处理历史/结果（分页，默认 50 条）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>test_source</code></td>
+<td>源连通性测试（Assrt Token）</td>
+</tr>
+</tbody>
+</table>
+<p>handler 返回 <code>{"success": bool, "message": str, "data": ...}</code>。
+POST 路由当前由框架统一要求 <code>plugin:manage</code>（<code>api/routers/plugin_framework.py:267</code>），
+因此 v1 的上传/重命名是<strong>插件管理员专属</strong>；若要让媒体库管理员使用，需要框架支持
+<code>library:manage</code> 或插件自定义权限，不在本 ADR 范围。</p>
+<h3 id="api-线程模型">API 线程模型<a class="headerlink" href="#api-线程模型" title="Permanent link">¶</a></h3>
+<p>当前 <code>_dispatch_plugin_api</code> 在 async POST 路由中直接调用同步 handler
+（<code>api/routers/plugin_framework.py:232,263</code>），网络搜索/压缩包处理会阻塞事件循环。
+实施本插件前需要以下二选一：</p>
+<ol>
+<li>框架层把同步 handler 放到 <code>run_in_threadpool</code> 执行（推荐）；</li>
+<li>插件 handler 只做参数校验并提交后台任务，接口立即返回 <code>job_id</code>。</li>
+</ol>
+<p>v1 选择方案 1；<code>search</code>/<code>download</code>/<code>upload</code> 均在线程池中执行，并在 handler 内限制
+总耗时（<code>request_timeout</code>）。自动下载不走 API，直接使用插件线程池。
+框架分发时若 handler 返回 awaitable，需要 <code>await</code>；否则插件会被误判为完成。</p>
+<p>插件路由在读取 JSON 前需要限制请求体大小（默认 8MB），否则超大 Base64 会先占内存；
+<code>upload</code> 的 5MB 指的是<strong>解码后的字幕内容</strong>，不是请求体大小。</p>
+<h2 id="后端详细设计">后端详细设计<a class="headerlink" href="#后端详细设计" title="Permanent link">¶</a></h2>
+<h3 id="1-数据模型backendmodelspy">1. 数据模型（backend/models.py）<a class="headerlink" href="#1-数据模型backendmodelspy" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SearchQuery</span><span class="p">:</span>
+    <span class="n">tmdb_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">year</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">media_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"movie"</span>        <span class="c1"># movie/tv/anime</span>
+    <span class="n">season</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">episode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">languages</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">[</span><span class="s2">"zh-Hans"</span><span class="p">])</span>
+    <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>    <span class="c1"># 供 Thunder CID 用</span>
+    <span class="n">backend_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>    <span class="c1"># 视频所在存储后端</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Candidate</span><span class="p">:</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>                      <span class="c1"># assrt / thunder / ...</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span>                    <span class="c1"># 归一化 BCP-47：zh-Hans/zh-Hant/en/ja/ko/mul/und</span>
+    <span class="nb">format</span><span class="p">:</span> <span class="nb">str</span>                      <span class="c1"># srt/ass/ssa</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span>                         <span class="c1"># 下载地址</span>
+    <span class="n">score</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>                   <span class="c1"># 0-100</span>
+    <span class="n">downloads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>  <span class="c1"># 源相关引用（如 assrt sub id）</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">PlaceResult</span><span class="p">:</span>
+    <span class="n">success</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="n">action</span><span class="p">:</span> <span class="nb">str</span>                      <span class="c1"># placed/skipped/overwritten/renamed/failed</span>
+    <span class="n">backend_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"local"</span>
+    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">target_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">sync_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"none"</span>        <span class="c1"># none/manual/reference/audio</span>
+    <span class="n">offset_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="n">sync_confidence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SyncAdjustment</span><span class="p">:</span>
+    <span class="n">offset_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>                <span class="c1"># 1.0 表示不变；25/23.976 等帧率修正</span>
+    <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"manual"</span>           <span class="c1"># manual/reference/audio</span>
+    <span class="n">confidence</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">RenameRule</span><span class="p">:</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"manual"</span>             <span class="c1"># manual / recognize</span>
+    <span class="n">backend_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"local"</span>
+    <span class="n">target_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">target_video</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">tmdb_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">media_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"movie"</span>
+    <span class="n">season</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">episode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">template</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"zh-Hans"</span>        <span class="c1"># BCP-47 主语言</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># forced/sdh/cc/commentary</span>
+    <span class="n">suffix_style</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"nexus"</span>
+    <span class="n">overwrite_policy</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"skip"</span>
+    <span class="n">recursive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">sync</span><span class="p">:</span> <span class="n">SyncAdjustment</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">SyncAdjustment</span><span class="p">)</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SubtitleInput</span><span class="p">:</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">content</span><span class="p">:</span> <span class="nb">bytes</span>
+    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>      <span class="c1"># 用户指定优先</span>
+    <span class="n">detected_language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># 插件识别结果</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">confidence</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">season</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">episode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MatchCandidate</span><span class="p">:</span>
+    <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">backend_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"local"</span>
+    <span class="n">confidence</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>              <span class="c1"># 0-100</span>
+    <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span>
+    <span class="n">year</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">season</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">episode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">UploadMapping</span><span class="p">:</span>
+    <span class="n">subtitle_filename</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">video_path</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">backend_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"local"</span>
+    <span class="n">language</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"zh-Hans"</span>
+    <span class="n">flags</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+    <span class="n">season</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">episode</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">suffix_style</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"nexus"</span>
+    <span class="n">template</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">sync</span><span class="p">:</span> <span class="n">SyncAdjustment</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">SyncAdjustment</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="2-插件入口backendpluginpy">2. 插件入口（backend/plugin.py）<a class="headerlink" href="#2-插件入口backendpluginpy" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SubtitlePlugin</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">mediaserver</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">media_service</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">filetransfer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">event_bus</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">app_context</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="o">...</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span> <span class="o">=</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">thread_name_prefix</span><span class="o">=</span><span class="s2">"subtitle"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_enable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="bp">self</span><span class="o">.</span><span class="n">_register_apis</span><span class="p">()</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_disable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ctx</span><span class="o">.</span><span class="n">unregister_all_apis</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cancel_futures</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span> <span class="o">==</span> <span class="s2">"subtitle.download"</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_auto_download</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">agent_tool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">arguments</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"subtitle_search"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_agent_search</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">"subtitle_download"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_agent_download</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">"success"</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"未知工具: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">}</span>
+</code></pre></div>
+<ul>
+<li><code>subtitle.download</code>：普通文件触发；<code>bluray=true</code> 或 <code>file</code> 为空时跳过。</li>
+<li><code>media.transfer_finished</code>：仅当 <code>target_path</code> 是目录时按蓝光处理；
+  在 <code>BDMV/STREAM</code> 中选最大 <code>.m2ts</code> 作为主视频。</li>
+<li><code>_auto_download</code>：指纹去重（store）→ 各源 <code>search</code> → <code>matcher</code> <strong>按启用语言逐语言选优</strong>
+  （同一语言取最高分，不因高分中文跳过英文）→ <code>download</code> → <code>placer.place</code>
+  （StorageBackend）→ 记录历史/可选 <code>ctx.notify</code>。</li>
+<li>线程池在 <code>on_disable</code> 中关闭；插件重载不会遗留后台线程。</li>
+</ul>
+<h3 id="21-agent-工具manifest-backendtools">2.1 Agent 工具（manifest <code>backend.tools</code>）<a class="headerlink" href="#21-agent-工具manifest-backendtools" title="Permanent link">¶</a></h3>
+<p>框架支持插件声明式 Agent 工具：manifest <code>backend.tools</code> 声明 schema，
+<code>ToolExecutor</code> 合并后通过 <code>plugin_framework_service.call_agent_tool</code> →
+<code>sandbox.call(plugin, "agent_tool", name, arguments)</code> 分发（<code>tool_executor.py:4-5</code>、
+<code>plugin_framework_service.py:267-303</code>）。本插件声明：</p>
+<div class="highlight"><pre><span></span><code><span class="nt">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subtitle_search"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"搜索字幕候选（不入库）"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"object"</span><span class="p">,</span><span class="w"> </span><span class="nt">"properties"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"title"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"string"</span><span class="p">},</span><span class="w"> </span><span class="nt">"year"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"string"</span><span class="p">},</span><span class="w"> </span><span class="nt">"tmdb_id"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"string"</span><span class="p">}</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"title"</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">"level"</span><span class="p">:</span><span class="w"> </span><span class="s2">"read"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"permission"</span><span class="p">:</span><span class="w"> </span><span class="s2">"library:manage"</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subtitle_download"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"下载最佳字幕并落盘到视频同目录"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"object"</span><span class="p">,</span><span class="w"> </span><span class="nt">"properties"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"tmdb_id"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"string"</span><span class="p">},</span><span class="w"> </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"string"</span><span class="p">}</span><span class="w"> </span><span class="p">},</span><span class="w"> </span><span class="nt">"required"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"tmdb_id"</span><span class="p">]</span><span class="w"> </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">"level"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dangerous"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"permission"</span><span class="p">:</span><span class="w"> </span><span class="s2">"library:manage"</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div>
+<p><code>agent_tool</code> 返回 <code>{"success": bool, "data": ..., "error": str}</code>，由 ToolExecutor 统一转换。
+工具权限使用 <code>library:manage</code>；<code>subtitle_download</code> 会写文件，必须声明 <code>level: "dangerous"</code> 才能触发 ToolExecutor 的用户确认（<code>write</code> 级别不会弹确认）。</p>
+<h3 id="3-存储后端解析">3. 存储后端解析<a class="headerlink" href="#3-存储后端解析" title="Permanent link">¶</a></h3>
+<p><code>placer</code>、<code>media_locator</code>、<code>thunder.py</code> 不直接使用 <code>os.path</code>/<code>open</code> 操作媒体库。</p>
+<ul>
+<li>事件/规则中的路径先按媒体库根目录做最长前缀匹配，解析出 <code>backend_id</code> 和
+  <code>StorageBackend</code>（复用 <code>media_config_service</code> 的路径/后端配置）。</li>
+<li>本地后端：<code>StorageBackend.read_stream</code>/<code>write_stream</code>/<code>move</code>；需要原子写时用
+  <code>tempfile + os.replace</code>，且目标必须通过 <code>realpath</code> 校验。</li>
+<li>远程后端：使用后端自己的 <code>stat/list_dir/read_stream/write_stream/move</code>；
+  禁止把远程路径传给 <code>open()</code> 或 <code>os.replace()</code>。</li>
+<li>路径白名单按“后端 + 规范化路径”判断；<code>..</code> 必须在规范化后消失。</li>
+<li>媒体服务器返回的路径如果与后端路径不一致，先做根目录映射；映射失败则返回空，
+  由用户手选，不能盲目写入。</li>
+</ul>
+<h3 id="4-源适配sourcesbasepy--assrtpy">4. 源适配（sources/base.py + assrt.py）<a class="headerlink" href="#4-源适配sourcesbasepy--assrtpy" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SubtitleSource</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_available</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">search</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">:</span> <span class="n">SearchQuery</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Candidate</span><span class="p">]:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">download</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">c</span><span class="p">:</span> <span class="n">Candidate</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span> <span class="o">...</span>
+</code></pre></div>
+<p><strong>AssrtSource</strong>（<code>https://api.assrt.net/v1</code>，备用域 <code>api.makedie.me</code>）：</p>
+<ul>
+<li>Token：在 <code>assrt.net</code> 注册后进入用户面板 <code>usercp.php</code> 查看/重置；32 位随机串；
+  官方默认配额 20 次/分钟（实际以账号面板为准，可能是 10；同 Token 与同 IP 共享配额）。</li>
+<li>搜索：<code>GET /sub/search?q=&lt;title&gt;&amp;cnt=&lt;N&gt;</code>（<code>cnt</code> 最大 15），Token 按 API 支持的
+  鉴权方式传递（优先请求头），日志必须脱敏；解析 <code>sub.subs[]</code> 的 <code>native_name</code>/
+  <code>videoname</code>/<code>subtype</code>/<code>lang.desc</code>/<code>lang.langlist</code>/<code>down_count</code> 为 <code>Candidate</code>，
+  <code>payload</code> 存 sub id。</li>
+<li>详情：<code>GET /sub/detail?id=&lt;sub_id&gt;</code> 取 <code>sub.subs[0].filelist[]</code>，文件名在 <code>f</code>、
+  下载地址在 <code>url</code>；若 <code>filelist</code> 为空（单文件字幕），回退详情里的 <code>filename</code>/<code>url</code>。
+  下载地址有有效期，不能持久化。</li>
+<li>下载：GET url → bytes；按魔数/扩展名判断 ZIP/RAR：
+  ZIP 用标准库 <code>zipfile</code> 解压；RAR 用 <code>rarfile</code>（缺 <code>unar</code>/<code>unrar</code> 时该源不可用并在
+  <code>is_available()</code> 返回 False / 页面提示）。
+  压缩包可能包含多个语言/版本的字幕，<strong>不能取首个</strong>；必须按目标语言、格式优先级
+  和文件名相似度选择最匹配的一个。</li>
+<li>限流/重试：Assrt 请求失败按指数退避重试 2 次；全部失败记为源不可用，不阻塞其他源。</li>
+<li>安全：解压拒绝绝对路径、<code>..</code>、符号链接，限制解压大小、条目数与压缩比。</li>
+</ul>
+<p><strong>ThunderSource</strong>（无 Token）：
+- CID：文件 ≥60KB 时读取首 20KB、1/3 处 20KB、末 20KB，做 SHA1 并转大写十六进制；
+  &lt;60KB 时对整文件做 SHA1。读取视频必须通过 <code>StorageBackend</code>，远程后端需支持 seek；
+  不支持 seek 时降级为名称搜索。
+- 搜索：<code>GET https://api-shoulei-ssl.xunlei.com/oracle/subtitle?name=&lt;视频文件名&gt;</code>；
+  解析 <code>data[]</code> 的 <code>name/url/ext/cid/languages/score</code>，过滤 srt/ass/ssa/vtt，
+  按 CID 命中优先、简体优先、评分排序，取前 20。
+- 下载：GET <code>url</code> 返回字幕字节；响应内容仍需经过内容校验/UTF-8 转换。
+- 接口为非官方公开接口，可能变更；失败时只影响 Thunder，不阻塞 Assrt。</p>
+<p><strong>ZimukuSource</strong>（字幕库，网页 + 验证码）：
+- 搜索：<code>GET https://zimuku.org/search?q=&lt;title&gt;&amp;chost=zimuku.org</code>；页面返回云锁验证码
+  （BMP base64 + <code>security_verify_img</code>）时：
+  1. 提取 <code>data:image/bmp;base64,...</code>；
+  2. 调用全局 <code>OcrRecognizer.get_captcha_text(image_b64=...)</code>（nexus-verify）；
+  3. 设置 <code>srcurl=&lt;原 URL 的 JS charCode hex&gt;</code>；
+  4. GET <code>...&amp;security_verify_img=&lt;验证码文本 hex&gt;</code>，最多重试 3 次。
+- 解析：<code>div.item</code> → <code>p.tt a[href]</code>；字幕行 <code>div.sublist tbody tr</code>；
+  详情 <code>td.first a[href]</code>；语言从行内 <code>img</code> 的 alt/title/src 识别；格式从行文本/标题识别。
+- 下载：详情页 <code>a#down1[href]</code> → 中转页 <code>a[rel~=nofollow][href]</code> → 最终文件；
+  ZIP/RAR 安全解压并选择目标语言字幕。
+- 站点无公开 API，HTML/验证码流程可能变化；OCR 不可用或识别失败时只跳过 Zimuku。</p>
+<h3 id="5-匹配打分backendmatcherpy">5. 匹配打分（backend/matcher.py）<a class="headerlink" href="#5-匹配打分backendmatcherpy" title="Permanent link">¶</a></h3>
+<ul>
+<li><code>normalize(title)</code>：去标签/标点/大小写/年份括号，统一中英文与分隔符。</li>
+<li>打分（0-100）：名称相似度 + 年份匹配（<code>|diff|&lt;=1</code> 满分，否则按差值递减）+
+  季集精确匹配（剧集时命中加分、错季减分）+ 语言命中 + 格式偏好
+  （<code>ass&gt;srt&gt;ssa</code>）+ 下载量热度。</li>
+<li>名称相似度优先使用标准库 <code>difflib.SequenceMatcher</code>，避免新增 <code>rapidfuzz</code> 依赖；
+  如果后续确认需要更高精度，再单独引入并记录依赖。</li>
+<li>流程：<code>score_all(candidates)</code> → 过滤 <code>&lt; min_score</code> → 同语言去重（取最高）→ 排序。</li>
+</ul>
+<h3 id="6-落盘backendplacerpy">6. 落盘（backend/placer.py）<a class="headerlink" href="#6-落盘backendplacerpy" title="Permanent link">¶</a></h3>
+<ul>
+<li><code>build_subtitle_path(video_path, language, flags, ext, suffix_style)</code>：
+  <code>base = splitext(video_path)[0]</code>；语言先规范化为 BCP-47，再按风格输出：</li>
+<li><code>nexus</code>（兼容存量库）：zh-Hans→<code>.chi.zh-cn</code>、zh-Hant→<code>.zh-tw</code>、
+    en→<code>.eng</code>、ja→<code>.jpn</code>、ko→<code>.kor</code>、mul→<code>.mul</code>、其他→<code>.und</code>；</li>
+<li><code>bcp47</code>：<code>.zh-Hans</code>、<code>.zh-Hant</code>、<code>.en</code>、<code>.ja</code>、<code>.ko</code>、<code>.mul</code>、<code>.und</code>；</li>
+<li><code>iso639</code>：<code>.zh</code>、<code>.en</code>、<code>.ja</code>、<code>.ko</code>、<code>.mul</code>、<code>.und</code>（zh-Hans/zh-Hant 都输出 <code>.zh</code>，
+    无法区分简繁，UI 需提示）。</li>
+<li><strong>字幕标记</strong>：<code>forced</code> / <code>sdh</code> / <code>cc</code> / <code>commentary</code> / <code>default</code> 追加在语言之后，
+  按固定顺序去重；例如：</li>
+<li><code>Movie (2020).zh-Hans.srt</code></li>
+<li><code>Movie (2020).zh-Hant.srt</code></li>
+<li><code>Movie (2020).zh-Hans.forced.srt</code></li>
+<li><code>Movie (2020).en.sdh.srt</code></li>
+<li><code>Movie (2020).mul.bilingual.srt</code>（双语/多语言文件）</li>
+<li><strong>白名单</strong>：规范化后的目标路径必须落在 <code>library_roots</code> 或事件视频同目录内，
+  并且属于同一 <code>backend_id</code>；否则拒绝。</li>
+<li><strong>冲突策略</strong>：<code>skip</code>→返回 skipped；<code>suffix</code>→在扩展名前追加 <code>.1/.2</code>；
+  <code>overwrite</code>→覆盖。同名不同语言/标记不算冲突。</li>
+<li><strong>多字幕</strong>：同一视频允许多个目标文件，只要语言/标记组合不同；相同组合按冲突策略处理。</li>
+<li><strong>写入前</strong>：编码探测（GB18030/GBK/UTF-8）→ 统一转 UTF-8；内容校验（含时间轴/首条）
+  只适用于文本字幕（<code>.srt/.ass/.ssa/.vtt</code>）；二进制格式 <code>.sup/.sub/.idx</code> 不做内容校验，
+  只做扩展名/大小/路径校验。<code>.sub</code> 必须与同名 <code>.idx</code> 成对上传，缺失则拒绝。</li>
+<li><strong>原子写</strong>：先写同目录临时文件，再 <code>StorageBackend.move</code> 覆盖；失败不留下半文件。</li>
+<li><strong>并发</strong>：同一目标路径使用 <code>library:subtitle:{backend_id}:{path}</code> 锁，避免自动下载
+  与手动上传同时写同一字幕。</li>
+</ul>
+<h3 id="7-定位backendmedia_locatorpy">7. 定位（backend/media_locator.py）<a class="headerlink" href="#7-定位backendmedia_locatorpy" title="Permanent link">¶</a></h3>
+<p><code>locate(tmdb_id, media_type, season, episode)</code>：</p>
+<ol>
+<li>优先查询 <code>MEDIASYNC_ITEMS</code>（<code>PATH</code> 字段，<code>models/media_sync.py:26</code>）或
+   <code>MediaServer</code> 新增的按 TMDB 查路径方法；返回 <code>{video_path, backend_id, ...}</code>。
+   现有客户端 <code>get_movies</code>/<code>get_tv_episodes</code> 不返回路径，不能直接使用。</li>
+<li>剧集按 <code>season</code>/<code>episode</code> 过滤（电影单条）。</li>
+<li>回退：<code>media_service</code> 查 TMDB 元数据 → <code>path_resolver.get_dest_path_by_info(dest, meta)</code></li>
+<li>名称格式 → 通过 <code>StorageBackend</code> 扫描目录找视频。</li>
+<li>媒体服务器路径映射不到后端时返回空，前端提示手选；不猜测路径。</li>
+</ol>
+<h3 id="71-手动上传的媒体匹配策略">7.1 手动上传的媒体匹配策略<a class="headerlink" href="#71-手动上传的媒体匹配策略" title="Permanent link">¶</a></h3>
+<p>手动上传分两阶段：<strong>匹配（match）</strong> → <strong>确认落盘（upload）</strong>。落盘阶段只接受用户确认过的
+<code>UploadMapping</code>，不再在写入时重新猜媒体。</p>
+<p>匹配优先级（从高到低）：</p>
+<ol>
+<li><strong>用户显式选择视频</strong>：<code>target_video</code> + <code>backend_id</code>，置信度 100。只校验路径存在、
+   位于白名单且是视频文件。</li>
+<li><strong>TMDB 精确定位</strong>：<code>tmdb_id + type + season + episode</code>，通过 <code>MEDIASYNC_ITEMS.PATH</code>
+   或媒体服务器路径查询，置信度 95。多条结果必须让用户选，不能自动取第一条。</li>
+<li><strong>字幕文件名解析</strong>：先去掉字幕扩展名和语言后缀（<code>.zh/.chs/.cht/.eng</code> 等），
+   再用 <code>meta_info()</code> 解析 title/year/season/episode，在当前目录/根目录内匹配视频，置信度 80。要求：</li>
+<li>片名归一化后相同或高度相似；</li>
+<li>年份差 ≤ 1；</li>
+<li>剧集 season/episode 完全一致；</li>
+<li>匹配结果唯一。</li>
+<li><strong>目录唯一视频兜底</strong>：目标目录恰好只有 1 个视频时，置信度 70，仍需用户确认。</li>
+<li><strong>模糊匹配</strong>：只允许作为候选提示，置信度 &lt; 70；默认不写入，必须用户手选。</li>
+</ol>
+<p>匹配规则：</p>
+<ul>
+<li><strong>电影</strong>：title + year；同片多个版本（1080p/4K）不自动选，列出候选让用户选。
+  用户可显式选择「应用到该目录内所有同片版本」，插件为每个视频各生成一份字幕。</li>
+<li><strong>剧集</strong>：season + episode 是硬条件；字幕文件名可解析 <code>S01E02</code>、<code>1x02</code>、<code>E02</code>、
+  <code>第02集</code> 等。多集视频（<code>S01E01-E02</code>）按区间匹配。</li>
+<li><strong>批量字幕</strong>：每个字幕文件独立解析/匹配；同一集出现多个字幕（不同语言）按语言区分；
+  同一集出现多个候选视频时逐条冲突，全部要求用户确认。</li>
+<li><strong>动漫绝对集号</strong>：如果字幕文件名只有绝对集号、没有 season/episode，优先用
+  <code>MEDIASYNC_ITEMS</code>/TMDB 的季集映射；无法映射时进入手选，不做 <code>集号=集数</code> 猜测。</li>
+<li><strong>文件名不可解析</strong>：进入 <code>needs_confirmation</code>，不写入。</li>
+<li><strong>语言</strong>：从字幕文件名/内容探测；语言不参与目标视频选择，只决定后缀。</li>
+<li><strong>后端</strong>：所有候选必须属于同一个 <code>backend_id</code>；跨后端候选不自动匹配。</li>
+</ul>
+<p>数据结构：</p>
+<div class="highlight"><pre><span></span><code>MatchRequest:
+  files: [{filename, size, language?, season?, episode?}]
+  mode: target_video | tmdb | filename | directory
+  backend_id?, target_dir?, target_video?, tmdb_id?, type?, season?, episode?
+
+MatchResponse:
+  [{filename, candidates: [{video_path, backend_id, confidence, reason,
+                            title, year, season, episode}],
+    selected?: {video_path, backend_id}}]
+
+UploadRequest:
+  files: [{filename, content(base64|text), language?}]
+  mappings: [UploadMapping]
+  suffix_style, overwrite_policy, dry_run
+</code></pre></div>
+<p><code>upload</code> 收到 <code>mappings</code> 后逐条重新校验：视频存在、同一后端、在白名单内、字幕扩展名合法；
+任一校验失败只影响该条，不写入其他条。</p>
+<h3 id="72-多语言多字幕与识别重命名">7.2 多语言、多字幕与识别重命名<a class="headerlink" href="#72-多语言多字幕与识别重命名" title="Permanent link">¶</a></h3>
+<h4 id="语言与标记">语言与标记<a class="headerlink" href="#语言与标记" title="Permanent link">¶</a></h4>
+<p>内部统一使用 BCP-47 语言标签，输出时再按 <code>suffix_style</code> 转换：</p>
+<table>
+<thead>
+<tr>
+<th>输入别名</th>
+<th>规范化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>zh</code>, <code>zh-CN</code>, <code>zh-SG</code>, <code>zh-Hans</code>, <code>chs</code>, <code>sc</code>, <code>简体</code>, <code>简中</code></td>
+<td><code>zh-Hans</code></td>
+</tr>
+<tr>
+<td><code>zh-TW</code>, <code>zh-HK</code>, <code>zh-Hant</code>, <code>cht</code>, <code>tc</code>, <code>繁体</code>, <code>繁中</code></td>
+<td><code>zh-Hant</code></td>
+</tr>
+<tr>
+<td><code>en</code>, <code>eng</code>, <code>english</code>, <code>英语</code></td>
+<td><code>en</code></td>
+</tr>
+<tr>
+<td><code>ja</code>, <code>jpn</code>, <code>japanese</code>, <code>日语</code></td>
+<td><code>ja</code></td>
+</tr>
+<tr>
+<td><code>ko</code>, <code>kor</code>, <code>korean</code>, <code>韩语</code></td>
+<td><code>ko</code></td>
+</tr>
+<tr>
+<td><code>zh-Hans&amp;en</code>, <code>chs&amp;eng</code>, <code>中英</code>, <code>双语</code>, <code>bilingual</code></td>
+<td><code>mul</code> + <code>bilingual</code> 标记</td>
+</tr>
+<tr>
+<td><code>und</code>, <code>unknown</code>, 空</td>
+<td><code>und</code></td>
+</tr>
+</tbody>
+</table>
+<p>字幕标记：<code>forced</code>、<code>sdh</code>、<code>cc</code>、<code>commentary</code>、<code>default</code>、<code>bilingual</code>。
+标记从文件名提取，用户可在 UI 中勾选/取消；标记顺序固定，避免同名文件因顺序不同重复。</p>
+<h4 id="多字幕">多字幕<a class="headerlink" href="#多字幕" title="Permanent link">¶</a></h4>
+<ul>
+<li>同一视频可同时存在多条字幕：<code>zh-Hans</code>、<code>zh-Hant</code>、<code>en</code>、<code>zh-Hans.forced</code>、
+  <code>en.sdh</code> 等；目标文件名 = 视频基名 + 语言 + 标记 + 扩展名。</li>
+<li>已存在判断按“语言 + 标记”组合，不按“视频是否有任意字幕”：
+  已有 <code>zh-Hans</code> 不应阻止下载 <code>en</code> 或 <code>zh-Hans.forced</code>。</li>
+<li>同一组合冲突时按 <code>overwrite_policy</code>；<code>suffix</code> 追加 <code>.1/.2</code>，不能覆盖其他语言。</li>
+<li>双语字幕规范化为 <code>mul</code> + <code>bilingual</code>，例如 <code>Movie.mul.bilingual.srt</code>；
+  不使用两个语言标签拼接（媒体服务器无法可靠识别）。</li>
+<li>多版本视频（1080p/4K）默认不自动选；用户可显式选择“应用到全部版本”，
+  插件为每个视频各写一份同语言/标记字幕。</li>
+</ul>
+<h4 id="识别重命名已有字幕">识别重命名（已有字幕）<a class="headerlink" href="#识别重命名已有字幕" title="Permanent link">¶</a></h4>
+<p>支持两种重命名方式：</p>
+<ol>
+<li><strong>手动重命名</strong>：用户选择字幕文件 + 目标视频 + 语言/标记，预览后写入。</li>
+<li><strong>识别重命名</strong>：扫描指定目录/媒体库根，逐个解析字幕文件名并尝试识别语言/标记，
+   再按 §7.1 的匹配规则找视频，返回“旧名 → 新名 + 识别语言 + 置信度”预览；
+   用户确认后批量写入。</li>
+</ol>
+<p>识别顺序：</p>
+<ol>
+<li>文件名语言/标记别名（优先级最高）；</li>
+<li>文件名中的 <code>chs/cht/简/繁/eng/双语</code> 等显式标记；</li>
+<li>内容启发式（CJK 字符占比、简繁字符集、英文比例）；只作为辅助；</li>
+<li>无法确定 → <code>und</code>，标记 <code>needs_confirmation</code>，默认不写入，等待用户手选。</li>
+</ol>
+<p>安全与一致性：</p>
+<ul>
+<li>重命名只改变字幕文件名，不移动视频；目标必须同目录、同后端、在 <code>library_roots</code> 内。</li>
+<li>只接受字幕扩展名（<code>.srt/.ass/.ssa/.vtt/.sub/.idx/.sup</code> 等），拒绝把视频/NFO 当字幕。</li>
+<li><code>rename</code> 与 <code>upload</code> 共用 <code>UploadMapping</code>/<code>PlaceResult</code>，都必须支持 <code>dry_run</code>。</li>
+<li>扫描结果按“字幕文件 → 候选视频”分组；低置信度/多候选/同名冲突逐条确认，
+  不允许批量静默选择。</li>
+</ul>
+<h3 id="73-时间轴偏移与自动同步">7.3 时间轴偏移与自动同步<a class="headerlink" href="#73-时间轴偏移与自动同步" title="Permanent link">¶</a></h3>
+<p>支持三类同步方式，默认 <code>sync_policy=off</code>，不允许静默自动纠正：</p>
+<ol>
+<li><strong>手动偏移</strong>：用户输入 <code>offset_ms</code>（可为负）和 <code>rate</code>（默认 1.0），
+   预览首条/末条时间后应用。适用于已知固定偏移或帧率转换。</li>
+<li><strong>参考字幕对齐</strong>：同一视频已有另一条字幕（通常是英文或其他语言）作为时间参考。
+   只用<strong>时间轴</strong>对齐，不依赖文本翻译：取两条字幕的 cue 区间做互相关/最近邻匹配，
+   估计 <code>offset_ms</code> 和可选 <code>rate</code>，输出置信度；低置信度不采用。</li>
+<li><strong>音频语音对齐</strong>：通过 ffmpeg 提取单声道音频并做语音/静音检测，将字幕 cue 起始
+   与语音区间对齐，估计固定偏移或线性漂移。该方式较慢，只在本地临时文件或可流式读取
+   的后端上执行，必须设置超时和临时文件清理。</li>
+</ol>
+<p>规则：</p>
+<ul>
+<li>自动纠偏必须有可靠参考（另一条字幕或音频）；没有参考时只允许手动偏移。</li>
+<li>参考字幕选择：同一视频已存在的另一条字幕；优先用户指定，否则选择 cue 数最多且
+  非目标语言的一条；候选不唯一/无参考时不自动。</li>
+<li>不允许把字幕自身当作参考；参考字幕必须与目标视频对应且语言/版本不同。</li>
+<li>自动纠偏失败或低于阈值：保留原时间轴并记录 <code>sync_skipped</code>，不影响字幕落盘。</li>
+<li>偏移超过 <code>sync_max_offset_ms</code> 或置信度低于 <code>sync_min_confidence</code> → 不采用，保留原字幕。</li>
+<li>时间变换：<code>new_time = old_time * rate + offset_ms</code>；结果必须 <code>&gt;= 0</code> 且保持单调，
+  异常时拒绝整条字幕。</li>
+<li>只支持<strong>恒定偏移/线性速率</strong>，不做逐行/逐句自动重排；逐行错位需要人工处理。</li>
+<li>自动下载默认不同步；只有 <code>sync_policy=auto_reference</code>/<code>auto_audio</code> 且达到阈值时，
+  才在落盘前应用，并把 <code>sync_method</code>/<code>offset_ms</code>/<code>rate</code>/<code>sync_confidence</code> 写入历史。</li>
+<li>手动上传/识别重命名始终展示同步预览，用户可覆盖自动结果。</li>
+</ul>
+<p>格式处理：</p>
+<ul>
+<li>SRT 使用现有 <code>srt</code> 依赖解析/重写；ASS/SSA/VTT 使用独立时间轴解析器
+  （可引入 <code>pysubs2</code>，或实现只改 <code>Dialogue</code>/cue 时间的轻量解析）。</li>
+<li>二进制格式（<code>.sup/.sub/.idx</code>）不支持时间轴纠偏，只支持重命名/落盘。</li>
+<li>保留样式、注释和编码转换结果；ASS 的 <code>Dialogue: Start,End</code> 与 VTT 的 cue 时间
+  必须成对修改，不能只改开始时间。</li>
+<li>负时间钳制为 0 并记录警告；不要删除字幕行。</li>
+</ul>
+<h3 id="74-蓝光原盘">7.4 蓝光原盘<a class="headerlink" href="#74-蓝光原盘" title="Permanent link">¶</a></h3>
+<p>蓝光目录的 <code>subtitle.download.file</code> 为空，插件从 <code>media.transfer_finished</code> 的
+<code>target_path</code> 目录进入：</p>
+<ol>
+<li>在 <code>&lt;disc&gt;/BDMV/STREAM</code> 中选择最大的 <code>.m2ts</code>/<code>.mts</code> 作为主视频；</li>
+<li><code>ffprobe</code> 读取主视频字幕流，检测中文软字幕；</li>
+<li>外挂字幕放在主 <code>.m2ts</code> 同目录同基名。注意：Emby 官方文档只说明普通视频的
+   外挂字幕命名，未确认 BDMV 目录外挂字幕；社区反馈也不保证识别。因此这里只是
+   best-effort，若要 Emby 稳定识别，优先 remux 为 MKV；</li>
+<li>硬字幕仍使用目录/主视频文件名特征或可选 OCR；</li>
+<li>找不到主视频时记录 <code>bluray_main_not_found</code>，不阻塞其他任务。</li>
+</ol>
+<h3 id="75-已有中文字幕检测">7.5 已有中文字幕检测<a class="headerlink" href="#75-已有中文字幕检测" title="Permanent link">¶</a></h3>
+<p>下载/自动下载前执行，命中则跳过并记录 <code>chinese_subtitle_exists:&lt;kind&gt;</code>：</p>
+<ol>
+<li><strong>外挂字幕</strong>：扫描视频同目录同基名字幕，解析文件名语言；语言为 <code>zh-Hans</code>/
+   <code>zh-Hant</code>/<code>mul</code> 或文本内容含 CJK 时命中。</li>
+<li><strong>容器内软字幕</strong>：本地视频直接调用 <code>ffprobe -select_streams s</code>；远程后端先通过
+   <code>StorageBackend.read_stream</code> 读取前 16MB 到临时文件再 ffprobe（MKV/M2TS 的轨道头
+   通常在文件前部）。命中 zh/chi/zho/zh-Hans/zh-Hant/中文/简/繁/双语。</li>
+<li><strong>硬字幕文件名</strong>：文件名/目录含 <code>中字/中英/简繁/简体/繁体/中文/双语/内嵌/
+   硬字幕/CHS/CHT/ZH</code> 等特征时命中。</li>
+<li><strong>硬字幕 OCR（可选）</strong>：<code>hard_sub_detection=ocr</code> 时用 ffmpeg 抽 4 帧、
+   裁底部 30%，调用 nexus-verify <code>TEXT_OCR</code>，出现 CJK 字符即命中。OCR 不可用
+   或抽帧失败时回退文件名检测。</li>
+</ol>
+<p>约束：</p>
+<ul>
+<li>远程软字幕检测复制前 16MB 头部；MP4 等 <code>moov</code> 在文件尾部的格式可能无法从头部
+  识别，此时回退外挂字幕/文件名检测。</li>
+<li>硬字幕检测是启发式，存在误判（片名含“中字”但实际无硬字幕）和漏判
+  （硬字幕不在底部/抽帧未覆盖）；默认使用文件名，OCR 只作为可选增强。</li>
+<li><code>download</code> API 支持 <code>force=true</code> 跳过检测，供用户明确要求时使用。</li>
+</ul>
+<h3 id="76-媒体库全量补字幕">7.6 媒体库全量补字幕<a class="headerlink" href="#76-媒体库全量补字幕" title="Permanent link">¶</a></h3>
+<p><code>library/scan</code> 启动后台 job：</p>
+<ol>
+<li>枚举 <code>BackendResolver.roots()</code>（可按 <code>roots</code>/<code>media_types</code> 过滤），用
+   <code>media_match.list_videos</code> 递归列出视频；按 <code>(backend_id, path)</code> 去重。</li>
+<li>每个视频执行 §7.5 中文字幕检测；命中则跳过。</li>
+<li>缺失时用视频标题/年份/季集构造 <code>SearchQuery</code>，按配置语言搜索并落盘；
+   <code>dry_run</code> 只返回 <code>would_download</code>/<code>exists</code>，不写文件。</li>
+<li><code>library_delay_seconds</code> 控制条目间隔，适配 Assrt 等低配额源；单条失败不阻断后续。</li>
+<li>job 状态持久化到插件 <code>jobs.json</code>，支持 <code>library/job</code> 查询和 <code>library/cancel</code>；
+   结果最多保留 200 条，任务最多保留 50 个。</li>
+</ol>
+<p>全量任务与事件监听共用 <code>SubtitleService.download</code> 和同一落盘/检测逻辑；
+事件监听只处理 <code>subtitle.download</code>，全量任务是独立入口。</p>
+<p>定时任务由 <code>ctx.schedule_cron("library_scan", ...)</code> 注册，<code>on_disable</code> 中
+<code>ctx.remove_schedule("library_scan")</code> 移除；插件启用时若配置开启则自动注册，
+配置保存后通过 <code>plugin.config_changed</code> 重新注册。
+定时触发同样受“单飞”保护，已有 running job 时直接跳过并记录日志。</p>
+<h3 id="8-register_api-handlers请求响应">8. register_api handlers（请求/响应）<a class="headerlink" href="#8-register_api-handlers请求响应" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>path</th>
+<th>请求</th>
+<th>响应 data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>search</code></td>
+<td><code>{title,year?,tmdb_id?,type?,season?,episode?,languages?}</code></td>
+<td><code>[Candidate 摘要]</code></td>
+</tr>
+<tr>
+<td><code>match</code></td>
+<td><code>MatchRequest</code></td>
+<td><code>MatchResponse</code>（仅匹配，不写文件）</td>
+</tr>
+<tr>
+<td><code>download</code></td>
+<td><code>{tmdb_id,type,season?,episode?,languages?,overwrite?,force?}</code></td>
+<td><code>[PlaceResult]</code></td>
+</tr>
+<tr>
+<td><code>upload</code></td>
+<td><code>{files[], mappings[](language/flags/sync), suffix_style, overwrite_policy, dry_run}</code></td>
+<td><code>[{video_path, subtitle_path, action, reason, sync}]</code></td>
+</tr>
+<tr>
+<td><code>sync_detect</code></td>
+<td><code>{subtitle_path, video_path, method, reference_path?, max_offset_ms?, min_confidence?}</code></td>
+<td><code>{offset_ms,rate,method,confidence,samples[]}</code></td>
+</tr>
+<tr>
+<td><code>locate</code></td>
+<td><code>{tmdb_id,type,season?,episode?}</code></td>
+<td><code>[{video_path,backend_id,title,season,episode}]</code></td>
+</tr>
+<tr>
+<td><code>rename</code></td>
+<td><code>{mode: manual|recognize, mappings?, scope?{backend_id,path,recursive}, detect_language?, sync_policy?, suffix_style?, overwrite_policy, dry_run}</code></td>
+<td><code>[{old_path,new_path,language,flags,confidence,action,reason,sync}]</code></td>
+</tr>
+<tr>
+<td><code>list_targets</code></td>
+<td><code>{path, backend_id?}</code></td>
+<td><code>[目录/视频项]</code></td>
+</tr>
+<tr>
+<td><code>history</code></td>
+<td><code>{page?, page_size?}</code></td>
+<td><code>{items,total}</code></td>
+</tr>
+<tr>
+<td><code>test_source</code></td>
+<td><code>{}</code></td>
+<td><code>{ok, message}</code></td>
+</tr>
+<tr>
+<td><code>library/scan</code></td>
+<td><code>{roots?, media_types?, dry_run?, limit?}</code></td>
+<td><code>{id,status,total,...}</code></td>
+</tr>
+<tr>
+<td><code>library/job</code></td>
+<td><code>{job_id}</code>（GET query）</td>
+<td><code>{id,status,total,done,skipped,failed,current,results}</code></td>
+</tr>
+<tr>
+<td><code>library/cancel</code></td>
+<td><code>{job_id}</code></td>
+<td>job 状态</td>
+</tr>
+</tbody>
+</table>
+<p>统一返回 <code>{"success": bool, "message": str, "data": ...}</code>；<code>dry_run=true</code> 只计算不写。
+<code>upload</code> 的 Base64 字符串先校验长度再解码；<code>upload.mappings</code> 必须包含语言、标记与同步参数；
+<code>sync_detect</code> 只计算偏移/速率，不写字幕；<code>rename</code> 的 manual 模式逐条校验 mapping，
+recognize 模式只接受白名单内的字幕目录/根，并且只处理字幕扩展名；
+<code>list_targets</code> 不能越出白名单根目录。</p>
+<h3 id="9-storepy数据目录-json">9. store.py（数据目录 JSON）<a class="headerlink" href="#9-storepy数据目录-json" title="Permanent link">¶</a></h3>
+<ul>
+<li><code>history.json</code>：最近 N 条 <code>{time, title, tmdb_id, source, lang, flags, action, target, result, sync_method, offset_ms, rate, sync_confidence}</code>；</li>
+<li><code>fingerprints.json</code>：自动下载去重指纹（<code>tmdb+season+episode+lang+flags+backend_id</code>），
+  设置上限（默认 5000）并按时间淘汰；</li>
+<li><code>cache.json</code>：搜索缓存（TTL，避免重复请求）。</li>
+</ul>
+<p>所有写入使用临时文件 + <code>os.replace</code> 原子替换，并用进程内 <code>threading.Lock</code>
+（或文件锁）串行化；插件重载后重新加载。多实例部署共享数据目录时，进程内锁不够，
+指纹/历史写入改用分布式锁 <code>library:subtitle:store</code>。</p>
+<h3 id="10-di-依赖sandbox-注入键">10. DI 依赖（sandbox 注入键）<a class="headerlink" href="#10-di-依赖sandbox-注入键" title="Permanent link">¶</a></h3>
+<p>注入 <code>mediaserver</code>、<code>media_service</code>、<code>filetransfer</code>、<code>event_bus</code>、<code>app_context</code>；
+仅构造参数名匹配者注入（<code>sandbox.py:200-215</code>）。线程池由插件自建，不依赖 DI。</p>
+<h3 id="11-实施影响面">11. 实施影响面<a class="headerlink" href="#11-实施影响面" title="Permanent link">¶</a></h3>
+<ul>
+<li>独立仓库 <code>~/python/nexus-media/nexus-media-plugins/plugins/subtitle</code>：插件源码、测试与
+  <code>manifest.json</code>；打包由仓库根目录 <code>tools/build_catalog.py</code> 生成；不修改后端 builtin 插件目录。</li>
+<li><code>api/routers/plugin_framework.py</code>：把同步插件 API handler 放入线程池执行。</li>
+<li><code>src/app/plugin_framework/registry.py</code>：安装/启用后同步 manifest/state 缓存，支持安装后立即启用。</li>
+<li><code>src/app/services/transfer/subtitle_naming.py</code>：抽出共享字幕后缀/命名逻辑，
+  <code>transfer_engine.py</code> 与插件共同使用。</li>
+<li><code>src/app/mediaserver/</code>：新增或扩展按 TMDB 返回视频路径的查询能力（若不复用
+  <code>MEDIASYNC_ITEMS.PATH</code>）。</li>
+<li>插件 manifest 声明 <code>backend.tools</code>，由现有 ToolExecutor 合并；无需改 Agent 工具框架。</li>
+<li>测试：插件仓库内新增 matcher/placer/source/locator/API/事件/Agent 工具/打包安装测试；
+  后端新增共享命名与插件 API 线程模型测试。</li>
+</ul>
+<h3 id="12-测试">12. 测试<a class="headerlink" href="#12-测试" title="Permanent link">¶</a></h3>
+<ul>
+<li><code>matcher</code>：打分/去重/排序边界；</li>
+<li><code>placer</code>：命名/后缀/覆盖/白名单/目录穿越拒绝/编码转换/原子写；</li>
+<li><code>placer</code> 多语言：<code>zh-Hans</code>/<code>zh-Hant</code>/<code>en</code>/<code>ja</code>/<code>ko</code>/<code>mul</code>、forced/sdh/cc、
+  简繁别名、双语（<code>mul</code>）、三种 suffix_style；</li>
+<li><code>placer</code> 远程后端：使用 fake StorageBackend 验证 read/write/move 调用，禁止本地 <code>open</code>；</li>
+<li><code>assrt</code>：固定样本响应解析、压缩包安全（符号链接/绝对路径/bomb）、Token 脱敏；</li>
+<li><code>match</code>：显式视频、TMDB 精确、文件名解析、目录唯一、模糊拒绝、多候选冲突、
+  多版本/多集/动漫绝对集号；</li>
+<li><code>rename</code>：manual + recognize、语言/标记识别、低置信度不写入、同名多语言不冲突、
+  同语言不同标记共存；</li>
+<li><code>sync</code>：SRT 正/负偏移、frame-rate <code>rate</code>、负时间钳制、单调校验、ASS/VTT 时间成对修改、
+  参考字幕置信度、音频 VAD 假数据、超阈值拒绝、无参考不自动；</li>
+<li>事件：普通文件只触发一次下载；蓝光目录通过 <code>media.transfer_finished</code> 处理并找到主 m2ts；</li>
+<li><code>locate</code>：MEDIASYNC_ITEMS 命中、路径映射失败回退、手选兜底；</li>
+<li><code>agent_tool</code>：manifest tools schema、<code>library:manage</code> 权限、写工具确认级别、
+  返回 <code>{success,data,error}</code> 契约；</li>
+<li>打包/安装：zip 根目录含 manifest、版本升级替换、可选依赖缺失时插件仍可加载；</li>
+<li>闭环：<code>match</code> → <code>upload</code> → <code>rename</code>（含 dry_run）；</li>
+<li>并发：自动下载与手动上传同时写同一路径时只允许一个成功。</li>
+<li>全量任务：dry-run 只检测不下载、已有中文跳过、缺失下载、取消后停止、进度/结果持久化。</li>
+<li>定时任务：启用时注册 cron、禁用时移除、重叠触发被拒绝。</li>
+</ul>
+<h2 id="详细页面设计">详细页面设计<a class="headerlink" href="#详细页面设计" title="Permanent link">¶</a></h2>
+<p>插件前端为独立 ESM（<code>frontend/index.mjs</code>，默认导出 <code>function(host)</code>，返回组件映射；
+<code>host</code> 提供 <code>Vue</code>、<code>IconifyIcon</code>、<code>api</code> 客户端与 <code>NaiveUI</code> 命名空间 — <code>loader.ts:44,56-86</code>）。</p>
+<p>页面使用 host 注入的 Naive UI 组件（<code>NCard</code>/<code>NDataTable</code>/<code>NButton</code>/<code>NSelect</code>/<code>NProgress</code> 等），
+视觉遵循项目规范：<code>hsl(var(--card|--border|--primary|--accent|--muted-foreground|...))</code>、
+<code>IconifyIcon</code>（<code>lucide:</code> 前缀）、<code>grid-cols-1 md:grid-cols-2</code> 响应式。</p>
+<h3 id="页面-a设置settingspagemanifest-settings-自动渲染">页面 A：设置（SettingsPage，manifest settings 自动渲染）<a class="headerlink" href="#页面-a设置settingspagemanifest-settings-自动渲染" title="Permanent link">¶</a></h3>
+<ul>
+<li>由框架按 <code>settings.fields</code> 渲染，无需手写；</li>
+<li>顶部可选一卡片展示「源连通性」（调用 <code>test_source</code>，红/绿点 + 失败原因）。</li>
+</ul>
+<h3 id="页面-b上传--重命名uploadpage路由-pluginsubtitleupload">页面 B：上传 / 重命名（UploadPage，路由 <code>/plugin/subtitle/upload</code>）<a class="headerlink" href="#页面-b上传--重命名uploadpage路由-pluginsubtitleupload" title="Permanent link">¶</a></h3>
+<p>布局为左右两栏（移动端上下堆叠），左侧「上传与目标」，右侧「匹配与结果」。</p>
+<p><strong>左侧：上传与目标</strong></p>
+<ol>
+<li><strong>上传区</strong>（拖拽或点击选择 <code>.srt/.ass/.ssa/.vtt/.sub/.idx/.sup</code>）：</li>
+<li>文件卡片：名称、大小、探测语言、格式；可移除；</li>
+<li>每个文件可手动修正语言/标记（<code>zh-Hans</code>、<code>zh-Hant</code>、<code>en</code>、<code>forced</code>、<code>sdh</code>、<code>bilingual</code> 等）；</li>
+<li>多文件列表（剧集批量/多语言）。</li>
+<li><strong>模式切换</strong>（segment 按钮）：</li>
+<li>「手动指定」：目标目录选择器（<code>list_targets</code> 浏览）+ 目标视频下拉（同目录媒体）；</li>
+<li>「按 TMDB ID」：<code>tmdb_id</code> + 类型（电影/电视剧/动漫）+（剧集时）季/集 输入；</li>
+<li>「按文件名」：解析字幕文件名中的标题/年份/季集，在当前目录或指定根目录内匹配。</li>
+<li><strong>命名规则</strong>：</li>
+<li>语言（zh-Hans/zh-Hant/en/ja/ko/mul）+ 标记（forced/sdh/cc/commentary/bilingual）；</li>
+<li>后缀风格（<code>nexus</code> / <code>bcp47</code> / <code>iso639</code>）；</li>
+<li>已存在策略（skip/suffix/overwrite）；</li>
+<li>自定义模板（占位符 <code>{title}{year}{season}{episode}{lang}{flags}{ext}</code>，含预览）。</li>
+<li><strong>时间轴</strong>：</li>
+<li>偏移 <code>offset_ms</code>（可为负）、速率 <code>rate</code>（默认 1.0）；</li>
+<li>「自动检测」按钮：选择参考字幕或音频；展示 <code>offset_ms/rate/confidence</code> 和首尾时间样本；</li>
+<li>自动结果低于阈值或没有参考时不应用，保留原时间轴。</li>
+<li>操作按钮：「匹配媒体」（只匹配不写）→ 确认候选后「预览命名」→「上传并落盘」。
+   匹配结果中的低置信度/多候选/冲突项必须手动选择，未选择不写入。</li>
+</ol>
+<p><strong>右侧：匹配与结果</strong></p>
+<ul>
+<li><strong>匹配结果</strong>：按字幕文件分组，展示候选视频路径、置信度、匹配原因（显式选择/TMDB/文件名/目录唯一）；
+  多候选时逐条选择；同一电影多版本可勾选「应用到全部版本」。</li>
+<li><strong>定位结果</strong>（TMDB 模式）：按季/集分组的视频列表，每个含路径 + 目标字幕名预览 + 状态徽标（将新建/将覆盖/跳过）；</li>
+<li><strong>执行结果</strong>：逐条「成功 / 失败原因 / 跳过原因」，失败可重试单条；</li>
+<li><strong>状态设计</strong>：空态（提示先上传/匹配）、加载骨架、错误态（含返回原因，如 TMDB 未定位）、成功态。</li>
+</ul>
+<p><strong>移动端</strong>：<code>grid-cols-1</code>；上传区固定为按钮；结果区折叠；操作按钮吸底。</p>
+<h3 id="页面-c识别重命名renamepage路由-pluginsubtitlerename">页面 C：识别重命名（RenamePage，路由 <code>/plugin/subtitle/rename</code>）<a class="headerlink" href="#页面-c识别重命名renamepage路由-pluginsubtitlerename" title="Permanent link">¶</a></h3>
+<p>用于已有字幕的批量整理，支持“识别重命名”和“手动重命名”。</p>
+<ol>
+<li><strong>范围</strong>：选择后端/目录或媒体库根；是否递归；是否启用内容语言识别。</li>
+<li><strong>扫描/预览</strong>：表格列：</li>
+<li>旧字幕路径、视频路径、新字幕名；</li>
+<li>识别语言（下拉可改）、标记（多选）、置信度、动作（将重命名/跳过/冲突）；</li>
+<li>时间轴偏移/速率/同步置信度（可手动改，也可对单条执行 <code>sync_detect</code>）；</li>
+<li>低置信度、多候选、同名冲突、自动同步失败行高亮，必须逐条确认。</li>
+<li><strong>手动重命名</strong>：选中字幕行后指定目标视频 + 语言/标记，预览后执行；不移动视频。</li>
+<li><strong>执行</strong>：<code>dry_run</code> 预览 → 批量/单条应用；失败可重试单条；不覆盖其他语言/标记。</li>
+</ol>
+<h3 id="页面-d可选历史historypage">页面 D（可选）：历史（HistoryPage）<a class="headerlink" href="#页面-d可选历史historypage" title="Permanent link">¶</a></h3>
+<ul>
+<li>表格/时间线：时间、媒体（标题/年份）、语言、动作（自动下载/上传/重命名）、源、目标路径、结果；</li>
+<li>过滤：媒体类型、结果、源；分页加载；点击查看详情。</li>
+</ul>
+<h2 id="交互状态要点">交互/状态要点<a class="headerlink" href="#交互状态要点" title="Permanent link">¶</a></h2>
+<ul>
+<li>预览与落盘分离（先「预览命名」再「上传并落盘」）；</li>
+<li>批量时逐条独立成败，整体完成后汇总通知；</li>
+<li>失败原因可读（TMDB 未定位 / 已存在跳过 / 越白名单 / 内容校验失败）；</li>
+<li>大文件/网络失败给出重试入口；</li>
+<li>可达性：所有按钮可键盘聚焦，图标带 <code>aria-label</code>。</li>
+</ul>
+<h2 id="错误处理">错误处理<a class="headerlink" href="#错误处理" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Assrt 无 Token / 401</td>
+<td>提示配置 Token，跳过搜索</td>
+</tr>
+<tr>
+<td>源超时/网络失败</td>
+<td>标记失败可重试，不中断批量</td>
+</tr>
+<tr>
+<td>无候选 ≥ min_score</td>
+<td>记日志/可选通知，跳过</td>
+</tr>
+<tr>
+<td>响应为 HTML/空</td>
+<td>丢弃（防止存错内容）</td>
+</tr>
+<tr>
+<td>压缩包含 <code>..</code>/绝对路径/符号链接/超限</td>
+<td>拒绝并记录</td>
+</tr>
+<tr>
+<td>压缩包含多语言/多版本</td>
+<td>按目标语言/格式/文件名选择，不取首个</td>
+</tr>
+<tr>
+<td>路径越白名单/跨后端</td>
+<td>拒绝并提示</td>
+</tr>
+<tr>
+<td>二进制 <code>.sup/.sub/.idx</code></td>
+<td>不做内容校验；<code>.sub</code> 缺同名 <code>.idx</code> 拒绝</td>
+</tr>
+<tr>
+<td>同名已存在</td>
+<td>按 overwrite_policy 处理</td>
+</tr>
+<tr>
+<td>蓝光原盘</td>
+<td>从 <code>media.transfer_finished.target_path</code> 找主 m2ts；找不到则跳过</td>
+</tr>
+<tr>
+<td>媒体服务器路径无法映射到后端</td>
+<td>返回空结果，要求手选</td>
+</tr>
+</tbody>
+</table>
+<h2 id="依赖">依赖<a class="headerlink" href="#依赖" title="Permanent link">¶</a></h2>
+<ul>
+<li>标准库：<code>zipfile</code>、<code>difflib</code>、<code>chardet</code>/<code>charset-normalizer</code>（编码探测）。</li>
+<li>现有依赖：<code>srt</code>（SRT 解析/重写）。</li>
+<li>可选：<code>pysubs2</code>（ASS/SSA/VTT 时间轴修改）；未安装时这些格式只做重命名，不自动纠偏。</li>
+<li>可选：系统 <code>ffmpeg</code>/<code>ffprobe</code>（音频语音对齐、软/硬字幕检测）；缺失时跳过对应检测。</li>
+<li>可选：<code>rarfile</code>（Python 包）+ 系统 <code>unar</code>/<code>unrar</code>；<code>rarfile</code> 本身只是解压前端，
+  不包含 RAR 解码器。缺失时 Assrt/Zimuku 的 RAR 包不可用，ZIP 不受影响。</li>
+<li>Zimuku 依赖全局 <code>laboratory.ocr_server_host</code>（nexus-verify）；未配置或不可达时该源报错跳过。</li>
+<li>不引入 <code>rapidfuzz</code>；若后续需要更高匹配精度，再单独评估依赖与体积。</li>
+</ul>
+<h2 id="里程碑增量落地">里程碑（增量落地）<a class="headerlink" href="#里程碑增量落地" title="Permanent link">¶</a></h2>
+<ol>
+<li><strong>Slice 1</strong>：骨架 + 配置 + <code>subtitle.download</code> hook + Assrt 源 + 共享命名/落盘/去重 + 单测。</li>
+<li><strong>Slice 2</strong>：上传/识别重命名页（手动/TMDB/文件名匹配）+ <code>match</code>/<code>upload</code>/<code>rename</code>/<code>list_targets</code> API + 手动偏移/速率预览 + 线程池/原子写。</li>
+<li><strong>Slice 3</strong>：<code>locate</code>（MEDIASYNC_ITEMS/媒体服务器路径）+ 自动重命名 + <code>sync_detect</code>（参考字幕/音频）。</li>
+<li><strong>Slice 4</strong>：Thunder/Zimuku 源完善 + 全量补字幕 + <code>test_source</code> + 历史页。</li>
+<li><strong>Slice 5</strong>：Agent 工具（<code>subtitle_search</code> / <code>subtitle_download</code>）+ 权限/确认级别测试。</li>
+<li><strong>Slice 6</strong>：通知、文档、全量测试与发版。</li>
+</ol>
+<h2 id="风险--待决">风险 / 待决<a class="headerlink" href="#风险--待决" title="Permanent link">¶</a></h2>
+<ul>
+<li><strong>Thunder 接口</strong>为非官方公开接口，可能随时变更；CID 需要远程后端支持 seek，
+  不支持时降级名称搜索；Thunder 结果仍需内容校验。</li>
+<li><strong>全量任务配额</strong>：Assrt 每个视频通常需要搜索 + 详情 + 下载请求，低配额账号
+  需要增大 <code>library_delay_seconds</code>，否则会出现 <code>quota</code> 失败；失败项可重跑。</li>
+<li><strong>定时任务重叠</strong>：cron 触发时若上一次全量任务仍在运行，本次跳过；进程重启后
+  正在运行的 job 不会自动恢复，需要重新触发（state 保留为历史记录）。</li>
+<li><strong>Zimuku 验证码</strong>依赖 nexus-verify OCR，识别率/可用性会直接影响该源；站点 HTML
+  和云锁流程变化也会导致失效。不要高频请求，失败时跳过。</li>
+<li><strong>已有字幕检测</strong>：远程软字幕依赖前 16MB 头部探测，MP4 <code>moov</code> 在尾部时可能漏检；
+  硬字幕 OCR 只覆盖抽帧的底部区域，可能误判/漏判。默认使用文件名特征，必要时让用户手动确认。</li>
+<li><strong>Emby 蓝光外挂字幕</strong>：官方文档未确认 BDMV 目录外挂字幕；2019/2021 社区反馈均不保证
+  识别。插件可以写入主 <code>.m2ts</code> 同目录，但不能承诺 Emby 会加载；需要稳定效果时建议
+  将 BDMV remux 为 MKV。</li>
+<li><strong>全量扫描耗时</strong>：逐视频检测/搜索/下载是 I/O 密集操作；默认串行并受
+  <code>library_delay_seconds</code> 限制，大型媒体库建议先用 <code>dry_run</code> 预览缺失清单。</li>
+<li><strong>RAR 解压</strong>依赖系统 <code>unrar</code>，缺失时降级为仅 ZIP 并在页面提示。</li>
+<li><strong>TMDB→文件定位</strong>依赖 <code>MEDIASYNC_ITEMS.PATH</code> 或新增媒体服务器路径查询；
+  <code>MEDIASYNC_ITEMS.PATH</code> 只有 255 字符，长路径可能被截断；定位失败时回退
+  <code>path_resolver</code>，再失败则手选。
+  媒体服务器路径与后端路径不一致时只能手选。</li>
+<li><strong>插件 API 线程模型</strong>：依赖框架把同步 handler 放入线程池；若暂不改造，在线 handler
+  只能做快速校验并提交后台任务。</li>
+<li><strong>权限</strong>：POST 固定 <code>plugin:manage</code>，本 v1 仅插件管理员可上传/重命名。</li>
+<li><strong>语言识别</strong>：内容启发式只用于辅助简繁/中英判断，不能保证准确；无法确定时标 <code>und</code>
+  并要求用户确认。文件名显式标签优先。</li>
+<li><strong><code>iso639</code> 风格</strong>：<code>zh-Hans</code>/<code>zh-Hant</code> 都会写成 <code>.zh</code>，无法区分简繁；UI 必须提示，
+  需要区分时使用 <code>bcp47</code>。</li>
+<li><strong><code>mul</code>/<code>bilingual</code></strong>：不同媒体服务器对 <code>mul</code> 和自定义标记的识别程度不同；
+  不识别时仍能作为普通字幕文件存在，但语言展示可能不理想。</li>
+<li><strong>自动纠偏风险</strong>：音频 VAD/参考字幕对齐都可能误判；默认 <code>sync_policy=off</code>，
+  自动结果必须达到置信度阈值并保留预览，不能静默覆盖原时间轴。</li>
+<li><strong>纠偏范围</strong>：只支持恒定偏移/线性速率；逐行错位、乱序、缺失 cue 不做自动重排。</li>
+<li><strong>格式支持</strong>：SRT 使用现有 <code>srt</code>；ASS/SSA/VTT 依赖可选 <code>pysubs2</code>，缺失时只重命名不纠偏。</li>
+<li><strong>音频纠偏成本</strong>：ffmpeg 提取音频与 VAD 较慢，必须限制文件大小/时长、设置超时并清理临时文件。</li>
+<li><strong>远端存储</strong>：SMB/WebDAV/S3/OpenList 的 <code>write_stream</code>/<code>move</code> 语义不同，跨后端复制
+  可能退化；需预留失败回滚与临时文件清理。</li>
+<li>字幕属共享资源，自动覆盖默认 <code>skip</code>，谨慎。</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "content.action.edit", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>

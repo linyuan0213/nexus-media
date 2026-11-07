@@ -1,0 +1,1993 @@
+<!DOCTYPE html><html lang="zh" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Nexus Media 多功能媒体库管理工具使用文档">
+      
+      
+      
+        <link rel="canonical" href="https://linyuan0213.github.io/nexus-media/plans/ADR-025-implementation-matrix/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>ADR-025 实现矩阵 - Nexus Media 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-025-实现矩阵" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="Nexus Media 文档" class="md-header__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Nexus Media 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-025 实现矩阵
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到深色模式" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换到深色模式" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到浅色模式" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换到浅色模式" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Nexus Media 文档" class="md-nav__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    Nexus Media 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装部署
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    使用指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    使用指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    基础配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    资源搜索与探索
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sites/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    站点配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../filter_rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    过滤规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../download_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../downloaders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体服务器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../directory_sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    目录同步
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_organization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体整理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rss/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RSS 订阅
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../indexers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    索引器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通知渠道配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../message_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    消息通知模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务与调度
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    存储后端
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    用户与权限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    插件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件使用
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugin_development_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发者
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    开发者
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    本地开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent-mvp-detailed-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    常见问题
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    更新日志
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#1-规范模型与-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. 规范模型与 Provider
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-合成与策略" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. 合成与策略
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-身份与订阅" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. 身份与订阅
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-识别与匹配" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. 识别与匹配
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-刮削--nfo--图片" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. 刮削 / NFO / 图片
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-命名" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. 命名
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-discovery--探索页" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Discovery / 探索页
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-api--数据库--安全" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. API / 数据库 / 安全
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-运营与收尾" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. 运营与收尾
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#结论" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        结论
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/linyuan0213/nexus-media/edit/master/docs/plans/ADR-025-implementation-matrix.md" title="编辑此页" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="adr-025-实现矩阵">ADR-025 实现矩阵<a class="headerlink" href="#adr-025-实现矩阵" title="Permanent link">¶</a></h1>
+<blockquote>
+<p>对照：<code>docs/decisions/ADR-025-metadata-provider-and-naming-architecture.md</code>
+日期：2026-10-20
+状态说明：已实现 / 部分实现 / 未实现</p>
+</blockquote>
+<h2 id="1-规范模型与-provider">1. 规范模型与 Provider<a class="headerlink" href="#1-规范模型与-provider" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR 条目</th>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ProviderRef / FieldValue / ProviderRecord / MediaMetadata</td>
+<td>已实现</td>
+<td><code>src/app/media/metadata/models.py</code></td>
+</tr>
+<tr>
+<td>评分按 provider 命名空间</td>
+<td>已实现</td>
+<td><code>ratings</code> 字典</td>
+</tr>
+<tr>
+<td>快照 schema_version</td>
+<td>已实现</td>
+<td>模型与缓存 key 含版本</td>
+</tr>
+<tr>
+<td>PersonIdentity 人员实体</td>
+<td>已实现</td>
+<td>表/仓储/<code>/media/person/{id}</code></td>
+</tr>
+<tr>
+<td>Provider 协议</td>
+<td>已实现</td>
+<td><code>protocol.py</code></td>
+</tr>
+<tr>
+<td>ProviderContext</td>
+<td>部分实现</td>
+<td>有 context/限流/熔断/URL 校验并传入 provider；内置 client 尚未全部走 context</td>
+</tr>
+<tr>
+<td>map_ids 外部 ID 映射</td>
+<td>部分实现</td>
+<td>方法存在，调用链未使用</td>
+</tr>
+<tr>
+<td>health / provider 健康状态</td>
+<td>已实现</td>
+<td><code>/media/providers</code> 返回 health + runtime</td>
+</tr>
+<tr>
+<td>统一错误语义</td>
+<td>已实现</td>
+<td><code>errors.py</code> + orchestrator 降级</td>
+</tr>
+<tr>
+<td>熔断器 / 超时策略</td>
+<td>已实现</td>
+<td>provider 级失败计数/冷却；超时仍由 HTTP 层控制</td>
+</tr>
+<tr>
+<td>allowed_hosts / SSRF 防护</td>
+<td>已实现</td>
+<td><code>validate_outbound_url</code> + descriptor allowed_hosts</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-合成与策略">2. 合成与策略<a class="headerlink" href="#2-合成与策略" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR 条目</th>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>字段级合成</td>
+<td>已实现</td>
+<td>顺序、locale、union、provenance</td>
+</tr>
+<tr>
+<td>预设策略</td>
+<td>已实现</td>
+<td>tmdb/douban/bangumi/provider_only</td>
+</tr>
+<tr>
+<td>自定义字段策略</td>
+<td>部分实现</td>
+<td>订阅可传 <code>metadata_policy</code>；无完整策略编辑器</td>
+</tr>
+<tr>
+<td>冲突记录</td>
+<td>已实现</td>
+<td><code>extra["conflicts"]</code></td>
+</tr>
+<tr>
+<td>冲突人工审核 API</td>
+<td>已实现</td>
+<td><code>/identity/conflicts</code> + <code>/identity/link/review</code></td>
+</tr>
+<tr>
+<td>能力过滤</td>
+<td>已实现</td>
+<td>orchestrator 从 descriptor 生成能力表</td>
+</tr>
+<tr>
+<td>手动锁定字段</td>
+<td>已实现</td>
+<td><code>MEDIA_FIELD_OVERRIDE</code> 读取/写入，override 失效快照</td>
+</tr>
+<tr>
+<td>锁定字段</td>
+<td>已实现</td>
+<td>仓储读写 + 合成读取；无独立前端页</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-身份与订阅">3. 身份与订阅<a class="headerlink" href="#3-身份与订阅" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR 条目</th>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MEDIA_IDENTITY / MEDIA_EXTERNAL_REF</td>
+<td>已实现</td>
+<td>含 LINK_METHOD/CONFIDENCE/REVIEWED</td>
+</tr>
+<tr>
+<td>MEDIA_METADATA_SNAPSHOT</td>
+<td>已实现</td>
+<td><code>persist</code> + TTL 复用 + 落库</td>
+</tr>
+<tr>
+<td>旧数据回填</td>
+<td>已实现</td>
+<td>dry-run / apply / 幂等</td>
+</tr>
+<tr>
+<td>订阅新增列 + 双写</td>
+<td>已实现</td>
+<td>model/repository/adapter/service 全链路</td>
+</tr>
+<tr>
+<td>锚点跟随卡片来源</td>
+<td>已实现</td>
+<td>DB:/BG:/tmdb: 透传</td>
+</tr>
+<tr>
+<td>锚点策略解析</td>
+<td>已实现</td>
+<td>创建时写入，读侧 helper 存在</td>
+</tr>
+<tr>
+<td>订阅 UI 展示/编辑策略</td>
+<td>未实现</td>
+<td>前端仍按 tmdbid，策略字段未编辑</td>
+</tr>
+<tr>
+<td>历史表 identity 列</td>
+<td>已实现</td>
+<td>两表新增列 + 迁移（写入仍待业务调用）</td>
+</tr>
+<tr>
+<td>跨源链接人工审核</td>
+<td>已实现</td>
+<td>pending/review/merge</td>
+</tr>
+<tr>
+<td>identity 合并/去重工具</td>
+<td>已实现</td>
+<td><code>merge_identity</code> + <code>/identity/merge</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-识别与匹配">4. 识别与匹配<a class="headerlink" href="#4-识别与匹配" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR 条目</th>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MatchProfile 协议</td>
+<td>已实现</td>
+<td><code>matching.py</code></td>
+</tr>
+<tr>
+<td>内置 movie/tv/anime profile</td>
+<td>已实现</td>
+<td>复用旧 <code>infer_type</code></td>
+</tr>
+<tr>
+<td>插件 profile 优先级</td>
+<td>已实现</td>
+<td>registry + parser 接入</td>
+</tr>
+<tr>
+<td>ParserProfile 内容编号识别</td>
+<td>部分实现</td>
+<td>接口与注册存在；解析器未实际调用</td>
+</tr>
+<tr>
+<td>content_profiles 注册表</td>
+<td>部分实现</td>
+<td>可注册，未参与解析/命名选择</td>
+</tr>
+<tr>
+<td>匹配策略按内容形态替换</td>
+<td>未实现</td>
+<td>仍以旧 infer_type 结果为主</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-刮削--nfo--图片">5. 刮削 / NFO / 图片<a class="headerlink" href="#5-刮削--nfo--图片" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR 条目</th>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>快照驱动 Scraper</td>
+<td>已实现</td>
+<td>无 TMDB 或关闭 legacy 时走快照</td>
+</tr>
+<tr>
+<td>旧 TMDB 路径兼容</td>
+<td>已实现</td>
+<td><code>legacy_tmdb_fallback</code> 默认 true</td>
+</tr>
+<tr>
+<td>快照 NFO（movie/tv/season/episode）</td>
+<td>已实现</td>
+<td>多 uniqueid、credits、ratings</td>
+</tr>
+<tr>
+<td>NFO Profile 插件贡献</td>
+<td>已实现</td>
+<td><code>NfoProfile.extra_tags</code> 接入 NFO</td>
+</tr>
+<tr>
+<td>图片 resolver + fallback</td>
+<td>已实现</td>
+<td>provider 优先级/分辨率/locale/失败重试</td>
+</tr>
+<tr>
+<td>演员图远程后端下载</td>
+<td>部分实现</td>
+<td>远程后端跳过演员图</td>
+</tr>
+<tr>
+<td>分集整体展开</td>
+<td>已实现</td>
+<td>多季按需展开 + TMDB 缓存</td>
+</tr>
+<tr>
+<td>豆瓣 HTML 分集</td>
+<td>已实现</td>
+<td>PoW + 解析 + 队列 + TTL</td>
+</tr>
+<tr>
+<td>豆瓣 HTML 队列可观测</td>
+<td>部分实现</td>
+<td>有 stats，但无 API/指标</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-命名">6. 命名<a class="headerlink" href="#6-命名" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR 条目</th>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>核心字段扩展</td>
+<td>已实现</td>
+<td>doubanid/bgmid/provider/评分等</td>
+</tr>
+<tr>
+<td>naming 命名空间字段校验</td>
+<td>已实现</td>
+<td><code>{profile.field}</code> + 插件字段目录</td>
+</tr>
+<tr>
+<td>NamingProfile 注册</td>
+<td>已实现</td>
+<td>注册/注销/字段目录</td>
+</tr>
+<tr>
+<td>插件字段实际渲染</td>
+<td>已实现</td>
+<td><code>render_naming_fields</code> 合并进 format dict</td>
+</tr>
+<tr>
+<td>profile 默认模板选择</td>
+<td>未实现</td>
+<td>仍由媒体库配置模板决定</td>
+</tr>
+<tr>
+<td>ParserProfile</td>
+<td>已实现</td>
+<td>ParserChain + UnifiedParser 短路；命名联动仍由 MatchProfile 决定</td>
+</tr>
+<tr>
+<td>快照驱动命名</td>
+<td>已实现</td>
+<td>重命名规划器读取最新快照</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-discovery--探索页">7. Discovery / 探索页<a class="headerlink" href="#7-discovery--探索页" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR 条目</th>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DiscoveryProvider 注册表</td>
+<td>已实现</td>
+<td>协议/注册/注销</td>
+</tr>
+<tr>
+<td>豆瓣/TMDB/Bangumi 内置 feed</td>
+<td>已实现</td>
+<td>热映/趋势/季度/日历</td>
+</tr>
+<tr>
+<td>季度档 seasonal</td>
+<td>已实现</td>
+<td>日期区间换算</td>
+</tr>
+<tr>
+<td><code>/discovery/providers</code> <code>/items</code></td>
+<td>已实现</td>
+<td>权限过滤</td>
+</tr>
+<tr>
+<td>动态来源 tab + feed tab</td>
+<td>已实现</td>
+<td>前端已重构</td>
+</tr>
+<tr>
+<td>私有来源权限</td>
+<td>已实现</td>
+<td>required_permission 动态校验</td>
+</tr>
+<tr>
+<td>feed 缓存</td>
+<td>已实现</td>
+<td>5 分钟 TTL</td>
+</tr>
+<tr>
+<td>用户来源/feed 偏好记忆</td>
+<td>已实现</td>
+<td>localStorage</td>
+</tr>
+<tr>
+<td>facet</td>
+<td>部分实现</td>
+<td>season + year；类型/演员未做</td>
+</tr>
+<tr>
+<td>综合跨源视图</td>
+<td>未实现</td>
+<td>未做显式聚合 tab</td>
+</tr>
+<tr>
+<td>插件自定义面板</td>
+<td>部分实现</td>
+<td>有 <code>PluginSlot</code>，无内置示例</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8-api--数据库--安全">8. API / 数据库 / 安全<a class="headerlink" href="#8-api--数据库--安全" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>ADR 条目</th>
+<th>状态</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/metadata/preview</code></td>
+<td>已实现</td>
+<td>合成预览</td>
+</tr>
+<tr>
+<td><code>/media/providers</code></td>
+<td>已实现</td>
+<td>能力/health/runtime</td>
+</tr>
+<tr>
+<td><code>/media/search</code>（多源）</td>
+<td>已实现</td>
+<td>registry 聚合搜索</td>
+</tr>
+<tr>
+<td><code>/media/lookup</code></td>
+<td>已实现</td>
+<td>统一 ref 查询</td>
+</tr>
+<tr>
+<td><code>/identity/{id}</code> <code>/conflicts</code></td>
+<td>已实现</td>
+<td>详情/待审/审核/合并</td>
+</tr>
+<tr>
+<td><code>/naming/profiles</code></td>
+<td>已实现</td>
+<td>profile + 字段列表；preview 仍走 name_format</td>
+</tr>
+<tr>
+<td>新表 + 迁移</td>
+<td>已实现</td>
+<td>identity/ref/snapshot/override</td>
+</tr>
+<tr>
+<td>历史表新增 identity 列</td>
+<td>已实现</td>
+<td>两表列 + 迁移；业务写入待调用</td>
+</tr>
+<tr>
+<td>manifest 元数据自动装载</td>
+<td>已实现</td>
+<td><code>backend.metadata.*.entry</code> 自动实例化/注册</td>
+</tr>
+<tr>
+<td>私有 zip 安全解压</td>
+<td>已实现</td>
+<td>路径穿越/符号链接拒绝</td>
+</tr>
+<tr>
+<td>私有包 required_permission</td>
+<td>已实现</td>
+<td>descriptor 注入 + API 校验</td>
+</tr>
+<tr>
+<td>私有包 SHA-256 校验</td>
+<td>已实现</td>
+<td>安装接口可选参数</td>
+</tr>
+<tr>
+<td>provider 级缓存/限流/熔断</td>
+<td>已实现</td>
+<td>orchestrator 缓存 + runtime 限流/熔断</td>
+</tr>
+<tr>
+<td>可观测性</td>
+<td>部分实现</td>
+<td>metrics + 事件 ring buffer + <code>/metadata/metrics</code>；无外部事件总线</td>
+</tr>
+</tbody>
+</table>
+<h2 id="9-运营与收尾">9. 运营与收尾<a class="headerlink" href="#9-运营与收尾" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>条目</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>真实库迁移</td>
+<td>未执行（仅临时 SQLite）</td>
+</tr>
+<tr>
+<td>回填 <code>--apply</code></td>
+<td>未在真实库执行</td>
+</tr>
+<tr>
+<td>生产 Redis/代理/风控验证</td>
+<td>未执行</td>
+</tr>
+<tr>
+<td>P7 物理删除旧 TMDB 分支</td>
+<td>保留观察期</td>
+</tr>
+<tr>
+<td>前后端提交</td>
+<td>未提交</td>
+</tr>
+<tr>
+<td>全量测试</td>
+<td>3625 passed / 6 skipped</td>
+</tr>
+</tbody>
+</table>
+<h2 id="结论">结论<a class="headerlink" href="#结论" title="Permanent link">¶</a></h2>
+<p>主链路（Provider → 合成 → 身份 → 订阅 → 刮削/NFO → 探索页）已经可用。
+尚未完成的主要是：人员实体、ProviderContext/限流熔断、跨源链接审核、历史表 identity 列、NamingProfile 实际渲染、多源搜索/统一 lookup API、可观测性，以及真实库迁移与提交。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "content.action.edit", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
