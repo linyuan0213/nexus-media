@@ -107,6 +107,9 @@ def test_douban_discovery_prefers_poster_over_still_photo():
     page = provider.items("tv_animation", 1, {}, None)
 
     assert page.items[0].poster == "https://img/poster-2x3.webp"
+    assert page.items[0].content_profile == "anime"
+    assert page.items[0].ref.provider_media_type == ProviderMediaType.SERIES
+    assert page.items[0].ref.media_kind == MediaKind.EPISODIC
 
 
 class _FakeMediaService:

@@ -102,10 +102,12 @@ class DoubanDiscovery:
         method = getattr(self._api, feed)
         raw = method(start=start, count=count) or {}
         year = str(filters.get("year") or "")
+        content_profile = "anime" if feed == "tv_animation" else "default"
         items = [
             item
             for raw_item in raw.get("subject_collection_items") or []
-            if (item := _douban_discovery_item(raw_item)) is not None and (not year or item.year == year)
+            if (item := _douban_discovery_item(raw_item, content_profile=content_profile)) is not None
+            and (not year or item.year == year)
         ]
         mainstream, facets = _genre_facets(items)
         genre = str(filters.get("genre") or "").strip()
@@ -385,7 +387,7 @@ def _genre_facets(items: list[DiscoveryItem], limit: int = 16) -> tuple[list[str
     return mainstream, facets
 
 
-def _douban_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
+def _douban_discovery_item(raw: dict[str, Any], *, content_profile: str = "default") -> DiscoveryItem | None:
     external_id = str(raw.get("id") or "").strip()
     if not external_id:
         return None
@@ -421,7 +423,7 @@ def _douban_discovery_item(raw: dict[str, Any]) -> DiscoveryItem | None:
             external_id=external_id,
             provider_media_type=provider_type,
         ),
-        content_profile="default",
+        content_profile=content_profile,
         title=str(raw.get("title") or ""),
         year=year or None,
         poster=cover,
