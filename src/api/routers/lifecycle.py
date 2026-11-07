@@ -16,6 +16,7 @@ from app.db.repositories.lifecycle_repository import (
     lifecycle_row_to_dict,
 )
 from app.domain.lifecycle import stage_rank
+from app.domain.media_types import media_type_registry
 from app.schemas.auth import UserContext
 from app.services.lifecycle_action_service import LifecycleActionError, LifecycleActionService
 from app.services.lifecycle_service import LifecycleReconciler
@@ -36,6 +37,14 @@ def _row_payload(row) -> dict[str, Any]:
     return {
         "identity_id": data.get("IDENTITY_ID"),
         "media_type": data.get("MEDIA_TYPE"),
+        "media_type_name": (
+            media_type_registry.resolve_profile(data.get("CONTENT_PROFILE"))
+            or media_type_registry.resolve(data.get("MEDIA_TYPE"), data.get("CONTENT_PROFILE"))
+        ).display_name,
+        "media_kind": (
+            media_type_registry.resolve_profile(data.get("CONTENT_PROFILE"))
+            or media_type_registry.resolve(data.get("MEDIA_TYPE"), data.get("CONTENT_PROFILE"))
+        ).kind.value,
         "season": data.get("SEASON"),
         "episode": data.get("EPISODE"),
         "title": data.get("TITLE"),

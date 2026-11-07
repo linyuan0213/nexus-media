@@ -69,7 +69,7 @@ class MediaTypeRegistry:
     def get(self, key: str | None) -> MediaTypeDescriptor | None:
         return self._descriptors.get(str(key or "").strip())
 
-    def resolve(self, value: Any = None, content_profile: str = "default") -> MediaTypeRef:
+    def resolve(self, value: Any = None, content_profile: str | None = "default") -> MediaTypeRef:
         if isinstance(value, MediaTypeRef):
             return value
         if isinstance(value, MediaType):
@@ -89,6 +89,17 @@ class MediaTypeRegistry:
             content_profile=profile,
             code_identity=descriptor.code_identity,
         )
+
+    def resolve_profile(self, content_profile: str | None) -> MediaTypeRef | None:
+        """按 content profile 找插件/核心描述符；找不到返回 None，不默认 movie."""
+        profile = str(content_profile or "").strip()
+        if not profile or profile == "default":
+            return None
+        matches = [descriptor for descriptor in self._descriptors.values() if profile in descriptor.content_profiles]
+        if not matches:
+            return None
+        descriptor = sorted(matches, key=lambda item: item.key != "anime")[0]
+        return self.resolve(descriptor.key, profile)
 
     def all(self) -> tuple[MediaTypeDescriptor, ...]:
         return tuple(self._descriptors.values())

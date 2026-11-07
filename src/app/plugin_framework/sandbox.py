@@ -14,6 +14,7 @@ from typing import Any
 
 import log
 from app.core.exceptions import PluginError
+from app.domain.media_types import MediaKind, MediaTypeDescriptor, media_type_registry
 from app.indexer.contract.http import HttpIndexerProvider
 from app.infrastructure.image_proxy.referer_registry import image_referer_registry
 from app.media.metadata.registry import registry as metadata_registry
@@ -357,6 +358,19 @@ class PluginSandbox:
             ("providers", ctx.register_metadata_provider),
             ("discovery_providers", ctx.register_discovery_provider),
             ("indexer_providers", ctx.register_indexer_provider),
+            (
+                "media_types",
+                lambda key, obj: ctx.register_media_type(
+                    MediaTypeDescriptor(
+                        key=key,
+                        kind=MediaKind(str(obj.get("kind") or "unknown")),
+                        display_name=str(obj.get("display_name") or key),
+                        code_identity=bool(obj.get("code_identity")),
+                        content_profiles=tuple(obj.get("content_profiles") or ()),
+                        plugin_id=str(getattr(manifest, "id", "") or ""),
+                    )
+                ),
+            ),
             ("content_profiles", lambda key, obj: ctx.register_metadata_profile("content", key, obj)),
             ("match_profiles", lambda key, obj: ctx.register_metadata_profile("match", key, obj)),
             ("parser_profiles", lambda key, obj: ctx.register_metadata_profile("parser", key, obj)),
@@ -370,6 +384,13 @@ class PluginSandbox:
                 key = item.get("key")
                 entry = item.get("entry")
                 if not key:
+                    continue
+                if field == "media_types":
+                    try:
+                        register(key, item)
+                        log.info(f"[Sandbox]媒体类型已注册 {plugin_id}: {key}")
+                    except Exception as exc:  # noqa: BLE001
+                        log.warn(f"[Sandbox]媒体类型注册失败 {plugin_id} {key}: {exc}")
                     continue
                 if field == "indexer_providers" and item.get("type") == "http":
                     try:
@@ -445,6 +466,7 @@ class PluginSandbox:
 
             # 注销该插件注册的元数据 provider / 发现来源 / profile
             metadata_registry.unregister_plugin(plugin_id)
+            media_type_registry.unregister_namespace(plugin_id)
             message_template_registry.unregister_plugin(plugin_id)
             scraper_processor_registry.unregister_plugin(plugin_id)
             image_referer_registry.unregister_plugin(plugin_id)

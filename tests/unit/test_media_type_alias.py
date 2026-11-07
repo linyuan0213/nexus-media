@@ -2,7 +2,7 @@
 
 # 先完成仓储包初始化，避免 system_config 与 repositories 的既有循环导入。
 import app.db.repositories  # noqa: F401
-from app.domain.mediatypes import MediaType, normalize_media_type_input
+from app.domain.mediatypes import normalize_media_type_input
 from app.services.system.info import WebSearchService
 
 
@@ -27,7 +27,7 @@ def test_regular_media_type_is_unchanged():
     assert profile == "default"
 
 
-def test_web_search_uses_movie_for_non_default_profile():
+def test_web_search_does_not_default_unknown_plugin_profile_to_movie():
     captured = {}
 
     def search_fn(**kwargs):
@@ -40,5 +40,5 @@ def test_web_search_uses_movie_for_non_default_profile():
         filters={"content_profile": "plugin-profile"},
     )
 
-    assert captured["media_type"] == MediaType.MOVIE
+    assert captured["media_type"] == "legacy-type"
     assert captured["filters"]["content_profile"] == "plugin-profile"

@@ -9,7 +9,8 @@
 
 ### 新增
 
-- 媒体类型：新增 `MediaKind` / `MediaTypeDescriptor` / `MediaTypeRef` / `MediaTypeRegistry`，插件类型使用 `plugin:` 命名空间，未知类型保持 `UNKNOWN`。
+- 媒体类型：新增 `MediaKind` / `MediaTypeDescriptor` / `MediaTypeRef` / `MediaTypeRegistry`；下载进度、生命周期、搜索/RSS 接入注册表，插件 manifest 可声明 `media_types`，未知类型保持 `UNKNOWN`。
+- 数据库：`MEDIA_TYPE` 扩展到 128 字符，支持 `plugin:` 命名空间。
 
 
 ## v5.8.2 (2026-11-07)

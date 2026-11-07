@@ -927,3 +927,33 @@ def test_grouped_media_type_prefers_episode_rows():
     row = next(item for item in rows if item["IDENTITY_ID"] == "type-identity")
     assert row["MEDIA_TYPE"] == "anime"
     assert row["CONTENT_PROFILE"] == "anime"
+
+
+def test_lifecycle_uses_plugin_media_type_descriptor():
+    from app.domain.media_types import MediaKind, MediaTypeDescriptor, media_type_registry
+
+    descriptor = MediaTypeDescriptor(
+        key="plugin:test-plugin:custom",
+        kind=MediaKind.MOVIE,
+        display_name="Plugin Custom",
+        code_identity=True,
+        content_profiles=("test_profile",),
+    )
+    media_type_registry.register(descriptor)
+    try:
+        repo = LifecycleRepository()
+        projector = LifecycleProjector(repo)
+        projector.record(
+            identity_id="plugin-type-identity",
+            stage=LifecycleStage.DOWNLOADING,
+            status=LifecycleStatus.RUNNING,
+            event_type="download.progress",
+            media_type="movie",
+            content_profile="test_profile",
+            event_key="plugin-type-event",
+        )
+        current = repo.get_current("plugin-type-identity")
+        assert current is not None
+        assert current.MEDIA_TYPE == "plugin:test-plugin:custom"
+    finally:
+        media_type_registry.unregister_namespace("test-plugin")

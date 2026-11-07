@@ -41,3 +41,20 @@ def test_plugin_descriptor_cannot_use_core_key():
     registry = MediaTypeRegistry()
     with pytest.raises(ValueError):
         registry.register(MediaTypeDescriptor("movie", MediaKind.MOVIE, "x"))
+
+
+def test_resolve_profile_uses_plugin_descriptor():
+    registry = MediaTypeRegistry()
+    registry.register(
+        MediaTypeDescriptor(
+            key="plugin:demo:profile",
+            kind=MediaKind.MOVIE,
+            display_name="Plugin Profile",
+            content_profiles=("demo_profile",),
+        )
+    )
+    resolved = registry.resolve_profile("demo_profile")
+    assert resolved is not None
+    assert resolved.key == "plugin:demo:profile"
+    assert resolved.kind == MediaKind.MOVIE
+    assert registry.resolve_profile("missing_profile") is None

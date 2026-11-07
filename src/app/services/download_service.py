@@ -12,6 +12,7 @@ from app.db.repositories.download_repo_adapter import DownloadHistoryRepositoryA
 from app.db.repositories.subscribe_repository import SubscribeRepository
 from app.domain.enums import SearchType
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
+from app.domain.media_types import MediaKind, media_type_registry
 from app.domain.mediatypes import MediaType
 from app.infrastructure.temp import temp_manager
 from app.media.display_image_policy import transform_display_image, unwrap_display_image_url
@@ -528,12 +529,16 @@ class DownloadService:
 
     @staticmethod
     def _task_media_type(task) -> MediaType:
-        value = str(getattr(task, "media_type", "") or "").strip().lower()
-        if value == "anime":
+        value = str(getattr(task, "media_type", "") or "").strip()
+        profile = str(getattr(task, "content_profile", "") or "").strip()
+        resolved = media_type_registry.resolve_profile(profile) or media_type_registry.resolve(value, profile)
+        if resolved.key == MediaType.ANIME.value:
             return MediaType.ANIME
-        if value == "tv":
+        if resolved.kind == MediaKind.MOVIE:
+            return MediaType.MOVIE
+        if resolved.kind == MediaKind.EPISODIC:
             return MediaType.TV
-        return MediaType.MOVIE
+        return MediaType.UNKNOWN
 
     def _build_display_info(self, task) -> tuple[str, str]:
         """根据下载历史任务构建显示标题和海报"""

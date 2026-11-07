@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from app.domain.media_types import MediaKind, media_type_registry
 from app.domain.mediatypes import MediaType
 
 _TITLE_PROFILES = {"default", "anime", "tv", "movie"}
@@ -31,16 +32,23 @@ class SearchSubject:
         provider = str(anchor_provider or "").strip()
         external = str(external_id or "").strip()
 
-        code_identity = profile not in _TITLE_PROFILES or provider == "content_id" or external.startswith("content_id:")
+        descriptor = media_type_registry.resolve_profile(profile) or media_type_registry.resolve(media_type, profile)
+        code_identity = (
+            descriptor.code_identity
+            or profile not in _TITLE_PROFILES
+            or provider == "content_id"
+            or external.startswith("content_id:")
+        )
         if provider == "bangumi" and raw_type != MediaType.MOVIE:
             display = MediaType.ANIME
-        elif profile == "anime" or raw_type == MediaType.ANIME:
+        elif profile == "anime" or raw_type == MediaType.ANIME or descriptor.key == "anime":
             display = MediaType.ANIME
         elif raw_type in (MediaType.MOVIE, MediaType.TV):
             display = raw_type
-        elif profile not in _TITLE_PROFILES:
-            # content_id 来源由 provider 详情决定类型，不能在入口硬编码电影。
-            display = None if provider == "content_id" else MediaType.MOVIE
+        elif descriptor.kind == MediaKind.MOVIE:
+            display = MediaType.MOVIE
+        elif descriptor.kind == MediaKind.EPISODIC:
+            display = MediaType.TV
         else:
             display = None
         provider_type = MediaType.TV if display == MediaType.ANIME else display

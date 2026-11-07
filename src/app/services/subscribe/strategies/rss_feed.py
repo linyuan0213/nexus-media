@@ -18,6 +18,7 @@ from app.domain.entities.rss import SubscribeState
 from app.domain.enums import SearchType
 from app.domain.media_ref import media_series_scope_key
 from app.domain.media_type_utils import MediaTypeMapper
+from app.domain.media_types import media_type_registry
 from app.domain.mediatypes import MediaType
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.media.service import MediaService
@@ -140,8 +141,10 @@ class RssFeedStrategy:
         for info in subscriptions.values():
             profile = str(info.get("content_profile") or "default")
             keyword_text = str(info.get("keyword") or "").strip()
+            descriptor = media_type_registry.resolve_profile(profile)
+            code_identity = descriptor.code_identity if descriptor is not None else profile not in _TITLE_PROFILES
             # 编号型订阅以编号为准，不把宽泛的标题别名加入预筛，避免误放行。
-            if profile not in _TITLE_PROFILES and _CODE_KEYWORD_RE.match(keyword_text):
+            if code_identity and _CODE_KEYWORD_RE.match(keyword_text):
                 normalized = cls._normalize_keyword(keyword_text)
                 if len(normalized) >= 2:
                     terms.add(normalized)

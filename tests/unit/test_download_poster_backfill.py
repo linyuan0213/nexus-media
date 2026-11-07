@@ -42,3 +42,30 @@ def test_task_media_type_preserves_anime():
     assert DownloadService._task_media_type(type("T", (), {"media_type": "anime"})()) == MediaType.ANIME
     assert DownloadService._task_media_type(type("T", (), {"media_type": "tv"})()) == MediaType.TV
     assert DownloadService._task_media_type(type("T", (), {"media_type": "movie"})()) == MediaType.MOVIE
+
+
+def test_task_media_type_uses_plugin_descriptor():
+    from app.domain.media_types import MediaKind, MediaTypeDescriptor, media_type_registry
+    from app.domain.mediatypes import MediaType
+    from app.services.download_service import DownloadService
+
+    descriptor = MediaTypeDescriptor(
+        key="plugin:test:type",
+        kind=MediaKind.EPISODIC,
+        display_name="Plugin Type",
+        content_profiles=("test_profile",),
+    )
+    media_type_registry.register(descriptor)
+    try:
+        task = type("T", (), {"media_type": "plugin-type", "content_profile": "test_profile"})()
+        assert DownloadService._task_media_type(task) == MediaType.TV
+    finally:
+        media_type_registry.unregister_namespace("test")
+
+
+def test_task_media_type_keeps_unknown():
+    from app.domain.mediatypes import MediaType
+    from app.services.download_service import DownloadService
+
+    task = type("T", (), {"media_type": "mystery", "content_profile": "default"})()
+    assert DownloadService._task_media_type(task) == MediaType.UNKNOWN

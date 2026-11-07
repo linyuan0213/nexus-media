@@ -38,3 +38,33 @@ class DemoProvider:
     finally:
         ctx.unregister_all_metadata()
         sys.modules.pop(module_name, None)
+
+
+def test_manifest_media_type_descriptor_is_auto_loaded(tmp_path):
+    metadata = PluginMetadataConfig.from_dict(
+        {
+            "media_types": [
+                {
+                    "key": "plugin:autoload-plugin:demo",
+                    "kind": "episodic",
+                    "display_name": "Demo Type",
+                    "code_identity": True,
+                    "content_profiles": ["demo_profile"],
+                }
+            ]
+        }
+    )
+    ctx = PluginContext("autoload-plugin", message=MagicMock(), manifest_metadata=metadata)
+    sandbox = PluginSandbox.__new__(PluginSandbox)
+    try:
+        manifest = SimpleNamespace(backend=SimpleNamespace(metadata=metadata))
+        sandbox._load_manifest_metadata(ctx, "autoload-plugin", str(tmp_path), manifest)
+        from app.domain.media_types import MediaKind, media_type_registry
+
+        resolved = media_type_registry.resolve("plugin:autoload-plugin:demo", "demo_profile")
+        assert resolved.kind == MediaKind.EPISODIC
+        assert resolved.code_identity is True
+    finally:
+        from app.domain.media_types import media_type_registry
+
+        media_type_registry.unregister_namespace("autoload-plugin")
