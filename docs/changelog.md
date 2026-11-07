@@ -1,36 +1,20 @@
 # 版本历史
 
-## 未发布
+## v5.9.0 (2026-11-07)
+
+### 改进
+
+- 媒体类型：统一内容类型与结构类型，支持插件自定义类型；详情、搜索、订阅、下载、生命周期和消息一致显示中文类型。
+- 下载/转移：源文件更新时按重新下载处理并覆盖转移，已入库身份不再重复发送入库消息。
 
 ### 修复
 
-- 生命周期：下载进度投影保留 anime 类型，E0 工作行继承同身份分集的 poster/元数据；分组类型/画像优先采用分集行，修复动漫被 E0 工作行标成电影。
-
-
-### 新增
-
-- 媒体类型：新增 `MediaKind` / `MediaTypeDescriptor` / `MediaTypeRef` / `MediaTypeRegistry`；下载进度、生命周期、搜索/RSS 接入注册表，插件 manifest 可声明 `media_types`，未知类型保持 `UNKNOWN`。
-- 数据库：`MEDIA_TYPE` 扩展到 128 字符，`MEDIA_IDENTITY` 增加 `MEDIA_KIND`，历史类型回填 movie/episodic/unknown。
-- 生命周期：分组媒体类型和 kind 优先使用 identity 的规范值，插件 descriptor 不可用时仍保留结构类型。
-- 媒体类型：`MediaInfo` 与转移队列 payload 增加 `media_type_key`/`media_kind`，下载进度、转移和生命周期投影透传 descriptor；增加旧 Redis payload 兼容和 AST 守卫。
-- API：搜索结果、媒体详情、订阅详情返回 `media_type_name`/`media_kind`，前端优先使用 descriptor 展示。
-- 消息/重试：生命周期重试和入库消息使用 profile/descriptor 展示，未知旧类型不再默认 movie。
-- 业务：Agent 订阅、搜索消息、订阅上下文改用 MediaTypeRegistry，插件描述符可映射回结构类型。
-- Provider 契约：新增 `ProviderMediaType`，`MediaRef`/`ProviderRef`/`ProviderRecord` 增加 `provider_media_type`/`media_kind`；Emby/Plex/Jellyfin/FnOS 与 TMDB/豆瓣/Bangumi provider 引用改用外部协议类型。
-
-
-- 外部适配：`LookupResult` 改为 `provider_media_type`/`media_kind`，TMDB/豆瓣/Bangumi lookup 与 Provider 统一使用外部协议类型；`ProviderDescriptor` 改为 `provider_media_types`/`media_kinds`/`default_provider_media_type`。
-- API：provider 列表输出外部协议值与 kind 值，详情接口补齐 `media_type_name`/`media_kind`。
-- 探索：按条目题材识别动漫，豆瓣动画榜与 TMDB 动画剧集统一使用 `anime` 画像，卡片显示「动漫」而不是「剧集」。
-- 搜索：豆瓣聚合结果过滤图书/豆列，按 `card_subtitle` 题材识别动漫，搜索卡片不再显示「未知」。
-- 消息：入库/订阅消息统一显示电影/电视剧/动漫，迁移历史消息客户端模板中的 `media_info.type.value`。
-- 类型：下载历史、推荐、搜索结果与识别输出补充 `media_type_key`/`media_type_name`/`media_kind`，按内容画像解析显示。
-- 站点：API 业务错误码不再按空结果处理；M-Team 等限流错误记录失败并进入站点退避。
-- 生命周期：同一身份仅回填最新下载记录；当前仍在下载时隐藏旧下载周期的“下载完成”事件。
-- 订阅：目标已缺失/删除的旧转移历史不再算已入库；洗版订阅不会被旧转移历史提前定稿。
-- 订阅：补齐转移事件注册与季号 int/str 键兼容，避免剧集已入库仍反复下载。
-- 类型：彻底移除旧 `MediaType`、`app.domain.mediatypes` 与旧转换入口，统一 `ProviderMediaType` 内容类型和 `MediaKind` 结构类型。
-- 转移幂等：下载监控仅跳过源文件未更新的旧任务；重新下载或源文件更新时按覆盖转移，重复定稿在身份曾入库时不再发送入库消息。
+- 元数据：按题材识别动漫，豆瓣过滤图书/豆列，TMDB/Bangumi 榜单不再显示剧集或未知。
+- 订阅：修复转移完成事件未注册、季号 int/str 键不兼容，以及失效转移历史导致洗版提前完成的问题。
+- 生命周期：同一身份仅回填最新下载记录，当前下载中不再混入旧周期的完成事件。
+- 站点搜索：识别 API 业务错误码，限流后进入退避，不再将错误响应当作 0 条结果。
+- 浏览器：强制回退时复用持久会话，避免重复创建临时会话导致反复过盾。
+- PostgreSQL：修复黑名单菜单更新与剧集别名重建的约束冲突。
 
 ## v5.8.2 (2026-11-07)
 
