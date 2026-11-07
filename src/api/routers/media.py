@@ -424,6 +424,14 @@ def _record_detail_data(
         "year": record.get("year") or "",
         "overview": record.get("overview") or "",
         "type": media_type.value,
+        "media_type_name": (
+            media_type_registry.resolve_profile(record.get("content_profile"))
+            or media_type_registry.resolve(media_type, record.get("content_profile"))
+        ).display_name,
+        "media_kind": (
+            media_type_registry.resolve_profile(record.get("content_profile"))
+            or media_type_registry.resolve(media_type, record.get("content_profile"))
+        ).kind.value,
         "image": poster,
         "poster": poster,
         "background": backdrop,
@@ -1345,6 +1353,14 @@ def media_detail_by_ref(
         "year": _field_value(fields, "year") or record.get("year") or "",
         "overview": _field_value(fields, "overview") or record.get("overview") or "",
         "type": (media_type or MediaType.MOVIE).value,
+        "media_type_name": (
+            media_type_registry.resolve_profile(record.get("content_profile") or req.content_profile)
+            or media_type_registry.resolve(media_type, record.get("content_profile") or req.content_profile)
+        ).display_name,
+        "media_kind": (
+            media_type_registry.resolve_profile(record.get("content_profile") or req.content_profile)
+            or media_type_registry.resolve(media_type, record.get("content_profile") or req.content_profile)
+        ).kind.value,
         "image": poster,
         "poster": poster,
         "background": backdrop,

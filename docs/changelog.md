@@ -20,6 +20,7 @@
 
 
 - 外部适配：`LookupResult` 改为 `provider_media_type`/`media_kind`，TMDB/豆瓣/Bangumi lookup 与 Provider 统一使用外部协议类型；`ProviderDescriptor` 改为 `provider_media_types`/`media_kinds`/`default_provider_media_type`。
+- API：provider 列表输出外部协议值与 kind 值，详情接口补齐 `media_type_name`/`media_kind`。
 
 ## v5.8.2 (2026-11-07)
 
