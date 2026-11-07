@@ -11,7 +11,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.domain.media_types import MediaKind, media_type_registry
+from app.domain.media_types import MediaKind, ProviderMediaType, media_type_registry
 from app.domain.mediatypes import MediaType
 
 
@@ -49,6 +49,7 @@ class ProviderRef(BaseModel):
     provider: str
     external_id: str
     media_type: MediaType | None = None
+    provider_media_type: ProviderMediaType | None = None
     media_kind: MediaKind | None = None
     scope: str = "default"
     url: str | None = None
@@ -56,8 +57,16 @@ class ProviderRef(BaseModel):
 
     @model_validator(mode="after")
     def _fill_media_kind(self):
+        if self.provider_media_type is None and self.media_type is not None:
+            self.provider_media_type = ProviderMediaType.from_value(self.media_type.value)
+        if self.media_type is None and self.provider_media_type is not None:
+            self.media_type = self.provider_media_type.to_media_type()
         if self.media_kind is None:
-            self.media_kind = media_type_registry.resolve(self.media_type).kind
+            self.media_kind = (
+                self.provider_media_type.kind
+                if self.provider_media_type is not None
+                else media_type_registry.resolve(self.media_type).kind
+            )
         return self
 
 
@@ -144,6 +153,7 @@ class ProviderRecord(BaseModel):
     external_id: str
     refs: list[ProviderRef] = Field(default_factory=list)
     media_type: MediaType = MediaType.UNKNOWN
+    provider_media_type: ProviderMediaType | None = None
     media_kind: MediaKind | None = None
     content_profile: str = "default"
     locale: str | None = None
@@ -176,8 +186,10 @@ class ProviderRecord(BaseModel):
 
     @model_validator(mode="after")
     def _fill_media_kind(self):
+        if self.provider_media_type is None:
+            self.provider_media_type = ProviderMediaType.from_value(self.media_type.value)
         if self.media_kind is None:
-            self.media_kind = media_type_registry.resolve(self.media_type).kind
+            self.media_kind = self.provider_media_type.kind
         return self
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from app.domain.media_types import MediaKind, media_type_registry
+from app.domain.media_types import MediaKind, ProviderMediaType, media_type_registry
 from app.domain.mediatypes import MediaType
 
 
@@ -17,14 +17,23 @@ class MediaRef:
     external_id: str
     scope: str = "default"
     media_type: MediaType | None = None
+    provider_media_type: ProviderMediaType | None = None
     media_kind: MediaKind | None = None
 
     def __post_init__(self) -> None:
+        if self.provider_media_type is None and self.media_type is not None:
+            object.__setattr__(
+                self,
+                "provider_media_type",
+                ProviderMediaType.from_value(self.media_type.value),
+            )
         if self.media_kind is None:
             object.__setattr__(
                 self,
                 "media_kind",
-                media_type_registry.resolve(self.media_type).kind,
+                self.provider_media_type.kind
+                if self.provider_media_type is not None
+                else media_type_registry.resolve(self.media_type).kind,
             )
 
 

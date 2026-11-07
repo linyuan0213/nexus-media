@@ -96,3 +96,22 @@ def test_provider_contracts_fill_media_kind():
     assert ref.media_kind == MediaKind.EPISODIC
     record = ProviderRecord(provider="tmdb", external_id="1", media_type=MediaType.TV)
     assert record.media_kind == MediaKind.EPISODIC
+
+
+def test_provider_media_type_is_separate_from_internal_type():
+    from app.domain.media_ref import MediaRef
+    from app.domain.media_types import ProviderMediaType
+    from app.media.metadata.models import ProviderRef
+
+    ref = ProviderRef(
+        provider="emby",
+        external_id="1",
+        provider_media_type=ProviderMediaType.SERIES,
+    )
+    assert ref.provider_media_type == ProviderMediaType.SERIES
+    assert ref.media_type == MediaType.TV
+    assert ref.media_kind == MediaKind.EPISODIC
+
+    media_ref = MediaRef("emby", "1", provider_media_type=ProviderMediaType.MOVIE)
+    assert media_ref.provider_media_type == ProviderMediaType.MOVIE
+    assert media_ref.media_kind == MediaKind.MOVIE

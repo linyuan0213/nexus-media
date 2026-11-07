@@ -15,6 +15,43 @@ class MediaKind(str, Enum):
     UNKNOWN = "unknown"
 
 
+class ProviderMediaType(str, Enum):
+    """外部 provider / 媒体服务器协议类型，不等同于内部 MediaType."""
+
+    MOVIE = "movie"
+    SERIES = "series"
+    ANIME = "anime"
+    UNKNOWN = "unknown"
+
+    @classmethod
+    def from_value(cls, value: Any) -> "ProviderMediaType":
+        raw = str(value or "").strip().lower()
+        if raw in {"movie", "film"}:
+            return cls.MOVIE
+        if raw in {"series", "show", "tv", "episode", "episodic"}:
+            return cls.SERIES
+        if raw in {"anime", "动漫"}:
+            return cls.ANIME
+        return cls.UNKNOWN
+
+    @property
+    def kind(self) -> MediaKind:
+        if self == ProviderMediaType.MOVIE:
+            return MediaKind.MOVIE
+        if self in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
+            return MediaKind.EPISODIC
+        return MediaKind.UNKNOWN
+
+    def to_media_type(self) -> MediaType:
+        if self == ProviderMediaType.MOVIE:
+            return MediaType.MOVIE
+        if self == ProviderMediaType.SERIES:
+            return MediaType.TV
+        if self == ProviderMediaType.ANIME:
+            return MediaType.ANIME
+        return MediaType.UNKNOWN
+
+
 @dataclass(frozen=True)
 class MediaTypeDescriptor:
     key: str
