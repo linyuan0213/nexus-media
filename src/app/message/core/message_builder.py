@@ -323,10 +323,12 @@ class MessageBuilder:
                     f"✅ {item_info.get_title_string()} {item_info.get_season_string()} "
                     f"共{item_info.total_episodes}集 已入库"
                 )
+            profile = str(getattr(item_info, "content_profile", "") or "default")
+            type_label = _type_label(item_info, profile)
             if item_info.vote_average:
-                msg_str = f"{item_info.get_vote_string()}，类型：{item_info.type.display_name}"
+                msg_str = f"{item_info.get_vote_string()}，类型：{type_label}"
             else:
-                msg_str = f"类型：{item_info.type.display_name}"
+                msg_str = f"类型：{type_label}"
             if item_info.category:
                 msg_str = f"{msg_str}，类别：{item_info.category}"
             from_source = f"，来自：{StringUtils.resolve_in_from_display(in_from)}"

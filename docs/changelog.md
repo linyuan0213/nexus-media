@@ -14,6 +14,7 @@
 - 生命周期：分组媒体类型和 kind 优先使用 identity 的规范值，插件 descriptor 不可用时仍保留结构类型。
 - 媒体类型：`MediaInfo` 与转移队列 payload 增加 `media_type_key`/`media_kind`，下载进度、转移和生命周期投影透传 descriptor；增加旧 Redis payload 兼容和 AST 守卫。
 - API：搜索结果、媒体详情、订阅详情返回 `media_type_name`/`media_kind`，前端优先使用 descriptor 展示。
+- 消息/重试：生命周期重试和入库消息使用 profile/descriptor 展示，未知旧类型不再默认 movie。
 
 
 ## v5.8.2 (2026-11-07)

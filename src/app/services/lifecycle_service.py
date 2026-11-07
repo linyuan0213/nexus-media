@@ -865,4 +865,6 @@ def _parse_history_time(value: Any) -> datetime | None:
 
 def _row_media_type(value: Any) -> str:
     key = str(value or "").lower()
-    return {"mov": "movie", "movie": "movie", "tv": "tv", "ani": "anime", "anime": "anime"}.get(key, "movie")
+    return {"mov": "movie", "movie": "movie", "tv": "tv", "ani": "anime", "anime": "anime"}.get(
+        key, str(value or "unknown")
+    )

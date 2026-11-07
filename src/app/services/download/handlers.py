@@ -87,7 +87,9 @@ def _parse_season_episode(value: object) -> tuple[int, int]:
 
 def _row_media_type(value: object) -> str:
     key = str(value or "").lower()
-    return {"mov": "movie", "movie": "movie", "tv": "tv", "ani": "anime", "anime": "anime"}.get(key, "movie")
+    return {"mov": "movie", "movie": "movie", "tv": "tv", "ani": "anime", "anime": "anime"}.get(
+        key, str(value or "unknown")
+    )
 
 
 @on_event(DOWNLOAD_COMPLETED)
