@@ -216,17 +216,20 @@ class APIKeyService:
         except Exception as e:
             ExceptionUtils.log_and_raise(e, target=ServiceError, message="获取 API Key 使用记录失败")
 
-    def get_or_create_system_key(self, name: str) -> str:
+    def get_or_create_system_key(self, name: str, created_by: int | None = None) -> str:
         """
         获取或创建系统级 API Key
         系统 key 的原始值保存在 RAW_KEY 列中，用于构造 webhook URL 等场景
         :param name: 系统 key 名称（如 "MessageWebhook"）
+        :param created_by: 可选归属用户；系统 key 用于用户数据查询时必须绑定
         :return: 原始 API Key 值
         """
         try:
             # 查找已有系统 key
             existing = self._key_repo.get_by_name(name, status=1)
             if existing is not None and existing.raw_key:
+                if created_by and not existing.created_by:
+                    self._key_repo.update_key(existing.id, created_by=created_by)
                 return existing.raw_key
 
             # 不存在或无效，创建新的
@@ -238,6 +241,7 @@ class APIKeyService:
                 name=name,
                 key_value=key_hash,
                 key_prefix=key_prefix,
+                created_by=created_by,
                 description=f"系统自动创建: {name}",
                 raw_key=raw_key,
             )

@@ -634,7 +634,7 @@ def get_webcal_url(
     user: UserContext = Depends(get_current_user),
     apikey_service: APIKeyService = Depends(get_apikey_service),
 ):
-    token = apikey_service.get_or_create_system_key("CalendarSubscription")
+    token = apikey_service.get_or_create_system_key("CalendarSubscription", created_by=user.user_id or None)
     return success(data={"token": token})
 
 
