@@ -2,6 +2,7 @@
 
 import os
 import time
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -110,7 +111,7 @@ class TestDownloadMonitor:
         target.write_bytes(b"x")
         os.utime(target, (time.time() - 86400 * 3, time.time() - 86400 * 3))
         history = MagicMock()
-        history.get_by_source.return_value = SimpleNamespace(date="2026-11-07 12:39:00")
+        history.get_by_source.return_value = SimpleNamespace(date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         m = DownloadMonitor(
             client_factory=mock_factory,
             event_bus=mock_bus,

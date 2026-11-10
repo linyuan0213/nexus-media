@@ -30,8 +30,23 @@ class Qbittorrent(_IDownloadClient):
         fields=[
             ConfigField(id="host", required=True, title="地址", type="text", placeholder="127.0.0.1"),
             ConfigField(id="port", required=True, title="端口", type="text", placeholder="8080"),
-            ConfigField(id="username", required=True, title="用户名", type="text", placeholder="admin"),
+            ConfigField(
+                id="username",
+                required=False,
+                title="用户名",
+                type="text",
+                placeholder="admin",
+                tooltip="API Key 模式下可留空",
+            ),
             ConfigField(id="password", required=False, title="密码", type="password", placeholder="password"),
+            ConfigField(
+                id="api_key",
+                required=False,
+                title="API Key",
+                type="password",
+                placeholder="qBittorrent 5.2+ 可选",
+                tooltip="使用 qBittorrent 5.2+ 生成的 API Key；填写后优先于用户名密码认证",
+            ),
             ConfigField(
                 id="torrent_management",
                 required=False,
@@ -53,6 +68,7 @@ class Qbittorrent(_IDownloadClient):
     port = None
     username = None
     password = None
+    api_key = None
     download_dir = []
     name = "测试"
     _sync_rid: int = 0
@@ -85,6 +101,7 @@ class Qbittorrent(_IDownloadClient):
             )
             self.username = self._client_config.get("username")
             self.password = self._client_config.get("password")
+            self.api_key = str(self._client_config.get("api_key") or "").strip() or None
             self.download_dir = self._client_config.get("download_dir") or []
             self.name = self._client_config.get("name") or ""
             self._torrent_management = self._client_config.get("torrent_management")
@@ -121,6 +138,7 @@ class Qbittorrent(_IDownloadClient):
                 port=self.port,
                 username=self.username,
                 password=self.password,
+                api_key=self.api_key,
                 VERIFY_WEBUI_CERTIFICATE=False,
                 REQUESTS_ARGS={"timeout": (15, 60)},
             )
