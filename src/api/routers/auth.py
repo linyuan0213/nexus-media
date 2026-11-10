@@ -135,6 +135,9 @@ async def list_sessions(
         item.pop("refresh_jti", None)
         item["is_current"] = item.get("session_id") == user.session_id
         item["is_active"] = not item.get("revoked_at")
+    # 当前设备固定置顶，其余保持最近活跃倒序。
+    sessions.sort(key=lambda item: item.get("last_seen_at") or "", reverse=True)
+    sessions.sort(key=lambda item: 0 if item.get("is_current") else 1)
     return {"code": 0, "data": sessions, "message": "ok"}
 
 
