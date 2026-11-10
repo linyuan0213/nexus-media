@@ -29,9 +29,13 @@ def upgrade() -> None:
         unique=False,
     )
     # 历史统计消息回填稳定类型，避免升级后首次统计重复发送。
-    op.execute(
-        "UPDATE AGENT_WEB_MESSAGE SET MSG_TYPE='ptrefresh_date_message' "
-        "WHERE MSG_TYPE='' AND TITLE LIKE '%站点数据统计%'"
+    # 使用 Core 让 PostgreSQL 正确引用大写的表名/列名。
+    bind = op.get_bind()
+    table = sa.Table("AGENT_WEB_MESSAGE", sa.MetaData(), autoload_with=bind)
+    bind.execute(
+        sa.update(table)
+        .where(table.c.MSG_TYPE == "", table.c.TITLE.like("%站点数据统计%"))
+        .values(MSG_TYPE="ptrefresh_date_message")
     )
 
 
