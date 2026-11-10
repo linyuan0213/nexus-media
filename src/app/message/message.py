@@ -172,8 +172,8 @@ class Message:
 
     # ---------- 核心发送（保留在 Facade 以兼容外部直接调用） ----------
 
-    def _do_sendmsg(self, client, title, text, image, url, user_id):
-        return self._dispatcher._do_sendmsg(client, title, text, image, url, user_id)
+    def _do_sendmsg(self, client, title, text, image, url, user_id, msg_type=""):
+        return self._dispatcher._do_sendmsg(client, title, text, image, url, user_id, msg_type=msg_type)
 
     def send_channel_msg(
         self,
@@ -183,8 +183,9 @@ class Message:
         image: str | None = None,
         url: str | None = None,
         user_id: str = "",
+        msg_type: str = "",
     ) -> bool:
-        return self._dispatcher.send_channel_msg(channel, title, text, image, url, user_id)
+        return self._dispatcher.send_channel_msg(channel, title, text, image, url, user_id, msg_type=msg_type)
 
     def send_channel_list_msg(self, channel: Any, title: str, medias: list, user_id: str = "") -> bool:
         return self._dispatcher.send_channel_list_msg(channel, title, medias, user_id)

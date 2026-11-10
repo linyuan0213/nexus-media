@@ -20,8 +20,9 @@ class WebMessageRepositoryAdapter(IWebMessageRepository):
         url: str = "",
         items: list | None = None,
         content_profile: str = "",
+        msg_type: str = "",
     ) -> int:
-        return self._repo.add_message(user_id, kind, title, content, image, url, items, content_profile)
+        return self._repo.add_message(user_id, kind, title, content, image, url, items, content_profile, msg_type)
 
     def history(self, user_id: str, limit: int = 50) -> list[dict]:
         return self._repo.history(user_id, limit)

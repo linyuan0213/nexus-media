@@ -51,8 +51,10 @@ class AgentEnhancingDispatcher:
             log.info(f"[AgentEnhancingDispatcher]增强失败，回退模板通知: {msg_type}")
         return self._inner.sendmsg(client, title, text, image, url, user_id, msg_type, variables, template_engine)
 
-    def _do_sendmsg(self, client, title, text, image, url, user_id):
-        return self._inner._do_sendmsg(client, title, text, image, url, user_id)
+    def _do_sendmsg(self, client, title, text, image, url, user_id, content_profile="", msg_type=""):
+        return self._inner._do_sendmsg(
+            client, title, text, image, url, user_id, content_profile=content_profile, msg_type=msg_type
+        )
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._inner, name)

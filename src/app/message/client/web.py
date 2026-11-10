@@ -22,7 +22,9 @@ class WebMessage(_IMessageClient):
     def read_config(self):
         self._enabled = self._config.get("enabled", True)
 
-    def send_msg(self, title, text="", image="", url="", user_id="", content_profile="") -> tuple[bool, str]:
+    def send_msg(
+        self, title, text="", image="", url="", user_id="", content_profile="", msg_type=""
+    ) -> tuple[bool, str]:
         if not title and not text:
             return False, "消息内容为空"
         WebMessageStore.instance().add(
@@ -33,6 +35,7 @@ class WebMessage(_IMessageClient):
             url=url or "",
             user_id=user_id or "",
             content_profile=content_profile or "",
+            msg_type=msg_type or "",
         )
         # 同步触发浏览器 Web Push（Service Worker 推送，移动端/后台可达）；
         # 一次 add 只推一次，与已读状态无关，不会重复推送

@@ -78,11 +78,15 @@ class AGENTPENDINGACTION(Base):
 
 class AGENTWEBMESSAGE(Base):
     __tablename__ = "AGENT_WEB_MESSAGE"
-    __table_args__ = (Index("idx_agent_web_msg_user", "USER_ID", "ID"),)
+    __table_args__ = (
+        Index("idx_agent_web_msg_user", "USER_ID", "ID"),
+        Index("idx_agent_web_msg_type", "MSG_TYPE", "ID"),
+    )
 
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     USER_ID: Mapped[str] = mapped_column(String(64), default="", server_default="")
     KIND: Mapped[str] = mapped_column(String(16), default="notify", server_default="notify")
+    MSG_TYPE: Mapped[str] = mapped_column(String(64), default="", server_default="")
     TITLE: Mapped[str] = mapped_column(Text, default="")
     CONTENT: Mapped[str] = mapped_column(Text, default="")
     IMAGE: Mapped[str] = mapped_column(Text, default="")

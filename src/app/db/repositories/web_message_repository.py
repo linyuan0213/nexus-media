@@ -27,11 +27,13 @@ class WebMessageRepository(BaseRepository):
         url: str = "",
         items: list | None = None,
         content_profile: str = "",
+        msg_type: str = "",
     ) -> int:
         with self.session() as db:
             row = AGENTWEBMESSAGE(
                 USER_ID=user_id,
                 KIND=kind,
+                MSG_TYPE=msg_type or "",
                 TITLE=title or "",
                 CONTENT=content or "",
                 IMAGE=image or "",
@@ -118,6 +120,7 @@ class WebMessageRepository(BaseRepository):
             "cursor": row.ID,
             "id": row.ID,
             "kind": row.KIND,
+            "msg_type": row.MSG_TYPE or "",
             "title": row.TITLE,
             "content": row.CONTENT,
             "image": row.IMAGE,

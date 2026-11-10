@@ -361,21 +361,14 @@ class SiteUserInfo:
         header = f"共 {len(rows)} 个站点  " + "  ".join(total_parts)
         return [header, "", *rows], inc_uploads, inc_downloads
 
-    # 统计消息标题标识：标题经模板渲染后可能带 emoji 前缀（如「📊 站点数据统计」），
-    # 也可被 MESSAGE_CLIENT.TEMPLATES 覆盖，故用包含匹配而非全等。
-    _STATS_MSG_TITLE_TAG = "站点数据统计"
+    _STATS_MSG_TYPE = "ptrefresh_date_message"
 
     def _stats_message_unchanged(self, msg_text: str) -> bool:
-        """统计消息内容是否与最近一次已发送（持久化）的一致.
-
-        注意：标题经消息模板渲染后可能带 emoji 前缀（如「📊 站点数据统计」），
-        也可能被 MESSAGE_CLIENT.TEMPLATES 自定义，因此不能用全等匹配，
-        否则去重永久失效、每轮刷新都会重复发送统计消息。
-        """
+        """统计消息内容是否与最近一条同类型消息（持久化）一致."""
         try:
             items = self.message.recent_web_messages(user_id="", limit=20) if self.message is not None else []
             for item in reversed(items):
-                if self._STATS_MSG_TITLE_TAG in (item.get("title") or ""):
+                if item.get("msg_type") == self._STATS_MSG_TYPE:
                     return (item.get("content") or "").strip() == msg_text.strip()
         except Exception as e:
             log.debug(f"[Sites]统计消息去重检查失败: {e}")

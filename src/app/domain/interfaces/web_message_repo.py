@@ -19,6 +19,7 @@ class IWebMessageRepository(Protocol):
         url: str = "",
         items: list | None = None,
         content_profile: str = "",
+        msg_type: str = "",
     ) -> int:
         """写入一条消息，返回游标（自增 ID）"""
         ...

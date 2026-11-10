@@ -73,7 +73,7 @@ class MessageDispatcher:
         else:
             log.warn(f"[Message]队列中找不到客户端: id={client_id}, type={client_type}")
 
-    def _do_sendmsg(self, client, title, text, image, url, user_id, content_profile=""):
+    def _do_sendmsg(self, client, title, text, image, url, user_id, content_profile="", msg_type=""):
         """实际执行消息发送（由队列调用）."""
         if not client or not client.get("client"):
             log.warn("[Message]客户端对象为空，跳过发送")
@@ -111,6 +111,7 @@ class MessageDispatcher:
             }
             if client.get("type") == "web":
                 send_kwargs["content_profile"] = content_profile
+                send_kwargs["msg_type"] = msg_type
             state, ret_msg = client.get("client").send_msg(**send_kwargs)
             if not state:
                 log.error(f"[Message]{cname} 消息发送失败：%s" % ret_msg)
@@ -157,7 +158,14 @@ class MessageDispatcher:
             except Exception as e:  # noqa: BLE001
                 log.warn(f"[Message]治理层异常，改为直接发送: {e!s}")
         return self.submit_now(
-            client, title, text, image=image, url=url, user_id=user_id, content_profile=content_profile
+            client,
+            title,
+            text,
+            image=image,
+            url=url,
+            user_id=user_id,
+            content_profile=content_profile,
+            msg_type=msg_type or "",
         )
 
     def submit_now(
@@ -169,6 +177,7 @@ class MessageDispatcher:
         url: str | None = None,
         user_id: str = "",
         content_profile: str = "",
+        msg_type: str = "",
     ) -> bool:
         """直接入队发送（不经过治理层），供治理层 flush 摘要时回调."""
         if not client or not client.get("client"):
@@ -186,6 +195,7 @@ class MessageDispatcher:
             url,
             user_id,
             content_profile,
+            msg_type,
             name=f"sendmsg:{cname}",
         )
 
@@ -198,6 +208,7 @@ class MessageDispatcher:
         url: str | None = None,
         user_id: str = "",
         content_profile: str = "",
+        msg_type: str = "",
     ) -> bool:
         """按渠道发送消息，用于消息交互."""
         if channel == SearchType.WEB:
@@ -212,6 +223,7 @@ class MessageDispatcher:
                 url=url or "",
                 user_id=user_id,
                 content_profile=content_profile,
+                msg_type=msg_type,
             )
             return True
         client = self._client_manager.get_interactive_client(channel)
@@ -263,6 +275,7 @@ class MessageDispatcher:
             url=url,
             user_id=str(system_user_id or ""),
             content_profile=content_profile,
+            msg_type=msg_type or "",
         )
         delivered = True
         if system_user_id and self._channel_binding_service is not None:

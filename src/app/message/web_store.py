@@ -102,6 +102,7 @@ class WebMessageStore:
         items: list[dict] | None = None,
         user_id: str = "",
         content_profile: str = "",
+        msg_type: str = "",
     ) -> dict:
         """写入消息，返回条目（kind: notify 事件通知 / reply 交互回复 / list 列表）
 
@@ -122,6 +123,7 @@ class WebMessageStore:
                     url=(url or "").strip(),
                     items=proxied_items,
                     content_profile=content_profile,
+                    msg_type=msg_type,
                 )
             except Exception as e:
                 log.warn(f"[WebMessageStore]DB 写入失败，降级内存: {e}")
@@ -129,6 +131,7 @@ class WebMessageStore:
             item = {
                 "cursor": cursor if cursor is not None else next(self._fallback_seq),
                 "kind": kind,
+                "msg_type": msg_type or "",
                 "title": (title or "").strip(),
                 "content": (content or "").strip(),
                 "image": proxied_image,

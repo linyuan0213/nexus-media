@@ -44,3 +44,16 @@ def test_unread_and_mark_read(repo):
     assert by_id[id1]["read"] is True
     assert by_id[id2]["read"] is True
     assert by_id[id1]["id"] == id1
+
+
+def test_message_type_is_persisted_and_returned(repo):
+    message_id = repo.add_message(
+        "u-type-test",
+        "notify",
+        "任意标题",
+        "内容",
+        msg_type="ptrefresh_date_message",
+    )
+
+    item = next(i for i in repo.history("u-type-test") if i["id"] == message_id)
+    assert item["msg_type"] == "ptrefresh_date_message"
