@@ -69,6 +69,9 @@ def downgrade():
 
 
 def _add_fk_if_columns(inspector, table, column, ref_table, ref_column):
+    if op.get_bind().dialect.name == "sqlite":
+        # SQLite 不支持 ALTER TABLE ADD CONSTRAINT；外键由建表/批量重建负责。
+        return
     if not inspector.has_table(table) or not inspector.has_table(ref_table):
         return
     cols = {c["name"] for c in inspector.get_columns(table)}
