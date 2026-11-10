@@ -112,10 +112,16 @@ class RBACUserSessionRepository(BaseRepository):
             return len(rows)
 
     def list_sessions(self, user_id: int) -> list[dict[str, Any]]:
+        """只返回当前有效会话；已吊销/过期会话不再展示."""
+        now = datetime.now()
         with self.readonly() as db:
             rows = (
                 db.query(RBACUserSession)
-                .filter(RBACUserSession.USER_ID == user_id)
+                .filter(
+                    RBACUserSession.USER_ID == user_id,
+                    RBACUserSession.REVOKED_AT.is_(None),
+                    RBACUserSession.EXPIRES_AT > now,
+                )
                 .order_by(RBACUserSession.LAST_SEEN_AT.desc())
                 .all()
             )

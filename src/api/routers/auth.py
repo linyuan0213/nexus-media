@@ -138,7 +138,7 @@ async def list_sessions(
     return {"code": 0, "data": sessions, "message": "ok"}
 
 
-@router.post("/sessions/{session_id}/revoke", response_model=CommonResponse, summary="吊销指定登录设备")
+@router.post("/sessions/{session_id}/revoke", response_model=CommonResponse, summary="退出指定登录设备")
 async def revoke_session(
     session_id: str,
     user: UserContext = Depends(get_current_user),
@@ -146,10 +146,10 @@ async def revoke_session(
 ):
     if not auth_service.revoke_session(session_id, user.user_id, reason="user_revoke"):
         raise AuthError("会话不存在或已失效", errcode=ErrorCode.RESOURCE_NOT_FOUND, http_status=404)
-    return {"code": 0, "data": True, "message": "已吊销该设备"}
+    return {"code": 0, "data": True, "message": "该设备已退出登录"}
 
 
-@router.post("/sessions/revoke-others", response_model=CommonResponse, summary="吊销其他登录设备")
+@router.post("/sessions/revoke-others", response_model=CommonResponse, summary="退出其他登录设备")
 async def revoke_other_sessions(
     user: UserContext = Depends(get_current_user),
     auth_service: AuthService = Depends(get_auth_service),
@@ -157,7 +157,7 @@ async def revoke_other_sessions(
     if not user.session_id:
         raise AuthError("当前登录会话无效", errcode=ErrorCode.UNAUTHORIZED, http_status=401)
     count = auth_service.revoke_other_sessions(user.user_id, user.session_id)
-    return {"code": 0, "data": {"revoked": count}, "message": "已吊销其他设备"}
+    return {"code": 0, "data": {"revoked": count}, "message": "其他设备已退出登录"}
 
 
 @router.get("/totp/status", response_model=CommonResponse, summary="获取两步验证状态")
