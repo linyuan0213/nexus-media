@@ -4,6 +4,7 @@
 
 - 日历：绑定日历系统 API Key 到当前用户，修复 Webcal 订阅日历为空。
 - 消息：Web 消息持久化稳定消息类型，站点统计去重改为按类型匹配，不再依赖标题文案。
+- 迁移：SQLite 跳过不支持的 `MEDIA_METADATA_SNAPSHOT.PAYLOAD` ALTER COLUMN，避免历史迁移中断。
 
 ## v5.9.4 (2026-11-08)
 

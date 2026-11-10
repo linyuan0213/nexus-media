@@ -19,6 +19,9 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # SQLite 不支持 ALTER COLUMN；TEXT 与 LONGTEXT 变体在 SQLite 下等价，直接跳过。
+    if op.get_bind().dialect.name == "sqlite":
+        return
     op.alter_column(
         "MEDIA_METADATA_SNAPSHOT",
         "PAYLOAD",
@@ -29,6 +32,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    if op.get_bind().dialect.name == "sqlite":
+        return
     op.alter_column(
         "MEDIA_METADATA_SNAPSHOT",
         "PAYLOAD",
