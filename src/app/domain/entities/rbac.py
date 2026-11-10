@@ -26,6 +26,9 @@ class RBACUserEntity:
     created_at: datetime | None
     updated_at: datetime | None
     roles: list[dict[str, Any]] | None = None
+    totp_secret: str | None = None
+    totp_enabled: int = 0
+    totp_recovery_codes: str | None = None
 
     @classmethod
     def from_orm(cls, orm_model) -> Optional["RBACUserEntity"]:
@@ -51,6 +54,9 @@ class RBACUserEntity:
             created_at=getattr(orm_model, "CREATED_AT", None),
             updated_at=getattr(orm_model, "UPDATED_AT", None),
             roles=roles if roles else None,
+            totp_secret=getattr(orm_model, "TOTP_SECRET", None),
+            totp_enabled=getattr(orm_model, "TOTP_ENABLED", 0) or 0,
+            totp_recovery_codes=getattr(orm_model, "TOTP_RECOVERY_CODES", None),
         )
 
     def __getattr__(self, name: str):
@@ -67,6 +73,7 @@ class RBACUserEntity:
             "nickname": self.nickname,
             "avatar": self.avatar,
             "status": self.status,
+            "totp_enabled": bool(self.totp_enabled),
             "last_login_at": self.last_login_at.strftime("%Y-%m-%d %H:%M:%S") if self.last_login_at else None,
             "last_login_ip": self.last_login_ip,
             "created_at": self.created_at.strftime("%Y-%m-%d %H:%M:%S") if self.created_at else None,

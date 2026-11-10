@@ -3,6 +3,8 @@ JWT 认证服务
 提供 Access Token + Refresh Token 双令牌机制
 """
 
+import base64
+import io
 import json
 import secrets
 import uuid
@@ -11,8 +13,10 @@ from typing import Any
 
 import jwt
 import pyotp
+import qrcode
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
+from qrcode.image.svg import SvgPathImage
 
 from app.core.exceptions import RepositoryError, ServiceError
 from app.db.repositories.rbac.user_session_repository import RBACUserSessionRepository
@@ -202,7 +206,10 @@ class AuthService:
             TOTP_RECOVERY_CODES=None,
         )
         uri = pyotp.TOTP(secret).provisioning_uri(name=user.USERNAME, issuer_name="Nexus Media")
-        return True, {"secret": secret, "uri": uri}
+        buffer = io.BytesIO()
+        qrcode.make(uri, image_factory=SvgPathImage, border=2).save(buffer)
+        qr_data_uri = "data:image/svg+xml;base64," + base64.b64encode(buffer.getvalue()).decode()
+        return True, {"secret": secret, "uri": uri, "qr_data_uri": qr_data_uri}
 
     def enable_totp(self, user_id: int, code: str) -> tuple[bool, dict[str, Any]]:
         user = self._rbac_service.get_user_by_id(user_id)
@@ -251,12 +258,14 @@ class AuthService:
             user_id = int(payload.get("sub") or 0)
             session_id = str(payload.get("sid") or "")
             refresh_jti = str(payload.get("jti") or "")
-            if not user_id or not session_id or not refresh_jti:
+            if not user_id or not refresh_jti:
                 return None
 
-            session = self._session_repo.get_active_session(session_id, user_id)
-            if session is None or session.get("refresh_jti") != refresh_jti:
-                return None
+            # 旧版 Refresh Token 没有 sid：平滑升级为新的服务端会话。
+            if session_id:
+                session = self._session_repo.get_active_session(session_id, user_id)
+                if session is None or session.get("refresh_jti") != refresh_jti:
+                    return None
 
             # 重新获取用户信息
             user = self._rbac_service.get_user_by_id(user_id)
@@ -282,6 +291,8 @@ class AuthService:
                 role_codes=role_codes,
                 session_id=session_id,
             )
+            if not session_id:
+                return self.create_session_pair(ctx, login_ip=login_ip, user_agent=user_agent)
             new_jti = uuid.uuid4().hex
             self._session_repo.touch_session(session_id, refresh_jti=new_jti, login_ip=login_ip)
             return self.create_token_pair(ctx, session_id=session_id, refresh_jti=new_jti)

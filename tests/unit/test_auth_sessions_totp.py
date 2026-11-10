@@ -96,6 +96,7 @@ def test_totp_setup_enable_and_disable():
 
     ok, data = svc.begin_totp_setup(7)
     assert ok and data["secret"]
+    assert data["qr_data_uri"].startswith("data:image/svg+xml;base64,")
     user.TOTP_SECRET = data["secret"]
     ok, enabled = svc.enable_totp(7, pyotp.TOTP(data["secret"]).now())
     assert ok and len(enabled["recovery_codes"]) == 8
@@ -114,3 +115,15 @@ def test_user_agent_device_parser():
     assert device["device_model"] == "Pixel 9"
     assert device["os"] == "Android"
     assert device["browser"] == "Chrome"
+
+
+def test_legacy_refresh_without_sid_creates_session():
+    svc = AuthService(rbac_service=_FakeRbac())
+    tokens = AuthService.create_token_pair(_ctx(10))
+
+    refreshed = svc.refresh_access_token(tokens.refresh_token, login_ip="127.0.0.1", user_agent="curl/legacy")
+
+    assert refreshed is not None
+    ctx = svc.verify_token_with_session(refreshed.access_token)[0]
+    assert ctx is not None and ctx.session_id
+    assert any(item["session_id"] == ctx.session_id for item in svc.list_sessions(10))

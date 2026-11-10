@@ -47,9 +47,14 @@ class RBACService:
     # ==================== 用户认证（委托） ====================
 
     def authenticate_user(
-        self, username: str, password: str, login_ip: str | None = None, user_agent: str | None = None
+        self,
+        username: str,
+        password: str,
+        login_ip: str | None = None,
+        user_agent: str | None = None,
+        totp_code: str | None = None,
     ) -> tuple:
-        return self._auth.authenticate_user(username, password, login_ip, user_agent)
+        return self._auth.authenticate_user(username, password, login_ip, user_agent, totp_code)
 
     def change_password(self, user_id: int, old_password: str, new_password: str) -> tuple:
         return self._auth.change_password(user_id, old_password, new_password)
