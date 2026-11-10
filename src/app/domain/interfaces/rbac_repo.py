@@ -123,6 +123,10 @@ class IRBACLogRepository(Protocol):
         login_type: str = "password",
         login_status: int = 1,
         fail_reason: str | None = None,
+        device_type: str | None = None,
+        device_model: str | None = None,
+        os_name: str | None = None,
+        browser: str | None = None,
     ) -> RBACUserLoginLogEntity: ...
     def get_login_logs(
         self, user_id: int | None = None, page: int = 1, page_size: int = 20

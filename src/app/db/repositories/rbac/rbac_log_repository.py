@@ -28,6 +28,10 @@ class RBACLogRepository(BaseRepository):
         login_type: str = "password",
         login_status: int = 1,
         fail_reason: str | None = None,
+        device_type: str | None = None,
+        device_model: str | None = None,
+        os_name: str | None = None,
+        browser: str | None = None,
     ) -> RBACUserLoginLog:
         """
         添加登录日志
@@ -39,6 +43,10 @@ class RBACLogRepository(BaseRepository):
                 LOGIN_IP=login_ip,
                 LOGIN_LOCATION=login_location,
                 USER_AGENT=user_agent,
+                DEVICE_TYPE=device_type,
+                DEVICE_MODEL=device_model,
+                OS_NAME=os_name,
+                BROWSER=browser,
                 LOGIN_TYPE=login_type,
                 LOGIN_STATUS=login_status,
                 FAIL_REASON=fail_reason,

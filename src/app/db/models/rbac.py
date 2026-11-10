@@ -59,6 +59,11 @@ class RBACUser(Base):
     LAST_LOGIN_AT: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     LAST_LOGIN_IP: Mapped[str] = mapped_column(String(64), nullable=True)
 
+    # 两步验证（TOTP）；SECRET 仅在未启用/待确认期间写入，启用后保留用于校验
+    TOTP_SECRET: Mapped[str] = mapped_column(String(64), nullable=True)
+    TOTP_ENABLED: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    TOTP_RECOVERY_CODES: Mapped[str] = mapped_column(Text, nullable=True)
+
     # 时间戳
     CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
     UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
@@ -399,6 +404,10 @@ class RBACUserLoginLog(Base):
     LOGIN_IP: Mapped[str] = mapped_column(String(64), nullable=True)
     LOGIN_LOCATION: Mapped[str] = mapped_column(String(255), nullable=True)
     USER_AGENT: Mapped[str] = mapped_column(Text, nullable=True)
+    DEVICE_TYPE: Mapped[str] = mapped_column(String(32), nullable=True)
+    DEVICE_MODEL: Mapped[str] = mapped_column(String(128), nullable=True)
+    OS_NAME: Mapped[str] = mapped_column(String(64), nullable=True)
+    BROWSER: Mapped[str] = mapped_column(String(64), nullable=True)
     LOGIN_TYPE: Mapped[str] = mapped_column(String(64), default="password", nullable=False)  # password, token, oauth
     LOGIN_STATUS: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 1=成功, 0=失败
     FAIL_REASON: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -415,6 +424,10 @@ class RBACUserLoginLog(Base):
             "username": self.USERNAME,
             "login_ip": self.LOGIN_IP,
             "login_location": self.LOGIN_LOCATION,
+            "device_type": self.DEVICE_TYPE,
+            "device_model": self.DEVICE_MODEL,
+            "os": self.OS_NAME,
+            "browser": self.BROWSER,
             "login_type": self.LOGIN_TYPE,
             "login_status": self.LOGIN_STATUS,
             "fail_reason": self.FAIL_REASON,
@@ -491,4 +504,48 @@ class RBACOperationLog(Base):
             "operation_status": self.OPERATION_STATUS,
             "error_msg": self.ERROR_MSG,
             "operated_at": self.OPERATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.OPERATED_AT is not None else None,
+        }
+
+
+class RBACUserSession(Base):
+    """用户设备会话表；用于设备展示与服务端 Token 吊销."""
+
+    __tablename__ = "RBAC_USER_SESSIONS"
+
+    SESSION_ID: Mapped[str] = mapped_column(String(64), primary_key=True)
+    USER_ID: Mapped[int] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=False, index=True
+    )
+    REFRESH_JTI: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    DEVICE_TYPE: Mapped[str] = mapped_column(String(32), nullable=True)
+    DEVICE_MODEL: Mapped[str] = mapped_column(String(128), nullable=True)
+    OS_NAME: Mapped[str] = mapped_column(String(64), nullable=True)
+    BROWSER: Mapped[str] = mapped_column(String(64), nullable=True)
+    LOGIN_IP: Mapped[str] = mapped_column(String(64), nullable=True)
+    USER_AGENT: Mapped[str] = mapped_column(Text, nullable=True)
+    CREATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    LAST_SEEN_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)
+    EXPIRES_AT: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    REVOKED_AT: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    REVOKE_REASON: Mapped[str] = mapped_column(String(255), nullable=True)
+
+    def __repr__(self):
+        return f"<RBACUserSession(SESSION_ID='{self.SESSION_ID}', USER_ID={self.USER_ID})>"
+
+    def to_dict(self) -> dict:
+        return {
+            "session_id": self.SESSION_ID,
+            "user_id": self.USER_ID,
+            "refresh_jti": self.REFRESH_JTI,
+            "device_type": self.DEVICE_TYPE,
+            "device_model": self.DEVICE_MODEL,
+            "os": self.OS_NAME,
+            "browser": self.BROWSER,
+            "login_ip": self.LOGIN_IP,
+            "user_agent": self.USER_AGENT,
+            "created_at": self.CREATED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.CREATED_AT else None,
+            "last_seen_at": self.LAST_SEEN_AT.strftime("%Y-%m-%d %H:%M:%S") if self.LAST_SEEN_AT else None,
+            "expires_at": self.EXPIRES_AT.strftime("%Y-%m-%d %H:%M:%S") if self.EXPIRES_AT else None,
+            "revoked_at": self.REVOKED_AT.strftime("%Y-%m-%d %H:%M:%S") if self.REVOKED_AT else None,
+            "revoke_reason": self.REVOKE_REASON,
         }

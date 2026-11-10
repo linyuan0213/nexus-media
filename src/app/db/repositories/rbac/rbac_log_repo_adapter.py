@@ -31,9 +31,24 @@ class RBACLogRepositoryAdapter(IRBACLogRepository):
         login_type: str = "password",
         login_status: int = 1,
         fail_reason: str | None = None,
+        device_type: str | None = None,
+        device_model: str | None = None,
+        os_name: str | None = None,
+        browser: str | None = None,
     ) -> RBACUserLoginLogEntity:
         row = self._repo.add_login_log(
-            user_id, username, login_ip, login_location, user_agent, login_type, login_status, fail_reason
+            user_id,
+            username,
+            login_ip,
+            login_location,
+            user_agent,
+            login_type,
+            login_status,
+            fail_reason,
+            device_type,
+            device_model,
+            os_name,
+            browser,
         )
         if isinstance(row, bool):
             row = None

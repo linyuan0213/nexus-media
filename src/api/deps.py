@@ -117,14 +117,15 @@ def get_current_user(
     """
     auth_header: str | None = credentials.credentials if credentials else None
 
-    # 1) JWT 认证（新标准）
+    # 1) JWT 认证（新标准）；带 sid 的 Token 同时校验服务端会话未吊销
     jwt_reason = "missing"
+    auth_service = AuthService(rbac_service=app_context.rbac_service)
     if auth_header:
-        user_ctx = _extract_user_from_jwt(auth_header)
+        user_ctx = _extract_user_from_jwt(auth_header, auth_service)
         if user_ctx:
             return _overlay_fresh_snapshot(user_ctx, app_context.rbac_service)
         token = auth_header.split()[-1] if " " in auth_header else auth_header
-        _, jwt_reason = AuthService.verify_token_detail(token)
+        _, jwt_reason = auth_service.verify_token_with_session(token)
 
     # 2) 旧 Token 认证（APIv1 兼容）：映射为系统上下文（旧 API 本就是管理员粒度）
     username = _extract_user_from_token(auth_header)
@@ -530,14 +531,14 @@ def _extract_user_from_token(auth_header: str | None) -> str | None:
     return username
 
 
-def _extract_user_from_jwt(auth_header: str | None) -> UserContext | None:
-    """
-    JWT 认证：从 Authorization header 提取并验证 JWT Token
-    """
+def _extract_user_from_jwt(auth_header: str | None, auth_service: AuthService | None = None) -> UserContext | None:
+    """JWT 认证：解码 Token，并在有会话时校验服务端吊销状态."""
     if not auth_header:
         return None
     # 支持 "Bearer xxx" 或直接 "xxx"
     token = auth_header.split()[-1] if " " in auth_header else auth_header
+    if auth_service is not None:
+        return auth_service.verify_token_with_session(token)[0]
     return AuthService.verify_token(token)
 
 

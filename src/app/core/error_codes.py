@@ -41,6 +41,9 @@ class ErrorCode(IntEnum):
     PASSWORD_INCORRECT = 20007
     APIKEY_NOT_FOUND = 20008
     APIKEY_INVALID = 20009
+    TOTP_REQUIRED = 20010
+    TOTP_INVALID = 20011
+    SESSION_REVOKED = 20012
 
     # 媒体 30xxx
     MEDIA_RECOGNIZE_FAILED = 30001
@@ -114,6 +117,9 @@ _META: dict[ErrorCode, tuple[str, int]] = {
     ErrorCode.PASSWORD_INCORRECT: ("用户名或密码错误", 401),
     ErrorCode.APIKEY_NOT_FOUND: ("API Key 不存在", 404),
     ErrorCode.APIKEY_INVALID: ("API Key 无效", 401),
+    ErrorCode.TOTP_REQUIRED: ("请输入两步验证码", 401),
+    ErrorCode.TOTP_INVALID: ("两步验证码错误", 401),
+    ErrorCode.SESSION_REVOKED: ("登录会话已失效，请重新登录", 401),
     ErrorCode.MEDIA_RECOGNIZE_FAILED: ("媒体识别失败", 500),
     ErrorCode.MEDIA_NOT_FOUND: ("未找到媒体信息", 404),
     ErrorCode.TMDB_REQUEST_FAILED: ("TMDB 请求失败", 502),

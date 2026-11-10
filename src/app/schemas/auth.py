@@ -41,6 +41,7 @@ class UserContext(BaseModel):
     level: int
     permissions: list[str]
     role_codes: list[str] = []
+    session_id: str | None = None
 
     @property
     def is_superadmin(self) -> bool:
@@ -82,3 +83,16 @@ class RefreshTokenRequest(BaseModel):
     """刷新 Token 请求（也可通过 Cookie 传递）"""
 
     refresh_token: str | None = None
+
+
+class TOTPCodeRequest(BaseModel):
+    """TOTP 验证码请求."""
+
+    code: str
+
+
+class TOTPDisableRequest(BaseModel):
+    """关闭 TOTP 请求."""
+
+    password: str
+    code: str

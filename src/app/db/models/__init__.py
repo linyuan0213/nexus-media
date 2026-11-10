@@ -125,6 +125,7 @@ from app.db.models.rbac import (
     RBACUser,
     RBACUserChannel,
     RBACUserLoginLog,
+    RBACUserSession,
     RBACUserSite,
 )
 
@@ -266,6 +267,7 @@ __all__ = [
     "RBACPermission",
     "RBACMenu",
     "RBACUserLoginLog",
+    "RBACUserSession",
     "RBACOperationLog",
     # API Key
     "APIKEY",

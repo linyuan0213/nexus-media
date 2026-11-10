@@ -1,7 +1,12 @@
 """RBAC auth service - 用户认证."""
 
+import json
+
+import pyotp
+
 from app.core.settings import settings
 from app.infrastructure.security import check_password_hash, generate_password_hash
+from app.utils.user_agent import describe_user_agent
 
 
 class RBACAuthService:
@@ -12,9 +17,21 @@ class RBACAuthService:
         self.log_repo = log_repo
 
     def authenticate_user(
-        self, username: str, password: str, login_ip: str | None = None, user_agent: str | None = None
+        self,
+        username: str,
+        password: str,
+        login_ip: str | None = None,
+        user_agent: str | None = None,
+        totp_code: str | None = None,
     ) -> tuple:
         """用户认证"""
+        device = describe_user_agent(user_agent)
+        device_kwargs = {
+            "device_type": device["device_type"],
+            "device_model": device["device_model"],
+            "os_name": device["os"],
+            "browser": device["browser"],
+        }
         user = self.user_repo.get_user_by_username(username)
 
         if not user:
@@ -23,6 +40,7 @@ class RBACAuthService:
                 username=username,
                 login_ip=login_ip,
                 user_agent=user_agent,
+                **device_kwargs,
                 login_status=0,
                 fail_reason="用户不存在",
             )
@@ -34,6 +52,7 @@ class RBACAuthService:
                 username=username,
                 login_ip=login_ip,
                 user_agent=user_agent,
+                **device_kwargs,
                 login_status=0,
                 fail_reason="用户已被禁用",
             )
@@ -47,6 +66,7 @@ class RBACAuthService:
                     username=username,
                     login_ip=login_ip,
                     user_agent=user_agent,
+                    **device_kwargs,
                     login_status=0,
                     fail_reason="密码错误",
                 )
@@ -59,16 +79,62 @@ class RBACAuthService:
                 username=username,
                 login_ip=login_ip,
                 user_agent=user_agent,
+                **device_kwargs,
                 login_status=0,
                 fail_reason="密码错误",
             )
             return False, "用户名或密码错误"
 
+        totp_enabled = getattr(user, "TOTP_ENABLED", 0)
+        if totp_enabled is True or totp_enabled == 1:
+            if not self._verify_totp(user, totp_code):
+                reason = "请输入两步验证码" if not totp_code else "两步验证码错误"
+                self.log_repo.add_login_log(
+                    user_id=user.ID,
+                    username=username,
+                    login_ip=login_ip,
+                    user_agent=user_agent,
+                    **device_kwargs,
+                    login_status=0,
+                    fail_reason=reason,
+                )
+                return False, ("TOTP_REQUIRED" if not totp_code else "TOTP_INVALID")
+
         self.user_repo.update_last_login(user.ID, login_ip)
         self.log_repo.add_login_log(
-            user_id=user.ID, username=username, login_ip=login_ip, user_agent=user_agent, login_status=1
+            user_id=user.ID,
+            username=username,
+            login_ip=login_ip,
+            user_agent=user_agent,
+            **device_kwargs,
+            login_status=1,
         )
         return True, user
+
+    def _verify_totp(self, user, code: str | None) -> bool:
+        code = str(code or "").strip()
+        if not code:
+            return False
+        secret = str(getattr(user, "TOTP_SECRET", "") or "").strip()
+        if secret and pyotp.TOTP(secret).verify(code, valid_window=1):
+            return True
+        raw_codes = getattr(user, "TOTP_RECOVERY_CODES", None)
+        if not raw_codes:
+            return False
+        try:
+            codes = json.loads(raw_codes)
+        except (TypeError, ValueError):
+            return False
+        remaining = []
+        matched = False
+        for item in codes:
+            if not matched and isinstance(item, str) and check_password_hash(item, code):
+                matched = True
+            else:
+                remaining.append(item)
+        if matched:
+            self.user_repo.update_user(user.ID, TOTP_RECOVERY_CODES=json.dumps(remaining))
+        return matched
 
     def change_password(self, user_id: int, old_password: str, new_password: str) -> tuple:
         """修改密码"""

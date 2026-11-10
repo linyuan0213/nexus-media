@@ -310,6 +310,10 @@ class RBACUserLoginLogEntity:
     login_ip: str | None
     login_location: str | None
     user_agent: str | None
+    device_type: str | None
+    device_model: str | None
+    os_name: str | None
+    browser: str | None
     login_type: str
     login_status: int
     fail_reason: str | None
@@ -326,6 +330,10 @@ class RBACUserLoginLogEntity:
             login_ip=getattr(orm_model, "LOGIN_IP", None),
             login_location=getattr(orm_model, "LOGIN_LOCATION", None),
             user_agent=getattr(orm_model, "USER_AGENT", None),
+            device_type=getattr(orm_model, "DEVICE_TYPE", None),
+            device_model=getattr(orm_model, "DEVICE_MODEL", None),
+            os_name=getattr(orm_model, "OS_NAME", None),
+            browser=getattr(orm_model, "BROWSER", None),
             login_type=getattr(orm_model, "LOGIN_TYPE", "password"),
             login_status=getattr(orm_model, "LOGIN_STATUS", 1),
             fail_reason=getattr(orm_model, "FAIL_REASON", None),
@@ -345,6 +353,10 @@ class RBACUserLoginLogEntity:
             "username": self.username,
             "login_ip": self.login_ip,
             "login_location": self.login_location,
+            "device_type": self.device_type,
+            "device_model": self.device_model,
+            "os": self.os_name,
+            "browser": self.browser,
             "login_type": self.login_type,
             "login_status": self.login_status,
             "fail_reason": self.fail_reason,
