@@ -7,6 +7,8 @@ import base64
 import io
 import json
 import secrets
+import threading
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -14,6 +16,7 @@ from typing import Any
 import jwt
 import pyotp
 import qrcode
+from loguru import logger
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 from qrcode.image.svg import SvgPathImage
@@ -32,6 +35,9 @@ _SECRET_KEY = get_secret_key()
 _ALGORITHM = "HS256"
 _ACCESS_TOKEN_EXPIRE_MINUTES = 15
 _REFRESH_TOKEN_EXPIRE_DAYS = 7
+_SESSION_TOUCH_INTERVAL = 60
+_SESSION_TOUCH_CACHE: dict[str, float] = {}
+_SESSION_TOUCH_LOCK = threading.Lock()
 
 
 class AuthService:
@@ -172,9 +178,24 @@ class AuthService:
         user_ctx, reason = self.verify_token_detail(token)
         if user_ctx is None:
             return None, reason
-        if user_ctx.session_id and self._session_repo.get_active_session(user_ctx.session_id, user_ctx.user_id) is None:
-            return None, "revoked"
+        if user_ctx.session_id:
+            if self._session_repo.get_active_session(user_ctx.session_id, user_ctx.user_id) is None:
+                return None, "revoked"
+            self._touch_session(user_ctx.session_id)
         return user_ctx, "ok"
+
+    @staticmethod
+    def _touch_session(session_id: str) -> None:
+        """节流更新最近活跃时间，避免每个 API 请求都写数据库."""
+        now = time.monotonic()
+        with _SESSION_TOUCH_LOCK:
+            if now - _SESSION_TOUCH_CACHE.get(session_id, 0) < _SESSION_TOUCH_INTERVAL:
+                return
+            _SESSION_TOUCH_CACHE[session_id] = now
+        try:
+            RBACUserSessionRepository().touch_session(session_id)
+        except Exception as e:  # noqa: BLE001 - 活跃时间更新失败不应影响请求
+            logger.debug(f"[Auth]更新会话活跃时间失败 {session_id}: {e}")
 
     def list_sessions(self, user_id: int) -> list[dict[str, Any]]:
         return self._session_repo.list_sessions(user_id)
