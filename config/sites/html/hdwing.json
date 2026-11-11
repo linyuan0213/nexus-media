@@ -1,0 +1,177 @@
+{
+  "id": "hdwing",
+  "name": "HDWinG",
+  "domain": "https://hdwing.org",
+  "encoding": "UTF-8",
+  "public": false,
+  "html": {
+    "search": {
+      "paths": [
+        {
+          "path": "torrents.php",
+          "method": "get"
+        }
+      ],
+      "params": {
+        "search": "{keyword}"
+      },
+      "batch": {
+        "delimiter": " ",
+        "space_replace": "_"
+      }
+    },
+    "category": {
+      "movie": [
+        {
+          "id": 20,
+          "cat": "Movies/Full BD",
+          "desc": "原盘"
+        },
+        {
+          "id": 17,
+          "cat": "Movies/1080p",
+          "desc": "电影 1080p"
+        },
+        {
+          "id": 16,
+          "cat": "Movies/1080i",
+          "desc": "电影 1080i"
+        },
+        {
+          "id": 9,
+          "cat": "Movies/720p",
+          "desc": "电影 720p"
+        }
+      ],
+      "tv": [
+        {
+          "id": 13,
+          "cat": "TV/EU-US",
+          "desc": "欧美剧"
+        },
+        {
+          "id": 25,
+          "cat": "TV/Chinese",
+          "desc": "中港台剧集"
+        },
+        {
+          "id": 26,
+          "cat": "TV/Korean",
+          "desc": "韩剧"
+        },
+        {
+          "id": 24,
+          "cat": "TV/Japanese",
+          "desc": "日剧"
+        },
+        {
+          "id": 21,
+          "cat": "TV/EU-US Pack",
+          "desc": "欧美剧集包"
+        },
+        {
+          "id": 22,
+          "cat": "TV/Chinese Pack",
+          "desc": "中港台剧集包"
+        },
+        {
+          "id": 23,
+          "cat": "TV/JPN-KOR Pack",
+          "desc": "日韩剧集包"
+        },
+        {
+          "id": 14,
+          "cat": "TV/Animation",
+          "desc": "动画片"
+        },
+        {
+          "id": 5,
+          "cat": "TV/Documentary",
+          "desc": "纪录片"
+        },
+        {
+          "id": 15,
+          "cat": "TV/Sports",
+          "desc": "体育节目"
+        }
+      ]
+    },
+    "torrents": {
+      "list": {
+        "selector": "table.torrent_list > tbody > tr"
+      },
+      "fields": {
+        "id": {
+          "selector": "a[href*=\"/details.php?id=\"]",
+          "attribute": "href",
+          "filters": [
+            {
+              "name": "re_search",
+              "args": [
+                "\\d+",
+                0
+              ]
+            }
+          ]
+        },
+        "category": {
+          "selector": "td.t_cat img",
+          "attribute": "alt"
+        },
+        "title": {
+          "selector": "td.t_name h3 a"
+        },
+        "details": {
+          "selector": "a[href*=\"/details.php?id=\"]",
+          "attribute": "href"
+        },
+        "download": {
+          "selector": "a[href*=\"download.php?hash=\"]",
+          "attribute": "href"
+        },
+        "size": {
+          "selector": "td.t_size"
+        },
+        "seeders": {
+          "selector": "td.t_torrents"
+        },
+        "leechers": {
+          "selector": "td.t_leech"
+        },
+        "grabs": {
+          "selector": "td.t_completed"
+        },
+        "date": {
+          "selector": "td.t_time"
+        },
+        "downloadvolumefactor": {
+          "default": 1
+        },
+        "uploadvolumefactor": {
+          "default": 1
+        },
+        "description": {
+          "selector": "td.t_name h4",
+          "optional": true
+        }
+      }
+    },
+    "conf": {
+      "FREE": [
+        "//img[contains(@class,'pro_free')]",
+        "//img[contains(@class,'pro_free2up')]"
+      ],
+      "2XFREE": [
+        "//img[contains(@class,'pro_free2up')]",
+        "//img[contains(@class,'pro_2up')]"
+      ],
+      "HR": [
+        "//img[contains(@class,'hitandrun')]"
+      ],
+      "PEER_COUNT": [
+        "//div[@id='peercount']/b[1]"
+      ]
+    }
+  },
+  "detail_page_url": "/details.php?id={tid}"
+}
