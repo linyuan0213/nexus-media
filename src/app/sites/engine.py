@@ -466,6 +466,8 @@ class SiteEngine:
                 return engine_download.resolve_download_api(self, url, site, user_config, tid)
             elif site.download.type == "api_chained":
                 return engine_download.resolve_download_chained(self, url, site, user_config, tid)
+            elif site.download.type == "api_blob":
+                return url
             elif site.download.type == "template":
                 return site.download.path.format(tid=tid)
             return url

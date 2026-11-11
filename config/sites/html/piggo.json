@@ -4,70 +4,80 @@
   "domain": "https://piggo.me",
   "encoding": "UTF-8",
   "public": false,
+  "tid_pattern": "/detail/(\\d+)",
   "html": {
     "search": {
       "paths": [
         {
-          "path": "search.php",
+          "path": "torrents",
           "method": "get"
         }
       ],
       "params": {
-        "search": "{keyword}"
-      },
-      "batch": {
-        "delimiter": " ",
-        "space_replace": "_"
+        "q": "{keyword}"
       }
     },
     "category": {
       "movie": [
         {
-          "id": 401,
+          "id": "movie",
           "cat": "Movies",
           "desc": "电影"
         }
       ],
       "tv": [
         {
-          "id": 402,
+          "id": "tv",
           "cat": "TV/Series",
           "desc": "电视剧"
         },
         {
-          "id": 403,
+          "id": "variety",
           "cat": "TV/Shows",
           "desc": "综艺"
         },
         {
-          "id": 404,
+          "id": "documentary",
           "cat": "TV/Documentaries",
           "desc": "纪录片"
         },
         {
-          "id": 405,
+          "id": "anime",
           "cat": "TV/Animations",
           "desc": "动漫"
         },
         {
-          "id": 908,
+          "id": "children",
           "cat": "TV/Series",
-          "desc": "儿童剧集"
-        },
-        {
-          "id": 909,
-          "cat": "Movies",
-          "desc": "儿童电影"
+          "desc": "儿童"
         }
       ]
     },
+    "conf": {
+      "FREE": [
+        "//span[contains(@class,'torrent-promo-2')]",
+        "//span[contains(@class,'torrent-promo-4')]"
+      ],
+      "2XFREE": [
+        "//span[contains(@class,'torrent-promo-4')]"
+      ],
+      "HR": [
+        "//span[contains(@class,'torrent-promo-6')]"
+      ],
+      "PEER_COUNT": [
+        "//div[contains(@class,'head-stats')]/button[@data-tip='做种']"
+      ]
+    },
+    "browse": {
+      "path": "torrents"
+    },
     "torrents": {
       "list": {
-        "selector": "table.torrents > tr:has(\"table.torrentname\")"
+        "selector": "table.torrent-list > tbody > tr"
       },
       "fields": {
         "id": {
-          "selector": "a[href*=\"details.php?id=\"]",
+          "selector": "a[href*=\"/detail/\"]",
           "attribute": "href",
           "filters": [
             {
@@ -80,122 +90,72 @@
           ]
         },
         "category": {
-          "selector": "a[href*=\"?cat=\"]",
-          "attribute": "href",
-          "filters": [
-            {
-              "name": "querystring",
-              "args": "cat"
-            }
-          ]
+          "selector": "a.torrent-sec-chip",
+          "optional": true
         },
         "title_default": {
-          "selector": "a[href*=\"details.php?id=\"]"
-        },
-        "title_optional": {
-          "optional": true,
-          "selector": "a[title][href*=\"details.php?id=\"]",
-          "attribute": "title"
+          "selector": "a[href*=\"/detail/\"]"
         },
         "title": {
-          "text": "{% if fields['title_optional'] %}{{ fields['title_optional'] }}{% else %}{{ fields['title_default'] }}{% endif %}"
+          "text": "{{ fields['title_default'] }}"
         },
         "details": {
-          "selector": "a[href*=\"details.php?id=\"]",
-          "attribute": "href"
-        },
-        "poster": {
-          "selector": "img[data-orig]",
-          "attribute": "data-orig"
-        },
-        "download": {
-          "selector": "a[href*=\"download.php?id=\"]",
+          "selector": "a[href*=\"/detail/\"]",
           "attribute": "href"
         },
         "size": {
-          "selector": "td.rowfollow:nth-child(5)"
+          "selector": "td.torrent-col-size"
         },
         "grabs": {
-          "selector": "td.rowfollow:nth-child(8)"
+          "selector": "td.torrent-col-n[data-label=\"完成\"]"
         },
         "seeders": {
-          "selector": "td.rowfollow:nth-child(6)"
+          "selector": "td.torrent-col-n[data-label=\"做种\"]"
         },
         "leechers": {
-          "selector": "td.rowfollow:nth-child(7)"
+          "selector": "td.torrent-col-n[data-label=\"下载\"]"
         },
         "date_elapsed": {
-          "selector": "td.rowfollow:nth-child(4) > span",
-          "optional": true
-        },
-        "date_added": {
-          "selector": "td.rowfollow:nth-child(4) > span",
-          "attribute": "title",
+          "selector": "td.torrent-col-time",
           "optional": true
         },
         "date": {
-          "text": "{% if fields['date_elapsed'] or fields['date_added'] %}{{ fields['date_elapsed'] if fields['date_elapsed'] else fields['date_added'] }}{% else %}now{% endif %}"
-
+          "text": "{% if fields['date_elapsed'] %}{{ fields['date_elapsed'] }}{% else %}now{% endif %}"
         },
         "downloadvolumefactor": {
           "case": {
-            "img.pro_free": 0,
-            "img.pro_free2up": 0,
-            "img.pro_50pctdown": 0.5,
-            "img.pro_50pctdown2up": 0.5,
-            "img.pro_30pctdown": 0.3,
+            "span:contains('免费')": 0,
+            "span:contains('50%')": 0.5,
             "*": 1
           }
         },
         "uploadvolumefactor": {
           "case": {
-            "img.pro_50pctdown2up": 2,
-            "img.pro_free2up": 2,
-            "img.pro_2up": 2,
             "*": 1
           }
         },
-        "free_deadline": {
-          "default_value": "{% if fields['downloadvolumefactor']==0 %}{{max_time}}{% endif%}",
-          "default_value_format": "%Y-%m-%d %H:%M:%S.%f",
-          "selector": "div > b > span[title]",
-          "attribute": "title"
-
-        },
         "tags": {
-          "selector": "div > a.torrents-tag"
+          "selector": "a.torrent-tag",
+          "optional": true
         },
         "subject": {
-          "selector": "td.embedded:nth-child(2) > div > div[style] > span",
-          "contents": -1
+          "selector": "a[href*=\"/detail/\"]"
         },
         "description": {
-          "selector": "td:nth-child(2) > table.torrentname > td:has(\"a[href*='details.php?id=']\")",
-          "remove": "span,a,img,font,b",
-          "contents": -1
+          "selector": "div.torrent-sub",
+          "optional": true
         },
         "labels": {
-          "selector": "td:nth-child(2) > table.torrentname > td:has(\"a[href*='details.php?id=']\") > span"
+          "selector": "span.torrent-promo",
+          "optional": true
         }
       }
-    },
-    "conf": {
-      "FREE": [
-        "//h1[@id='top']/b/font[@class='free']"
-      ],
-      "2XFREE": [
-        "//h1[@id='top']/b/font[@class='twoupfree']"
-      ],
-      "HR": [
-        "//h1[@id='top']/img[@class='hitandrun']"
-      ],
-      "PEER_COUNT": [
-        "//div[@id='peercount']/b[1]"
-      ]
-    },
-    "browse": {
-      "path": "torrents.php"
     }
   },
-  "detail_page_url": "/details.php?id={tid}"
+  "download": {
+    "type": "api_blob",
+    "method": "POST",
+    "path": "/torrents/{tid}/download"
+  },
+  "detail_page_url": "/detail/{tid}"
 }

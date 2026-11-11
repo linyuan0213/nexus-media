@@ -166,7 +166,17 @@ class Torrent:
             )
             # 不自动跟随跳转：Prowlarr/Jackett 的下载接口会 302 到 magnet:，
             # httpx 跟随会抛 "Request URL has an unsupported protocol 'magnet://'"。
-            req = client.get(url=url, headers=headers, auth=auth, follow_redirects=False, **rl_kwargs)
+            download_type = getattr(getattr(site_def, "download", None), "type", "")
+            download_method = (
+                str(getattr(getattr(site_def, "download", None), "method", "GET") or "GET").upper()
+                if download_type == "api_blob"
+                else "GET"
+            )
+            request_kwargs = {"headers": headers, "auth": auth, "follow_redirects": False, **rl_kwargs}
+            if download_method == "POST":
+                req = client.post(url=url, **request_kwargs)
+            else:
+                req = client.get(url=url, **request_kwargs)
             redirect_hops = 0
             while getattr(req, "status_code", 200) in (301, 302, 303, 307, 308) and redirect_hops < 3:
                 location = str(req.headers.get("location") or "").strip()
@@ -176,7 +186,11 @@ class Torrent:
                 if not location:
                     break
                 url = urljoin(url, location)
-                req = client.get(url=url, headers=headers, auth=auth, follow_redirects=False, **rl_kwargs)
+                req = (
+                    client.post(url=url, **request_kwargs)
+                    if download_method == "POST"
+                    else client.get(url=url, **request_kwargs)
+                )
                 redirect_hops += 1
         except HttpClientError as exc:
             log.warn(f"[Torrent]下载请求失败, url={url[:200]}, status={exc.status_code}, err={str(exc)}")
