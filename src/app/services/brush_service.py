@@ -39,7 +39,7 @@ _REMOVE_RULE_FIELDS = {
     "uploadsize": "brushtask_seedsize",
     "dltime": "brushtask_dltime",
     "avg_upspeed": "brushtask_avg_upspeed",
-    "cur_upspeed": "brushtask_upspeed",
+    "upspeed": "brushtask_upspeed",
     "iatime": "brushtask_iatime",
     "pending_time": "brushtask_pending_time",
     "freespace": "brushtask_freespace",
@@ -194,9 +194,12 @@ class BrushService:
             rule_type=data.get("type"),
             json_rule=JsonUtils.dumps(data.get("json_rule", {}), ensure_ascii=False) if "json_rule" in data else None,
         )
+        # 任务启动时缓存了规则快照；编辑模板后必须重建引用该规则的任务，否则调度器仍用旧条件。
+        self._brush.reload_tasks_for_rule(rule_id)
 
     def delete_rule(self, rule_id: int) -> None:
         self._rule_repo.delete(rule_id)
+        self._brush.reload_tasks_for_rule(rule_id)
 
     # ---------- 规则引擎委托 ----------
 

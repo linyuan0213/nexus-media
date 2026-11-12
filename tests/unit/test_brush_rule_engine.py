@@ -752,3 +752,19 @@ def test_check_pubdate_prefers_page_and_handles_tz():
     # 很旧的页面时间（>3h）不满足
     attr2 = {"pubdate": (_dt.datetime.now() - _dt.timedelta(hours=10)).strftime("%Y-%m-%d %H:%M:%S")}
     assert BrushRuleEngine._check_pubdate(_dt.datetime.now(), attr2, "bw#0,3") is False
+
+
+class TestRemoveRuleAliasKeys:
+    def test_seedratio_alias_triggers_ratio_rule(self):
+        need, dtype = BrushRuleEngine.check_remove_rule(
+            {"mode": "or", "seedratio": "gt#1"}, {"ratio": 2.0, "is_completed": True}
+        )
+        assert need is True
+        assert dtype == BrushDeleteType.RATIO
+
+    def test_seedsize_alias_triggers_uploadsize_rule(self):
+        need, dtype = BrushRuleEngine.check_remove_rule(
+            {"mode": "or", "seedsize": "gt#1"}, {"uploaded": 2 * 1024**3, "is_completed": True}
+        )
+        assert need is True
+        assert dtype == BrushDeleteType.UPLOADSIZE

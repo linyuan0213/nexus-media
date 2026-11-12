@@ -276,7 +276,7 @@ class BrushTaskService:
         site_info: Any = self._sites.get_sites(siteid=task.SITE)
         site_url = StringUtils.get_base_url(site_info.get("signurl") or site_info.get("rssurl")) if site_info else ""
         downloader_info = self._downloader.get_downloader_conf(task.DOWNLOADER)
-        total_size = round(int(self._repo.get_brushtask_totalsize(task.ID)) / (1024**3), 1)
+        total_size = round(self._helper.get_task_torrent_size(task.ID, task.DOWNLOADER) / (1024**3), 1)
         seed_size_gb = round(int(task.SEED_SIZE) / (1024**3), 1) if task.SEED_SIZE else 0
         rss_rule, remove_rule, stop_rule = self._load_rules_from_template(task)
         return {
@@ -330,6 +330,16 @@ class BrushTaskService:
         if taskid:
             return self._brush_tasks.get(str(taskid)) or {}
         return list(self._brush_tasks.values())
+
+    def reload_tasks_for_rule(self, rule_id: int) -> None:
+        """规则模板变更后重建引用该规则的任务，刷新 remove_rule/rss_rule 快照."""
+        for task_id, task in list(self._brush_tasks.items()):
+            if rule_id in {
+                task.get("rss_rule_id"),
+                task.get("remove_rule_id"),
+                task.get("stop_rule_id"),
+            }:
+                self._reload_single_task(int(task_id))
 
     def update_brushtask(self, brushtask_id: int | None, item: dict) -> Any:
         ret = self._repo.update_brushtask(brushtask_id or 0, item)

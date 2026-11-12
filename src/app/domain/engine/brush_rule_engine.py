@@ -288,6 +288,19 @@ class BrushRuleEngine:
             "tracker_error": params.get("tracker_error"),
         }
 
+        # 兼容历史/前端字段名：seedratio/seedsize/hr_seedtime
+        rule_aliases = {
+            "ratio": "seedratio",
+            "uploadsize": "seedsize",
+            "hr_time": "hr_seedtime",
+        }
+
+        def rule_value(key: str) -> Any:
+            value = remove_rule.get(key)
+            if value in ("#", SwitchState.OFF.value, None, ""):
+                value = remove_rule.get(rule_aliases.get(key, ""))
+            return value
+
         rule_checks = {
             "time": (BrushDeleteType.SEEDTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
             "hr_time": (BrushDeleteType.HRSEEDTIME, lambda value, rv: cls.check_range_rule(value, rv, 3600)),
@@ -314,7 +327,7 @@ class BrushRuleEngine:
         mode = remove_rule.get("mode", "and")
         if free_end_guard and params.get("is_completed", True):
             has_other_rules = any(
-                remove_rule.get(rule) not in ("#", SwitchState.OFF.value, None, "") for rule in rule_checks
+                rule_value(rule) not in ("#", SwitchState.OFF.value, None, "") for rule in rule_checks
             )
             if not has_other_rules or (attr_unknown and mode == "and"):
                 return False, BrushDeleteType.NOTDELETE
@@ -329,8 +342,8 @@ class BrushRuleEngine:
         )
 
         for rule, (delete_type, check_func) in rule_checks.items():
-            rule_value = remove_rule.get(rule)
-            if rule_value in ("#", SwitchState.OFF.value, None, ""):
+            rv = rule_value(rule)
+            if rv in ("#", SwitchState.OFF.value, None, ""):
                 continue
 
             # 详情属性未知（抓取失败）时，free/hr/hour 相关条件无法判定：
@@ -350,22 +363,22 @@ class BrushRuleEngine:
             value = values.get(rule)
             if value is None:
                 log.info(
-                    f"[Brush][删种规则] {rule}={rule_value}, 但种子无此数据 (None)，"
+                    f"[Brush][删种规则] {rule}={rv}, 但种子无此数据 (None)，"
                     f"模式={mode}，" + ("阻止删种" if mode == "and" else "跳过该规则")
                 )
                 if mode == "and":
                     return False, BrushDeleteType.NOTDELETE
                 continue
 
-            matched = check_func(value, rule_value)
+            matched = check_func(value, rv)
             if matched:
                 triggered_types.append(delete_type)
-                log.info(f"[Brush][删种规则] {rule} 触发: 当前={value}, 规则={rule_value}")
+                log.info(f"[Brush][删种规则] {rule} 触发: 当前={value}, 规则={rv}")
                 if mode == "or":
                     _t = triggered_types
                     return True, _t[0] if len(_t) == 1 else _t  # type: ignore[return-value]
             else:
-                log.info(f"[Brush][删种规则] {rule} 未触发: 当前={value}, 规则={rule_value}")
+                log.info(f"[Brush][删种规则] {rule} 未触发: 当前={value}, 规则={rv}")
                 if mode == "and":
                     return False, BrushDeleteType.NOTDELETE
 

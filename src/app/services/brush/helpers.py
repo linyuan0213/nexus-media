@@ -296,6 +296,16 @@ class BrushTaskHelper:
             store_torrent_attr(torrent_url, torrent_attr)
         return torrent_url, torrent_attr
 
+    def get_task_torrent_size(self, task_id: int | None, downloader_id) -> int:
+        """任务实际占用体积：按任务种子 ID 向下载器查询，避免 DB 历史/重复记录虚高。"""
+        records = self._repo.get_brushtask_torrents(task_id)
+        ids = [str(item.DOWNLOAD_ID) for item in records if getattr(item, "DOWNLOAD_ID", None)]
+        if ids:
+            torrents = self._downloader.get_torrents(downloader_id, ids)
+            if torrents is not None:
+                return sum(int(getattr(item, "size", 0) or 0) for item in torrents)
+        return int(self._repo.get_brushtask_totalsize(task_id))
+
     def is_allow_new_torrent(self, taskinfo, dlcount, torrent_size=None):
         if not taskinfo:
             return False
@@ -305,7 +315,7 @@ class BrushTaskHelper:
         task_name = taskinfo.get("name")
         downloader_id = taskinfo.get("downloader")
         downloader_name = taskinfo.get("downloader_name")
-        total_size = self._repo.get_brushtask_totalsize(taskinfo.get("id"))
+        total_size = self.get_task_torrent_size(taskinfo.get("id"), downloader_id)
 
         # 下载器不支持 PT（无法刷流）时禁止新增下载
         if not self._downloader_supports_brush(downloader_id):
