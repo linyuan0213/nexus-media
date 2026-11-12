@@ -657,6 +657,9 @@
           "message_unread": {
             "source": "data.user.mail_unread",
             "type": "int"
+          },
+          "join_at": {
+            "source": "data.user.created_at"
           }
         }
       }
