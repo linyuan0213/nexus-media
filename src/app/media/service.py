@@ -252,6 +252,12 @@ class MediaService:
                 self._lookup.client.set_language()
             return None
 
+        # 简介/父目录里的中文标题通常比“全52集 类型：动画”等后处理串干净。
+        if subtitle:
+            cn_candidate = str(subtitle).split("|", 1)[0].strip()
+            if cn_candidate and StringUtils.is_chinese(cn_candidate):
+                parsed.title_cn = cn_candidate
+
         # 领域规则：标题质量过滤，排除纯网站名/垃圾词
         search_name = parsed.title_en or parsed.title_cn or ""
         if not is_valid_media_title(search_name):
@@ -319,6 +325,18 @@ class MediaService:
             result = self._lookup.lookup(parsed, hint_type=mtype, strict=use_strict, language=language or "")
         else:
             result = self._lookup.lookup(parsed, strict=use_strict, language=language or "")
+
+        # 2.05 Fallback: 文件名是拼音时，从简介/父目录提取中文名后再查 TMDB。
+        if not result and not parsed.title_cn and subtitle:
+            cn_candidate = str(subtitle).split("|", 1)[0].strip()
+            if cn_candidate and StringUtils.is_chinese(cn_candidate):
+                retry = copy.copy(parsed)
+                retry.title_cn = cn_candidate
+                retry.title_en = ""
+                retry_result = self._lookup.lookup(retry, hint_type=mtype, strict=use_strict, language=language or "")
+                if retry_result:
+                    result = retry_result
+                    parsed = retry
 
         # 2.1 Fallback: 纯拼音/英文标题经元数据网关检索中文名，再重试 TMDB。
         if not result and self._metadata_gateway is not None and not parsed.title_cn:
