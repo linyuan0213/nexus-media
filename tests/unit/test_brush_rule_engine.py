@@ -768,3 +768,19 @@ class TestRemoveRuleAliasKeys:
         )
         assert need is True
         assert dtype == BrushDeleteType.UPLOADSIZE
+
+
+class TestBooleanOffRules:
+    def test_tracker_error_false_is_off(self):
+        need, _ = BrushRuleEngine.check_remove_rule(
+            {"mode": "or", "tracker_error": False}, {"tracker_error": "", "is_completed": True}
+        )
+        assert need is False
+
+    def test_freestatus_false_does_not_enable_guard(self):
+        need, dtype = BrushRuleEngine.check_remove_rule(
+            {"mode": "or", "freestatus": False, "time": "gt#1"},
+            {"seeding_time": 7200, "torrent_attr": {"free": False}, "is_completed": True},
+        )
+        assert need is True
+        assert dtype == BrushDeleteType.SEEDTIME

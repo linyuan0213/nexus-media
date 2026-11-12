@@ -44,6 +44,11 @@ class BrushRuleEngine:
     # 操作符映射，用于前端展示
     OP_DISPLAY = {"gt": ">", "lt": "<", "bw": ""}
 
+    @staticmethod
+    def _is_rule_off(rule_value: Any) -> bool:
+        """规则关闭值：兼容 UI 的 #/N、空值和历史布尔 false/0."""
+        return rule_value in ("#", SwitchState.OFF.value, None, "", 0) or rule_value is False
+
     # 依赖种子详情页属性的删种规则键；属性抓取失败时这些条件不做判定
     REMOVE_ATTR_RULE_KEYS = ("freestatus", "hr", "hr_time", "pubdate")
 
@@ -133,7 +138,7 @@ class BrushRuleEngine:
             for rule, check_func in rule_checks.items():
                 rule_value = rss_rule.get(rule)
                 log.debug(f"检查字段: {rule}, 规则值: {rule_value}")
-                if rule_value in ("#", SwitchState.OFF.value, None, ""):
+                if cls._is_rule_off(rule_value):
                     log.debug(f"规则 {rule} 被设置为忽略，跳过检查")
                     continue
                 if not check_func(rule_value):
@@ -298,7 +303,7 @@ class BrushRuleEngine:
 
         def rule_value(key: str) -> Any:
             value = remove_rule.get(key)
-            if value in ("#", SwitchState.OFF.value, None, ""):
+            if cls._is_rule_off(value):
                 value = remove_rule.get(rule_aliases.get(key, ""))
             return value
 
@@ -324,12 +329,10 @@ class BrushRuleEngine:
         # freestatus 是删种前置约束，不再作为独立删种条件：
         # - 未完成任务由 stopfree 负责暂停，不在这里按 Free 状态删除；
         # - 已完成任务必须 Free 到期且有其他删种条件，才继续评估。
-        free_end_guard = remove_rule.get("freestatus") not in ("#", SwitchState.OFF.value, None, "")
+        free_end_guard = not cls._is_rule_off(remove_rule.get("freestatus"))
         mode = remove_rule.get("mode", "and")
         if free_end_guard and params.get("is_completed", True):
-            has_other_rules = any(
-                rule_value(rule) not in ("#", SwitchState.OFF.value, None, "") for rule in rule_checks
-            )
+            has_other_rules = any(not cls._is_rule_off(rule_value(rule)) for rule in rule_checks)
             if not has_other_rules or (attr_unknown and mode == "and"):
                 return False, BrushDeleteType.NOTDELETE
             if not attr_unknown and params.get("torrent_attr", {}).get("free", False):
@@ -344,7 +347,7 @@ class BrushRuleEngine:
 
         for rule, (delete_type, check_func) in rule_checks.items():
             rv = rule_value(rule)
-            if rv in ("#", SwitchState.OFF.value, None, ""):
+            if cls._is_rule_off(rv):
                 continue
 
             # 详情属性未知（抓取失败）时，free/hr/hour 相关条件无法判定：
@@ -438,7 +441,7 @@ class BrushRuleEngine:
 
         for rule, (stop_type, check_func) in rule_checks.items():
             rule_value = stop_rule.get(rule)
-            if rule_value in ("#", SwitchState.OFF.value, None, ""):
+            if cls._is_rule_off(rule_value):
                 continue
             # Free 到期暂停只针对未完成下载；已完成种子继续评估其他停种规则。
             if rule == "stopfree" and params.get("is_completed", False):
@@ -508,7 +511,7 @@ class BrushRuleEngine:
 
             for rule, check_func in rule_checks.items():
                 rule_value = rss_rule.get(rule)
-                if rule_value in ("#", SwitchState.OFF.value, None, ""):
+                if cls._is_rule_off(rule_value):
                     continue
                 if not check_func(rule_value):
                     return cls._RULE_FAIL_REASONS.get(rule, rule)
