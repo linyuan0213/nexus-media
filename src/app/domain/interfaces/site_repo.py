@@ -47,6 +47,10 @@ class ISiteRepository(Protocol):
         """写入/删除站点 API profile 凭据"""
         ...
 
+    def update_with_credentials(self, entity, credentials: dict[str, dict] | None) -> None:
+        """站点与凭据在同一事务内更新"""
+        ...
+
 
 class ISiteStatisticsRepository(Protocol):
     """站点统计仓储接口"""

@@ -367,11 +367,10 @@ class SiteService:
                 explicit_fields.add("rss_uses")
             entity = self._merge_partial_update(existing, entity, explicit_fields)
             try:
-                self._site_entity_repo.update(entity)
                 if api_credentials is not None:
-                    for profile, credential in (api_credentials or {}).items():
-                        if isinstance(credential, dict):
-                            self._site_entity_repo.upsert_site_api_credentials(int(tid), str(profile), credential)
+                    self._site_entity_repo.update_with_credentials(entity, api_credentials)
+                else:
+                    self._site_entity_repo.update(entity)
                 if name and name != existing.name and existing.name:
                     self._site_user_info.update_site_name(name, existing.name)
                 self._sites.refresh()

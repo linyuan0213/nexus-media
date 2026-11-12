@@ -56,6 +56,25 @@ class SiteRepositoryAdapter(ISiteRepository):
             rss_uses=entity.rss_uses or "",
         )
 
+    def update_with_credentials(self, entity: SiteEntity, credentials: dict[str, dict] | None) -> None:
+        """站点与凭据在同一个数据库事务内更新."""
+        if not entity.id:
+            raise ValueError("Entity ID is required for update")
+        self._repo.update_config_site(
+            tid=entity.id,
+            name=entity.name,
+            site_pri=str(entity.pri),
+            rssurl=entity.rss_url or "",
+            signurl=entity.sign_url or "",
+            cookie=entity.cookie or "",
+            api_key=entity.api_key or "",
+            bearer_token=entity.bearer_token or "",
+            headers=entity.headers or "",
+            note=JsonUtils.dumps(entity.note) if entity.note else "",
+            rss_uses=entity.rss_uses or "",
+            credentials=credentials,
+        )
+
     def update(self, entity: SiteEntity) -> None:
         """更新站点"""
         if not entity.id:

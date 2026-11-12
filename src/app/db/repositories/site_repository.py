@@ -95,37 +95,41 @@ class SiteRepository(BaseRepository):
                 result.setdefault(int(row.SITE_ID), {})[str(row.PROFILE)] = data
         return result
 
-    def upsert_site_api_credentials(self, site_id: int, profile: str, data: dict | None) -> None:
-        """写入或删除指定站点 profile 凭据；data 为空时删除."""
+    @staticmethod
+    def _upsert_site_api_credentials_in_db(db, site_id: int, profile: str, data: dict | None) -> None:
         if not site_id or not profile:
             return
-        with self.session() as db:
-            row = (
-                db.query(CONFIGSITEAPICREDENTIAL)
-                .filter(
-                    CONFIGSITEAPICREDENTIAL.SITE_ID == int(site_id),
-                    CONFIGSITEAPICREDENTIAL.PROFILE == str(profile),
-                )
-                .first()
+        row = (
+            db.query(CONFIGSITEAPICREDENTIAL)
+            .filter(
+                CONFIGSITEAPICREDENTIAL.SITE_ID == int(site_id),
+                CONFIGSITEAPICREDENTIAL.PROFILE == str(profile),
             )
-            if not data:
-                if row:
-                    db.delete(row)
-                return
-            payload = encrypt_secret(JsonUtils.dumps(data))
-            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            .first()
+        )
+        if not data:
             if row:
-                row.DATA = payload
-                row.UPDATED_AT = now
-            else:
-                db.add(
-                    CONFIGSITEAPICREDENTIAL(
-                        SITE_ID=int(site_id),
-                        PROFILE=str(profile),
-                        DATA=payload,
-                        UPDATED_AT=now,
-                    )
+                db.delete(row)
+            return
+        payload = encrypt_secret(JsonUtils.dumps(data))
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if row:
+            row.DATA = payload
+            row.UPDATED_AT = now
+        else:
+            db.add(
+                CONFIGSITEAPICREDENTIAL(
+                    SITE_ID=int(site_id),
+                    PROFILE=str(profile),
+                    DATA=payload,
+                    UPDATED_AT=now,
                 )
+            )
+
+    def upsert_site_api_credentials(self, site_id: int, profile: str, data: dict | None) -> None:
+        """写入或删除指定站点 profile 凭据；data 为空时删除."""
+        with self.session() as db:
+            self._upsert_site_api_credentials_in_db(db, site_id, profile, data)
 
     def delete_config_site(self, tid: int | None) -> None:
         """
@@ -150,6 +154,7 @@ class SiteRepository(BaseRepository):
         headers: str | None = None,
         note: str | None = None,
         rss_uses: str | None = None,
+        credentials: dict[str, dict] | None = None,
     ) -> None:
         """
         更新站点信息
@@ -171,6 +176,10 @@ class SiteRepository(BaseRepository):
                     "INCLUDE": rss_uses,
                 }
             )
+            if credentials is not None:
+                for profile, credential in credentials.items():
+                    if isinstance(credential, dict):
+                        self._upsert_site_api_credentials_in_db(db, int(tid), str(profile), credential)
 
     def update_config_site_note(self, tid: int | None, note: str) -> None:
         """
