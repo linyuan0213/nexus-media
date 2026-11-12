@@ -640,6 +640,9 @@ async def search_progress(session_id: str):
         loop = asyncio.get_running_loop()
         deadline = loop.time() + 600
         missing_since: float | None = None
+        last_progress_at = loop.time()
+        # 进度长时间不变化（线程丢失/旧会话）时主动收尾，避免前端永久停在 0%。
+        stale_after = 120.0
         while loop.time() < deadline:
             detail = tracker.get_process(f"search:{session_id}")
             if not detail:
@@ -662,9 +665,15 @@ async def search_progress(session_id: str):
                 detail.get("text", ""),
                 json.dumps(detail.get("sites"), ensure_ascii=False, sort_keys=True),
             )
+            now = loop.time()
             if signature != last_sig:
                 last_sig = signature
+                last_progress_at = now
                 yield f"data: {json.dumps(detail, ensure_ascii=False)}\n\n"
+            elif now - last_progress_at > stale_after:
+                payload = {"value": 100, "text": "搜索进度长时间未更新，已结束", "enable": False}
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                break
             # 已结束（enable=False 且 value>=100）→ 关闭流
             if not detail.get("enable") and val >= 100:
                 break
