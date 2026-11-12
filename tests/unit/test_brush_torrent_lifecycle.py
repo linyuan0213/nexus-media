@@ -289,3 +289,11 @@ def test_remove_rule_pubdate_alone_triggers_attr_fetch():
 
     assert BrushTorrentLifecycle._remove_rule_needs_torrent_attr({"pubdate": "0-24"}) is True
     assert BrushTorrentLifecycle._remove_rule_needs_torrent_attr({"pubdate": "#"}) is False
+
+
+def test_stopped_task_still_runs_remove_rules():
+    lc = _lifecycle([_pending_torrent(9 * HOUR)])
+    task = _task({"pending_time": "gt#3", "mode": "or"})
+    task["state"] = BrushTaskState.STOPPED.value
+    lc.remove_task_torrents(1, task)
+    assert lc._downloader.deleted == ["A"]

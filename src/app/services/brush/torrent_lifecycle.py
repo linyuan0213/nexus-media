@@ -37,7 +37,12 @@ class BrushTorrentLifecycle:
         return any(remove_rule.get(key) not in ("#", "N", None, "") for key in BrushRuleEngine.REMOVE_ATTR_RULE_KEYS)
 
     def remove_task_torrents(self, taskid: int | None, taskinfo: dict) -> None:
-        if taskinfo.get("state") != BrushTaskState.RUNNING.value:
+        # 停止任务仍允许清理已从下载器消失的种子并执行删种规则；
+        # 只有禁用状态才完全不处理，避免“停止新增”后旧记录和体积永久不更新。
+        if taskinfo.get("state") not in {
+            BrushTaskState.RUNNING.value,
+            BrushTaskState.STOPPED.value,
+        }:
             return
         try:
             total_uploaded = 0
