@@ -47,3 +47,13 @@ def test_code_identity_only_uses_number_keyword():
     assert terms == {"SONE968"}
     assert RssFeedStrategy._title_matches_keywords("SONE-968-C 1080p", terms) is True
     assert RssFeedStrategy._title_matches_keywords("宽泛标题 1080p", terms) is False
+
+
+def test_english_title_matches_chinese_description_alias():
+    terms = RssFeedStrategy._subscription_keywords(
+        {1: {"name": "FX战士久留美", "keyword": "FX战士久留美", "aliases": ["FX Fighter KURUMICHAN"]}}
+    )
+    title = "FX Senshi Kurumi chan S01E07 2026 1080p LINETV WEB-DL H264 AAC-ADWeb"
+    description = "FX战士久留美 FX戰士久留美 FX戦士くるみちゃん 第01季 第07集"
+    assert RssFeedStrategy._title_matches_keywords(title, terms) is False
+    assert RssFeedStrategy._title_matches_keywords(f"{title} {description}", terms) is True

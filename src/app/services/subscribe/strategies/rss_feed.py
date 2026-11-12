@@ -330,8 +330,9 @@ class RssFeedStrategy:
                 continue
             seen_enclosures.add(enclosure or "")
 
-            # 先用订阅关键词做廉价预筛；没有命中任何订阅的资源不调用元数据 API。
-            if not self._title_matches_keywords(title, subscription_keywords):
+            # 先用订阅关键词做廉价预筛；标题和简介都参与，避免英文标题/中文简介的资源被漏掉。
+            article_text = f"{title} {article.get('description') or ''}"
+            if not self._title_matches_keywords(article_text, subscription_keywords):
                 keyword_filtered += 1
                 log.debug(f"[RssFeedStrategy] 关键词预筛跳过：{title}")
                 continue
