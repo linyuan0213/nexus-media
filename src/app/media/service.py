@@ -325,6 +325,7 @@ class MediaService:
             try:
                 candidates = self._metadata_gateway.search(
                     query=search_name,
+                    provider="douban",
                     media_type=mtype or parsed.type,
                     limit=5,
                 )
