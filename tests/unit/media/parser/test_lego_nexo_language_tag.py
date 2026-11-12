@@ -11,3 +11,13 @@ def test_multi_audio_tag_is_not_part_of_title():
     info = meta_info(title="Gu Gong Li De Da Guai Shou 2021 S01 2160p WEB-DL H.265 AAC 2Audios-CSWEB")
     assert info.get_name() == "Gu Gong Li De Da Guai Shou"
     assert info.get_season_episode_string() == "S01"
+
+
+def test_hdrvivid_is_metadata_not_title():
+    info = meta_info(
+        title="Yu Zhou Hu Wei Dui Bai Bian Liu Xing 2026 2160p WEB-DL HDRVivid H.265 FLAC 2.0 5Audios-CSWEB"
+    )
+    assert info.get_name() == "Yu Zhou Hu Wei Dui Bai Bian Liu Xing"
+    assert info.year == "2026"
+    assert info.type is not None
+    assert info.type.value == "movie"
