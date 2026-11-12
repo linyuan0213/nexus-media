@@ -36,6 +36,7 @@ def mock_repo():
 def mock_engine():
     engine = MagicMock()
     engine.get_by_url.return_value = None
+    engine.get_by_name.return_value = None
     return engine
 
 
@@ -94,3 +95,11 @@ class TestSiteCache:
         assert isinstance(site, dict)
         assert site["note"]["tag"] is True
         assert site["name"] == "站点A"
+
+    def test_register_site_by_definition_id(self, mock_repo, mock_engine):
+        limiter = MagicMock(spec=SiteRateLimiterService)
+        mock_engine.get_by_name.return_value = type("Def", (), {"id": "mteam"})()
+        note = {"rate_limit": "5/m", "rate_burst": 2}
+        mock_repo.list_all.return_value = [_Entity(27, "M-Team", note=note)]
+        SiteCache(repo=mock_repo, site_engine=mock_engine, rate_limiter=limiter)
+        limiter.register_site.assert_any_call("mteam", note)

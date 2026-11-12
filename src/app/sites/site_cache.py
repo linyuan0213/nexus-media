@@ -221,8 +221,12 @@ class SiteCache:
             "note": note,
         }
 
-        # 注册到限流服务
+        # 注册到限流服务：API 搜索拿到的是站点定义 id（如 mteam），
+        # 与 DB 数字 id 不同，必须同时注册别名，否则站点限流不会生效。
         self._rate_limiter.register_site(str(entity.id), note)
+        definition = self._site_engine.get_by_name(entity.name)
+        if definition is not None:
+            self._rate_limiter.register_site(str(definition.id), note)
 
         return site_info
 

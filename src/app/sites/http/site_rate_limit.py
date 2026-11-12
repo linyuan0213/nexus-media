@@ -11,4 +11,8 @@ def get_rate_limit_kwargs(engine: Any, site: Any) -> dict:
     rate_config = site_limiter.get_rate(str(site.id))
     if not rate_config:
         return {}
-    return {"rate_limit_key": f"site:{site.id}", "rate_limit_rate": rate_config[0]}
+    return {
+        "rate_limit_key": f"site:{site.id}",
+        "rate_limit_rate": rate_config[0],
+        "rate_limit_burst": rate_config[1],
+    }
