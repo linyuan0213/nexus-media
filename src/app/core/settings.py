@@ -186,7 +186,7 @@ class SubscribeConfig(BaseModel):
     """订阅监控调度配置（ADR-007 统一配置）"""
 
     queue_interval: int = 300
-    rss_interval: int = 1800
+    rss_interval: int = 600
     search_interval: int = 6
     batch_limit: int = 20
     batch_workers: int = 3
