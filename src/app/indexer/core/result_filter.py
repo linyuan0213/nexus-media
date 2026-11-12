@@ -228,6 +228,9 @@ class ResultFilter:
             _norm(match_media.en_name),
             _norm(match_media.original_title),
         }
+        # provider 别名（如猪猪的 "Lets Go"）也必须参与召回，不能只比 title/en_name。
+        for alias in getattr(match_media, "aliases", None) or []:
+            match_names.add(_norm(alias))
         match_names.discard("")
 
         meta_names = {

@@ -110,6 +110,21 @@ class TestLocalFilterQnmRecallGate:
         assert direct_results == []
         assert stats.index_sucess == 0
 
+    def test_english_alias_recalls_title_without_cn_name(self):
+        """match_media.aliases 中的英文别名应与 title/en_name 一样参与 qnm。"""
+        match = MediaInfo(
+            cn_name="走马上任",
+            title="走马上任",
+            en_name="Zou.ma.shang.ren",
+            original_title="走马上任",
+            year="2026",
+            type=ProviderMediaType.SERIES,
+            tmdb_id=275297,
+            aliases=["Lets Go", "Let's Go", "走馬上任"],
+        )
+        mi = parse_title("Lets Go S01E24 2160p TX WEB-DL AAC2.0 HDR HFR H.265-MWeb")
+        assert ResultFilter.quick_name_match(mi, match) is True
+
     def test_description_alias_recovers_english_episode_title(self):
         """英文单集标题 + 中文简介应通过 qnm 召回，不能因缺中文标题被拒绝。"""
         rf = _make_filter()
