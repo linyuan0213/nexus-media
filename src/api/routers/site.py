@@ -118,6 +118,10 @@ class SiteUserStatisticsRequest(BaseModel):
     site_hash: str | None = None
 
 
+class SiteApiCredentialsRequest(BaseModel):
+    id: str
+
+
 class SiteResourcesRequest(BaseModel):
     id: str | None = None
     page: int | None = None
@@ -549,6 +553,18 @@ def _provider_resources(index_id: str, keyword: str, page: int, page_size: int) 
         "has_more": result.has_more,
         "total": result.total,
     }
+
+
+@router.post("/sites/api-credentials", response_model=CommonResponse, summary="读取站点 API 凭据")
+def get_site_api_credentials(
+    req: SiteApiCredentialsRequest,
+    user: str = Depends(require_permission("site:manage")),
+    svc: SiteService = Depends(get_site_service),
+):
+    try:
+        return success(data=svc.get_site_api_credentials(int(req.id)))
+    except (TypeError, ValueError):
+        return fail(msg="无效的站点 id")
 
 
 @router.post("/sites/resources", response_model=CommonResponse, summary="获取站点资源列表")

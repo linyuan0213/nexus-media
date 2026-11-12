@@ -147,6 +147,32 @@ class SiteService:
             site_hr = bool(attr.get("HR"))
         return SiteDetailDTO(site=site_info, site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
 
+    def get_site_api_credentials(self, tid: int) -> dict:
+        """编辑页按需读取站点凭据；列表接口仍保持脱敏."""
+        site = self._sites.get_sites(siteid=int(tid)) or {}
+        if isinstance(site, list):
+            site = site[0] if site else {}
+        credentials = dict(site.get("api_credentials") or {})
+        spa = credentials.get("spa")
+        if isinstance(spa, dict):
+            spa = dict(spa)
+            storage = spa.get("local_storage") or {}
+            if isinstance(storage, dict):
+                spa.setdefault(
+                    "bearer_token",
+                    storage.get("pig_token")
+                    or storage.get("auth")
+                    or storage.get("token")
+                    or storage.get("access_token")
+                    or "",
+                )
+                spa.setdefault(
+                    "visitor_id",
+                    storage.get("visitorId") or storage.get("visitor_id") or storage.get("pig_visitorid") or "",
+                )
+            credentials["spa"] = spa
+        return credentials
+
     @staticmethod
     def _sanitize_site_credentials(site: dict) -> dict:
         """API 列表不返回明文凭据，只返回 profile/来源元信息."""
