@@ -298,13 +298,21 @@ class BrushTaskHelper:
 
     def get_task_torrent_size(self, task_id: int | None, downloader_id) -> int:
         """任务实际占用体积：按任务种子 ID 向下载器查询，避免 DB 历史/重复记录虚高。"""
-        records = self._repo.get_brushtask_torrents(task_id)
-        ids = [str(item.DOWNLOAD_ID) for item in records if getattr(item, "DOWNLOAD_ID", None)]
-        if ids:
+        fallback = int(self._repo.get_brushtask_totalsize(task_id))
+        if not downloader_id:
+            return fallback
+        try:
+            records = self._repo.get_brushtask_torrents(task_id)
+            ids = [str(item.DOWNLOAD_ID) for item in records if getattr(item, "DOWNLOAD_ID", None)]
+            if not ids:
+                return 0
             torrents = self._downloader.get_torrents(downloader_id, ids)
-            if torrents is not None:
-                return sum(int(getattr(item, "size", 0) or 0) for item in torrents)
-        return int(self._repo.get_brushtask_totalsize(task_id))
+            if torrents is None:
+                return fallback
+            return sum(int(getattr(item, "size", 0) or 0) for item in torrents)
+        except Exception as exc:
+            log.warn(f"[Brush]读取任务 {task_id} 实际种子体积失败，回退数据库统计: {exc}")
+            return fallback
 
     def is_allow_new_torrent(self, taskinfo, dlcount, torrent_size=None):
         if not taskinfo:

@@ -293,6 +293,7 @@ class BrushRuleEngine:
             "ratio": "seedratio",
             "uploadsize": "seedsize",
             "hr_time": "hr_seedtime",
+            "upspeed": "cur_upspeed",
         }
 
         def rule_value(key: str) -> Any:
