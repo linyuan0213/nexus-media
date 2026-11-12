@@ -158,6 +158,7 @@ class SiteService:
             if isinstance(spa, dict):
                 result["spa_source"] = spa.get("source") or ""
                 result["spa_updated_at"] = int(spa.get("updated_at") or 0)
+                result["spa_configured"] = bool(spa.get("bearer_token") or spa.get("token") or spa.get("local_storage"))
         result["has_api_credentials"] = bool(result.get("api_profiles"))
         return result
 
