@@ -205,5 +205,8 @@ class SiteSyncService:
         latency = sum(latencies) / len(latencies) if latencies else float("inf")
         return rate, latency
 
+    def get_credentials(self, site_id: int) -> dict:
+        return dict(self._site_entity_repo.get_site_api_credentials_map().get(int(site_id)) or {})
+
     def upsert_credentials(self, site_id: int, profile: str, data: dict | None) -> None:
         self._site_entity_repo.upsert_site_api_credentials(int(site_id), str(profile), data)

@@ -576,16 +576,22 @@ class CookieCloudPlugin:
                 site_id = site.get("id")
                 if not site_id:
                     continue
-                self._site_sync.upsert_credentials(
-                    int(site_id),
-                    "spa",
-                    {
-                        "source": "cookiecloud",
-                        "updated_at": int(time.time()),
-                        "domain": raw_site,
-                        "local_storage": storage,
-                    },
-                )
+                existing = (self._site_sync.get_credentials(int(site_id)) or {}).get("spa") or {}
+                merged_storage = {**(existing.get("local_storage") or {}), **storage}
+                payload = {
+                    **existing,
+                    "source": "cookiecloud",
+                    "updated_at": int(time.time()),
+                    "domain": raw_site,
+                    "local_storage": merged_storage,
+                }
+                token = merged_storage.get("pig_token") or existing.get("bearer_token")
+                visitor = merged_storage.get("visitorId") or existing.get("visitor_id")
+                if token:
+                    payload["bearer_token"] = token
+                if visitor:
+                    payload["visitor_id"] = visitor
+                self._site_sync.upsert_credentials(int(site_id), "spa", payload)
         except Exception as exc:  # noqa: BLE001 - 同步失败不应阻塞 Cookie 更新
             self.ctx.warn(f"[CookieCloud]写入 SPA 凭据失败 {domain_url}: {exc}")
 

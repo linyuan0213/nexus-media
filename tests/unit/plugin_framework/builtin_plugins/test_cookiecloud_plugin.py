@@ -13,6 +13,7 @@ def _make_plugin(site_def=None, test_result=True, probe=(1.0, 10.0)):
     sync.resolve_definition.return_value = site_def
     sync.test_connection.return_value = test_result
     sync.probe_domain.return_value = probe
+    sync.get_credentials.return_value = {}
     plugin = CookieCloudPlugin.__new__(CookieCloudPlugin)
     plugin.ctx = ctx
     plugin._site_sync = sync
@@ -101,3 +102,20 @@ class TestSpaLocalStoragePersistence:
         assert args[1] == "spa"
         assert args[2]["source"] == "cookiecloud"
         assert args[2]["local_storage"]["pig_token"] == "jwt"
+
+
+def test_spa_sync_preserves_existing_visitor_when_storage_lacks_it():
+    plugin = _make_plugin()
+    plugin._site_sync.find_sites_by_domain.return_value = [{"id": 34}]
+    plugin._site_sync.get_credentials.return_value = {
+        "spa": {
+            "bearer_token": "manual-token",
+            "visitor_id": "manual-visitor",
+            "local_storage": {"pig_token": "manual-token"},
+        }
+    }
+    plugin._persist_spa_local_storage("piggo.me", "piggo.me", {"pig_token": "new-token"})
+    args, _ = plugin._site_sync.upsert_credentials.call_args
+    assert args[2]["bearer_token"] == "new-token"
+    assert args[2]["visitor_id"] == "manual-visitor"
+    assert args[2]["local_storage"]["pig_token"] == "new-token"
