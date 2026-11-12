@@ -135,7 +135,13 @@ class ConfigApiUserInfo:
             body = dict(seeding_cfg.get("body") or {})
             extra_vars = {"userid": str(self.userid) if self.userid else ""}
             body = self._render_body(body, page=page, **extra_vars)
-            resp = self._api_call(seeding_cfg, body)
+            raw_params = seeding_cfg.get("params") or {}
+            params = (
+                {k: v.format(page=page, **extra_vars) if isinstance(v, str) else v for k, v in raw_params.items()}
+                if raw_params
+                else None
+            )
+            resp = self._api_call(seeding_cfg, body, params=params)
             if resp is None:
                 log.warn(f"[ConfigApiUserInfo]{self.site_name} seeding API 失败")
                 break
@@ -210,7 +216,7 @@ class ConfigApiUserInfo:
         if read_cfg:
             self._api_call(read_cfg)
 
-    def _api_call(self, endpoint_cfg, body=None):
+    def _api_call(self, endpoint_cfg, body=None, params=None):
         method = endpoint_cfg.get("method", "GET").upper()
         base = self._def.api.base_url if self._def.api else ""
         path = endpoint_cfg.get("path", "").lstrip("/")
@@ -234,6 +240,14 @@ class ConfigApiUserInfo:
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, self._def)
         client = HttpClient(config=HttpClientConfig(proxy_url=proxy_url), rate_limiter=rate_limiter_engine)
+        request_params = params
+        if request_params is None:
+            raw_params = dict(endpoint_cfg.get("params") or {})
+            request_params = (
+                {k: v.format(page="1") if isinstance(v, str) else v for k, v in raw_params.items()}
+                if raw_params
+                else None
+            )
         try:
             if method == "POST":
                 data = JsonUtils.dumps(body or {}, separators=(",", ":"))
@@ -242,14 +256,10 @@ class ConfigApiUserInfo:
                     headers.pop("Content-Type", None)
                 headers.setdefault("Referer", base)
                 headers.setdefault("Origin", base)
-                res = client.post(url=url, data=data, headers=headers, auth=auth, **rl_kwargs)
+                res = client.post(url=url, params=request_params, data=data, headers=headers, auth=auth, **rl_kwargs)
             else:
-                params = dict(endpoint_cfg.get("params") or {})
-                params = (
-                    {k: v.format(page="1") if isinstance(v, str) else v for k, v in params.items()} if params else None
-                )
                 headers.pop("Content-Type", None)
-                res = client.get(url=url, params=params, headers=headers, auth=auth, **rl_kwargs)
+                res = client.get(url=url, params=request_params, headers=headers, auth=auth, **rl_kwargs)
             return res.json()
         except Exception:
             log.warn(f"[ConfigApiUserInfo]{self.site_name} API call fail")

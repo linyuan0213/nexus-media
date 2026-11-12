@@ -663,6 +663,26 @@
           }
         }
       }
+    },
+    "seeding": {
+      "method": "POST",
+      "path": "/v1/api/me/torrents",
+      "params": {
+        "kind": "seeding",
+        "page": "{page}",
+        "per_page": 100
+      },
+      "body": {},
+      "pagination": {
+        "type": "page_param",
+        "page_key": "page",
+        "total_pages_key": "data.pages"
+      },
+      "response": {
+        "items_key": "data.items",
+        "seeders_field": "seeders",
+        "size_field": "size"
+      }
     }
   },
   "favicon": "https://piggo.me/favicon.ico"
