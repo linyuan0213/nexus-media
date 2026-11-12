@@ -33,6 +33,8 @@ _RE_AUDIO_BITRATE = re.compile(r"\b\d{2,4}(\.\d+)?\s*(kHz|kbps|bit|bits)\b", re.
 _RE_AUDIO_FORMAT = re.compile(r"\b(FLAC|ALAC|APE|WAV|AIFF|DSD|DTS|MP3|AAC|OGG|WMA|M4A|Opus)\b", re.IGNORECASE)
 # 场景发布里的意大利语标记 iT；大小写敏感，避免误伤标题 "It"。
 _RE_ITALIAN_TAG = re.compile(r"(?<![A-Za-z])iT(?![A-Za-z])")
+# 多音轨标记：2Audio / 2Audios / 3Audio
+_RE_MULTI_AUDIO_TAG = re.compile(r"(?i)(?<![A-Za-z])\d+\s*Audios?(?![A-Za-z])")
 _RE_FPS_HZ = re.compile(r"\d+\s*(FPS|HZ)\b", re.IGNORECASE)
 _RE_DATE = re.compile(r"\d{4}[\s._-]\d{1,2}[\s._-]\d{1,2}")
 _RE_YEAR_RANGE = re.compile(r"([\s.]+)(\d{4})-(\d{4})")
@@ -61,6 +63,7 @@ def prepare_title(title: str) -> str:
     title = _RE_SITE_TAG.sub("", title).strip()
     title = _RE_FILESIZE.sub("", title)
     title = _RE_ITALIAN_TAG.sub(" ", title)
+    title = _RE_MULTI_AUDIO_TAG.sub(" ", title)
     title = _RE_TV_NUMBER.sub(r"[\1", title)
     title = _RE_4K.sub("2160p", title)
     title = _RE_AUDIO_BITRATE.sub("", title)

@@ -164,6 +164,7 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
 
     metadata_service = MetadataService(identity_repo=MediaIdentityRepository(), media_service=media_service)
     metadata_gateway = MetadataGateway(metadata_service, media_service=media_service)
+    media_service.set_metadata_gateway(metadata_gateway)
     metadata_admin_service = MetadataAdminService(metadata_service)
     discovery_service = DiscoveryService(
         media_service=media_service,

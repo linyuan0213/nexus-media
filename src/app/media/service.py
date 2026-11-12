@@ -64,6 +64,7 @@ class MediaService:
         self._llm_parser = llm_parser
         self._parser = self._build_parser()
         self._lookup = tmdb_lookup
+        self._metadata_gateway = None
         self._episode_mapper = EpisodeMapper(self._lookup)
         self._episode_remapper = EpisodeRemapper(episode_mapper=self._episode_mapper)
         self._init_config()
@@ -319,6 +320,30 @@ class MediaService:
         else:
             result = self._lookup.lookup(parsed, strict=use_strict, language=language or "")
 
+        # 2.1 Fallback: 纯拼音/英文标题经元数据网关检索中文名，再重试 TMDB。
+        if not result and self._metadata_gateway is not None and not parsed.title_cn:
+            try:
+                candidates = self._metadata_gateway.search(
+                    query=search_name,
+                    media_type=mtype or parsed.type,
+                    limit=5,
+                )
+                for candidate in candidates:
+                    cn_title = str(candidate.get("title") or candidate.get("name") or "").strip()
+                    if not cn_title or not StringUtils.is_chinese(cn_title):
+                        continue
+                    retry = copy.copy(parsed)
+                    retry.title_cn = cn_title
+                    retry_result = self._lookup.lookup(
+                        retry, hint_type=mtype, strict=use_strict, language=language or ""
+                    )
+                    if retry_result:
+                        result = retry_result
+                        parsed = retry
+                        break
+            except Exception as e:
+                log.debug(f"[MediaService]拼音标题补全失败: {e}")
+
         # 3. Fallback: WEB 抓取
         if not result and self._search_tmdbweb:
             web_info = self._lookup.search.search_web(search_name, parsed.type or ProviderMediaType.UNKNOWN)
@@ -465,6 +490,10 @@ class MediaService:
             self._lookup.client.set_language()
 
         return info
+
+    def set_metadata_gateway(self, gateway) -> None:
+        """晚绑定元数据网关，用于拼音标题的跨 provider 补全."""
+        self._metadata_gateway = gateway
 
     def get_media_info(
         self,
