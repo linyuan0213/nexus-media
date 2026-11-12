@@ -1,3 +1,19 @@
+## 未发布 (2026-11-12)
+
+### 新增
+
+- 站点：API 配置支持多 profile（官方 API / SPA），按搜索、下载、刷流属性和用户信息能力选择。
+- 站点：新增加密的 `CONFIG_SITE_API_CREDENTIAL`，支持 API Key 与 SPA 凭据分离；旧 `NOTE.api_credentials` 自动迁移。
+- 站点：CookieCloud 同步 local_storage/Cookie 到 SPA 凭据，支持 Piggo SPA 搜索和 M-Team 签到复用，增加新鲜度回退。
+- 站点：SPA 请求支持 HTTP/2、sign/HMAC、visitorId；下载、详情属性和搜索按 profile 回退。
+- 界面：站点编辑页增加接口模式和 SPA 凭据来源/同步时间展示。
+
+### 修复
+
+- 站点：Rousi 移除已废弃的 `x-sign-token` 请求头，恢复 Cookie 签到路径。
+- 站点：资源列表补齐 SPA 缺失的 `page_url`，修复下载提示无链接。
+- 站点：SPA 下载和详情属性补齐认证、请求头及标签解析。
+
 ## v5.10.0 (2026-11-11)
 
 ### 新增

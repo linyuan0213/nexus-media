@@ -1,3 +1,5 @@
+> 2026-11-12 更新：Rousi 已不再使用 `headers.x-sign-token`，当前签到使用 Cookie；本文下方旧示例仅保留历史记录。
+
 # ADR-018: 自动签到插件站点驱动重构
 
 ## Status

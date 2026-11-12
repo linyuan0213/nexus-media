@@ -147,6 +147,20 @@ class SiteService:
             site_hr = bool(attr.get("HR"))
         return SiteDetailDTO(site=site_info, site_free=site_free, site_2xfree=site_2xfree, site_hr=site_hr)
 
+    @staticmethod
+    def _sanitize_site_credentials(site: dict) -> dict:
+        """API 列表不返回明文凭据，只返回 profile/来源元信息."""
+        result = dict(site)
+        credentials = result.pop("api_credentials", None)
+        if isinstance(credentials, dict):
+            result["api_profiles"] = list(credentials.keys())
+            spa = credentials.get("spa") or {}
+            if isinstance(spa, dict):
+                result["spa_source"] = spa.get("source") or ""
+                result["spa_updated_at"] = int(spa.get("updated_at") or 0)
+        result["has_api_credentials"] = bool(result.get("api_profiles"))
+        return result
+
     def get_sites(
         self,
         rss: bool = False,
@@ -157,7 +171,10 @@ class SiteService:
     ) -> Any:
         # RSS/刷流/统计场景只返回 builtin 站点
         if rss or brush or statistic:
-            return self._sites.get_sites(rss=rss, brush=brush, statistic=statistic, public=True)
+            return [
+                self._sanitize_site_credentials(site)
+                for site in self._sites.get_sites(rss=rss, brush=brush, statistic=statistic, public=True)
+            ]
 
         builtin = self._sites.get_sites(public=True)
         engine_by_name = {s.name: s.public for s in self._site_engine.all_sites()}
@@ -190,7 +207,7 @@ class SiteService:
                             "enabled": bool(row.enabled),
                             "third_party": True,
                         }
-            return list(merged.values())
+            return [self._sanitize_site_credentials(site) for site in merged.values()]
 
         merged = {s["name"]: {**s, "source": "builtin", "third_party": False} for s in builtin}
         for name, site in merged.items():
