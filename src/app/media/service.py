@@ -323,24 +323,27 @@ class MediaService:
         # 2.1 Fallback: 纯拼音/英文标题经元数据网关检索中文名，再重试 TMDB。
         if not result and self._metadata_gateway is not None and not parsed.title_cn:
             try:
-                candidates = self._metadata_gateway.search(
-                    query=search_name,
-                    provider="douban",
-                    media_type=mtype or parsed.type,
-                    limit=5,
-                )
-                for candidate in candidates:
-                    cn_title = str(candidate.get("title") or candidate.get("name") or "").strip()
-                    if not cn_title or not StringUtils.is_chinese(cn_title):
-                        continue
-                    retry = copy.copy(parsed)
-                    retry.title_cn = cn_title
-                    retry_result = self._lookup.lookup(
-                        retry, hint_type=mtype, strict=use_strict, language=language or ""
+                for provider in ("tmdb", "douban"):
+                    candidates = self._metadata_gateway.search(
+                        query=search_name,
+                        provider=provider,
+                        media_type=mtype or parsed.type,
+                        limit=5,
                     )
-                    if retry_result:
-                        result = retry_result
-                        parsed = retry
+                    for candidate in candidates:
+                        cn_title = str(candidate.get("title") or candidate.get("name") or "").strip()
+                        if not cn_title or not StringUtils.is_chinese(cn_title):
+                            continue
+                        retry = copy.copy(parsed)
+                        retry.title_cn = cn_title
+                        retry_result = self._lookup.lookup(
+                            retry, hint_type=mtype, strict=use_strict, language=language or ""
+                        )
+                        if retry_result:
+                            result = retry_result
+                            parsed = retry
+                            break
+                    if result:
                         break
             except Exception as e:
                 log.debug(f"[MediaService]拼音标题补全失败: {e}")
