@@ -300,6 +300,8 @@ class ConfigApiUserInfo:
                 return default
         if ftype == "str":
             return str(val)
+        if ftype == "size":
+            return StringUtils.num_filesize(val)
         transform = field_cfg.get("transform")
         if transform == "map_value":
             return (field_cfg.get("map") or {}).get(str(val), str(val))

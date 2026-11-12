@@ -633,6 +633,30 @@
           },
           "user_level": {
             "source": "data.user.class.name"
+          },
+          "upload": {
+            "source": "data.user.stats.uploaded",
+            "type": "size"
+          },
+          "download": {
+            "source": "data.user.stats.downloaded",
+            "type": "size"
+          },
+          "bonus": {
+            "source": "data.user.stats.bonus",
+            "type": "float"
+          },
+          "seeding": {
+            "source": "data.user.stats.seeding",
+            "type": "int"
+          },
+          "leeching": {
+            "source": "data.user.stats.leeching",
+            "type": "int"
+          },
+          "message_unread": {
+            "source": "data.user.mail_unread",
+            "type": "int"
           }
         }
       }

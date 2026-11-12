@@ -39,3 +39,15 @@ class TestConfigApiUserInfo:
         }
         result = ConfigApiUserInfo._resolve_json_path(data, field_cfg)
         assert result == 1714478855
+
+    def test_resolve_json_path_size(self):
+        data = {"data": {"user": {"stats": {"uploaded": "1.5 GB"}}}}
+        field_cfg = {"source": "data.user.stats.uploaded", "type": "size"}
+        result = ConfigApiUserInfo._resolve_json_path(data, field_cfg)
+        assert result == int(1.5 * 1024**3)
+
+    def test_resolve_json_path_size_zero(self):
+        data = {"data": {"user": {"stats": {"downloaded": "0 B"}}}}
+        field_cfg = {"source": "data.user.stats.downloaded", "type": "size"}
+        result = ConfigApiUserInfo._resolve_json_path(data, field_cfg)
+        assert result == 0
