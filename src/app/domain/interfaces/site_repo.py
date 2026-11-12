@@ -39,6 +39,14 @@ class ISiteRepository(Protocol):
         """更新站点Cookie和UA"""
         ...
 
+    def get_site_api_credentials_map(self) -> dict[int, dict[str, dict]]:
+        """读取全部站点 API profile 凭据"""
+        ...
+
+    def upsert_site_api_credentials(self, site_id: int, profile: str, data: dict | None) -> None:
+        """写入/删除站点 API profile 凭据"""
+        ...
+
 
 class ISiteStatisticsRepository(Protocol):
     """站点统计仓储接口"""

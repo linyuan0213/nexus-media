@@ -1,0 +1,641 @@
+{
+  "id": "piggo",
+  "name": "猪猪",
+  "domain": "piggo.me",
+  "domain_aliases": [
+    "www.piggo.me",
+    "api.piggo.me"
+  ],
+  "encoding": "UTF-8",
+  "public": false,
+  "tid_pattern": "/detail/(\\d+)",
+  "detail_page_url": "/detail/{tid}",
+  "api": {
+    "base_url": "https://api.piggo.me",
+    "auth": {
+      "type": "bearer",
+      "header_name": "Authorization",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36"
+    },
+    "endpoints": {
+      "search": {
+        "method": "POST",
+        "path": "/v1/api/torrents",
+        "params": {
+          "q": "{keyword}",
+          "page": "{page_1}",
+          "per_page": 100
+        },
+        "body": {},
+        "response": {
+          "items_key": "data.items",
+          "total_key": "data.total",
+          "item_mapping": {
+            "id": {
+              "source": "id"
+            },
+            "title": {
+              "source": "name"
+            },
+            "description": {
+              "source": "small_descr"
+            },
+            "poster": {
+              "source": "cover"
+            },
+            "size": {
+              "source": "size"
+            },
+            "seeders": {
+              "source": "seeders"
+            },
+            "leechers": {
+              "source": "leechers"
+            },
+            "grabs": {
+              "source": "times_completed"
+            },
+            "pubdate": {
+              "source": "added_at"
+            },
+            "page_url": {
+              "source": "page_url"
+            },
+            "details": {
+              "source": "page_url"
+            },
+            "downloadvolumefactor": {
+              "type": "mapping",
+              "source": "promotion.down",
+              "map": {
+                "0": 0.0,
+                "0.5": 0.5,
+                "1": 1.0
+              }
+            },
+            "uploadvolumefactor": {
+              "type": "mapping",
+              "source": "promotion.up",
+              "map": {
+                "0": 0.0,
+                "1": 1.0,
+                "2": 2.0
+              }
+            },
+            "labels": {
+              "type": "labels",
+              "sources": [
+                {
+                  "source": "categories",
+                  "key": "name"
+                },
+                {
+                  "source": "taxonomies",
+                  "key": "name"
+                },
+                {
+                  "source": "tags",
+                  "key": "name"
+                },
+                {
+                  "source": "promotion.label"
+                },
+                {
+                  "source": "category_ids",
+                  "map": {
+                    "1": "剧情",
+                    "2": "喜剧",
+                    "3": "动作",
+                    "4": "爱情",
+                    "5": "奇幻科幻",
+                    "6": "动画",
+                    "7": "惊悚",
+                    "8": "悬疑",
+                    "9": "战争",
+                    "10": "历史",
+                    "11": "其他",
+                    "12": "儿歌",
+                    "13": "真人",
+                    "14": "益智启蒙",
+                    "15": "冒险",
+                    "16": "科普",
+                    "17": "玩具交通",
+                    "18": "儿童音频",
+                    "19": "动画电影",
+                    "20": "有声书",
+                    "21": "播客",
+                    "22": "广播剧",
+                    "23": "相声曲艺",
+                    "24": "讲座课程",
+                    "25": "音乐口白",
+                    "26": "绘本",
+                    "27": "漫画",
+                    "28": "真人秀",
+                    "29": "脱口秀",
+                    "30": "访谈",
+                    "31": "晚会",
+                    "32": "选秀偶像",
+                    "33": "生活美食",
+                    "34": "文化",
+                    "35": "热血",
+                    "36": "日常",
+                    "37": "恋爱",
+                    "38": "搞笑",
+                    "39": "治愈",
+                    "40": "竞技",
+                    "41": "自然",
+                    "42": "社会",
+                    "43": "人物",
+                    "44": "科学",
+                    "45": "旅行",
+                    "46": "足球",
+                    "47": "篮球",
+                    "48": "网球",
+                    "49": "乒羽",
+                    "50": "赛车",
+                    "51": "格斗",
+                    "52": "排球",
+                    "53": "冰雪极限",
+                    "54": "台球棋牌",
+                    "55": "演唱会",
+                    "56": "MV",
+                    "57": "音频"
+                  }
+                }
+              ],
+              "text": "name",
+              "text_tags": {
+                "4K|2160p": "4K",
+                "1080p|1080i": "1080p",
+                "720p": "720p"
+              }
+            },
+            "category": {
+              "source": "category_name"
+            },
+            "free_deadline": {
+              "source": "promotion_until"
+            }
+          }
+        }
+      },
+      "detail": {
+        "method": "POST",
+        "path": "/v1/api/torrents/{tid}",
+        "body": {}
+      },
+      "test_connection": {
+        "method": "POST",
+        "path": "/v1/api/me",
+        "body": {}
+      }
+    },
+    "default_profile": "official",
+    "profiles": {
+      "official": {
+        "base_url": "https://api.piggo.me",
+        "auth": {
+          "type": "bearer",
+          "header_name": "Authorization",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36"
+        },
+        "endpoints": {
+          "search": {
+            "method": "POST",
+            "path": "/v1/api/torrents",
+            "params": {
+              "q": "{keyword}",
+              "page": "{page_1}",
+              "per_page": 100
+            },
+            "body": {},
+            "response": {
+              "items_key": "data.items",
+              "total_key": "data.total",
+              "item_mapping": {
+                "id": {
+                  "source": "id"
+                },
+                "title": {
+                  "source": "name"
+                },
+                "description": {
+                  "source": "small_descr"
+                },
+                "poster": {
+                  "source": "cover"
+                },
+                "size": {
+                  "source": "size"
+                },
+                "seeders": {
+                  "source": "seeders"
+                },
+                "leechers": {
+                  "source": "leechers"
+                },
+                "grabs": {
+                  "source": "times_completed"
+                },
+                "pubdate": {
+                  "source": "added_at"
+                },
+                "page_url": {
+                  "source": "page_url"
+                },
+                "details": {
+                  "source": "page_url"
+                },
+                "downloadvolumefactor": {
+                  "type": "mapping",
+                  "source": "promotion.down",
+                  "map": {
+                    "0": 0.0,
+                    "0.5": 0.5,
+                    "1": 1.0
+                  }
+                },
+                "uploadvolumefactor": {
+                  "type": "mapping",
+                  "source": "promotion.up",
+                  "map": {
+                    "0": 0.0,
+                    "1": 1.0,
+                    "2": 2.0
+                  }
+                },
+                "labels": {
+                  "type": "labels",
+                  "sources": [
+                    {
+                      "source": "categories",
+                      "key": "name"
+                    },
+                    {
+                      "source": "taxonomies",
+                      "key": "name"
+                    },
+                    {
+                      "source": "tags",
+                      "key": "name"
+                    },
+                    {
+                      "source": "promotion.label"
+                    },
+                    {
+                      "source": "category_ids",
+                      "map": {
+                        "1": "剧情",
+                        "2": "喜剧",
+                        "3": "动作",
+                        "4": "爱情",
+                        "5": "奇幻科幻",
+                        "6": "动画",
+                        "7": "惊悚",
+                        "8": "悬疑",
+                        "9": "战争",
+                        "10": "历史",
+                        "11": "其他",
+                        "12": "儿歌",
+                        "13": "真人",
+                        "14": "益智启蒙",
+                        "15": "冒险",
+                        "16": "科普",
+                        "17": "玩具交通",
+                        "18": "儿童音频",
+                        "19": "动画电影",
+                        "20": "有声书",
+                        "21": "播客",
+                        "22": "广播剧",
+                        "23": "相声曲艺",
+                        "24": "讲座课程",
+                        "25": "音乐口白",
+                        "26": "绘本",
+                        "27": "漫画",
+                        "28": "真人秀",
+                        "29": "脱口秀",
+                        "30": "访谈",
+                        "31": "晚会",
+                        "32": "选秀偶像",
+                        "33": "生活美食",
+                        "34": "文化",
+                        "35": "热血",
+                        "36": "日常",
+                        "37": "恋爱",
+                        "38": "搞笑",
+                        "39": "治愈",
+                        "40": "竞技",
+                        "41": "自然",
+                        "42": "社会",
+                        "43": "人物",
+                        "44": "科学",
+                        "45": "旅行",
+                        "46": "足球",
+                        "47": "篮球",
+                        "48": "网球",
+                        "49": "乒羽",
+                        "50": "赛车",
+                        "51": "格斗",
+                        "52": "排球",
+                        "53": "冰雪极限",
+                        "54": "台球棋牌",
+                        "55": "演唱会",
+                        "56": "MV",
+                        "57": "音频"
+                      }
+                    }
+                  ],
+                  "text": "name",
+                  "text_tags": {
+                    "4K|2160p": "4K",
+                    "1080p|1080i": "1080p",
+                    "720p": "720p"
+                  }
+                },
+                "category": {
+                  "source": "category_name"
+                },
+                "free_deadline": {
+                  "source": "promotion_until"
+                }
+              }
+            }
+          },
+          "detail": {
+            "method": "POST",
+            "path": "/v1/api/torrents/{tid}",
+            "body": {}
+          },
+          "test_connection": {
+            "method": "POST",
+            "path": "/v1/api/me",
+            "body": {}
+          }
+        },
+        "download": {
+          "type": "api",
+          "method": "POST",
+          "path": "/v1/api/torrents/{tid}/download-link",
+          "body": {},
+          "response_key": "data.url",
+          "presigned": true
+        }
+      },
+      "spa": {
+        "base_url": "https://piggo.me",
+        "auth": {
+          "type": "bearer",
+          "token_key": "bearer_token",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "spa": {
+            "sign_path": "/v1/web/auth/sign",
+            "sign_key": "data.sign",
+            "base_path": "/v1/web",
+            "version": "1.0.0",
+            "webversion": "1",
+            "sign_ttl": 300
+          }
+        },
+        "endpoints": {
+          "search": {
+            "method": "GET",
+            "path": "/v1/web/torrents",
+            "params": {
+              "q": "{keyword}",
+              "page": "{page_1}",
+              "per_page": 100
+            },
+            "body": {},
+            "response": {
+              "items_key": "data.items",
+              "total_key": "data.total",
+              "item_mapping": {
+                "id": {
+                  "source": "id"
+                },
+                "title": {
+                  "source": "name"
+                },
+                "description": {
+                  "source": "small_descr"
+                },
+                "poster": {
+                  "source": "cover"
+                },
+                "size": {
+                  "source": "size"
+                },
+                "seeders": {
+                  "source": "seeders"
+                },
+                "leechers": {
+                  "source": "leechers"
+                },
+                "grabs": {
+                  "source": "times_completed"
+                },
+                "pubdate": {
+                  "source": "added_at"
+                },
+                "page_url": {
+                  "source": "page_url"
+                },
+                "details": {
+                  "source": "page_url"
+                },
+                "downloadvolumefactor": {
+                  "type": "mapping",
+                  "source": "promotion.down",
+                  "map": {
+                    "0": 0.0,
+                    "0.5": 0.5,
+                    "1": 1.0
+                  }
+                },
+                "uploadvolumefactor": {
+                  "type": "mapping",
+                  "source": "promotion.up",
+                  "map": {
+                    "0": 0.0,
+                    "1": 1.0,
+                    "2": 2.0
+                  }
+                },
+                "labels": {
+                  "type": "labels",
+                  "sources": [
+                    {
+                      "source": "categories",
+                      "key": "name"
+                    },
+                    {
+                      "source": "taxonomies",
+                      "key": "name"
+                    },
+                    {
+                      "source": "tags",
+                      "key": "name"
+                    },
+                    {
+                      "source": "promotion.label"
+                    },
+                    {
+                      "source": "category_ids",
+                      "map": {
+                        "1": "剧情",
+                        "2": "喜剧",
+                        "3": "动作",
+                        "4": "爱情",
+                        "5": "奇幻科幻",
+                        "6": "动画",
+                        "7": "惊悚",
+                        "8": "悬疑",
+                        "9": "战争",
+                        "10": "历史",
+                        "11": "其他",
+                        "12": "儿歌",
+                        "13": "真人",
+                        "14": "益智启蒙",
+                        "15": "冒险",
+                        "16": "科普",
+                        "17": "玩具交通",
+                        "18": "儿童音频",
+                        "19": "动画电影",
+                        "20": "有声书",
+                        "21": "播客",
+                        "22": "广播剧",
+                        "23": "相声曲艺",
+                        "24": "讲座课程",
+                        "25": "音乐口白",
+                        "26": "绘本",
+                        "27": "漫画",
+                        "28": "真人秀",
+                        "29": "脱口秀",
+                        "30": "访谈",
+                        "31": "晚会",
+                        "32": "选秀偶像",
+                        "33": "生活美食",
+                        "34": "文化",
+                        "35": "热血",
+                        "36": "日常",
+                        "37": "恋爱",
+                        "38": "搞笑",
+                        "39": "治愈",
+                        "40": "竞技",
+                        "41": "自然",
+                        "42": "社会",
+                        "43": "人物",
+                        "44": "科学",
+                        "45": "旅行",
+                        "46": "足球",
+                        "47": "篮球",
+                        "48": "网球",
+                        "49": "乒羽",
+                        "50": "赛车",
+                        "51": "格斗",
+                        "52": "排球",
+                        "53": "冰雪极限",
+                        "54": "台球棋牌",
+                        "55": "演唱会",
+                        "56": "MV",
+                        "57": "音频"
+                      }
+                    }
+                  ],
+                  "text": "name",
+                  "text_tags": {
+                    "4K|2160p": "4K",
+                    "1080p|1080i": "1080p",
+                    "720p": "720p"
+                  }
+                },
+                "category": {
+                  "source": "category_name"
+                },
+                "free_deadline": {
+                  "source": "promotion_until"
+                }
+              }
+            }
+          },
+          "detail": {
+            "method": "GET",
+            "path": "/v1/web/torrents/{tid}"
+          },
+          "test_connection": {
+            "method": "GET",
+            "path": "/v1/web/me"
+          }
+        },
+        "transport": "http2",
+        "torrent_attr": {
+          "method": "GET",
+          "path": "/v1/web/torrents/{tid}",
+          "response": {
+            "free_key": "data.item.promotion.down",
+            "free_value": 0,
+            "2xfree_key": "data.item.promotion.up",
+            "2xfree_value": 2,
+            "hr_key": "data.item.hr",
+            "hr_value": true,
+            "peer_count_key": "data.item.seeders",
+            "labels_key": "data.item.tags",
+            "promotion_label_key": "data.item.promotion.label"
+          }
+        },
+        "download": {
+          "type": "api",
+          "method": "POST",
+          "path": "/v1/web/torrents/{tid}/download-link",
+          "body": {},
+          "response_key": "data.url",
+          "presigned": true
+        }
+      }
+    },
+    "capabilities": {
+      "search": [
+        "spa",
+        "official"
+      ],
+      "detail": [
+        "spa",
+        "official"
+      ],
+      "download": [
+        "spa",
+        "official"
+      ],
+      "user_info": [
+        "official"
+      ],
+      "torrent_attr": [
+        "spa",
+        "official"
+      ]
+    }
+  },
+  "user_info": {
+    "type": "api",
+    "profile": {
+      "method": "POST",
+      "path": "/v1/api/me",
+      "body": {},
+      "response": {
+        "field_mapping": {
+          "username": {
+            "source": "data.user.username"
+          },
+          "userid": {
+            "source": "data.user.id",
+            "type": "int"
+          },
+          "user_level": {
+            "source": "data.user.class.name"
+          }
+        }
+      }
+    }
+  },
+  "favicon": "https://piggo.me/favicon.ico"
+}

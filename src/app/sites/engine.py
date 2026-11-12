@@ -5,6 +5,7 @@
 通过声明式 JSON 站点定义提供统一的搜索、下载、字幕等功能入口。
 """
 
+import copy
 import importlib
 import os
 import random
@@ -132,11 +133,17 @@ class SubtitleConfig:
 
 @dataclass
 class SiteApiConfig:
-    """站点 API 配置"""
+    """站点 API 配置；profiles 允许多套协议共存."""
 
     base_url: str = ""
     auth: dict = field(default_factory=dict)
     endpoints: dict = field(default_factory=dict)
+    profiles: dict[str, "SiteApiConfig"] = field(default_factory=dict)
+    default_profile: str = ""
+    capabilities: dict[str, list[str]] = field(default_factory=dict)
+    http2: bool = False
+    torrent_attr: dict | None = None
+    download: Any = None
 
 
 @dataclass
@@ -190,6 +197,33 @@ class SiteDefinition:
             return True
         return any(rss.lower() in url_lower or url_lower in rss.lower() for rss in self.rss_domains)
 
+    @staticmethod
+    def _parse_download(data: dict | None) -> DownloadConfig | None:
+        if not isinstance(data, dict):
+            return None
+        return DownloadConfig(
+            type=data.get("type", "api"),
+            method=data.get("method", "GET"),
+            path=data.get("path", ""),
+            body=data.get("body"),
+            response_key=data.get("response_key", "data"),
+            params=data.get("params"),
+            download_url=data.get("download_url"),
+            selectors=data.get("selectors"),
+            presigned=data.get("presigned", False),
+        )
+
+    @classmethod
+    def _parse_api_profile(cls, data: dict) -> SiteApiConfig:
+        return SiteApiConfig(
+            base_url=data.get("base_url", ""),
+            auth=data.get("auth", {}),
+            endpoints=data.get("endpoints", {}),
+            http2=bool(data.get("http2") or data.get("transport") == "http2"),
+            torrent_attr=data.get("torrent_attr"),
+            download=cls._parse_download(data.get("download")),
+        )
+
     @classmethod
     def from_dict(cls, data: dict) -> "SiteDefinition":
         d = cls()
@@ -206,8 +240,24 @@ class SiteDefinition:
         d.detail_page_url = data.get("detail_page_url", "")
         if data.get("api"):
             api = data["api"]
-            endpoints = api.get("endpoints", {})
-            d.api = SiteApiConfig(base_url=api.get("base_url", ""), auth=api.get("auth", {}), endpoints=endpoints)
+            profiles = {
+                str(name): cls._parse_api_profile(profile)
+                for name, profile in (api.get("profiles") or {}).items()
+                if isinstance(profile, dict)
+            }
+            d.api = SiteApiConfig(
+                base_url=api.get("base_url", ""),
+                auth=api.get("auth", {}),
+                endpoints=api.get("endpoints", {}),
+                profiles=profiles,
+                default_profile=str(api.get("default_profile") or ""),
+                capabilities={
+                    str(name): [str(item) for item in order]
+                    for name, order in (api.get("capabilities") or {}).items()
+                    if isinstance(order, list)
+                },
+                http2=bool(api.get("http2") or api.get("transport") == "http2"),
+            )
         if data.get("html"):
             html = data["html"]
             d.html = SiteHtmlConfig(
@@ -453,29 +503,85 @@ class SiteEngine:
         if not site:
             return None
         user_config = user_config or {}
-        if site.download:
-            if site.download.type == "html":
+        if not (getattr(site.api, "profiles", None) if site.api else None):
+            return self._resolve_download_legacy(site, page_url, user_config)
+
+        tid = self._extract_tid(page_url, site)
+        if not tid:
+            return None
+        # profile 站点按 capability 顺序尝试；SPA 失败时可回退 official。
+        for name, api, merged_config in engine_tools.api_profile_candidates(site, user_config, "download"):
+            download_cfg = getattr(api, "download", None)
+            if not download_cfg:
+                continue
+            result = self._resolve_download_with_profile(site, api, download_cfg, merged_config, page_url, tid)
+            if result:
+                return result
+            log.debug(f"[SiteEngine]下载 profile {name} 失败，尝试下一个")
+        return None
+
+    def _resolve_download_with_profile(self, site, api, download_cfg, user_config, page_url, tid):
+        if download_cfg.type == "html":
+            return engine_download.resolve_html_download(self, page_url, site, user_config)
+        site = copy.copy(site)
+        site.download = download_cfg
+        base = api.base_url.rstrip("/") if api and api.base_url else self._base_from_url(page_url)
+        path = download_cfg.path.format(tid=tid)
+        url = f"{base}{path}" if path.startswith("/") else path
+        if download_cfg.type == "api":
+            return engine_download.resolve_download_api(self, url, site, user_config, tid, api=api)
+        if download_cfg.type == "api_chained":
+            return engine_download.resolve_download_chained(self, url, site, user_config, tid, api=api)
+        if download_cfg.type == "api_blob":
+            return url
+        if download_cfg.type == "template":
+            return download_cfg.path.format(tid=tid)
+        return url
+
+    def _resolve_download_legacy(self, site, page_url, user_config):
+        download_cfg = site.download
+        if download_cfg:
+            if download_cfg.type == "html":
                 return engine_download.resolve_html_download(self, page_url, site, user_config)
             tid = self._extract_tid(page_url, site)
             if not tid:
                 return None
-            base = site.api.base_url.rstrip("/") if site.api else self._base_from_url(page_url)
-            path = site.download.path.format(tid=tid)
+            base = self._base_from_url(page_url)
+            path = download_cfg.path.format(tid=tid)
             url = f"{base}{path}" if path.startswith("/") else path
-            if site.download.type == "api":
+            if download_cfg.type == "api":
                 return engine_download.resolve_download_api(self, url, site, user_config, tid)
-            elif site.download.type == "api_chained":
+            if download_cfg.type == "api_chained":
                 return engine_download.resolve_download_chained(self, url, site, user_config, tid)
-            elif site.download.type == "api_blob":
+            if download_cfg.type == "api_blob":
                 return url
-            elif site.download.type == "template":
-                return site.download.path.format(tid=tid)
+            if download_cfg.type == "template":
+                return download_cfg.path.format(tid=tid)
             return url
         if site.html:
             return engine_download.resolve_html_download(self, page_url, site, user_config)
         return None
 
     # ---- 种子属性检查 ----
+
+    @staticmethod
+    def _labels_to_parts(value: Any) -> list[str]:
+        if value is None or value == "":
+            return []
+        if isinstance(value, dict):
+            label = value.get("name") or value.get("label") or value.get("title")
+            return [str(label)] if label else []
+        if isinstance(value, (list, tuple, set)):
+            parts: list[str] = []
+            for item in value:
+                if isinstance(item, dict):
+                    label = item.get("name") or item.get("label") or item.get("title")
+                    if label:
+                        parts.append(str(label))
+                elif item:
+                    parts.append(str(item))
+            return parts
+        return [str(value)]
 
     @staticmethod
     def _match_attr_value(extracted, expected, match_type: str = "exact") -> bool:
@@ -633,6 +739,7 @@ class SiteEngine:
         chrome=False,
         browser_persistent=False,
         detail=None,
+        note=None,
     ):
         ret = {"free": False, "2xfree": False, "hr": False, "peer_count": 0, "labels": ""}
         site = self.get_by_url(torrent_url)
@@ -649,16 +756,21 @@ class SiteEngine:
             "headers": headers or {},
             "chrome": chrome,
             "browser_persistent": bool(browser_persistent),
+            "note": note or {},
         }
 
-        if site.api and site.torrent_attr:
+        profile = engine_tools.resolve_api_profile(site, user_config, "torrent_attr")
+        profile_name, api_config = profile if profile else ("", site.api)
+        user_config = engine_tools.profile_user_config(user_config, profile_name)
+        cfg = (getattr(api_config, "torrent_attr", None) if api_config else None) or site.torrent_attr
+
+        if api_config and cfg:
             tid = self._extract_tid(torrent_url, site)
             if not tid:
                 # TID 提取失败（如 RSS 一次性签名链接）：属性未知，不得按"非免费"处理
                 log.warn(f"[SiteEngine]resolve_torrent_attr TID提取失败, url={torrent_url[:100]}")
                 raise TorrentAttrFetchError(f"TID提取失败: {torrent_url[:100]}")
-            cfg = site.torrent_attr
-            base = site.api.base_url.rstrip("/")
+            base = api_config.base_url.rstrip("/")
             path = cfg.get("path", "").format(tid=tid)
             url = f"{base}{path}" if path.startswith("/") else path
             body = {k: v.format(tid=tid) for k, v in (cfg.get("body") or {}).items()}
@@ -668,7 +780,7 @@ class SiteEngine:
                 query = {k: v.format(tid=tid) for k, v in (cfg.get("params") or {}).items()}
                 if query:
                     url = f"{url}?{urlencode(query)}"
-            headers, auth = engine_tools._build_auth(self, site, user_config)
+            headers, auth = engine_tools._build_auth(self, site, user_config, api=api_config)
             body_format = cfg.get("body_format", "form")
             if body_format == "json":
                 if method == "POST":
@@ -682,8 +794,14 @@ class SiteEngine:
                 rate_limiter_engine = rate_limiter.engine if rate_limiter else None
                 rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
                 client = HttpClient(
-                    config=HttpClientConfig(proxy_url=proxy_url),
+                    config=HttpClientConfig(
+                        proxy_url=proxy_url,
+                        enable_http2=bool(getattr(api_config, "http2", False)),
+                    ),
                     rate_limiter=rate_limiter_engine,
+                )
+                headers = engine_tools.spa_signed_headers(
+                    self, api_config, user_config, client, headers, method, url, auth=auth
                 )
                 if method == "POST":
                     if body_format == "json":
@@ -771,12 +889,16 @@ class SiteEngine:
                     else:
                         ret["peer_count"] = int(val) if val else 0
                 labels_path = cfg.get("response", {}).get("labels_key", "")
+                labels_parts: list[str] = []
                 if labels_path:
                     labels_val = JsonUtils.get_json_object(text, labels_path)
-                    if isinstance(labels_val, (list, tuple)):
-                        ret["labels"] = ",".join(str(x) for x in labels_val if x)
-                    elif labels_val:
-                        ret["labels"] = str(labels_val)
+                    labels_parts.extend(self._labels_to_parts(labels_val))
+                promo_label_path = cfg.get("response", {}).get("promotion_label_key", "")
+                if promo_label_path:
+                    promo_label = JsonUtils.get_json_object(text, promo_label_path)
+                    labels_parts.extend(self._labels_to_parts(promo_label))
+                if labels_parts:
+                    ret["labels"] = ",".join(dict.fromkeys(labels_parts))
                 # 自检用：输出各配置字段在响应中是否存在（识别字段漂移）
                 if isinstance(detail, dict):
                     resp = cfg.get("response", {}) or {}
@@ -965,17 +1087,20 @@ class SiteEngine:
             return False, "未找到站点定义", 0
         user_config = user_config or {}
         if site.api:
-            test_cfg = site.api.endpoints.get("test_connection")
+            profile = engine_tools.resolve_api_profile(site, user_config, "search")
+            profile_name, api = profile if profile else ("", site.api)
+            user_config = engine_tools.profile_user_config(user_config, profile_name)
+            test_cfg = api.endpoints.get("test_connection") if api else None
             if not test_cfg:
                 return False, "站点未配置连接测试端点", 0
             start = time.time()
-            result = engine_tools._call_endpoint(self, test_cfg, site, user_config, {})
+            result = engine_tools._call_endpoint(self, test_cfg, site, user_config, {}, api=api)
             latency = round(time.time() - start, 3)
             if result is None:
                 return False, "连接失败", latency
             raw = JsonUtils.dumps(result, separators=(",", ":")) if not isinstance(result, str) else result
             if not is_logged_in(raw):
-                auth_type = (site.api.auth.get("type") if site.api.auth else "") or ""
+                auth_type = (api.auth.get("type") if api and api.auth else "") or ""
                 if auth_type in ("cookie", "csrf"):
                     return False, "Cookie失效", latency
                 if auth_type == "bearer":
@@ -1098,7 +1223,17 @@ class SiteEngine:
 
     # ---- 内部工具 (委托给 engine_tools) ----
 
-    def _call_endpoint(self, cfg, site, user_config, template_vars, credential="", download_dir="", download=False):
+    def _call_endpoint(
+        self,
+        cfg,
+        site,
+        user_config,
+        template_vars,
+        credential="",
+        download_dir="",
+        download=False,
+        api=None,
+    ):
         return engine_tools._call_endpoint(
             self,
             cfg,
@@ -1108,13 +1243,14 @@ class SiteEngine:
             credential=credential,
             download_dir=download_dir,
             download=download,
+            api=api,
         )
 
-    def _build_auth(self, site, user_config):
-        return engine_tools._build_auth(self, site, user_config)
+    def _build_auth(self, site, user_config, api=None):
+        return engine_tools._build_auth(self, site, user_config, api=api)
 
-    def _build_headers(self, site, user_config):
-        return engine_tools._build_headers(self, site, user_config)
+    def _build_headers(self, site, user_config, api=None):
+        return engine_tools._build_headers(self, site, user_config, api=api)
 
     def _resolve_auth_token(self, site, user_config, token_type):
         return engine_tools._resolve_auth_token(self, site, user_config, token_type)

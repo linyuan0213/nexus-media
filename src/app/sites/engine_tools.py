@@ -1,8 +1,13 @@
 """引擎内部工具 — 从 engine.py 拆分"""
 
+import hashlib
+import hmac
 import os
 import re
+import secrets
+import time
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx2
 from lxml import etree
@@ -15,7 +20,229 @@ from app.utils.config_tools import get_proxies
 from app.utils.json_utils import JsonUtils
 
 
-def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx2.Auth | None]:
+def _explicit_profile_token(user_config: dict, profile_name: str, key: str) -> bool:
+    """显式 token_key 优先只接受该 profile 的 NOTE.api_credentials.
+
+    避免把站点顶层 BEARER_TOKEN（通常是另一套 API 的 token）误当成
+    SPA profile 的 JWT。
+    """
+    note = user_config.get("note") or {}
+    credentials = note.get("api_credentials") or user_config.get("api_credentials") or {}
+    if profile_name:
+        item = credentials.get(profile_name) if isinstance(credentials, dict) else None
+        return bool(item.get(key)) if isinstance(item, dict) else False
+    return bool(user_config.get(key))
+
+
+def _profile_ready(api: Any, user_config: dict, profile_name: str = "") -> bool:
+    """判断 profile 是否具备最小认证条件，避免选中缺凭据的高优先级 profile."""
+    auth = getattr(api, "auth", {}) or {}
+    auth_type = str(auth.get("type") or "")
+    if auth_type == "api_key":
+        explicit = str(auth.get("token_key") or "").strip()
+        if explicit:
+            return _explicit_profile_token(user_config, profile_name, explicit)
+        return bool(user_config.get("api_key") or user_config.get("cookie"))
+    if auth_type == "bearer":
+        explicit = str(auth.get("token_key") or "").strip()
+        if explicit:
+            return _explicit_profile_token(user_config, profile_name, explicit)
+        return bool(user_config.get("bearer_token") or user_config.get("api_key") or user_config.get("cookie"))
+    if auth_type in {"cookie", "csrf"}:
+        return bool(user_config.get("cookie") or user_config.get("bearer_token"))
+    return True
+
+
+def api_profile_candidates(
+    site: Any,
+    user_config: dict,
+    capability: str = "search",
+) -> list[tuple[str, Any, dict]]:
+    """按用户选择/capability 顺序返回可用 profile；无 profiles 时返回旧 api."""
+    api = getattr(site, "api", None)
+    if not api:
+        return []
+    profiles = getattr(api, "profiles", None) or {}
+    if not profiles:
+        return [("", api, dict(user_config))]
+
+    note = user_config.get("note") or {}
+    selected = str(user_config.get("api_profile") or note.get("api_profile") or "").strip()
+    names: list[str] = []
+    if selected:
+        names.append(selected)
+    for name in (getattr(api, "capabilities", None) or {}).get(capability, []):
+        names.append(str(name))
+    default = str(getattr(api, "default_profile", "") or "").strip()
+    if default:
+        names.append(default)
+    names.extend(str(name) for name in profiles)
+
+    seen: set[str] = set()
+    ready: list[tuple[str, Any, dict]] = []
+    fallback: list[tuple[str, Any, dict]] = []
+    for name in names:
+        if name in seen or name not in profiles:
+            continue
+        seen.add(name)
+        profile_config = profile_user_config(user_config, name)
+        item = (name, profiles[name], profile_config)
+        if _profile_ready(profiles[name], profile_config, name):
+            ready.append(item)
+        else:
+            fallback.append(item)
+    return ready or fallback
+
+
+def resolve_api_profile(site: Any, user_config: dict, capability: str = "search") -> tuple[str, Any] | None:
+    """选择一个 API profile；没有 profiles 时返回旧 site.api。"""
+    api = getattr(site, "api", None)
+    if not api:
+        return None
+    profiles = getattr(api, "profiles", None) or {}
+    if not profiles:
+        return "", api
+
+    note = user_config.get("note") or {}
+    selected = str(user_config.get("api_profile") or note.get("api_profile") or "").strip()
+
+    def ready(name: str) -> bool:
+        return name in profiles and _profile_ready(
+            profiles[name],
+            profile_user_config(user_config, name),
+            name,
+        )
+
+    if capability == "search" and selected and ready(selected):
+        return selected, profiles[selected]
+
+    for name in (getattr(api, "capabilities", None) or {}).get(capability, []):
+        if ready(str(name)):
+            return str(name), profiles[str(name)]
+
+    if selected and ready(selected):
+        return selected, profiles[selected]
+
+    default = str(getattr(api, "default_profile", "") or "").strip()
+    if ready(default):
+        return default, profiles[default]
+    if capability == "search":
+        for name in profiles:
+            if ready(str(name)):
+                return str(name), profiles[name]
+    name = default if default in profiles else next(iter(profiles))
+    return str(name), profiles[name]
+
+
+def profile_user_config(user_config: dict, profile_name: str) -> dict:
+    """合并 NOTE.api_credentials[profile] 到用户配置，供认证复用."""
+    merged = dict(user_config or {})
+    if not profile_name:
+        return merged
+    note = merged.get("note") or {}
+    credentials = note.get("api_credentials") or merged.get("api_credentials") or {}
+    if isinstance(credentials, dict):
+        extra = credentials.get(profile_name)
+        if isinstance(extra, dict):
+            merged.update(extra)
+    merged["api_profile"] = profile_name
+    return merged
+
+
+def spa_signed_headers(
+    engine: Any,
+    api: Any,
+    user_config: dict,
+    client: HttpClient,
+    headers: dict[str, str],
+    method: str,
+    url: str,
+    auth: Any | None = None,
+) -> dict[str, str]:
+    """为 SPA profile 获取 sign 并返回带 ts/nonce/HMAC 的 headers."""
+    spa = (getattr(api, "auth", {}) or {}).get("spa") if api else None
+    if not isinstance(spa, dict):
+        return headers
+    prepared = dict(headers)
+    prepared.setdefault("Accept", "application/json")
+    prepared.setdefault("X-Requested-With", "XMLHttpRequest")
+    cookie = str(user_config.get("cookie") or "").strip()
+    if cookie and "Cookie" not in prepared:
+        prepared["Cookie"] = cookie
+    visitor_id = str(user_config.get("visitor_id") or spa.get("visitor_id") or secrets.token_hex(16))
+    version = str(spa.get("version") or "1.0.0")
+    webversion = str(spa.get("webversion") or "1")
+    now = time.time()
+    cache = getattr(engine, "_spa_sign_cache", None)
+    if not isinstance(cache, dict):
+        cache = {}
+        setattr(engine, "_spa_sign_cache", cache)
+    cache_key = (
+        str(getattr(api, "base_url", "") or ""),
+        str(spa.get("sign_path") or "/v1/web/auth/sign"),
+        str(prepared.get("Authorization") or ""),
+        str(auth or ""),
+        cookie,
+    )
+    cached = cache.get(cache_key)
+    ttl = float(spa.get("sign_ttl") or 300)
+    if not cached or now - float(cached[1]) > ttl:
+        sign_headers = dict(prepared)
+        sign_headers.update(
+            {
+                "visitorId": visitor_id,
+                "ts": str(int(now)),
+                "version": version,
+                "webversion": webversion,
+            }
+        )
+        sign_url = f"{str(api.base_url).rstrip('/')}{spa.get('sign_path') or '/v1/web/auth/sign'}"
+        response = client.get(sign_url, headers=sign_headers, auth=auth)
+        if not response.is_success:
+            raise RuntimeError(f"SPA sign HTTP {response.status_code}")
+        payload = response.json()
+        sign = _nested_json_value(payload, str(spa.get("sign_key") or "data.sign"))
+        if not sign:
+            raise RuntimeError("SPA sign 响应缺少 sign")
+        cached = (str(sign), now)
+        cache[cache_key] = cached
+    sign, _ = cached
+    nonce = secrets.token_hex(16)
+    timestamp = str(int(time.time()))
+    canonical = urlparse(url).path.strip("/").lower()
+    message = f"{method.upper()}\n{canonical}\n{timestamp}\n{nonce}"
+    prepared.update(
+        {
+            "visitorId": visitor_id,
+            "ts": timestamp,
+            "version": version,
+            "webversion": webversion,
+            "X-Spa-Nonce": nonce,
+            "X-Spa-Hmac": hmac.new(
+                str(sign).encode("ascii"),
+                message.encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest(),
+        }
+    )
+    return prepared
+
+
+def _nested_json_value(payload: Any, key: str) -> Any:
+    value = payload
+    for part in str(key or "").split("."):
+        if not isinstance(value, dict):
+            return None
+        value = value.get(part)
+    return value
+
+
+def _build_auth(
+    engine: Any,
+    site: Any,
+    user_config: dict,
+    api: Any | None = None,
+) -> tuple[dict, httpx2.Auth | None]:
     """构建全局认证（每个请求通用），返回 (headers, auth)。
 
     认证信息同时写入 headers（向后兼容）并返回 auth 对象（供 httpx 使用）。
@@ -27,22 +254,33 @@ def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx2
         except Exception:
             headers = {}
     auth = None
-    auth_type = site.api.auth.get("type", "") if site.api else ""
+    api = api if api is not None else getattr(site, "api", None)
+    if not api:
+        return headers, auth
+    auth_type = api.auth.get("type", "")
 
     if auth_type == "api_key":
-        hdr = site.api.auth.get("header_name", "x-api-key")
-        key = user_config.get("api_key", "")
-        # 向后兼容：旧配置可能把 api_key 放在 cookie 字段
-        if not key:
-            key = user_config.get("cookie", "")
+        hdr = api.auth.get("header_name", "x-api-key")
+        token_key = str(api.auth.get("token_key") or "").strip()
+        if token_key:
+            key = user_config.get(token_key, "")
+        else:
+            key = user_config.get("api_key", "")
+            # 向后兼容：旧配置可能把 api_key 放在 cookie 字段
+            if not key:
+                key = user_config.get("cookie", "")
         if key:
             headers[hdr] = key
             auth = ApiKeyAuth(key=hdr, value=key)
     elif auth_type == "bearer":
-        token = user_config.get("bearer_token", "")
-        # 向后兼容：旧配置可能把 bearer token 放在 cookie/api_key 字段
-        if not token:
-            token = user_config.get("api_key", "") or user_config.get("cookie", "")
+        token_key = str(api.auth.get("token_key") or "").strip()
+        if token_key:
+            token = user_config.get(token_key, "")
+        else:
+            token = user_config.get("bearer_token", "")
+            # 向后兼容：旧配置可能把 bearer token 放在 cookie/api_key 字段
+            if not token:
+                token = user_config.get("api_key", "") or user_config.get("cookie", "")
         if token and not token.startswith("Bearer "):
             token = f"Bearer {token}"
         if token:
@@ -54,7 +292,7 @@ def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx2
         if cookie:
             auth = CookieAuth(cookie)
     elif auth_type == "csrf":
-        hdr = site.api.auth.get("header_name", "X-CSRF-TOKEN")
+        hdr = api.auth.get("header_name", "X-CSRF-TOKEN")
         token = engine._resolve_auth_token(site, user_config, "csrf")
         if token:
             headers[hdr] = token
@@ -63,7 +301,7 @@ def _build_auth(engine: Any, site: Any, user_config: dict) -> tuple[dict, httpx2
             auth = CookieAuth(cookie)
 
     headers["Content-Type"] = headers.get("Content-Type", "application/json;charset=utf-8")
-    ua_override = site.api.auth.get("user_agent") if site.api and site.api.auth else None
+    ua_override = api.auth.get("user_agent") if api and api.auth else None
     if ua_override is not None:
         headers["User-Agent"] = ua_override
     elif user_config.get("ua"):
@@ -82,9 +320,9 @@ def _get_rate_limit_kwargs(engine: Any, site: Any) -> dict:
     return {"rate_limit_key": f"site:{site.id}", "rate_limit_rate": rate_config[0]}
 
 
-def _build_headers(engine: Any, site: Any, user_config: dict) -> dict:
+def _build_headers(engine: Any, site: Any, user_config: dict, api: Any | None = None) -> dict:
     """返回包含认证信息的 headers 字典。"""
-    headers, auth = _build_auth(engine, site, user_config)
+    headers, auth = _build_auth(engine, site, user_config, api=api)
     if auth is not None and hasattr(auth, "_cookies"):
         cookie_dict = getattr(auth, "_cookies", {})
         cookie_str = "; ".join(f"{k}={v}" for k, v in cookie_dict.items())
@@ -102,13 +340,15 @@ def _call_endpoint(
     credential: str = "",
     download_dir: str = "",
     download: bool = False,
+    api: Any | None = None,
 ) -> bool | list[dict] | None:
     method = cfg.get("method", "GET")
     path = cfg.get("path", "").format(**template_vars)
-    base = site.api.base_url.rstrip("/") if site.api else ""
+    api = api if api is not None else getattr(site, "api", None)
+    base = api.base_url.rstrip("/") if api else ""
     url = f"{base}{'/' if not path.startswith('/') else ''}{path}"
 
-    headers, auth = engine._build_auth(site, user_config)
+    headers, auth = engine._build_auth(site, user_config, api=api)
     proxy = get_proxies() if user_config.get("proxy") else None
     proxy_url = proxy.get("http") if proxy else None
 

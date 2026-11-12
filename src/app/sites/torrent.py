@@ -138,9 +138,21 @@ class Torrent:
 
         # 预签名下载链接自带认证(如 M-Team RSS dlv2 的 sign 参数)，
         # 不能再附加站点 API Key，否则站点会当作 API 认证并返回 JSON 错误。
-        # 优先读站点配置 download.presigned；仅对 API 站点回退到 sign 参数启发式判断。
+        # 优先读 profile/站点配置 download.presigned；仅对 API 站点回退到 sign 参数启发式判断。
         # HTML 站点即使 URL 带 sign（防盗链 token）仍需要登录 cookie，不能跳过。
-        is_presigned = bool(site_def and site_def.download and site_def.download.presigned)
+        profile = (
+            engine_tools.resolve_api_profile(
+                site_def,
+                {"cookie": cookie or "", "api_key": api_key or "", "bearer_token": bearer_token or ""},
+                "download",
+            )
+            if site_def and site_def.api
+            else None
+        )
+        download_cfg = (getattr(profile[1], "download", None) if profile else None) or (
+            site_def.download if site_def else None
+        )
+        is_presigned = bool(download_cfg and download_cfg.presigned)
         if not is_presigned and site_def and site_def.api:
             is_presigned = bool(parse_qs(urlparse(url).query).get("sign"))
 
@@ -152,7 +164,9 @@ class Torrent:
                 "ua": ua or "",
                 "headers": {},
             }
-            auth_headers, auth = engine_tools._build_auth(engine, site_def, user_config)
+            auth_headers, auth = engine_tools._build_auth(
+                engine, site_def, user_config, api=(profile[1] if profile else None)
+            )
             headers.update(auth_headers)
         elif is_presigned:
             auth = None

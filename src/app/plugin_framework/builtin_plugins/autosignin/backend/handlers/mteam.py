@@ -4,11 +4,10 @@ import hmac
 import re
 import time
 from typing import Any
-from urllib.parse import urlparse
 
-from app.infrastructure.cache_system.cookiecloud_adapter import CookiecloudAdapter
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
+from app.sites.credential_provider import resolve_spa_credentials
 from app.utils.config_tools import get_ua
 from app.utils.json_utils import JsonUtils
 
@@ -37,18 +36,17 @@ class MTeam(SiteSigninHandler):
         site = ctx.site
         site_def = self._plugin_ctx.site_engine.get_by_id(ctx.site_id)
         home_url = self._resolve_home_url(site_def)
-        local_storage_domain = self._resolve_local_storage_domain(home_url)
-
         self._plugin_ctx.emit("site.local_storage_sync", {})
         time.sleep(10)
 
-        local_storage = CookiecloudAdapter().get_local_storage(local_storage_domain)
+        spa = resolve_spa_credentials(site_def, ctx.raw)
+        local_storage = spa.local_storage or {}
         if not local_storage:
             return SigninResult.fail(site, "LocalStorage 获取失败")
 
-        jwt = local_storage.get("auth")
+        jwt = spa.bearer_token or local_storage.get("auth")
         did = local_storage.get("did")
-        visitor_id = local_storage.get("visitorId")
+        visitor_id = spa.visitor_id or local_storage.get("visitorId")
         if not jwt:
             return SigninResult.fail(site, "localStorage auth 为空")
         # 设备指纹必须与浏览器一致：缺任一项会显著提高风控命中率（切勿空发）
@@ -124,15 +122,6 @@ class MTeam(SiteSigninHandler):
             return SigninResult.fail(site, SigninResult.SITE_UNREACHABLE)
 
         return self._check_response(res, site)
-
-    def _resolve_local_storage_domain(self, home_url: str) -> str:
-
-        parsed = urlparse(home_url)
-        host = parsed.hostname or "m-team.cc"
-        parts = host.split(".")
-        if len(parts) >= 2:
-            return ".".join(parts[-2:])
-        return host
 
     def _resolve_home_url(self, site_def: Any) -> str:
         domain = site_def.domain if site_def else "kp.m-team.cc"

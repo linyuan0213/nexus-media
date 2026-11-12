@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.context import PluginContext
+from app.sites.credential_provider import resolve_spa_credentials
 from app.utils.config_tools import get_proxies
 
 
@@ -22,6 +23,7 @@ class SiteSigninContext:
     proxy_url: str | None
     api_key_header: str | None = None
     headers: dict | None = None
+    spa_credentials: dict | None = None
     is_browser: bool = False
     raw: dict = field(default_factory=dict)
 
@@ -35,8 +37,8 @@ class SiteSigninContext:
         site = site_info.get("name", "")
         site_url = site_info.get("signurl") or site_info.get("strict_url") or site_info.get("rssurl") or ""
 
+        site_def = None
         if site_engine:
-            site_def = None
             for url in (site_info.get("strict_url"), site_info.get("signurl"), site_info.get("rssurl")):
                 if url:
                     site_def = site_engine.get_by_url(url)
@@ -49,17 +51,21 @@ class SiteSigninContext:
                 site_url = site_url or site_def.domain
                 site = site or site_def.name
 
+        spa_site = site_def or site_info
+        spa = resolve_spa_credentials(spa_site, site_info)
+        cookie = site_info.get("cookie") or spa.cookie
         return cls(
             site=site,
             site_id=site_id,
             site_url=site_url,
-            cookie=site_info.get("cookie"),
+            cookie=cookie,
             api_key=site_info.get("api_key"),
             bearer_token=site_info.get("bearer_token"),
             ua=site_info.get("ua"),
             proxy_url=proxy_url,
             api_key_header=site_info.get("api_key_header"),
             headers=site_info.get("headers"),
+            spa_credentials=spa.as_config(),
             is_browser=bool(site_info.get("is_browser", False)),
             raw=site_info,
         )

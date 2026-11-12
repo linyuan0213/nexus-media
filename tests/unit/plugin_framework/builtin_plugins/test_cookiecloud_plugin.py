@@ -120,3 +120,16 @@ class TestCookieCloudCommand:
         _, kwargs = plugin.ctx._message.send_channel_msg.call_args
         assert kwargs.get("channel") == "wx"
         assert kwargs.get("user_id") == "user1"
+
+
+class TestSpaLocalStoragePersistence:
+    def test_local_storage_is_written_to_spa_credentials(self):
+        plugin = _make_plugin()
+        plugin._site_repo = MagicMock()
+        plugin._find_matching_sites = MagicMock(return_value=[{"id": 34}])
+        plugin._persist_spa_local_storage("piggo.me", "piggo.me", {"pig_token": "jwt", "visitorId": "v"})
+        args, _kwargs = plugin._site_repo.upsert_site_api_credentials.call_args
+        assert args[0] == 34
+        assert args[1] == "spa"
+        assert args[2]["source"] == "cookiecloud"
+        assert args[2]["local_storage"]["pig_token"] == "jwt"

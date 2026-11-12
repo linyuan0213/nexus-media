@@ -29,12 +29,42 @@
       "required": ["base_url", "auth", "endpoints"],
       "properties": {
         "base_url": {"type": "string", "description": "API 基础地址"},
+        "http2": {"type": "boolean", "description": "是否使用 HTTP/2"},
+        "transport": {"type": "string", "enum": ["http", "http2"], "description": "传输协议"},
+        "profiles": {
+          "type": "object",
+          "description": "多套 API profile，键为 profile 名称",
+          "additionalProperties": {"$ref": "#/definitions/api_config"}
+        },
+        "default_profile": {"type": "string", "description": "默认 profile"},
+        "capabilities": {
+          "type": "object",
+          "description": "能力到 profile 优先顺序的映射",
+          "additionalProperties": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
         "auth": {
           "type": "object",
           "required": ["type"],
           "properties": {
             "type": {"enum": ["api_key", "bearer", "cookie", "csrf", "passkey", "token"]},
             "header_name": {"type": "string", "description": "API 密钥的 header 名称"},
+            "token_key": {"type": "string", "description": "从站点用户配置读取 token 的字段名"},
+            "spa": {
+              "type": "object",
+              "description": "SPA HMAC 签名配置",
+              "properties": {
+                "sign_path": {"type": "string"},
+                "sign_key": {"type": "string"},
+                "base_path": {"type": "string"},
+                "version": {"type": "string"},
+                "webversion": {"type": "string"},
+                "sign_ttl": {"type": "number"},
+                "visitor_id": {"type": "string"}
+              }
+            },
             "token_source": {"type": "string", "description": "cookie 中 token 的键名"},
             "csrf_url": {"type": "string", "description": "获取 CSRF token 的 URL"},
             "csrf_selector": {"type": "string", "description": "从 HTML 提取 CSRF 的选择器"},
@@ -51,7 +81,9 @@
             "test_connection": {"$ref": "#/definitions/endpoint"},
             "user_info": {"$ref": "#/definitions/endpoint"}
           }
-        }
+        },
+        "torrent_attr": {"$ref": "#/definitions/torrent_attr_config"},
+        "download": {"$ref": "#/definitions/download_config"}
       }
     },
     "endpoint": {
@@ -111,7 +143,7 @@
       "type": "object",
       "properties": {
         "source": {"type": "string", "description": "JSON 路径，点号分隔"},
-        "type": {"enum": ["mapping", "api", "constant", "template", "html", "int", "float"]},
+        "type": {"enum": ["mapping", "api", "constant", "template", "html", "int", "float", "labels"]},
         "method": {"enum": ["GET", "POST"]},
         "path": {"type": "string"},
         "body": {"type": "object"},
@@ -123,6 +155,8 @@
         "selector": {"type": "string", "description": "HTML 类型时的 CSS 选择器"},
         "attribute": {"type": "string", "description": "HTML 类型时提取的属性"},
         "fields": {"type": "object", "description": "template 类型引用的字段"},
+        "sources": {"type": "array", "description": "labels 类型引用的列表字段及值映射"},
+        "text_tags": {"type": "object", "description": "labels 类型从文本提取的正则标签映射"},
         "domains": {"type": "array", "items": {"type": "string"}}
       }
     },
@@ -130,7 +164,7 @@
       "type": "object",
       "required": ["type"],
       "properties": {
-        "type": {"enum": ["api", "api_chained", "template", "html"]},
+        "type": {"enum": ["api", "api_chained", "api_blob", "template", "html"]},
         "method": {"enum": ["GET", "POST"]},
         "path": {"type": "string", "description": "下载链接路径模板"},
         "body": {"type": "object"},

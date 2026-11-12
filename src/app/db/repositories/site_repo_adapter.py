@@ -82,6 +82,12 @@ class SiteRepositoryAdapter(ISiteRepository):
         """更新站点Cookie和UA"""
         self._repo.update_site_cookie_ua(site_id, cookie, ua)
 
+    def get_site_api_credentials_map(self) -> dict[int, dict[str, dict]]:
+        return self._repo.get_site_api_credentials_map()
+
+    def upsert_site_api_credentials(self, site_id: int, profile: str, data: dict | None) -> None:
+        self._repo.upsert_site_api_credentials(site_id, profile, data)
+
     def get_site_user_statistics(self, strict_urls: list | None = None, num: int = 100) -> list[SITEUSERINFOSTATS]:
         return self._repo.get_site_user_statistics(strict_urls=strict_urls, num=num)
 

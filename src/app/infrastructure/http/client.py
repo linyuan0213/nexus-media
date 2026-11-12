@@ -69,6 +69,7 @@ class _ClientPool:
             config.connect_timeout,
             config.max_connections,
             config.max_keepalive,
+            config.enable_http2,
         ) + browser_key
 
     def acquire(self, config: HttpClientConfig, builder: Callable[[], httpx2.Client]) -> httpx2.Client:
@@ -163,7 +164,7 @@ class HttpClient:
                     request.url = request.url.copy_with(host=mapping[host])
                 return super().handle_request(request)
 
-        transport = _MappedTransport(limits=limits, retries=0)
+        transport = _MappedTransport(limits=limits, retries=0, http2=self._config.enable_http2)
         timeout = httpx2.Timeout(
             self._config.timeout,
             connect=self._config.connect_timeout,
@@ -176,6 +177,7 @@ class HttpClient:
             proxy=self._config.proxy_url,
             auth=self._config.auth,
             headers=self._config.default_headers,
+            http2=self._config.enable_http2,
         )
 
     def request(self, method: str, url: str, **kwargs: Any) -> httpx2.Response:

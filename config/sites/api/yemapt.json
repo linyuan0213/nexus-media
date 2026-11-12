@@ -129,6 +129,149 @@
         "method": "POST",
         "path": "/openApi/user/fetchBasicInfo.json"
       }
+    },
+    "profiles": {
+      "default": {
+        "base_url": "https://www.yemapt.org",
+        "auth": {
+          "type": "api_key",
+          "header_name": "Authorization"
+        },
+        "endpoints": {
+          "search": {
+            "method": "POST",
+            "path": "/openApi/torrent/fetchOpenTorrentList.json",
+            "body": {
+              "keyword": "{keyword}",
+              "pageParam": {
+                "current": "{page_1}",
+                "pageSize": 20
+              },
+              "sorter": {}
+            },
+            "mode_mapping": {
+              "MOVIE": [
+                {
+                  "categoryId": 4
+                }
+              ],
+              "TV": [
+                {
+                  "categoryId": 5
+                },
+                {
+                  "categoryId": 13
+                },
+                {
+                  "categoryId": 15
+                }
+              ],
+              "ANIME": [
+                {
+                  "categoryId": 14
+                }
+              ]
+            },
+            "response": {
+              "items_key": "data",
+              "item_mapping": {
+                "title": {
+                  "source": "showName"
+                },
+                "description": {
+                  "source": "shortDesc"
+                },
+                "size": {
+                  "source": "fileSize"
+                },
+                "seeders": {
+                  "source": "seedNum"
+                },
+                "leechers": {
+                  "source": "leechNum"
+                },
+                "grabs": {
+                  "source": "completedNum"
+                },
+                "pubdate": {
+                  "source": "listingTime",
+                  "transform": "utc_to_local"
+                },
+                "downloadvolumefactor": {
+                  "type": "mapping",
+                  "source": "downloadPromotion",
+                  "map": {
+                    "free": 0.0,
+                    "half": 0.5,
+                    "none": 1.0
+                  }
+                },
+                "uploadvolumefactor": {
+                  "type": "mapping",
+                  "source": "uploadPromotion",
+                  "map": {
+                    "one_half": 0.5,
+                    "double_upload": 2.0,
+                    "none": 1.0
+                  }
+                },
+                "labels": {
+                  "source": "tagList",
+                  "transform": "split_map",
+                  "map": {
+                    "5": "国语",
+                    "6": "中字",
+                    "7": "粤语",
+                    "8": "英字"
+                  }
+                },
+                "page_url": {
+                  "type": "template",
+                  "value": "https://{domain}/torrent/{tid}",
+                  "fields": {
+                    "tid": "id"
+                  }
+                }
+              }
+            }
+          },
+          "test_connection": {
+            "method": "POST",
+            "path": "/openApi/torrent/fetchOpenTorrentList.json",
+            "body": {
+              "keyword": "",
+              "pageParam": {
+                "current": 1,
+                "pageSize": 1
+              },
+              "sorter": {}
+            }
+          },
+          "user_info": {
+            "method": "POST",
+            "path": "/openApi/user/fetchBasicInfo.json"
+          }
+        },
+        "download": {
+          "type": "api_chained",
+          "method": "POST",
+          "path": "/openApi/torrent/generateDownloadKey.json?id={tid}",
+          "response_key": "data",
+          "download_url": "{base}/api/torrent/download1?token={token}"
+        }
+      }
+    },
+    "default_profile": "default",
+    "capabilities": {
+      "search": [
+        "default"
+      ],
+      "download": [
+        "default"
+      ],
+      "torrent_attr": [
+        "default"
+      ]
     }
   },
   "user_info": {
@@ -177,13 +320,6 @@
         }
       }
     }
-  },
-  "download": {
-    "type": "api_chained",
-    "method": "POST",
-    "path": "/openApi/torrent/generateDownloadKey.json?id={tid}",
-    "response_key": "data",
-    "download_url": "{base}/api/torrent/download1?token={token}"
   },
   "favicon": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBmaWxsPSIjZWFhODcxIiBkPSJNNTUsMTguOTRjLTE5LjUsMC00MiwyMC41LTQyLDMyYzAsMTMsMjIsMzIsMzQsMzJjMCwwLDItNCwyLThjMC0zLjc2NC0yLTcuMy0yLTExYzAtNSwxLjM2Ni03LjQ4MSw3LTEyYzQsOSwxNyw4LDE3LDhzMiw1LDEwLDVjNCwwLDUtMSw1LTFsMi03YzAsMCwxLjM3MS00LjM4OC0zLTdjLTguNjk4LTguMzk4LTExLTE1LjUtMTEtMTUuNWwtMTEtMTIuNWwyLjg2NS04Ljk5OEM2NS44NjUsMTIuOTQyLDU4LjI0NiwxMy41MzEsNTUsMTguOTR6Ii8+PHBhdGggZmlsbD0iI2I3Nzc0OCIgZD0iTTU1IDE5LjQ0Yy02LjQxIDIuNjItOS4zOCAxNy42OC0xNSAyNyAwIDAtMS41LTIuNS0xLjUtNyAwLTMgLjk0LTYuNjEgMi05LTcuNjcgMTAuMzMtNi4wNCAyNC4yNy0xMiAzMCAwIDAtMS0zLTEtOCAwLTMgLjk0LTYuNjEgMi05LTYuMSA4LjA2LTYgMTIuODktMTAuNDIgMjEuMzVDMTUuNDIgNjAuMzQgMTMgNTUuNDYgMTMgNTAuOTQgMTMgMzkuOCAzNC4yMyAyMC4xNiA1My4xNSAxOWguMDJMNTUgMTkuNDR6TTg4LjAzMSA1Ni45NGwtLjMyMSAxLjMzLS41MjMuMTdjLS4wNDItLjExLTEuNjg4LTItMS42ODgtNCAwLTEuMjggMS4xOS0xLjk4IDIuMTAxLTJDODguNjIyIDU0LjY4IDg4LjAzMSA1Ni45NCA4OC4wMzEgNTYuOTR6Ii8+PHBhdGggZmlsbD0iIzFmMjEyYiIgZD0iTTY3LjUgMzYuOTRBMi41IDIuNSAwIDEgMCA2Ny41IDQxLjk0QTIuNSAyLjUgMCAxIDAgNjcuNSAzNi45NFoiLz48cGF0aCBmaWxsPSIjYjc3NzQ4IiBkPSJNNjguNSwxOS40NGM1LjMzMywwLDksNC41LDksOHMtMi4yMjIsNS4yNS00LDdjMC0zLTMuNjU2LTQuNjA4LTcuNS02LjVjLTMuNTU2LTEuNzUtMy41LTMuNTE3LTMuNS00LjVDNjIuNSwyMi40NCw2NCwxOS40NCw2OC41LDE5LjQ0eiIvPjxwYXRoIGZpbGw9IiMxZjIxMmIiIGQ9Ik00NC4wNDEgNzguNWMtLjA0MiAwLS4wODYtLjAwNS0uMTI4LS4wMTctLjI2Ny0uMDcxLS40MjYtLjM0NS0uMzU1LS42MTFDNDMuODUxIDc2Ljc2MiA0NCA3NS43NzYgNDQgNzQuOTRjMC0xLjIyOS0uNDIzLTIuNzQ3LS44MzItNC4yMTZDNDIuNjIgNjguNzI1IDQyIDY2LjQ2MSA0MiA2My45NGMwLTMuODE3LjgyMS02Ljg0IDIuNTgzLTkuNTEyLjE1My0uMjI5LjQ2Mi0uMjk1LjY5My0uMTQyLjIzLjE1MS4yOTQuNDYyLjE0Mi42OTJDNDMuNzQ2IDU3LjUxNCA0MyA2MC4yNzggNDMgNjMuOTQgNDMgNjYuMzI3IDQzLjYwMiA2OC41MjIgNDQuMTMyIDcwLjUxOUM0NC41NTkgNzEuOTkgNDUgNzMuNTc2IDQ1IDc0Ljk0YzAgLjkyMy0uMTYgMS45OTUtLjQ3NyAzLjE4OEM0NC40NjQgNzguMzUyIDQ0LjI2MiA3OC41IDQ0LjA0MSA3OC41ek00Ni41IDUzLjI1Yy0uMTE3IDAtLjIzNS0uMDQxLS4zMy0uMTI0LS4yMDgtLjE4My0uMjI5LS40OTgtLjA0Ni0uNzA2LjU5NS0uNjc4IDEuMjYxLTEuMzU1IDIuMDM3LTIuMDcuMjA0LS4xODguNTItLjE3NS43MDcuMDI4LjE4Ny4yMDMuMTc0LjUyLS4wMjkuNzA2LS43NS42OTEtMS4zOTIgMS4zNDQtMS45NjMgMS45OTZDNDYuNzc3IDUzLjE5MiA0Ni42MzkgNTMuMjUgNDYuNSA1My4yNXpNNTAgNDkuODk4Yy0uMTQzIDAtLjI4NC0uMDYxLS4zODMtLjE3OC0uMTc4LS4yMTEtLjE1MS0uNTI2LjA2LS43MDUuMzgyLS4zMjEuNzc5LS42NDYgMS4xODktLjk3NS4yMTYtLjE3NC41MzEtLjEzOC43MDMuMDc3LjE3My4yMTUuMTM4LjUyOS0uMDc3LjcwMi0uNDA1LjMyNS0uNzk1LjY0NC0xLjE3MS45NjFDNTAuMjI5IDQ5Ljg1OSA1MC4xMTQgNDkuODk4IDUwIDQ5Ljg5OHpNODUuNjE1LDQ5LjE0M2MtNy45NDItNy42OTYtMTAuNDE5LTE0LjMxNi0xMC42NDYtMTQuOTYyYy0uMDM0LS4xNjktLjExLS41MjgtLjIzNy0uOTg2Yy0uMzA2LTEuMTExLS4xNzksMS42MTQtMS4xNywwLjYzNmwtMS41NzgtMi4yMTdjMC41NTksMS4wMTYsMC45MjIsMi40MjcsMS4wMzMsMy4wMTJjMC4wMDgsMC4wNDEsMC4wMTksMC4wODMsMC4wMzEsMC4xMjNjMC4wOTcsMC4zLDIuNDc5LDcuNDM3LDExLjI1NywxNS45MTFjMC4wNTUsMC4wNTMsMC4xMTUsMC4xLDAuMTgyLDAuMTM5YzAuODE3LDAuNDg4LDEuMzc2LDEuMDY1LDEuNzY1LDEuNjY2Yy0uMTE4LDAuMDcxLS4yNSwwLjEyNS0uMzU1LDAuMjA5Qzg1LjMxMSw1My4xNDEsODUsNTMuNzUzLDg1LDU0LjQ0NGMwLDEuNDU4LDAuODc5LDIuNzk5LDEuNTE1LDMuNjAybC0xLjM4Myw1LjI2M2MtLjQzMSwwLjIxMS0xLjYwNCwwLjYzLTQuMTMyLDAuNjNjLTcuMTYsMC05LTQuMi05LjA3MS00LjM3MWMtLjE2My0uNDA1LS41NzItLjY1Ny0xLjAwNS0uNjI2Yy0uMTIxLDAuMDEzLTEyLjM0OCwwLjgzMS0xNi4wMS03LjQwOWMtLjEyNi0uMjgzLS4zNzctLjQ5Mi0uNjc4LS41NjVjLS4zMDItLjA3Mi0uNjItLjAwMy0uODYyLDAuMTkxQzQ3LjU4NSw1NS44MDMsNDYsNTguNTUsNDYsNjMuOTRjMCwxLjk3OCwwLjUyMywzLjg3OSwxLjAyOSw1LjcxOUM0Ny41MjksNzEuNDcyLDQ4LDczLjE4NSw0OCw3NC45NGMwLDIuODU4LTEuMTE2LDUuNzc3LTEuNjM1LDYuOTgxQzM0Ljg1LDgxLjI2MywxNCw2My4xOCwxNCw1MC45NGMwLTEwLjc3NywyMS43Mi0zMSw0MS0zMWMwLjM1MiwwLDAuNjc3LS4xODUsMC44NTctMC40ODVjMi4xMjMtMy41MzcsNi40MTQtNC44NCw4LjY1My01LjI5MmwtMS45NzgsNy41MjNsMi40NTgtMS40ODdsMS44NDEtNy4wMDNjMC4wODMtMC4zMTIsMC4wMDktMC42NDYtMC4xOTktMC44OTVjLS4yMDctMC4yNDgtLjUyOC0uMzgyLS44NDUtLjM1NmMtLjMyMiwwLjAyNS03LjczNCwwLjY1OS0xMS4zNCw2QzM1LjAzOSwxOC4zMiwxMiwzOC4zMjksMTIsNTAuOTRjMCwxMy41OTksMjIuNjM5LDMzLDM1LDMzYzAuMzc5LDAsMC43MjUtMC4yMTQsMC44OTUtMC41NTNDNDcuOTgsODMuMjE1LDUwLDc5LjEyOCw1MCw3NC45NGMwLTIuMDI1LTAuNTMtMy45NS0xLjA0Mi01LjgxMkM0OC40NjUsNjcuMzM3LDQ4LDY1LjY0Nyw0OCw2My45NGMwLTQuMTcsMC44NDgtNi40MDEsNS42NzEtMTAuNDM4YzQuMTc0LDcuMzA1LDE0LjA0Niw3LjUzNSwxNi43MzksNy40NjhDNzEuMyw2Mi40Niw3NC4xMTIsNjUuOTQsODEsNjUuOTRjNC4yMDEsMCw1LjQ5MS0xLjA3Nyw1LjcwNy0xLjI5M2MuMTI1LS4xMjUsMC4yMTUtMC4yODEsMC4yNi0wLjQ1M2wxLjcyOS02LjU4NkM4OS4zNDIsNTUuNzIyLDg5LjUxOCw1MS41NDksODUuNjE1LDQ5LjE0M3ogTTg2LjUyLDUzLjQ1NmMwLjA1Ni0wLjA0NSwwLjEyMi0wLjA3MiwwLjE4Mi0wLjExYzAuNTUsMS40NDUsMC4yOTgsMi44NjIsMC4xNTIsMy40MzJDODYuMyw1NS45MjgsODYsNTUuMTQzLDg2LDU0LjQ0NEM4Niw1NC4wNjQsODYuMTc1LDUzLjczMSw4Ni41Miw1My40NTZ6Ii8+PHBhdGggZmlsbD0iIzFmMjEyYiIgZD0iTTcxLjk4NSwzMS42MTRjLTAuMTY4LTAuMzA1LTAuMzUyLTAuNTc4LTAuNTU0LTAuNzc4TDcxLjk4NSwzMS42MTR6Ii8+PGc+PHBhdGggZmlsbD0iIzFmMjEyYiIgZD0iTTE5LDY1LjQ0Yy0wLjA3OSwwLTAuMTU5LTAuMDE5LTAuMjMzLTAuMDU5Yy0wLjI0NC0wLjEyOS0wLjMzNy0wLjQzMi0wLjIwOC0wLjY3NmMxLjc2OC0zLjMzOCwyLjgwNi02LjA4NiwzLjgxMS04Ljc0MmMxLjUyNi00LjAzOCwyLjk2OC03Ljg1Miw2LjczMy0xMi44MjVjMC4xNTItMC4yMDEsMC40MzMtMC4yNTgsMC42NTItMC4xMjljMC4yMTgsMC4xMjksMC4zMDYsMC40LDAuMjA0LDAuNjMzQzI4Ljk4Myw0NS44NDYsMjgsNDkuNDIxLDI4LDUyLjQ0YzAsMy4zNTMsMC40NjEsNS44MDYsMC43NSw3LjAwOWMyLjM0NS0yLjcyNywzLjM1LTYuOTkzLDQuNDk5LTExLjg3NWMxLjMyNi01LjYzMywyLjgzLTEyLjAxOSw2Ljg1LTE3LjQzMmMwLjE1Mi0wLjIwNCwwLjQzMy0wLjI2MiwwLjY1My0wLjEzNHMwLjMwOSwwLjQsMC4yMDYsMC42MzRDMzkuOTgzLDMyLjg0NiwzOSwzNi40MjEsMzksMzkuNDRjMCwyLjg1LDAuNjI1LDQuODc5LDEuMDQ4LDUuOTI4YzEuODUxLTMuMjU4LDMuNDI0LTcuMTM4LDQuOTUtMTAuODk5YzIuODctNy4wNzgsNS41ODEtMTMuNzY0LDkuODEyLTE1LjQ5MWMwLjI1Ni0wLjEwNCwwLjU0OCwwLjAxOCwwLjY1MiwwLjI3M3MtMC4wMTksMC41NDgtMC4yNzMsMC42NTJjLTMuODQyLDEuNTY4LTYuNDc2LDguMDY0LTkuMjY1LDE0Ljk0MWMtMS42NjksNC4xMTYtMy4zOTUsOC4zNzItNS40OTcsMTEuODU0QzQwLjMzNyw0Ni44NDgsNDAuMTc1LDQ2Ljk0LDQwLDQ2Ljk0aDBjLTAuMTc2LDAtMC4zMzgtMC4wOTMtMC40MjgtMC4yNDNDMzkuNTA3LDQ2LjU5LDM4LDQ0LjAyNiwzOCwzOS40NGMwLTEuNzMsMC4yODgtMy41NDEsMC42OTYtNS4xODNjLTIuMzIxLDQuNC0zLjQ1MSw5LjIwMS00LjQ3NCwxMy41NDZjLTEuMjc4LDUuNDMxLTIuMzgzLDEwLjEyMS01LjM3NSwxMi45OTdjLTAuMTIzLDAuMTE5LTAuMjk5LDAuMTY4LTAuNDY2LDAuMTI1Yy0wLjE2Ny0wLjA0MS0wLjMtMC4xNjQtMC4zNTQtMC4zMjdDMjcuOTg0LDYwLjQ3MiwyNyw1Ny40NjMsMjcsNTIuNDRjMC0xLjkzMSwwLjM1OC0zLjk2MSwwLjg0Mi01Ljc0NWMtMi4yMjYsMy41MDUtMy4zNTYsNi40OTUtNC41MzgsOS42MjJjLTEuMDE1LDIuNjg2LTIuMDY0LDUuNDYzLTMuODYyLDguODU3QzE5LjM1Miw2NS4zNDMsMTkuMTc5LDY1LjQ0LDE5LDY1LjQ0eiIvPjwvZz48Zz48cGF0aCBmaWxsPSIjMWYyMTJiIiBkPSJNODYsNjQuNDRjLTAuMTI4LDAtMC4yNTYtMC4wNDktMC4zNTQtMC4xNDZsLTYuNS02LjVjLTAuMTk1LTAuMTk1LTAuMTk1LTAuNTEyLDAtMC43MDdzMC41MTItMC4xOTUsMC43MDcsMGw2LjUsNi41YzAuMTk1LDAuMTk1LDAuMTk1LDAuNTEyLDAsMC43MDdDODYuMjU2LDY0LjM5MSw4Ni4xMjgsNjQuNDQsODYsNjQuNDR6Ii8+PC9nPjxnPjxwYXRoIGZpbGw9IiMxZjIxMmIiIGQ9Ik03My41LDM0Ljk0Yy0wLjA2NSwwLTAuMTMxLTAuMDEzLTAuMTkzLTAuMDM5QzczLjEyMSwzNC44MjQsNzMsMzQuNjQxLDczLDM0LjQ0YzAtMi41MTgtMy4wNDMtNC4wMDctNi41NjctNS43MzFsLTAuNjUzLTAuMzJjLTMuNzgyLTEuODYxLTMuNzgtMy44NDEtMy43NzktNC45MDRjMC0xLjg1MywxLjczMS00LjU0NCw2LjUtNC41NDRjNS40MzcsMCw5LjUsNC40ODcsOS41LDguNWMwLDMuMzY2LTEuOTIsNS4yMTEtMy42MTQsNi44MzhsLTAuNTM1LDAuNTE5QzczLjc1NiwzNC44OSw3My42MjksMzQuOTQsNzMuNSwzNC45NHogTTY4LjUsMTkuOTRjLTQuMDM1LDAtNS41LDIuMDkzLTUuNSwzLjVjLTAuMDAxLDAuOTUtMC4wMDIsMi40NjUsMy4yMjEsNC4wNTJsMC42NTEsMC4zMTljMy4yMzYsMS41ODMsNi4zMTQsMy4wODksNi45OTEsNS41ODNDNzUuNDM0LDMxLjg4MSw3NywzMC4yNzgsNzcsMjcuNDRDNzcsMjQuMzgyLDczLjY4OCwxOS45NCw2OC41LDE5Ljk0eiIvPjwvZz48L3N2Zz4="
 }

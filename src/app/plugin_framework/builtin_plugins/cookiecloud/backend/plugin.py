@@ -672,6 +672,29 @@ class CookieCloudPlugin:
             self.ctx.warn(f"[CookieCloud]验证异常 {domain_url}: {e}")
             return False
 
+    def _persist_spa_local_storage(self, domain_url: str, raw_site: str, storage: dict) -> None:
+        """把 CookieCloud localStorage 同步到站点 spa 凭据，供 SPA/签到时解析."""
+        if not isinstance(storage, dict) or not storage:
+            return
+        try:
+            matches = self._find_matching_sites(domain_url)
+            for site in matches:
+                site_id = site.get("id")
+                if not site_id:
+                    continue
+                self._site_repo.upsert_site_api_credentials(
+                    int(site_id),
+                    "spa",
+                    {
+                        "source": "cookiecloud",
+                        "updated_at": int(time.time()),
+                        "domain": raw_site,
+                        "local_storage": storage,
+                    },
+                )
+        except Exception as exc:  # noqa: BLE001 - 同步失败不应阻塞 Cookie 更新
+            self.ctx.warn(f"[CookieCloud]写入 SPA 凭据失败 {domain_url}: {exc}")
+
     def _store_local_storage(self, contents: dict) -> int:
         """把 CookieCloud local_storage_data 写入 Redis（按父域 key），返回成功站点数."""
         local_storage = contents.get("local_storage_data") or {}
@@ -684,6 +707,8 @@ class CookieCloudPlugin:
                     continue
                 domain_url = ".".join(site.split(".")[-2:])
                 self._cache.set(f"local_storage:{domain_url}", JsonUtils.dumps(storage))
+                self._cache.set(f"local_storage_updated_at:{domain_url}", str(int(time.time())))
+                self._persist_spa_local_storage(domain_url, site, storage)
                 synced += 1
             except Exception as e:
                 self.ctx.error(f"处理 LocalStorage {site} 时出错: {e}")

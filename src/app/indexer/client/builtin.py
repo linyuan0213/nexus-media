@@ -162,6 +162,9 @@ class BuiltinIndexer(IndexerClientBase):
                 render=render,
                 chrome=site.get("chrome"),
                 browser_render=site.get("browser_render"),
+                note=site.get("note") or {},
+                api_profile=site.get("api_profile"),
+                api_credentials=site.get("api_credentials") or {},
             )
             if indexer:
                 if indexer_id and (str(indexer.id) == str(indexer_id) or site.get("name") == indexer_id):
@@ -408,6 +411,9 @@ class BuiltinIndexer(IndexerClientBase):
             "chrome": getattr(indexer, "chrome", False),
             "browser_render": getattr(indexer, "browser_render", False),
             "browser_persistent": getattr(indexer, "browser_persistent", False),
+            "note": getattr(indexer, "note", {}) or {},
+            "api_profile": getattr(indexer, "api_profile", "") or "",
+            "api_credentials": getattr(indexer, "api_credentials", {}) or {},
         }
         if indexer.headers and not user_config.get("api_key") and not user_config.get("bearer_token"):
             try:

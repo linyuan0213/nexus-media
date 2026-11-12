@@ -57,8 +57,9 @@ class SiteCache:
         self._signin_sites = []
 
         entities = self._repo.list_all()
+        credentials_map = self._repo.get_site_api_credentials_map()
         for entity in entities:
-            site_info = self._build_site_info(entity)
+            site_info = self._build_site_info(entity, credentials_map.get(entity.id) or {})
             sid = site_info["id"]
             self._site_by_ids[sid] = site_info
             # 统一标识索引：配置 id 与站点名均可解析到同一 site_info
@@ -139,9 +140,11 @@ class SiteCache:
         """外部触发缓存重建（SiteService 写操作后调用）."""
         self._refresh()
 
-    def _build_site_info(self, entity) -> dict:
+    def _build_site_info(self, entity, api_credentials: dict | None = None) -> dict:
         """将 SiteEntity 转换为与旧 Sites 兼容的 dict 格式."""
         note = entity.note or {}
+        # 新表优先；NOTE 仅作为旧数据兼容回退
+        api_credentials = api_credentials or note.get("api_credentials") or {}
         site_rssurl = entity.rss_url
         site_signurl = entity.sign_url
         site_cookie = entity.cookie
@@ -193,6 +196,8 @@ class SiteCache:
             "api_key": entity.api_key,
             "bearer_token": entity.bearer_token,
             "api_key_header": api_key_header,
+            "api_profile": note.get("api_profile"),
+            "api_credentials": api_credentials,
             "headers": entity.headers or site_headers,
             "rule": note.get("rule"),
             "download_setting": note.get("download_setting"),

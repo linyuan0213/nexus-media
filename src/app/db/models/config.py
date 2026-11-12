@@ -3,7 +3,7 @@
 包含: 过滤器分组、过滤规则、RSS解析器、站点配置、同步路径、用户配置、用户RSS配置
 """
 
-from sqlalchemy import BigInteger, ForeignKey, Integer, Sequence, String, Text
+from sqlalchemy import BigInteger, ForeignKey, Integer, Sequence, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -59,6 +59,19 @@ class CONFIGSITE(Base):
     EXCLUDE: Mapped[str] = mapped_column(Text, default="")
     SIZE: Mapped[int] = mapped_column(BigInteger, default=0)
     NOTE: Mapped[str] = mapped_column(Text, default="")
+
+
+class CONFIGSITEAPICREDENTIAL(Base):
+    """站点 API profile 凭据（DATA 为加密后的 JSON）."""
+
+    __tablename__ = "CONFIG_SITE_API_CREDENTIAL"
+    __table_args__ = (UniqueConstraint("SITE_ID", "PROFILE", name="UN_CONFIG_SITE_API_CREDENTIAL"),)
+
+    ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
+    SITE_ID: Mapped[int] = mapped_column(Integer, ForeignKey("CONFIG_SITE.ID", ondelete="CASCADE"), index=True)
+    PROFILE: Mapped[str] = mapped_column(String(64))
+    DATA: Mapped[str] = mapped_column(Text)
+    UPDATED_AT: Mapped[str] = mapped_column(String(32), default="")
 
 
 class CONFIGSYNCPATHS(Base):

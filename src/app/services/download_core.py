@@ -842,5 +842,6 @@ class DownloadCore:
                 "proxy": site_info.get("proxy"),
                 "api_key": site_info.get("api_key", ""),
                 "bearer_token": site_info.get("bearer_token", ""),
+                "note": site_info.get("note") or {},
             },
         )

@@ -141,17 +141,160 @@
         "path": "/api/member/profile",
         "body": {}
       }
-    }
-  },
-  "download": {
-    "type": "api",
-    "method": "POST",
-    "path": "/api/torrent/genDlToken",
-    "body": {
-      "id": "{tid}"
     },
-    "response_key": "data",
-    "presigned": true
+    "profiles": {
+      "default": {
+        "base_url": "https://api.m-team.cc",
+        "auth": {
+          "type": "api_key",
+          "header_name": "x-api-key"
+        },
+        "endpoints": {
+          "search": {
+            "method": "POST",
+            "path": "/api/torrent/search",
+            "body": {
+              "mode": "normal",
+              "categories": [],
+              "visible": 1,
+              "keyword": "{keyword}",
+              "pageNumber": "{page_1}",
+              "pageSize": 100
+            },
+            "mode_mapping": {
+              "ADULT": "adult",
+              "MOVIE": "movie",
+              "TV": "tvshow",
+              "ANIME": {
+                "mode": "normal",
+                "categories": [
+                  405
+                ]
+              }
+            },
+            "response": {
+              "total_key": "data.total",
+              "items_key": "data.data",
+              "item_mapping": {
+                "title": {
+                  "source": "name"
+                },
+                "details": {
+                  "source": "smallDescr"
+                },
+                "description": {
+                  "source": "smallDescr"
+                },
+                "download": {
+                  "type": "api",
+                  "method": "POST",
+                  "path": "/api/torrent/genDlToken",
+                  "body": {
+                    "id": "{id}"
+                  },
+                  "response_key": "data"
+                },
+                "size": {
+                  "source": "size"
+                },
+                "seeders": {
+                  "source": "status.seeders"
+                },
+                "leechers": {
+                  "source": "status.leechers"
+                },
+                "grabs": {
+                  "source": "status.leechers"
+                },
+                "imdbid": {
+                  "source": "imdb",
+                  "filters": [
+                    {
+                      "name": "regex",
+                      "args": [
+                        "tt\\d+",
+                        0
+                      ]
+                    }
+                  ]
+                },
+                "uploadvolumefactor": {
+                  "type": "mapping",
+                  "source": "status.discount",
+                  "map": {
+                    "FREE": 1.0,
+                    "FREE_2X": 2.0,
+                    "PERCENT_50": 1.0,
+                    "PERCENT_70": 1.0,
+                    "NORMAL": 1.0
+                  }
+                },
+                "downloadvolumefactor": {
+                  "type": "mapping",
+                  "source": "status.discount",
+                  "map": {
+                    "FREE": 0.0,
+                    "FREE_2X": 0.0,
+                    "PERCENT_50": 0.5,
+                    "PERCENT_70": 0.3,
+                    "NORMAL": 1.0
+                  }
+                },
+                "page_url": {
+                  "type": "template",
+                  "value": "https://{domain}/detail/{tid}",
+                  "fields": {
+                    "tid": "id"
+                  }
+                },
+                "date_elapsed": {
+                  "source": "status.liveDate"
+                }
+              }
+            }
+          },
+          "detail": {
+            "method": "POST",
+            "path": "/api/torrent/detail",
+            "body": {
+              "id": "{tid}"
+            }
+          },
+          "test_connection": {
+            "method": "POST",
+            "path": "/api/member/profile",
+            "body": {}
+          },
+          "user_info": {
+            "method": "POST",
+            "path": "/api/member/profile",
+            "body": {}
+          }
+        },
+        "download": {
+          "type": "api",
+          "method": "POST",
+          "path": "/api/torrent/genDlToken",
+          "body": {
+            "id": "{tid}"
+          },
+          "response_key": "data",
+          "presigned": true
+        }
+      }
+    },
+    "default_profile": "default",
+    "capabilities": {
+      "search": [
+        "default"
+      ],
+      "download": [
+        "default"
+      ],
+      "torrent_attr": [
+        "default"
+      ]
+    }
   },
   "torrent_attr": {
     "method": "POST",

@@ -286,6 +286,7 @@ class BrushTaskHelper:
                 proxy=bool(site_proxy),
                 chrome=bool(site_info.get("chrome")),
                 browser_persistent=bool(site_info.get("browser_persistent")),
+                note=site_info.get("note") or {},
             )
         except TorrentAttrFetchError as e:
             # 详情抓取失败 → 属性未知（返回 None），调用方不得按“非免费/非HR”误删

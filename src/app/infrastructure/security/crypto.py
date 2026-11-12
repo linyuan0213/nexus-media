@@ -13,7 +13,7 @@ import secrets
 from base64 import b64encode
 
 import jwt
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from pwdlib import PasswordHash
@@ -192,3 +192,26 @@ class TokenManager:
     def delete(token_key: str) -> None:
         """删除token"""
         TokenCache.delete(token_key)
+
+
+def _credential_fernet_key() -> str:
+    """从应用 secret 派生稳定的 Fernet key，避免直接把任意长度 secret 当 key."""
+    digest = hashlib.sha256(get_secret_key().encode("utf-8")).digest()
+    return base64.urlsafe_b64encode(digest).decode("ascii")
+
+
+def encrypt_secret(value: str) -> str:
+    """加密站点凭据等敏感文本；空值不加密."""
+    if not value:
+        return ""
+    return Fernet(_credential_fernet_key()).encrypt(value.encode("utf-8")).decode("ascii")
+
+
+def decrypt_secret(value: str) -> str:
+    """解密 encrypt_secret 的结果；密钥不匹配或历史明文时返回空值."""
+    if not value:
+        return ""
+    try:
+        return Fernet(_credential_fernet_key()).decrypt(value.encode("ascii")).decode("utf-8")
+    except (InvalidToken, ValueError, TypeError, UnicodeDecodeError):
+        return ""

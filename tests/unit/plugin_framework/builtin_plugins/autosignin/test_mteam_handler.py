@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.mteam import MTeam
 from app.plugin_framework.context import PluginContext
+from app.sites.credential_provider import SpaCredentials
 
 
 class _FakeResponse:
@@ -114,7 +115,7 @@ def _run_signin(local_storage, response_text='{"code":"1","message":"FAIL","data
     client.__exit__.return_value = False
     client.post.return_value = _FakeResponse(response_text)
     with (
-        patch("app.plugin_framework.builtin_plugins.autosignin.backend.handlers.mteam.CookiecloudAdapter") as cc,
+        patch("app.plugin_framework.builtin_plugins.autosignin.backend.handlers.mteam.resolve_spa_credentials") as cc,
         patch(
             "app.plugin_framework.builtin_plugins.autosignin.backend.handlers.mteam.HttpClient",
             return_value=client,
@@ -122,7 +123,11 @@ def _run_signin(local_storage, response_text='{"code":"1","message":"FAIL","data
         patch("app.plugin_framework.builtin_plugins.autosignin.backend.handlers.mteam.time.sleep"),
         patch.object(handler, "_fetch_secret", return_value=None),
     ):
-        cc.return_value.get_local_storage.return_value = local_storage
+        cc.return_value = SpaCredentials(
+            local_storage=local_storage,
+            bearer_token=str(local_storage.get("auth") or ""),
+            visitor_id=str(local_storage.get("visitorId") or ""),
+        )
         result = handler.signin(_signin_ctx())
     assert isinstance(result, SigninResult)
     return result, client

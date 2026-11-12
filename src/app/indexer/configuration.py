@@ -48,6 +48,9 @@ class IndexerHelper:
         bearer_token=None,
         chrome=None,
         browser_render=None,
+        note=None,
+        api_profile=None,
+        api_credentials=None,
     ):
         if not url:
             return None
@@ -73,6 +76,9 @@ class IndexerHelper:
                     url=url,
                     chrome=chrome,
                     browser_render=browser_render,
+                    note=note,
+                    api_profile=api_profile,
+                    api_credentials=api_credentials,
                 )
         return None
 
@@ -99,6 +105,9 @@ class IndexerConf:
         url=None,
         chrome=None,
         browser_render=None,
+        note=None,
+        api_profile=None,
+        api_credentials=None,
     ):
         if not datas:
             return
@@ -128,3 +137,6 @@ class IndexerConf:
         self.bearer_token = bearer_token
         self.chrome = bool(chrome) if chrome is not None else False
         self.browser_render = bool(browser_render) if browser_render is not None else False
+        self.note = note or {}
+        self.api_profile = api_profile or ""
+        self.api_credentials = api_credentials or {}

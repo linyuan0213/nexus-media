@@ -271,6 +271,7 @@ class SiteService:
             except Exception:
                 note = {}
         note = note or {}
+        api_credentials = note.pop("api_credentials", None)
 
         rss_enable = data.get("rss_enable")
         brush_enable = data.get("brush_enable")
@@ -350,6 +351,10 @@ class SiteService:
             entity = self._merge_partial_update(existing, entity, explicit_fields)
             try:
                 self._site_entity_repo.update(entity)
+                if api_credentials is not None:
+                    for profile, credential in (api_credentials or {}).items():
+                        if isinstance(credential, dict):
+                            self._site_entity_repo.upsert_site_api_credentials(int(tid), str(profile), credential)
                 if name and name != existing.name and existing.name:
                     self._site_user_info.update_site_name(name, existing.name)
                 self._sites.refresh()
@@ -362,6 +367,14 @@ class SiteService:
                 return SiteUpdateResultDTO(code=400, msg="站点不存在于站点定义中，无法添加")
             try:
                 self._site_entity_repo.insert(entity)
+                if api_credentials:
+                    inserted = self._site_entity_repo.list_by_name(name or "")
+                    if inserted:
+                        for profile, credential in (api_credentials or {}).items():
+                            if isinstance(credential, dict):
+                                self._site_entity_repo.upsert_site_api_credentials(
+                                    int(inserted[0].id), str(profile), credential
+                                )
                 # 删除站点会保留一条 disabled 配置行；重新添加时必须重新启用。
                 self._indexer_site_config_repo.upsert_site(
                     site_name=str(name or ""),

@@ -23,6 +23,7 @@ class SiteEntity:
     bearer_token: str | None = None
     headers: str | None = None
     note: dict[str, Any] = field(default_factory=dict)
+    api_credentials: dict[str, dict[str, Any]] = field(default_factory=dict)
     rss_uses: str | None = None
 
     @property
@@ -66,6 +67,7 @@ class SiteEntity:
             bearer_token=getattr(orm_obj, "BEARER_TOKEN", None),
             headers=getattr(orm_obj, "HEADERS", None),
             note=note,
+            api_credentials={},
             rss_uses=getattr(orm_obj, "INCLUDE", None),
         )
 
@@ -82,6 +84,7 @@ class SiteEntity:
             "bearer_token": self.bearer_token,
             "headers": self.headers,
             "note": self.note,
+            "api_credentials": self.api_credentials,
             "rss_uses": self.rss_uses,
         }
 

@@ -9,8 +9,16 @@ import time
 
 from sqlalchemy import Integer, cast, func
 
-from app.db.models import CONFIGSITE, SITEFAVICON, SITESTATISTICSHISTORY, SITEUSERINFOSTATS, SITEUSERSEEDINGINFO
+from app.db.models import (
+    CONFIGSITE,
+    CONFIGSITEAPICREDENTIAL,
+    SITEFAVICON,
+    SITESTATISTICSHISTORY,
+    SITEUSERINFOSTATS,
+    SITEUSERSEEDINGINFO,
+)
 from app.db.repositories.base_repository import BaseRepository
+from app.utils.credential_crypto import decrypt_secret, encrypt_secret
 from app.utils.json_utils import JsonUtils
 
 
@@ -70,6 +78,55 @@ class SiteRepository(BaseRepository):
                 )
             )
 
+    def get_site_api_credentials_map(self) -> dict[int, dict[str, dict]]:
+        """读取全部站点 profile 凭据并解密."""
+        result: dict[int, dict[str, dict]] = {}
+        with self.session() as db:
+            rows = db.query(CONFIGSITEAPICREDENTIAL).all()
+        for row in rows:
+            raw = decrypt_secret(row.DATA or "")
+            if not raw:
+                continue
+            try:
+                data = JsonUtils.loads(raw)
+            except Exception:
+                continue
+            if isinstance(data, dict):
+                result.setdefault(int(row.SITE_ID), {})[str(row.PROFILE)] = data
+        return result
+
+    def upsert_site_api_credentials(self, site_id: int, profile: str, data: dict | None) -> None:
+        """写入或删除指定站点 profile 凭据；data 为空时删除."""
+        if not site_id or not profile:
+            return
+        with self.session() as db:
+            row = (
+                db.query(CONFIGSITEAPICREDENTIAL)
+                .filter(
+                    CONFIGSITEAPICREDENTIAL.SITE_ID == int(site_id),
+                    CONFIGSITEAPICREDENTIAL.PROFILE == str(profile),
+                )
+                .first()
+            )
+            if not data:
+                if row:
+                    db.delete(row)
+                return
+            payload = encrypt_secret(JsonUtils.dumps(data))
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if row:
+                row.DATA = payload
+                row.UPDATED_AT = now
+            else:
+                db.add(
+                    CONFIGSITEAPICREDENTIAL(
+                        SITE_ID=int(site_id),
+                        PROFILE=str(profile),
+                        DATA=payload,
+                        UPDATED_AT=now,
+                    )
+                )
+
     def delete_config_site(self, tid: int | None) -> None:
         """
         删除站点信息
@@ -77,6 +134,7 @@ class SiteRepository(BaseRepository):
         if not tid:
             return
         with self.session() as db:
+            db.query(CONFIGSITEAPICREDENTIAL).filter(CONFIGSITEAPICREDENTIAL.SITE_ID == int(tid)).delete()
             db.query(CONFIGSITE).filter(CONFIGSITE.ID == int(tid)).delete()
 
     def update_config_site(
