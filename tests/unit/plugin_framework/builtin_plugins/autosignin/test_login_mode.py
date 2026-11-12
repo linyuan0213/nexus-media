@@ -231,7 +231,7 @@ class TestSignerLoginDispatch:
         login_browser_handler.signin.assert_called_once()
         engine._registry.get_login.assert_not_called()
 
-    def test_login_refresh_not_recorded_as_signed(self):
+    def test_login_refresh_recorded_as_signed(self):
         ctx = MagicMock()
         cache = MagicMock()
         cache.get_site_dict.return_value = [{"name": "蝶粉", "id": 42}]
@@ -256,7 +256,7 @@ class TestSignerLoginDispatch:
             update_history=update_history,
         )
 
-        assert history["2026-09-15"]["sign"] == []
+        assert history["2026-09-15"]["sign"] == ["42"]
         assert history["2026-09-15"]["retry"] == []
         ctx._message.send_site_signin_message.assert_called_once()
         assert "[蝶粉]登录态已刷新" in ctx._message.send_site_signin_message.call_args.args[0]

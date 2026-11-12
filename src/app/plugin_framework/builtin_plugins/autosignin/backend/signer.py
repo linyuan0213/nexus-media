@@ -46,7 +46,7 @@ class SigninEngine:
         queue_cnt = config.get("queue_cnt", 10)
         notify = config.get("notify", False)
 
-        # 登录模式站点始终参与调度（仅刷新登录态，不写入已签名单）
+        # 登录模式站点每天首次调度刷新登录态，成功后写入当日已执行名单
         selected_cfg = list(dict.fromkeys([*sign_sites_cfg, *login_sites, *login_browser_sites]))
 
         today = datetime.today()
@@ -243,7 +243,9 @@ class SigninEngine:
                         ids.append(str(sid))
             return ids
 
-        sign_sites = _extract_site_ids(sign_success_msg + already_sign_msg + login_success_msg + fz_sign_msg)
+        sign_sites = _extract_site_ids(
+            sign_success_msg + already_sign_msg + login_success_msg + fz_sign_msg + login_refresh_msg
+        )
         sign_sites = list(set(sign_sites))
 
         self.ctx.debug(
