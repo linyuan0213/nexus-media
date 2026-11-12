@@ -409,6 +409,12 @@ class BuiltinIndexer(IndexerClientBase):
         runtime_config = getattr(indexer, "runtime_config", {}) or {}
         if runtime_config:
             user_config = dict(runtime_config)
+            # runtime_config 可能已选中 SPA profile 并带 SPA token；顶层认证字段必须
+            # 回到站点基础配置，否则 official profile 会误用 SPA token，回退也仍 401。
+            for key in ("cookie", "api_key", "bearer_token", "headers", "api_profile", "api_credentials", "note"):
+                value = getattr(indexer, key, None)
+                if value not in (None, "", {}, []):
+                    user_config[key] = value
             user_config.setdefault("ua", getattr(indexer, "ua", "") or get_ua())
             user_config.setdefault("domain", getattr(indexer, "domain", "") or "")
             user_config.setdefault("chrome", getattr(indexer, "chrome", False))
