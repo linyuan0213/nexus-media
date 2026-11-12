@@ -23,8 +23,8 @@ from app.infrastructure.chrome.challenge import is_challenge
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites import engine_tools
-from app.sites.siteuserinfo import discuz, gazelle, nexus_php, small_horse, unit3d
+from app.sites.http import site_rate_limit
+from app.sites.userinfo.providers import discuz, gazelle, nexus_php, small_horse, unit3d
 from app.utils import StringUtils
 from app.utils.browser_mode import build_browser_mode
 from app.utils.config_tools import get_proxies
@@ -285,7 +285,7 @@ class ConfigHtmlUserInfo:
         engine = self._site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
+        rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, self._def)
         method = sc.get("method", "GET").upper()
         path_tpl = sc.get("path", "")
         headers = {"User-Agent": self._ua} if self._ua else {}
@@ -396,7 +396,7 @@ class ConfigHtmlUserInfo:
         engine = self._site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
+        rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, self._def)
 
         def _request(with_browser=None) -> str | None:
             # 浏览器模式请求用完即关：非持久会话立即删除，避免 nexus-chrome 会话/标签页堆积

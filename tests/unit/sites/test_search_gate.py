@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from app.sites.search_gate import SiteSearchBusyError, SiteSearchGate
+from app.sites.search.search_gate import SiteSearchBusyError, SiteSearchGate
 
 
 class _Lock:

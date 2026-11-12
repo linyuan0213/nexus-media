@@ -20,11 +20,11 @@ from app.domain.media_types import ProviderMediaType
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.media.metadata.registry import registry as metadata_registry
-from app.sites import engine_tools
-from app.sites.credential_provider import merge_spa_config
-from app.sites.engine import SiteDefinition
-from app.sites.runtime_config import ProfileRouter, SiteRuntimeConfig
-from app.sites.searchers import _TRANSFORMS
+from app.sites.config.credential_provider import merge_spa_config
+from app.sites.config.runtime_config import ProfileRouter, SiteRuntimeConfig
+from app.sites.config.site_definition import SiteDefinition
+from app.sites.http import site_rate_limit, spa_signer
+from app.sites.search.searchers import _TRANSFORMS
 from app.utils.config_tools import get_proxies
 from app.utils.json_utils import JsonUtils
 
@@ -202,7 +202,7 @@ class ApiSiteSearcher:
         proxy_url = proxy.get("http") if proxy else None
         rate_limiter = getattr(self._engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        rl_kwargs = engine_tools._get_rate_limit_kwargs(self._engine, self._site)
+        rl_kwargs = site_rate_limit.get_rate_limit_kwargs(self._engine, self._site)
         params = self._render_template(dict(search_config.get("params") or {}), **template_vars)
         self._apply_page_size(params, page_size)
         try:
@@ -214,7 +214,7 @@ class ApiSiteSearcher:
                 rate_limiter=rate_limiter_engine,
             )
             if self._api.auth.get("spa") if self._api else None:
-                headers = engine_tools.spa_signed_headers(
+                headers = spa_signer.spa_signed_headers(
                     self,
                     self._api,
                     self._user_config,

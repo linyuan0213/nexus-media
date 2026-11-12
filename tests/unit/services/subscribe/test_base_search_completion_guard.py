@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 from app.domain.media_types import ProviderMediaType
 from app.services.subscribe.strategies.base_search import BaseSearchStrategy
-from app.sites.torrent import Torrent
+from app.sites.download.torrent import Torrent
 
 
 def _build(check_result, monkeypatch):

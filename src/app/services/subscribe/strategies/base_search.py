@@ -48,7 +48,7 @@ from app.services.subscribe_repo_adapter import (
     SubscribeTvEpisodeRepositoryAdapter,
     SubscribeTvRepositoryAdapter,
 )
-from app.sites.torrent import Torrent
+from app.sites.download.torrent import Torrent
 
 # 订阅搜索每轮处理上限（subscribe.batch_limit 可覆盖）
 _SUBSCRIBE_BATCH_DEFAULT = 20

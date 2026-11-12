@@ -19,10 +19,10 @@ from app.indexer.configuration import IndexerHelper
 from app.indexer.schema import IndexerConfigSchema
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.system_config import SystemConfig
+from app.sites.config.runtime_config import SiteRuntimeConfig
 from app.sites.engine import SiteEngine
-from app.sites.runtime_config import SiteRuntimeConfig
-from app.sites.search_gate import SiteSearchBusyError, get_site_search_gate
-from app.sites.searcher_factory import create_searcher
+from app.sites.search.search_gate import SiteSearchBusyError, get_site_search_gate
+from app.sites.search.searcher_factory import create_searcher
 from app.sites.site_cache import SiteCache
 from app.utils import StringUtils
 from app.utils.config_tools import get_ua

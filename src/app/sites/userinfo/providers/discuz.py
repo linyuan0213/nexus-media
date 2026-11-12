@@ -10,7 +10,7 @@ from lxml import etree
 from app.utils import StringUtils
 
 if TYPE_CHECKING:
-    from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
+    from app.sites.userinfo.providers.config_html import ConfigHtmlUserInfo
 
 
 def is_discuz(ins: ConfigHtmlUserInfo) -> bool:

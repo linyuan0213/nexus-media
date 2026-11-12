@@ -1,6 +1,6 @@
 """种子内容过滤：纯广告 .url 种子不得创建下载任务."""
 
-from app.sites.torrent import Torrent
+from app.sites.download.torrent import Torrent
 
 
 def test_torrent_with_only_url_is_rejected():

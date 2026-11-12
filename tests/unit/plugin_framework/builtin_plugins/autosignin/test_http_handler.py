@@ -6,6 +6,9 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers._http impo
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import (
     SiteSigninContext,
 )
+from app.plugin_framework.builtin_plugins.autosignin.backend.signin_config_store import (
+    SigninConfigStore,
+)
 
 
 class TestHttpSigninHandler:
@@ -133,5 +136,43 @@ class TestHttpSigninHandler:
         with patch.object(handler, "_http_client", return_value=mock_client):
             result = handler.signin(ctx)
 
+        assert result.ok is True
+        assert "已签到" in result.msg
+
+
+class TestDiscfanMarkers:
+    def _config(self):
+        configs = SigninConfigStore(MagicMock()).load_builtin()
+        return next(item for item in configs if item["site_id"] == "discfan")
+
+    def _run(self, text: str):
+        handler = HttpSigninHandler(MagicMock(), None, self._config())
+        ctx = SiteSigninContext(
+            site="蝶粉",
+            site_id="discfan",
+            site_url="https://discfan.net",
+            cookie="uid=1",
+            api_key=None,
+            bearer_token=None,
+            ua="",
+            proxy_url=None,
+            headers=None,
+            is_browser=False,
+            raw={},
+        )
+        client = MagicMock()
+        response = MagicMock()
+        response.text = text
+        client.get.return_value = response
+        with patch.object(handler, "_http_client", return_value=client):
+            return handler.signin(ctx)
+
+    def test_traditional_success(self):
+        result = self._run("這是您的第 3 次簽到，已連續簽到 2 天，本次簽到獲得 10 魔力值。")
+        assert result.ok is True
+        assert "签到成功" in result.msg
+
+    def test_traditional_already(self):
+        result = self._run("您今天已經簽到過了，請勿重複刷新。")
         assert result.ok is True
         assert "已签到" in result.msg

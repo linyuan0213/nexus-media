@@ -3,8 +3,8 @@ import base64
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.ocr import OcrRecognizer
-from app.sites import engine_tools
 from app.sites.engine import SiteEngine
+from app.sites.http import site_rate_limit
 from app.sites.site_cache import SiteCache
 from app.utils import StringUtils
 
@@ -69,7 +69,7 @@ class SiteCookie:
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
         site_def = engine.get_by_url(image_url)
-        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, site_def)
+        rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, site_def)
         client = HttpClient(rate_limiter=rate_limiter_engine)
         ret = client.get(
             image_url, headers={"User-Agent": chrome.get_ua()}, auth=CookieAuth(chrome.get_cookies()), **rl_kwargs

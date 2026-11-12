@@ -10,8 +10,8 @@ import time
 import log
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites import engine_tools
-from app.sites.engine import SiteDefinition
+from app.sites.config.site_definition import SiteDefinition
+from app.sites.http import site_rate_limit
 from app.utils.config_tools import get_proxies
 from app.utils.json_utils import JsonUtils
 from app.utils.string_utils import StringUtils
@@ -232,7 +232,7 @@ class ConfigApiUserInfo:
         proxy_url = self._proxies.get("http") if self._proxies else None
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._def)
+        rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, self._def)
         client = HttpClient(config=HttpClientConfig(proxy_url=proxy_url), rate_limiter=rate_limiter_engine)
         try:
             if method == "POST":

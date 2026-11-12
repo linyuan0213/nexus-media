@@ -12,7 +12,7 @@ from app.core.constants import PT_TAG
 from app.plugin_framework.builtin_plugins.iyuuautoseed.backend.iyuu.iyuu_helper import IyuuHelper
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import Torrent, TorrentStatus
-from app.sites.torrent import Torrent as TorrentUtil
+from app.sites.download.torrent import Torrent as TorrentUtil
 from app.utils.json_utils import JsonUtils
 
 

@@ -4,7 +4,7 @@ import json
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
+from app.sites.userinfo.providers.config_html import ConfigHtmlUserInfo
 
 
 class _MockInstance(ConfigHtmlUserInfo):

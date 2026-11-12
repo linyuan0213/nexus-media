@@ -2,8 +2,8 @@
 搜索器工厂 — 从 engine 移出，避免 engine ↔ searchers 循环导入
 """
 
-from app.sites.api_searcher import ApiSiteSearcher
-from app.sites.html_searcher import HtmlSiteSearcher
+from app.sites.search.api_searcher import ApiSiteSearcher
+from app.sites.search.html_searcher import HtmlSiteSearcher
 
 
 def create_searcher(url: str, site_engine, user_config: dict | None = None):

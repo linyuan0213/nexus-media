@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.sites import engine_tools
+from app.sites.config import site_profile
 
 
 class ProfileRouter:
@@ -13,7 +13,7 @@ class ProfileRouter:
 
     @staticmethod
     def candidates(site: Any, site_info: dict, capability: str) -> list[tuple[str, Any, dict]]:
-        return engine_tools.api_profile_candidates(site, site_info, capability)
+        return site_profile.api_profile_candidates(site, site_info, capability)
 
     @staticmethod
     def resolve(site: Any, site_info: dict, capability: str) -> tuple[str, Any, dict]:
@@ -21,7 +21,7 @@ class ProfileRouter:
         if candidates:
             return candidates[0]
         api = getattr(site, "api", None)
-        return "", api, engine_tools.profile_user_config(site_info, "")
+        return "", api, site_profile.profile_user_config(site_info, "")
 
 
 @dataclass

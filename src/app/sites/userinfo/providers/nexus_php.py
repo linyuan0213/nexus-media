@@ -13,7 +13,7 @@ from app.utils import StringUtils
 from app.utils.json_utils import JsonUtils
 
 if TYPE_CHECKING:
-    from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
+    from app.sites.userinfo.providers.config_html import ConfigHtmlUserInfo
 
 
 def is_nexusphp(ins: ConfigHtmlUserInfo) -> bool:

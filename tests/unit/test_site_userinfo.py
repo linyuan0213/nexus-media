@@ -9,7 +9,7 @@ import pytest
 
 from app.infrastructure.rate_limiter import MemoryTokenBucketBackend, RateLimitEngine
 from app.infrastructure.thread import ThreadExecutor
-from app.sites.site_userinfo import SiteUserInfo
+from app.sites.userinfo.site_userinfo import SiteUserInfo
 
 
 class _MockSiteInfo:

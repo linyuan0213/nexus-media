@@ -3,14 +3,14 @@
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from app.sites.credential_provider import resolve_spa_credentials
+from app.sites.config.credential_provider import resolve_spa_credentials
 
 
 def test_cookiecloud_local_storage_wins_over_manual():
     site = SimpleNamespace(domain="piggo.me")
     user = {"api_credentials": {"spa": {"bearer_token": "manual", "visitor_id": "v1"}}}
     storage = {"pig_token": "cloud-token", "visitorId": "cloud-visitor"}
-    with patch("app.sites.credential_provider.CookiecloudAdapter") as adapter_cls:
+    with patch("app.sites.config.credential_provider.CookiecloudAdapter") as adapter_cls:
         adapter_cls.return_value.get_local_storage_updated_at.return_value = int(__import__("time").time())
         adapter_cls.return_value.get_cookie_updated_at.return_value = int(__import__("time").time())
         adapter_cls.return_value.get_local_storage.return_value = storage
@@ -25,7 +25,7 @@ def test_cookiecloud_local_storage_wins_over_manual():
 def test_manual_fallback_when_cookiecloud_empty():
     site = SimpleNamespace(domain="example.com")
     user = {"api_credentials": {"spa": {"bearer_token": "manual", "visitor_id": "v1"}}}
-    with patch("app.sites.credential_provider.CookiecloudAdapter") as adapter_cls:
+    with patch("app.sites.config.credential_provider.CookiecloudAdapter") as adapter_cls:
         adapter_cls.return_value.get_local_storage_updated_at.return_value = 0
         adapter_cls.return_value.get_cookie_updated_at.return_value = 0
         adapter_cls.return_value.get_local_storage.return_value = {}
@@ -39,7 +39,7 @@ def test_manual_fallback_when_cookiecloud_empty():
 def test_stale_cookiecloud_falls_back_to_manual():
     site = SimpleNamespace(domain="example.com")
     user = {"api_credentials": {"spa": {"bearer_token": "manual", "visitor_id": "v1"}}}
-    with patch("app.sites.credential_provider.CookiecloudAdapter") as adapter_cls:
+    with patch("app.sites.config.credential_provider.CookiecloudAdapter") as adapter_cls:
         adapter_cls.return_value.get_local_storage_updated_at.return_value = 1
         adapter_cls.return_value.get_cookie_updated_at.return_value = 0
         adapter_cls.return_value.get_local_storage.return_value = {"pig_token": "stale"}

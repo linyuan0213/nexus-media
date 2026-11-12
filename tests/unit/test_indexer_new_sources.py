@@ -22,7 +22,7 @@ def test_mteam_uses_generic_mode_fallback():
 def test_profile_search_mode_falls_back_to_lowercase():
     from types import SimpleNamespace
 
-    from app.sites.api_searcher import ApiSiteSearcher
+    from app.sites.search.api_searcher import ApiSiteSearcher
 
     site = SimpleNamespace(
         name="mteam",

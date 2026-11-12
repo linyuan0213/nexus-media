@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from lxml import etree
 
-from app.sites.siteuserinfo import unit3d
+from app.sites.userinfo.providers import unit3d
 
 
 class _MockInstance:

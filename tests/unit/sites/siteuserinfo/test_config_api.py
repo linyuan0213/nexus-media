@@ -1,6 +1,6 @@
 """ConfigApiUserInfo 用户信息解析单元测试."""
 
-from app.sites.siteuserinfo.config_api import ConfigApiUserInfo
+from app.sites.userinfo.providers.config_api import ConfigApiUserInfo
 
 
 class TestConfigApiUserInfo:

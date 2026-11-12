@@ -8,7 +8,7 @@ import time
 import uuid
 
 from app.infrastructure.chrome import BrowserSession
-from app.sites.credential_provider import resolve_spa_credentials
+from app.sites.config.credential_provider import resolve_spa_credentials
 from app.utils.browser_mode import get_chrome_server_url
 
 from .base import SigninResult, SiteSigninContext, SiteSigninHandler

@@ -53,6 +53,7 @@ class PluginSandbox:
         agent_service: Any | None = None,
         filetransfer_service: Any | None = None,
         site_service: Any | None = None,
+        site_sync_service: Any | None = None,
         event_bus: Any | None = None,
         app_context: Any | None = None,
     ):
@@ -76,6 +77,7 @@ class PluginSandbox:
         self._agent_service = agent_service
         self._filetransfer_service = filetransfer_service
         self._site_service = site_service
+        self._site_sync_service = site_sync_service
         self._event_bus = event_bus
         self._app_context = app_context
 
@@ -318,6 +320,7 @@ class PluginSandbox:
                 "sync": self._sync_engine,
                 "filetransfer": self._filetransfer_service,
                 "site_service": self._site_service,
+                "site_sync": self._site_sync_service,
                 "event_bus": self._event_bus,
                 "app_context": self._app_context,
             }

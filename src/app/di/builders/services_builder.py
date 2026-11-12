@@ -85,6 +85,7 @@ from app.services.search_service import Searcher
 from app.services.search_web_entry import make_web_search_fn
 from app.services.site_grant_service import SiteGrantService
 from app.services.site_service import SiteService
+from app.services.site_sync_service import SiteSyncService
 from app.services.storage_backend_service import StorageBackendService
 from app.services.subscribe.management.calendar_service import SubscribeCalendarService
 from app.services.subscribe.management.history_service import SubscribeHistoryService
@@ -122,10 +123,10 @@ from app.services.transfer_pipeline import TransferPipeline
 from app.services.transfer_queue_service import TransferQueueService
 from app.services.words_service import WordsService
 from app.sites import SiteConf, SiteSubtitle
-from app.sites.site_cookie import SiteCookie
-from app.sites.site_favicon_service import SiteFaviconService
-from app.sites.site_resolver import SiteResolver
-from app.sites.site_userinfo import SiteUserInfo
+from app.sites.connectivity.site_cookie import SiteCookie
+from app.sites.connectivity.site_favicon_service import SiteFaviconService
+from app.sites.connectivity.site_resolver import SiteResolver
+from app.sites.userinfo.site_userinfo import SiteUserInfo
 
 
 def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> ServiceObjects:
@@ -539,6 +540,12 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         indexer_site_config_repo=indexer_site_config_repo,
         site_engine=site_engine,
     )
+    site_sync_service = SiteSyncService(
+        sites=site_cache,
+        site_entity_repo=SiteRepositoryAdapter(),
+        site_engine=site_engine,
+        indexer_helper=infra.indexer_helper,
+    )
 
     # 需要在数据库初始化后构造的服务
     words_service = WordsService(
@@ -616,6 +623,8 @@ def build_services(infra: InfrastructureObjects, facades: BusinessFacades) -> Se
         infra.plugin_sandbox._site_resolver = site_resolver
     if infra.plugin_sandbox._site_service is None:
         infra.plugin_sandbox._site_service = site_service
+    if infra.plugin_sandbox._site_sync_service is None:
+        infra.plugin_sandbox._site_sync_service = site_sync_service
     if infra.plugin_sandbox._event_bus is None:
         infra.plugin_sandbox._event_bus = infra.event_bus
 

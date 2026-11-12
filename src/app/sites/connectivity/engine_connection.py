@@ -7,7 +7,7 @@ from app.infrastructure.chrome.challenge import is_challenge
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites import engine_tools
+from app.sites.http import site_rate_limit
 from app.sites.utils import is_logged_in
 from app.utils.browser_mode import build_browser_mode
 from app.utils.config_tools import get_proxies
@@ -29,7 +29,7 @@ def test_html_connection(engine, site, user_config, base_url=None):
     proxy_url = proxy.get("http") if proxy else None
     rate_limiter = getattr(engine, "site_limiter", None)
     rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-    rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, site)
+    rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, site)
     browser = (
         build_browser_mode(
             site_info=user_config,

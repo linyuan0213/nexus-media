@@ -23,7 +23,7 @@ def test_spa_torrent_attr_maps_free_and_labels():
     user_note = {"api_credentials": {"spa": {"bearer_token": "jwt", "visitor_id": "v"}}}
     with (
         patch("app.sites.engine.HttpClient") as client_cls,
-        patch("app.sites.engine.engine_tools.spa_signed_headers", return_value={}),
+        patch("app.sites.engine.spa_signer.spa_signed_headers", return_value={}),
     ):
         client_cls.return_value.get.return_value.text = json.dumps(payload)
         result = engine.resolve_torrent_attr("https://piggo.me/detail/57233", note=user_note)

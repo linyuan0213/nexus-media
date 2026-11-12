@@ -52,7 +52,8 @@ class TestGetTorrentAttrUrl:
     """get_torrent_attr 详情页 URL 重建：RSS 域与主站域分离的站点（M-Team）不得拼错"""
 
     def _make(self):
-        from app.sites.engine import SiteDefinition, SiteEngine
+        from app.sites.config.site_definition import SiteDefinition
+        from app.sites.engine import SiteEngine
 
         helper = BrushTaskHelper.__new__(BrushTaskHelper)
         helper._repo = MagicMock()
@@ -100,7 +101,8 @@ class TestGetTorrentAttrUrl:
 
     def test_other_site_unchanged(self):
         """RSS 与主站同域的站点：URL 构建结果与旧逻辑一致"""
-        from app.sites.engine import SiteDefinition, SiteEngine
+        from app.sites.config.site_definition import SiteDefinition
+        from app.sites.engine import SiteEngine
 
         helper = BrushTaskHelper.__new__(BrushTaskHelper)
         helper._siteconf = MagicMock()
@@ -125,7 +127,8 @@ class TestGetTorrentAttrUrl:
 
     def test_domain_with_scheme_not_double_prefixed(self):
         """domain 自带 scheme 的站点（如观众 https://audiences.me）不得重复拼接协议头"""
-        from app.sites.engine import SiteDefinition, SiteEngine
+        from app.sites.config.site_definition import SiteDefinition
+        from app.sites.engine import SiteEngine
 
         helper = BrushTaskHelper.__new__(BrushTaskHelper)
         helper._siteconf = MagicMock()

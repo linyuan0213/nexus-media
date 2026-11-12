@@ -1,7 +1,7 @@
 """SmallHorse 站点用户信息解析单元测试."""
 
-from app.sites.siteuserinfo import small_horse
-from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
+from app.sites.userinfo.providers import small_horse
+from app.sites.userinfo.providers.config_html import ConfigHtmlUserInfo
 
 
 class _MockInstance(ConfigHtmlUserInfo):

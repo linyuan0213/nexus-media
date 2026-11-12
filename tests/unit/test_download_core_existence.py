@@ -6,7 +6,7 @@ import pytest
 
 from app.domain.media_types import ProviderMediaType
 from app.services.download_core import DownloadCore
-from app.sites.torrent import Torrent
+from app.sites.download.torrent import Torrent
 
 
 @pytest.mark.parametrize("total_ep", [{1: 10}, {"1": 10}])

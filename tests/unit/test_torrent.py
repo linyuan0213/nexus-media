@@ -1,4 +1,4 @@
-"""Tests for app.sites.torrent."""
+"""Tests for app.sites.download.torrent."""
 
 from unittest.mock import MagicMock, patch
 
@@ -7,7 +7,7 @@ import pytest
 from app.core.constants import site_priority_order
 from app.domain.media_types import ProviderMediaType
 from app.media.models import MediaInfo
-from app.sites.torrent import Torrent
+from app.sites.download.torrent import Torrent
 
 
 def test_site_priority_order_supports_values_above_100():
@@ -267,7 +267,7 @@ class TestTorrentContentErrors:
     def test_save_torrent_file_json_limit_returns_unretryable(self):
         torrent = self._torrent()
         resp = self._response('{"code":"1","message":"相同種子當天最多下載10次"}'.encode())
-        with patch("app.sites.torrent.HttpClient") as client:
+        with patch("app.sites.download.torrent.HttpClient") as client:
             client.return_value.get.return_value = resp
             path, content, msg = torrent.save_torrent_file("https://api.m-team.cc/api/rss/dlv2?sign=abc&t=1")
         assert path is None and content is None
@@ -289,7 +289,7 @@ class TestTorrentContentErrors:
         """
         torrent = self._torrent()
         magnet = "magnet:?xt=urn:btih:ABCDEF123456&dn=Show"
-        with patch("app.sites.torrent.HttpClient") as client:
+        with patch("app.sites.download.torrent.HttpClient") as client:
             client.return_value.get.return_value = self._redirect(302, magnet)
             path, content, msg = torrent.save_torrent_file("http://192.168.1.1:9696/6/download?apikey=k&link=a1lv")
         assert path is None
@@ -307,7 +307,7 @@ class TestTorrentContentErrors:
         second.content = magnet.encode()
         second.text = magnet
         second.headers = {"content-type": "application/x-bittorrent"}
-        with patch("app.sites.torrent.HttpClient") as client:
+        with patch("app.sites.download.torrent.HttpClient") as client:
             client.return_value.get.side_effect = [first, second]
             path, content, msg = torrent.save_torrent_file("https://site.example.com/dl/1")
         assert content == magnet

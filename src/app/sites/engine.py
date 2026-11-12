@@ -27,28 +27,17 @@ from app.infrastructure.chrome.challenge import is_challenge
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites import engine_connection, engine_download, engine_tools, engine_user_info
-from app.sites.runtime_config import ProfileRouter
-from app.sites.site_definition import (
-    DownloadConfig,
-    SiteApiConfig,
-    SiteDefinition,
-    SiteHtmlConfig,
-    SubtitleConfig,
-)
+from app.sites.config.runtime_config import ProfileRouter
+from app.sites.config.site_definition import SiteDefinition
+from app.sites.config.site_profile import profile_user_config
+from app.sites.connectivity import engine_connection
+from app.sites.download import engine_download
+from app.sites.http import auth_headers, endpoint_client, site_rate_limit, spa_signer
+from app.sites.userinfo import engine_user_info
 from app.sites.utils import is_logged_in
 from app.utils import JsonUtils
 from app.utils.browser_mode import build_browser_mode
 from app.utils.config_tools import get_proxies
-
-__all__ = [
-    "DownloadConfig",
-    "SiteApiConfig",
-    "SiteDefinition",
-    "SiteHtmlConfig",
-    "SubtitleConfig",
-    "SiteEngine",
-]
 
 # 详情页/页面抓取限流退避：站点连续返回空/失败时，串行化并放缓后续请求，
 # 避免瞬时并发触发站点风控；恢复正常后自动回到无间隔并发。
@@ -206,8 +195,8 @@ class SiteEngine:
 
     def _register_user_info_factories(self) -> None:
         """注册默认的用户信息解析工厂（动态导入避免循环依赖）"""
-        importlib.import_module("app.sites.siteuserinfo.config_api")
-        importlib.import_module("app.sites.siteuserinfo.config_html")
+        importlib.import_module("app.sites.userinfo.providers.config_api")
+        importlib.import_module("app.sites.userinfo.providers.config_html")
 
     def _load(self, directory: str):
         for fname in sorted(os.listdir(directory)):
@@ -608,7 +597,7 @@ class SiteEngine:
             profile = ProfileRouter.resolve(site, user_config, "torrent_attr")
         profile_name = profile[0] if profile else ""
         api_config = profile[1] if profile else site.api
-        user_config = engine_tools.profile_user_config(user_config, profile_name)
+        user_config = profile_user_config(user_config, profile_name)
         cfg = (getattr(api_config, "torrent_attr", None) if api_config else None) or site.torrent_attr
 
         if api_config and cfg:
@@ -627,7 +616,7 @@ class SiteEngine:
                 query = {k: v.format(tid=tid) for k, v in (cfg.get("params") or {}).items()}
                 if query:
                     url = f"{url}?{urlencode(query)}"
-            headers, auth = engine_tools._build_auth(self, site, user_config, api=api_config)
+            headers, auth = auth_headers.build_auth(self, site, user_config, api=api_config)
             body_format = cfg.get("body_format", "form")
             if body_format == "json":
                 if method == "POST":
@@ -639,7 +628,7 @@ class SiteEngine:
             try:
                 rate_limiter = getattr(self, "site_limiter", None)
                 rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-                rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
+                rl_kwargs = site_rate_limit.get_rate_limit_kwargs(self, site)
                 client = HttpClient(
                     config=HttpClientConfig(
                         proxy_url=proxy_url,
@@ -647,7 +636,7 @@ class SiteEngine:
                     ),
                     rate_limiter=rate_limiter_engine,
                 )
-                headers = engine_tools.spa_signed_headers(
+                headers = spa_signer.spa_signed_headers(
                     self, api_config, user_config, client, headers, method, url, auth=auth
                 )
                 if method == "POST":
@@ -858,7 +847,7 @@ class SiteEngine:
             time.sleep(pace_wait)
         rate_limiter = getattr(self, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        rl_kwargs = engine_tools._get_rate_limit_kwargs(self, site)
+        rl_kwargs = site_rate_limit.get_rate_limit_kwargs(self, site)
         cookie = user_config.get("cookie", "")
         if site and site.api:
             # 页面（HTML 详情/搜索页）抓取优先使用会话 cookie；无 cookie 时才回退 API 鉴权，
@@ -866,8 +855,8 @@ class SiteEngine:
             if cookie:
                 auth = CookieAuth(cookie)
             else:
-                auth_headers, auth = engine_tools._build_auth(self, site, user_config)
-                headers.update(auth_headers)
+                built_headers, auth = auth_headers.build_auth(self, site, user_config)
+                headers.update(built_headers)
         else:
             auth = CookieAuth(cookie) if cookie else None
 
@@ -937,12 +926,12 @@ class SiteEngine:
             profile = ProfileRouter.resolve(site, user_config, "search")
             profile_name = profile[0] if profile else ""
             api = profile[1] if profile else site.api
-            user_config = engine_tools.profile_user_config(user_config, profile_name)
+            user_config = profile_user_config(user_config, profile_name)
             test_cfg = api.endpoints.get("test_connection") if api else None
             if not test_cfg:
                 return False, "站点未配置连接测试端点", 0
             start = time.time()
-            result = engine_tools._call_endpoint(self, test_cfg, site, user_config, {}, api=api)
+            result = endpoint_client.call_endpoint(self, test_cfg, site, user_config, {}, api=api)
             latency = round(time.time() - start, 3)
             if result is None:
                 return False, "连接失败", latency
@@ -1029,7 +1018,7 @@ class SiteEngine:
         dl_cfg = site.subtitle.download_endpoint
         if not list_cfg or not dl_cfg:
             return 0
-        subs = engine_tools._call_endpoint(self, list_cfg, site, user_config, {"tid": tid}) or []
+        subs = endpoint_client.call_endpoint(self, list_cfg, site, user_config, {"tid": tid}) or []
         if not isinstance(subs, list):
             return 0
         cnt = 0
@@ -1039,12 +1028,14 @@ class SiteEngine:
                 continue
             genlink_vars = {"tid": tid, "subtitle_id": sid}
             link = (
-                engine_tools._call_endpoint(self, genlink_cfg, site, user_config, genlink_vars) if genlink_cfg else None
+                endpoint_client.call_endpoint(self, genlink_cfg, site, user_config, genlink_vars)
+                if genlink_cfg
+                else None
             )
             if link:
                 dl_cfg_path = dl_cfg.get("path", "").format(tid=tid, subtitle_id=sid)
                 dl_url = f"{(site.api.base_url or '').rstrip('/')}/{dl_cfg_path.lstrip('/')}" if site.api else ""
-                if engine_tools._call_endpoint(
+                if endpoint_client.call_endpoint(
                     self,
                     {"method": "GET", "path": dl_url},
                     site,
@@ -1056,7 +1047,7 @@ class SiteEngine:
                 ):
                     cnt += 1
             else:
-                if engine_tools._call_endpoint(
+                if endpoint_client.call_endpoint(
                     self,
                     dl_cfg,
                     site,
@@ -1069,7 +1060,7 @@ class SiteEngine:
                     cnt += 1
         return cnt
 
-    # ---- 内部工具 (委托给 engine_tools) ----
+    # ---- 内部工具 ----
 
     def _call_endpoint(
         self,
@@ -1082,7 +1073,7 @@ class SiteEngine:
         download=False,
         api=None,
     ):
-        return engine_tools._call_endpoint(
+        return endpoint_client.call_endpoint(
             self,
             cfg,
             site,
@@ -1095,19 +1086,19 @@ class SiteEngine:
         )
 
     def _build_auth(self, site, user_config, api=None):
-        return engine_tools._build_auth(self, site, user_config, api=api)
+        return auth_headers.build_auth(self, site, user_config, api=api)
 
     def _build_headers(self, site, user_config, api=None):
-        return engine_tools._build_headers(self, site, user_config, api=api)
+        return auth_headers.build_headers(self, site, user_config, api=api)
 
     def _resolve_auth_token(self, site, user_config, token_type):
-        return engine_tools._resolve_auth_token(self, site, user_config, token_type)
+        return auth_headers.resolve_auth_token(self, site, user_config, token_type)
 
     def _fetch_csrf_token(self, site, user_config):
-        return engine_tools._fetch_csrf_token(self, site, user_config)
+        return auth_headers.fetch_csrf_token(self, site, user_config)
 
     def _fetch_passkey(self, site, user_config):
-        return engine_tools._fetch_passkey(self, site, user_config)
+        return auth_headers.fetch_passkey(self, site, user_config)
 
     @staticmethod
     def _extract_tid(page_url: str, site: SiteDefinition | None = None) -> str | None:

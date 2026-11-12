@@ -14,7 +14,7 @@ import log
 from app.media import meta_info
 from app.plugin_framework.context import PluginContext
 from app.schemas.download import TorrentStatus
-from app.sites.torrent import Torrent
+from app.sites.download.torrent import Torrent
 from app.utils.json_utils import JsonUtils
 from app.utils.path_utils import get_temp_path
 

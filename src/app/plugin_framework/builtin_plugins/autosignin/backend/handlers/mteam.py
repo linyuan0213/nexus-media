@@ -7,7 +7,7 @@ from typing import Any
 
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites.credential_provider import resolve_spa_credentials
+from app.sites.config.credential_provider import resolve_spa_credentials
 from app.utils.config_tools import get_ua
 from app.utils.json_utils import JsonUtils
 

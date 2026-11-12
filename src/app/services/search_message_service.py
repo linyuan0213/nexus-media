@@ -26,9 +26,9 @@ from app.services.search_service import Searcher
 from app.services.subscribe_service import SubscribeService
 from app.services.subscription_intent import resolve_subscription
 from app.services.web.utils import search_media_infos
+from app.sites.download.torrent import Torrent
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
-from app.sites.torrent import Torrent
 from app.utils import StringUtils
 
 

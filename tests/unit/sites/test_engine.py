@@ -7,13 +7,8 @@ import pytest
 from lxml import etree
 
 import app.sites.engine as engine_mod
-from app.sites.engine import (
-    SiteApiConfig,
-    SiteDefinition,
-    SiteEngine,
-    TorrentAttrFetchError,
-    _extract_detail_labels,
-)
+from app.sites.config.site_definition import SiteApiConfig, SiteDefinition
+from app.sites.engine import SiteEngine, TorrentAttrFetchError, _extract_detail_labels
 
 
 class TestSiteEngine:

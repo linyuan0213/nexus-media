@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.sites.site_resolver import SiteResolver
+from app.sites.connectivity.site_resolver import SiteResolver
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ class TestSiteResolver:
         resolver._cache.get_sites.return_value = {"public": True, "rssurl": "https://example.com/rss"}
         resp = MagicMock()
         resp.status_code = 200
-        with patch("app.sites.site_resolver.HttpClient") as mock_client:
+        with patch("app.sites.connectivity.site_resolver.HttpClient") as mock_client:
             mock_client.return_value.get.return_value = resp
             ok, msg, seconds = resolver.test_connection(1)
         assert ok is True
@@ -48,7 +48,7 @@ class TestSiteResolver:
         resolver._cache.get_sites.return_value = {"public": True, "rssurl": "https://example.com/rss"}
         resp = MagicMock()
         resp.status_code = 500
-        with patch("app.sites.site_resolver.HttpClient") as mock_client:
+        with patch("app.sites.connectivity.site_resolver.HttpClient") as mock_client:
             mock_client.return_value.get.return_value = resp
             ok, msg, seconds = resolver.test_connection(1)
         assert ok is False
@@ -67,8 +67,8 @@ class TestSiteResolver:
         ok_resp.status_code = 200
         ok_resp.text = "<html>ok</html>"
         with (
-            patch("app.sites.site_resolver.build_browser_mode") as mock_browser,
-            patch("app.sites.site_resolver.HttpClient") as mock_client,
+            patch("app.sites.connectivity.site_resolver.build_browser_mode") as mock_browser,
+            patch("app.sites.connectivity.site_resolver.HttpClient") as mock_client,
         ):
             mock_browser.return_value = MagicMock()
             mock_client.return_value.get.side_effect = [blocked, ok_resp]
@@ -110,7 +110,7 @@ class TestSiteResolver:
           <a href="/logout">logout</a>
         </html>
         """
-        with patch("app.sites.site_resolver.HttpClient") as mock_client:
+        with patch("app.sites.connectivity.site_resolver.HttpClient") as mock_client:
             mock_client.return_value.get.return_value = resp
             ok, msg, seconds = resolver.test_connection(1)
         assert ok is True
@@ -125,7 +125,7 @@ class TestSiteResolver:
         resp = MagicMock()
         resp.status_code = 200
         resp.text = "<html>login</html>"
-        with patch("app.sites.site_resolver.HttpClient") as mock_client:
+        with patch("app.sites.connectivity.site_resolver.HttpClient") as mock_client:
             mock_client.return_value.get.return_value = resp
             ok, msg, seconds = resolver.test_connection(1)
         assert ok is False
@@ -139,7 +139,7 @@ class TestSiteResolver:
         resolver._site_engine.get_by_url.return_value = None
         resp = MagicMock()
         resp.status_code = 403
-        with patch("app.sites.site_resolver.HttpClient") as mock_client:
+        with patch("app.sites.connectivity.site_resolver.HttpClient") as mock_client:
             mock_client.return_value.get.return_value = resp
             ok, msg, seconds = resolver.test_connection(1)
         assert ok is False

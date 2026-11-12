@@ -3,7 +3,7 @@
 import log
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites.engine_tools import _get_rate_limit_kwargs
+from app.sites.http import site_rate_limit
 from app.utils.config_tools import get_proxies
 from app.utils.json_utils import JsonUtils
 
@@ -45,7 +45,7 @@ def prefetch_user_profile(
         proxy_url = proxies.get("http") if proxies else None
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        rl_kwargs = _get_rate_limit_kwargs(engine, site_def)
+        rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, site_def)
         client = HttpClient(
             config=HttpClientConfig(proxy_url=proxy_url),
             rate_limiter=rate_limiter_engine,

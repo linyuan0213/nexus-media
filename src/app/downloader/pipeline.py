@@ -22,7 +22,7 @@ from app.events import Event
 from app.events.constants import DOWNLOAD_FAILED, DOWNLOAD_STARTED
 from app.events.payloads import DownloadFailedPayload, DownloadStartedPayload
 from app.infrastructure.thread import ThreadExecutor
-from app.sites.torrent import Torrent
+from app.sites.download.torrent import Torrent
 from app.utils import StringUtils
 from app.utils.json_utils import JsonUtils
 

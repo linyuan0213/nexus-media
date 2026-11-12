@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
-from app.sites.api_searcher import ApiSiteSearcher
+from app.sites.search.api_searcher import ApiSiteSearcher
 
 
 class TestStripEmptyLists:
@@ -21,7 +21,7 @@ class TestStripEmptyLists:
 
     def test_empty_categories_omitted(self):
         s = self._searcher()
-        with patch("app.sites.api_searcher.HttpClient") as client_cls:
+        with patch("app.sites.search.api_searcher.HttpClient") as client_cls:
             client_cls.return_value.post.return_value.is_success = True
             client_cls.return_value.post.return_value.json.return_value = {"data": []}
             s._execute_request(
@@ -36,7 +36,7 @@ class TestStripEmptyLists:
 
     def test_api_error_response_sets_last_error(self):
         s = self._searcher()
-        with patch("app.sites.api_searcher.HttpClient") as client_cls:
+        with patch("app.sites.search.api_searcher.HttpClient") as client_cls:
             client_cls.return_value.post.return_value.is_success = True
             client_cls.return_value.post.return_value.json.return_value = {
                 "code": "4",
@@ -53,7 +53,7 @@ class TestStripEmptyLists:
 
     def test_nonempty_categories_kept(self):
         s = self._searcher()
-        with patch("app.sites.api_searcher.HttpClient") as client_cls:
+        with patch("app.sites.search.api_searcher.HttpClient") as client_cls:
             client_cls.return_value.post.return_value.is_success = True
             client_cls.return_value.post.return_value.json.return_value = {"data": []}
             s._execute_request(
@@ -117,7 +117,7 @@ class TestPostQueryParams:
 
     def test_post_params_become_query_string(self):
         s = self._searcher()
-        with patch("app.sites.api_searcher.HttpClient") as client_cls:
+        with patch("app.sites.search.api_searcher.HttpClient") as client_cls:
             client_cls.return_value.post.return_value.is_success = True
             client_cls.return_value.post.return_value.json.return_value = {"data": []}
             s._execute_request(
@@ -138,7 +138,7 @@ class TestPostQueryParams:
 
 class TestDottedDownloadResponse:
     def test_dotted_response_key(self):
-        from app.sites.engine_download import _response_value
+        from app.sites.download.engine_download import _response_value
 
         assert _response_value({"data": {"url": "https://x/torrent"}}, "data.url") == "https://x/torrent"
         assert _response_value({"data": {"url": "https://x/torrent"}}, "data") == {"url": "https://x/torrent"}
@@ -149,7 +149,7 @@ class TestApiDownload:
         from types import SimpleNamespace
         from unittest.mock import patch
 
-        from app.sites.engine_download import resolve_download_api
+        from app.sites.download.engine_download import resolve_download_api
 
         site = SimpleNamespace(
             domain="piggo.me",
@@ -159,7 +159,7 @@ class TestApiDownload:
         engine = MagicMock()
         engine._build_auth.return_value = ({}, None)
         engine.site_limiter = None
-        with patch("app.sites.engine_download.HttpClient") as client_cls:
+        with patch("app.sites.download.engine_download.HttpClient") as client_cls:
             client_cls.return_value.post.return_value.json.return_value = {
                 "data": {"url": "https://piggo.me/v1/web/torrents/1/dl/x"}
             }
@@ -218,7 +218,7 @@ class TestFullPiggoFields:
 
 class TestApiProfiles:
     def _site(self):
-        from app.sites.engine import SiteDefinition
+        from app.sites.config.site_definition import SiteDefinition
 
         return SiteDefinition.from_dict(
             {
@@ -237,7 +237,7 @@ class TestApiProfiles:
                         },
                         "spa": {
                             "base_url": "https://example.com",
-                            "auth": {"type": "bearer", "spa": {"sign_path": "/sign"}},
+                            "auth": {"type": "bearer", "spa": {"signer": "piggo", "sign_path": "/sign"}},
                             "endpoints": {"search": {"method": "GET", "path": "/spa/search"}},
                         },
                     },
@@ -247,18 +247,18 @@ class TestApiProfiles:
         )
 
     def test_profile_resolution_skips_missing_credentials(self):
-        from app.sites import engine_tools
+        from app.sites.config import site_profile
 
         site = self._site()
         user = {"note": {"api_credentials": {"official": {"api_key": "k"}}}}
-        resolved = engine_tools.resolve_api_profile(site, user, "search")
+        resolved = site_profile.resolve_api_profile(site, user, "search")
         assert resolved is not None
         name, api = resolved
         assert name == "official"
         assert api.base_url == "https://api.example.com"
 
     def test_profile_resolution_prefers_ready_spa(self):
-        from app.sites import engine_tools
+        from app.sites.config import site_profile
 
         site = self._site()
         user = {
@@ -269,7 +269,7 @@ class TestApiProfiles:
                 }
             }
         }
-        resolved = engine_tools.resolve_api_profile(site, user, "search")
+        resolved = site_profile.resolve_api_profile(site, user, "search")
         assert resolved is not None
         name, api = resolved
         assert name == "spa"
@@ -282,9 +282,9 @@ class TestApiProfiles:
         client = MagicMock()
         client.get.return_value.is_success = True
         client.get.return_value.json.return_value = {"data": {"sign": "b" * 64}}
-        from app.sites import engine_tools
+        from app.sites.http import spa_signer
 
-        headers = engine_tools.spa_signed_headers(
+        headers = spa_signer.spa_signed_headers(
             searcher,
             searcher._api,
             searcher._user_config,
@@ -301,7 +301,7 @@ class TestApiProfiles:
 
 class TestProfileFallbackSearch:
     def test_fallback_rebuilds_request_from_each_profile(self, monkeypatch):
-        from app.sites.engine import SiteDefinition
+        from app.sites.config.site_definition import SiteDefinition
 
         site = SiteDefinition.from_dict(
             {
@@ -371,7 +371,7 @@ class TestSpaDownload:
         from types import SimpleNamespace
         from unittest.mock import patch
 
-        from app.sites.engine_download import resolve_download_api
+        from app.sites.download.engine_download import resolve_download_api
 
         download = SimpleNamespace(
             type="api",
@@ -392,8 +392,8 @@ class TestSpaDownload:
         engine._build_auth.return_value = ({}, None)
         engine.site_limiter = None
         with (
-            patch("app.sites.engine_download.HttpClient") as client_cls,
-            patch("app.sites.engine_download.engine_tools.spa_signed_headers", return_value={"X-Spa-Hmac": "x"}),
+            patch("app.sites.download.engine_download.HttpClient") as client_cls,
+            patch("app.sites.download.engine_download.spa_signer.spa_signed_headers", return_value={"X-Spa-Hmac": "x"}),
         ):
             client = client_cls.return_value
             client.post.return_value.json.return_value = {"data": {"url": "https://piggo.me/dl/1"}}

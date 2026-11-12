@@ -11,7 +11,7 @@ import log
 from app.utils import StringUtils
 
 if TYPE_CHECKING:
-    from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
+    from app.sites.userinfo.providers.config_html import ConfigHtmlUserInfo
 
 
 def is_small_horse(ins: ConfigHtmlUserInfo) -> bool:

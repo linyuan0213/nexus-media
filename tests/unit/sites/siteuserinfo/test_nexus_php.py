@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.sites.siteuserinfo import nexus_php
-from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
+from app.sites.userinfo.providers import nexus_php
+from app.sites.userinfo.providers.config_html import ConfigHtmlUserInfo
 
 
 class _MockInstance(ConfigHtmlUserInfo):

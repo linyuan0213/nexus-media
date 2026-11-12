@@ -13,8 +13,8 @@ from unittest.mock import patch
 
 from app.infrastructure.http.config import BrowserModeConfig, HttpClientConfig
 from app.sites.engine import SiteEngine
-from app.sites.html_searcher import HtmlSiteSearcher
-from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
+from app.sites.search.html_searcher import HtmlSiteSearcher
+from app.sites.userinfo.providers.config_html import ConfigHtmlUserInfo
 
 
 class _Resp:
@@ -62,7 +62,7 @@ def _patch_http_client(module_name: str, fake_http, browser_mode: BrowserModeCon
     patchers = [
         patch(f"{module_name}.HttpClient", fake_http),
         patch(f"{module_name}.build_browser_mode", return_value=browser_mode),
-        patch("app.sites.engine_tools._get_rate_limit_kwargs", return_value={}),
+        patch("app.sites.http.site_rate_limit.get_rate_limit_kwargs", return_value={}),
     ]
 
     @contextlib.contextmanager
@@ -129,7 +129,7 @@ class TestEngineFetchPageFallback:
         with (
             patch("app.sites.engine.HttpClient", fake_http),
             patch("app.sites.engine.build_browser_mode", side_effect=fake_build_browser_mode),
-            patch("app.sites.engine_tools._get_rate_limit_kwargs", return_value={}),
+            patch("app.sites.http.site_rate_limit.get_rate_limit_kwargs", return_value={}),
         ):
             text = engine._fetch_page(
                 "http://pt.example.com/detail/1",
@@ -148,7 +148,7 @@ class TestHtmlSearcherFallback:
         searcher._user_config = {"chrome": True, "ua": "u", "domain": "pt.example.com", "cookie": ""}
         searcher._site_engine = SimpleNamespace()
         browser_mode = _browser_mode("pt.example.com")
-        with _patch_http_client("app.sites.html_searcher", fake_http, browser_mode):
+        with _patch_http_client("app.sites.search.html_searcher", fake_http, browser_mode):
             html = searcher._fetch_html("http://pt.example.com/browse/xxx")
         assert html == "chrome-list"
         _assert_browser_client_released(instances, browser_mode)
@@ -169,7 +169,7 @@ class TestConfigHtmlFallback:
         cfg.site_name = "PT"
         cfg._emulate = True
         browser_mode = _browser_mode("def-1")
-        with _patch_http_client("app.sites.siteuserinfo.config_html", fake_http, browser_mode):
+        with _patch_http_client("app.sites.userinfo.providers.config_html", fake_http, browser_mode):
             text = cfg._fetch_html("http://pt.example.com/usercp.php")
         assert text == "chrome-html"
         _assert_browser_client_released(instances, browser_mode)

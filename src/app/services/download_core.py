@@ -53,9 +53,9 @@ from app.services.download_strategies import (
 from app.services.filetransfer_service import FileTransferService as FileTransfer
 from app.services.lifecycle_service import LifecycleProjector
 from app.sites import SiteConf, SiteSubtitle
+from app.sites.download.torrent import Torrent
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
-from app.sites.torrent import Torrent
 from app.utils import ExceptionUtils
 
 # 轮内种子解析缓存上限（防止异常情况无限增长）与存活时长（秒）

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.mteam import MTeam
 from app.plugin_framework.context import PluginContext
-from app.sites.credential_provider import SpaCredentials
+from app.sites.config.credential_provider import SpaCredentials
 
 
 class _FakeResponse:

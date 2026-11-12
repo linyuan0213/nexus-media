@@ -1,6 +1,6 @@
 """站点数据统计消息格式测试."""
 
-from app.sites.site_userinfo import SiteUserInfo
+from app.sites.userinfo.site_userinfo import SiteUserInfo
 
 
 class TestBuildStatsMessageRows:

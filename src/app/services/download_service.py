@@ -27,9 +27,9 @@ from app.services.indexer_service import IndexerService
 from app.services.lifecycle_service import LifecycleProjector
 from app.services.search_service import Searcher
 from app.services.torrentremover_core import TorrentRemoverService as TorrentRemover
+from app.sites.download.torrent import Torrent
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
-from app.sites.torrent import Torrent
 
 
 class DownloadService:

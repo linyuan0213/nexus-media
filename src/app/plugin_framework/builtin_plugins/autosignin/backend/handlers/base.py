@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.context import PluginContext
-from app.sites.credential_provider import resolve_spa_credentials
+from app.sites.config.credential_provider import resolve_spa_credentials
 from app.utils.config_tools import get_proxies
 
 

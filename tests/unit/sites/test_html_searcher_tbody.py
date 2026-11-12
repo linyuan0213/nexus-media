@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
-from app.sites.html_searcher import HtmlSiteSearcher
+from app.sites.search.html_searcher import HtmlSiteSearcher
 
 _SITE_CFG = {
     "parser_type": "flat",

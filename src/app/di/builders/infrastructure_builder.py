@@ -29,8 +29,8 @@ from app.services.scheduler.core import SchedulerCore
 from app.services.site_rate_limiter import SiteRateLimiterService
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
-from app.sites.siteuserinfo.config_api import _api_factory
-from app.sites.siteuserinfo.config_html import _html_config_factory
+from app.sites.userinfo.providers.config_api import _api_factory
+from app.sites.userinfo.providers.config_html import _html_config_factory
 
 
 def build_infrastructure() -> InfrastructureObjects:

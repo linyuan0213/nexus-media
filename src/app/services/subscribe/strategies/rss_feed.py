@@ -31,9 +31,9 @@ from app.services.subscribe.management.service import SubscribeService
 from app.services.subscribe.matcher import SubscribeMatcher
 from app.services.subscribe.strategy_lock import strategy_lock
 from app.services.subscribe_repo_adapter import SubscribeHistoryRepositoryAdapter
+from app.sites.download.torrent import Torrent
 from app.sites.site_cache import SiteCache
 from app.sites.siteconf import SiteConf
-from app.sites.torrent import Torrent
 from app.utils import ExceptionUtils, JsonUtils
 
 _TITLE_PROFILES = {"default", "anime", "tv", "movie"}

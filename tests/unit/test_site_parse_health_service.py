@@ -4,7 +4,8 @@ import datetime
 from types import SimpleNamespace
 
 from app.services.site_parse_health_service import SiteParseHealthService
-from app.sites.engine import SiteDefinition, TorrentAttrFetchError
+from app.sites.config.site_definition import SiteDefinition
+from app.sites.engine import TorrentAttrFetchError
 
 
 def _days_ago(days: int) -> str:

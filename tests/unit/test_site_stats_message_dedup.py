@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-from app.sites.site_userinfo import SiteUserInfo
+from app.sites.userinfo.site_userinfo import SiteUserInfo
 
 STATS_TYPE = "ptrefresh_date_message"
 

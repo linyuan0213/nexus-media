@@ -1,7 +1,7 @@
 """Gazelle 站点用户信息解析单元测试."""
 
-from app.sites.siteuserinfo import gazelle
-from app.sites.siteuserinfo.config_html import ConfigHtmlUserInfo
+from app.sites.userinfo.providers import gazelle
+from app.sites.userinfo.providers.config_html import ConfigHtmlUserInfo
 
 
 class _MockInstance(ConfigHtmlUserInfo):

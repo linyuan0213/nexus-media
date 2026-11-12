@@ -16,9 +16,9 @@ from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.infrastructure.rate_limiter import MemoryTokenBucketBackend, RateLimitEngine
 from app.infrastructure.thread import ThreadExecutor
+from app.sites.connectivity.site_favicon_service import SiteFaviconService
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
-from app.sites.site_favicon_service import SiteFaviconService
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
 from app.utils.browser_mode import build_browser_mode
 from app.utils.config_tools import get_proxies

@@ -56,6 +56,7 @@
               "type": "object",
               "description": "SPA HMAC 签名配置",
               "properties": {
+                "signer": {"type": "string", "description": "站点专属签名器名称，如 piggo"},
                 "sign_path": {"type": "string"},
                 "sign_key": {"type": "string"},
                 "base_path": {"type": "string"},

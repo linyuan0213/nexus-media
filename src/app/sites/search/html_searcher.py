@@ -23,10 +23,10 @@ from app.infrastructure.chrome.challenge import has_pending_turnstile, is_challe
 from app.infrastructure.chrome.site_lock import site_serial
 from app.infrastructure.chrome.task import browser_task
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
-from app.sites import engine_tools
-from app.sites.api_searcher import ApiSiteSearcher
-from app.sites.engine import SiteDefinition
-from app.sites.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
+from app.sites.config.site_definition import SiteDefinition
+from app.sites.http import site_rate_limit
+from app.sites.search.api_searcher import ApiSiteSearcher
+from app.sites.search.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
 from app.utils.browser_mode import build_browser_mode, get_chrome_server_url, make_session_key
 from app.utils.config_tools import get_proxies
 
@@ -264,7 +264,7 @@ class HtmlSiteSearcher:
         engine = self._site_engine
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, self._site)
+        rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, self._site)
         chrome_enabled = bool(self._user_config.get("chrome"))
         render = bool(self._user_config.get("browser_render"))
 

@@ -38,7 +38,7 @@ from app.services.downloader_core import DownloaderCore as Downloader
 from app.services.indexer_service import IndexerService
 from app.services.search_subject import SearchSubject
 from app.services.subscription_download_guard import SubscriptionDownloadGuard
-from app.sites.search_gate import get_site_search_gate
+from app.sites.search.search_gate import get_site_search_gate
 from app.utils.string_utils import StringUtils
 
 # 合集/多集资源不能用标题里的首个数字补成单集，否则整季包会被当成单集下载。

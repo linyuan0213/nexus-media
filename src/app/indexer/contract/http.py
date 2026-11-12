@@ -6,7 +6,7 @@ from typing import Any
 
 import httpx
 
-from app.sites.search_gate import get_site_search_gate
+from app.sites.search.search_gate import get_site_search_gate
 
 from .models import IndexerHealth, IndexerInfo, IndexerItem, IndexerPage, IndexerQuery, IndexerSite
 

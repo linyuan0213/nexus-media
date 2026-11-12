@@ -5,8 +5,7 @@ from urllib.parse import quote
 import log
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
-from app.sites import engine_tools
-from app.sites.engine_tools import _call_html_endpoint, _get_rate_limit_kwargs
+from app.sites.http import endpoint_client, site_rate_limit, spa_signer
 from app.utils.config_tools import get_proxies
 
 
@@ -34,7 +33,7 @@ def resolve_download_api(engine, url, site, user_config, tid, api=None):
     proxy_url = proxy.get("http") if proxy else None
     rate_limiter = getattr(engine, "site_limiter", None)
     rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-    rl_kwargs = _get_rate_limit_kwargs(engine, site)
+    rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, site)
     try:
         client = HttpClient(
             config=HttpClientConfig(
@@ -43,7 +42,7 @@ def resolve_download_api(engine, url, site, user_config, tid, api=None):
             ),
             rate_limiter=rate_limiter_engine,
         )
-        headers = engine_tools.spa_signed_headers(
+        headers = spa_signer.spa_signed_headers(
             engine, api, user_config, client, headers, site.download.method, url, auth=auth
         )
         if site.download.method == "POST":
@@ -67,7 +66,7 @@ def resolve_download_chained(engine, url, site, user_config, tid, api=None):
     proxy_url = proxy.get("http") if proxy else None
     rate_limiter = getattr(engine, "site_limiter", None)
     rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-    rl_kwargs = _get_rate_limit_kwargs(engine, site)
+    rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, site)
     method = (getattr(site.download, "method", None) or "GET").upper()
     client = HttpClient(
         config=HttpClientConfig(
@@ -77,7 +76,7 @@ def resolve_download_chained(engine, url, site, user_config, tid, api=None):
         rate_limiter=rate_limiter_engine,
     )
     try:
-        headers = engine_tools.spa_signed_headers(engine, api, user_config, client, headers, method, url, auth=auth)
+        headers = spa_signer.spa_signed_headers(engine, api, user_config, client, headers, method, url, auth=auth)
         if method == "POST":
             if api and (getattr(api, "auth", {}) or {}).get("spa"):
                 headers["Content-Type"] = "application/json"
@@ -104,7 +103,7 @@ def resolve_html_download(engine, page_url, site, user_config):
         cfg["selectors"] = dl.selectors
     elif isinstance(dl, dict) and dl.get("selectors"):
         cfg["selectors"] = dl["selectors"]
-    result = _call_html_endpoint(engine, page_url, cfg, user_config, site=site)
+    result = endpoint_client.call_html_endpoint(engine, page_url, cfg, user_config, site=site)
     if result:
         return result.get("download") or result.get("enclosure")
     return None

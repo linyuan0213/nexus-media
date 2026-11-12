@@ -12,7 +12,7 @@ from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.temp import temp_manager
-from app.sites import engine_tools
+from app.sites.http import site_rate_limit
 from app.utils import ExceptionUtils, PathUtils, StringUtils, SystemUtils
 from app.utils.json_utils import JsonUtils
 
@@ -69,7 +69,7 @@ class SiteSubtitle:
         site_def = engine.get_by_url(media_info.page_url)
         rate_limiter = getattr(engine, "site_limiter", None)
         rate_limiter_engine = rate_limiter.engine if rate_limiter else None
-        rl_kwargs = engine_tools._get_rate_limit_kwargs(engine, site_def)
+        rl_kwargs = site_rate_limit.get_rate_limit_kwargs(engine, site_def)
         if site_def and site_def.subtitle:
             engine.resolve_subtitle(media_info.page_url, "", download_dir)
             return
