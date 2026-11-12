@@ -1,20 +1,22 @@
-## 未发布 (2026-11-12)
+## v5.11.0 (2026-11-12)
 
 ### 新增
 
-- 站点：API 配置支持多 profile（官方 API / SPA），按搜索、下载、刷流属性和用户信息能力选择。
-- 站点：新增加密的 `CONFIG_SITE_API_CREDENTIAL`，支持 API Key 与 SPA 凭据分离；旧 `NOTE.api_credentials` 自动迁移。
-- 站点：CookieCloud 同步 local_storage/Cookie 到 SPA 凭据，支持 Piggo SPA 搜索和 M-Team 签到复用，增加新鲜度回退。
-- 签到：新增 Piggo 日历签到，使用 SPA Token + 浏览器通过 Cloudflare 后调用 `/v1/web/calendar/attendance`。
-- 站点：SPA 请求支持 HTTP/2、sign/HMAC、visitorId；下载、详情属性和搜索按 profile 回退。
-- 站点：刷流详情属性支持按 profile 回退；CookieCloud Cookie/localStorage 增加新鲜度判断。
-- 界面：站点编辑页增加接口模式和 SPA 凭据来源/同步时间展示。
+- 站点：API 配置支持官方 API / SPA 多 profile，新增加密凭据表和 CookieCloud 同步。
+- 站点：SPA 支持 HTTP/2、sign/HMAC；猪猪支持用户统计、做种列表和日历签到。
+- 签到：DiscFan 兼容繁体签到文案，登录保活成功后当天不再重复。
+
+### 改进
+
+- 站点：拆分定义、运行时、搜索、下载、连通性模块；CookieCloud 改走站点同步门面。
+- 站点：限流按站点定义 ID 生效并传递 burst，M-Team 调整为 10/m。
+- 搜索：媒体别名参与召回，进度停滞时自动结束，避免页面卡在 0%。
 
 ### 修复
 
-- 站点：Rousi 移除已废弃的 `x-sign-token` 请求头，恢复 Cookie 签到路径。
-- 站点：资源列表补齐 SPA 缺失的 `page_url`，修复下载提示无链接。
-- 站点：SPA 下载和详情属性补齐认证、请求头及标签解析。
+- 站点：Rousi 签到、SPA 下载与属性解析、高清杜比 favicon 旧域名。
+- 刷流：保种体积改用下载器实际种子；停止任务仍清理记录并执行删种；修正规则缓存、字段别名和布尔关闭误判。
+- 签到：猪猪浏览器会话 Cookie 参数和登录保活重复执行问题。
 
 ## v5.10.0 (2026-11-11)
 
