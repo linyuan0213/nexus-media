@@ -4,99 +4,258 @@
   "title": "API 站点定义 Schema",
   "description": "通过 HTTP API 进行搜索的站点定义格式",
   "type": "object",
-  "required": ["id", "name", "domain", "api"],
+  "required": [
+    "id",
+    "name",
+    "domain",
+    "api"
+  ],
   "properties": {
-    "id": {"type": "string", "description": "站点唯一标识符，如 mteam、yemapt"},
-    "name": {"type": "string", "description": "站点显示名称"},
-    "domain": {"type": "string", "description": "主域名，用于 URL 匹配"},
-    "domain_aliases": {"type": "array", "items": {"type": "string"}, "description": "域名别名列表"},
-    "encoding": {"type": "string", "default": "UTF-8"},
-    "public": {"type": "boolean", "default": false, "description": "是否公开站点"},
-    "favicon": {"type": "string", "description": "站点图标 URL，为空则自动抓取"},
-    "language": {"type": "string", "description": "站点语言过滤"},
-    "tid_pattern": {"type": "string", "default": "\\d+", "description": "提取种子 ID 的正则"},
-    "detail_page_url": {"type": "string", "description": "种子详情页 URL 模板"},
-    "api": {"$ref": "#/definitions/api_config"},
-    "download": {"$ref": "#/definitions/download_config"},
-    "torrent_attr": {"$ref": "#/definitions/torrent_attr_config"},
-    "subtitle": {"$ref": "#/definitions/subtitle_config"},
-    "user_info": {"$ref": "#/definitions/user_info_config"}
+    "id": {
+      "type": "string",
+      "description": "站点唯一标识符，如 mteam、yemapt"
+    },
+    "name": {
+      "type": "string",
+      "description": "站点显示名称"
+    },
+    "domain": {
+      "type": "string",
+      "description": "主域名，用于 URL 匹配"
+    },
+    "domain_aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "域名别名列表"
+    },
+    "encoding": {
+      "type": "string",
+      "default": "UTF-8"
+    },
+    "public": {
+      "type": "boolean",
+      "default": false,
+      "description": "是否公开站点"
+    },
+    "favicon": {
+      "type": "string",
+      "description": "站点图标 URL，为空则自动抓取"
+    },
+    "language": {
+      "type": "string",
+      "description": "站点语言过滤"
+    },
+    "tid_pattern": {
+      "type": "string",
+      "default": "\\d+",
+      "description": "提取种子 ID 的正则"
+    },
+    "detail_page_url": {
+      "type": "string",
+      "description": "种子详情页 URL 模板"
+    },
+    "api": {
+      "$ref": "#/definitions/api_config"
+    },
+    "download": {
+      "$ref": "#/definitions/download_config"
+    },
+    "torrent_attr": {
+      "$ref": "#/definitions/torrent_attr_config"
+    },
+    "subtitle": {
+      "$ref": "#/definitions/subtitle_config"
+    },
+    "user_info": {
+      "$ref": "#/definitions/user_info_config"
+    }
   },
-
   "definitions": {
     "api_config": {
       "type": "object",
-      "required": ["base_url", "auth", "endpoints"],
+      "required": [
+        "base_url",
+        "auth",
+        "endpoints"
+      ],
       "properties": {
-        "base_url": {"type": "string", "description": "API 基础地址"},
-        "http2": {"type": "boolean", "description": "是否使用 HTTP/2"},
-        "transport": {"type": "string", "enum": ["http", "http2"], "description": "传输协议"},
+        "base_url": {
+          "type": "string",
+          "description": "API 基础地址"
+        },
+        "http2": {
+          "type": "boolean",
+          "description": "是否使用 HTTP/2"
+        },
+        "transport": {
+          "type": "string",
+          "enum": [
+            "http",
+            "http2"
+          ],
+          "description": "传输协议"
+        },
         "profiles": {
           "type": "object",
           "description": "多套 API profile，键为 profile 名称",
-          "additionalProperties": {"$ref": "#/definitions/api_config"}
+          "additionalProperties": {
+            "$ref": "#/definitions/api_config"
+          }
         },
-        "default_profile": {"type": "string", "description": "默认 profile"},
+        "default_profile": {
+          "type": "string",
+          "description": "默认 profile"
+        },
         "capabilities": {
           "type": "object",
           "description": "能力到 profile 优先顺序的映射",
           "additionalProperties": {
             "type": "array",
-            "items": {"type": "string"}
+            "items": {
+              "type": "string"
+            }
           }
         },
         "auth": {
           "type": "object",
-          "required": ["type"],
+          "required": [
+            "type"
+          ],
           "properties": {
-            "type": {"enum": ["api_key", "bearer", "cookie", "csrf", "passkey", "token"]},
-            "header_name": {"type": "string", "description": "API 密钥的 header 名称"},
-            "token_key": {"type": "string", "description": "从站点用户配置读取 token 的字段名"},
+            "type": {
+              "enum": [
+                "api_key",
+                "bearer",
+                "cookie",
+                "csrf",
+                "passkey",
+                "token"
+              ]
+            },
+            "header_name": {
+              "type": "string",
+              "description": "API 密钥的 header 名称"
+            },
+            "token_key": {
+              "type": "string",
+              "description": "从站点用户配置读取 token 的字段名"
+            },
             "spa": {
               "type": "object",
               "description": "SPA HMAC 签名配置",
               "properties": {
-                "signer": {"type": "string", "description": "站点专属签名器名称，如 piggo"},
-                "sign_path": {"type": "string"},
-                "sign_key": {"type": "string"},
-                "base_path": {"type": "string"},
-                "version": {"type": "string"},
-                "webversion": {"type": "string"},
-                "sign_ttl": {"type": "number"},
-                "visitor_id": {"type": "string"}
+                "signer": {
+                  "type": "string",
+                  "description": "站点专属签名器名称，如 piggo"
+                },
+                "sign_path": {
+                  "type": "string"
+                },
+                "sign_key": {
+                  "type": "string"
+                },
+                "base_path": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "webversion": {
+                  "type": "string"
+                },
+                "sign_ttl": {
+                  "type": "number"
+                },
+                "visitor_id": {
+                  "type": "string"
+                }
               }
             },
-            "token_source": {"type": "string", "description": "cookie 中 token 的键名"},
-            "csrf_url": {"type": "string", "description": "获取 CSRF token 的 URL"},
-            "csrf_selector": {"type": "string", "description": "从 HTML 提取 CSRF 的选择器"},
-            "csrf_selector_type": {"type": "string", "description": "CSRF 提取方式（text / attribute）"},
-            "user_agent": {"type": "string", "description": "请求 User-Agent 覆盖"}
+            "token_source": {
+              "type": "string",
+              "description": "cookie 中 token 的键名"
+            },
+            "csrf_url": {
+              "type": "string",
+              "description": "获取 CSRF token 的 URL"
+            },
+            "csrf_selector": {
+              "type": "string",
+              "description": "从 HTML 提取 CSRF 的选择器"
+            },
+            "csrf_selector_type": {
+              "type": "string",
+              "description": "CSRF 提取方式（text / attribute）"
+            },
+            "user_agent": {
+              "type": "string",
+              "description": "请求 User-Agent 覆盖"
+            }
           }
         },
         "endpoints": {
           "type": "object",
-          "required": ["search"],
+          "required": [
+            "search"
+          ],
           "properties": {
-            "search": {"$ref": "#/definitions/endpoint"},
-            "detail": {"$ref": "#/definitions/endpoint"},
-            "test_connection": {"$ref": "#/definitions/endpoint"},
-            "user_info": {"$ref": "#/definitions/endpoint"}
+            "search": {
+              "$ref": "#/definitions/endpoint"
+            },
+            "detail": {
+              "$ref": "#/definitions/endpoint"
+            },
+            "test_connection": {
+              "$ref": "#/definitions/endpoint"
+            },
+            "user_info": {
+              "$ref": "#/definitions/endpoint"
+            }
           }
         },
-        "torrent_attr": {"$ref": "#/definitions/torrent_attr_config"},
-        "download": {"$ref": "#/definitions/download_config"}
+        "torrent_attr": {
+          "$ref": "#/definitions/torrent_attr_config"
+        },
+        "download": {
+          "$ref": "#/definitions/download_config"
+        }
       }
     },
     "endpoint": {
       "type": "object",
-      "required": ["method", "path"],
+      "required": [
+        "method",
+        "path"
+      ],
       "properties": {
-        "method": {"enum": ["GET", "POST"]},
-        "path": {"type": "string", "description": "请求路径，支持 {keyword} {page_1} {tid} 占位"},
-        "params": {"type": "object", "description": "查询参数"},
-        "body": {"type": "object", "description": "请求体"},
-        "content_type": {"type": "string", "description": "请求 Content-Type，如 application/json"},
-        "response_key": {"type": "string", "description": "响应中提取数据的 JSON 路径"},
+        "method": {
+          "enum": [
+            "GET",
+            "POST"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "description": "请求路径，支持 {keyword} {page_1} {tid} 占位"
+        },
+        "params": {
+          "type": "object",
+          "description": "查询参数"
+        },
+        "body": {
+          "type": "object",
+          "description": "请求体"
+        },
+        "content_type": {
+          "type": "string",
+          "description": "请求 Content-Type，如 application/json"
+        },
+        "response_key": {
+          "type": "string",
+          "description": "响应中提取数据的 JSON 路径"
+        },
         "mode_mapping": {
           "type": "object",
           "description": "媒体类型到请求参数的映射（MOVIE/TV/ANIME → body/params 覆盖，值为对象/字符串/数组）"
@@ -104,36 +263,92 @@
         "response": {
           "type": "object",
           "properties": {
-            "total_key": {"type": "string", "description": "总数的 JSON 路径"},
-            "items_key": {"type": "string", "description": "列表的 JSON 路径"},
+            "total_key": {
+              "type": "string",
+              "description": "总数的 JSON 路径"
+            },
+            "items_key": {
+              "type": "string",
+              "description": "列表的 JSON 路径"
+            },
             "item_mapping": {
               "type": "object",
               "properties": {
-                "id": {"$ref": "#/definitions/field_mapping"},
-                "title": {"$ref": "#/definitions/field_mapping"},
-                "description": {"$ref": "#/definitions/field_mapping"},
-                "details": {"$ref": "#/definitions/field_mapping"},
-                "download": {"$ref": "#/definitions/field_mapping"},
-                "enclosure": {"$ref": "#/definitions/field_mapping"},
-                "page_url": {"$ref": "#/definitions/field_mapping"},
-                "poster": {"$ref": "#/definitions/field_mapping"},
-                "size": {"$ref": "#/definitions/field_mapping"},
-                "seeders": {"$ref": "#/definitions/field_mapping"},
-                "leechers": {"$ref": "#/definitions/field_mapping"},
-                "grabs": {"$ref": "#/definitions/field_mapping"},
-                "date_elapsed": {"$ref": "#/definitions/field_mapping"},
-                "date_added": {"$ref": "#/definitions/field_mapping"},
-                "pubdate": {"$ref": "#/definitions/field_mapping"},
-                "imdbid": {"$ref": "#/definitions/field_mapping"},
-                "uploadvolumefactor": {"$ref": "#/definitions/field_mapping"},
-                "downloadvolumefactor": {"$ref": "#/definitions/field_mapping"},
-                "free_deadline": {"$ref": "#/definitions/field_mapping"},
-                "labels": {"$ref": "#/definitions/field_mapping"},
-                "tags": {"$ref": "#/definitions/field_mapping"},
-                "category": {"$ref": "#/definitions/field_mapping"},
-                "category_icon": {"$ref": "#/definitions/field_mapping"},
-                "minimumratio": {"$ref": "#/definitions/field_mapping"},
-                "minimumseedtime": {"$ref": "#/definitions/field_mapping"}
+                "id": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "title": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "description": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "details": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "download": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "enclosure": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "page_url": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "poster": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "size": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "seeders": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "leechers": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "grabs": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "date_elapsed": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "date_added": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "pubdate": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "imdbid": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "uploadvolumefactor": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "downloadvolumefactor": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "free_deadline": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "labels": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "tags": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "category": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "category_icon": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "minimumratio": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "minimumseedtime": {
+                  "$ref": "#/definitions/field_mapping"
+                }
               }
             }
           }
@@ -143,67 +358,207 @@
     "field_mapping": {
       "type": "object",
       "properties": {
-        "source": {"type": "string", "description": "JSON 路径，点号分隔"},
-        "type": {"enum": ["mapping", "api", "constant", "template", "html", "int", "float", "labels"]},
-        "method": {"enum": ["GET", "POST"]},
-        "path": {"type": "string"},
-        "body": {"type": "object"},
-        "response_key": {"type": "string"},
-        "value": {"description": "constant 类型的固定值"},
-        "map": {"type": "object", "description": "值映射表"},
-        "transform": {"type": "string", "description": "值转换: map_value, utc_to_local, timestamp_to_date, num_filesize_B, split_map"},
-        "filters": {"type": "array", "items": {"type": "object"}},
-        "selector": {"type": "string", "description": "HTML 类型时的 CSS 选择器"},
-        "attribute": {"type": "string", "description": "HTML 类型时提取的属性"},
-        "fields": {"type": "object", "description": "template 类型引用的字段"},
-        "sources": {"type": "array", "description": "labels 类型引用的列表字段及值映射"},
-        "text_tags": {"type": "object", "description": "labels 类型从文本提取的正则标签映射"},
-        "domains": {"type": "array", "items": {"type": "string"}}
+        "source": {
+          "type": "string",
+          "description": "JSON 路径，点号分隔"
+        },
+        "type": {
+          "enum": [
+            "mapping",
+            "api",
+            "constant",
+            "template",
+            "html",
+            "int",
+            "float",
+            "labels",
+            "size"
+          ]
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "body": {
+          "type": "object"
+        },
+        "response_key": {
+          "type": "string"
+        },
+        "value": {
+          "description": "constant 类型的固定值"
+        },
+        "map": {
+          "type": "object",
+          "description": "值映射表"
+        },
+        "transform": {
+          "type": "string",
+          "description": "值转换: map_value, utc_to_local, timestamp_to_date, num_filesize_B, split_map"
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "selector": {
+          "type": "string",
+          "description": "HTML 类型时的 CSS 选择器"
+        },
+        "attribute": {
+          "type": "string",
+          "description": "HTML 类型时提取的属性"
+        },
+        "fields": {
+          "type": "object",
+          "description": "template 类型引用的字段"
+        },
+        "sources": {
+          "type": "array",
+          "description": "labels 类型引用的列表字段及值映射"
+        },
+        "text_tags": {
+          "type": "object",
+          "description": "labels 类型从文本提取的正则标签映射"
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "type": "string",
+          "description": "labels 类型从文本提取的标签来源"
+        }
       }
     },
     "download_config": {
       "type": "object",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "properties": {
-        "type": {"enum": ["api", "api_chained", "api_blob", "template", "html"]},
-        "method": {"enum": ["GET", "POST"]},
-        "path": {"type": "string", "description": "下载链接路径模板"},
-        "body": {"type": "object"},
-        "body_format": {"enum": ["form", "json"], "description": "请求体格式（form/json）"},
-        "params": {"type": "object", "description": "查询参数"},
-        "response_key": {"type": "string", "description": "响应中提取下载链接的 JSON 路径"},
-        "presigned": {"type": "boolean", "description": "下载链接是否为预签名 URL"},
+        "type": {
+          "enum": [
+            "api",
+            "api_chained",
+            "api_blob",
+            "template",
+            "html"
+          ]
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "description": "下载链接路径模板"
+        },
+        "body": {
+          "type": "object"
+        },
+        "body_format": {
+          "enum": [
+            "form",
+            "json"
+          ],
+          "description": "请求体格式（form/json）"
+        },
+        "params": {
+          "type": "object",
+          "description": "查询参数"
+        },
+        "response_key": {
+          "type": "string",
+          "description": "响应中提取下载链接的 JSON 路径"
+        },
+        "presigned": {
+          "type": "boolean",
+          "description": "下载链接是否为预签名 URL"
+        },
         "download_url": {
           "type": "string",
           "description": "下载地址模板覆盖，api_chained 支持 {base} {token} {tid} 占位"
         },
-        "selectors": {"type": "object", "description": "HTML 类型时的下载链接选择器"}
+        "selectors": {
+          "type": "object",
+          "description": "HTML 类型时的下载链接选择器"
+        }
       }
     },
     "torrent_attr_config": {
       "type": "object",
       "description": "种子属性增强配置",
       "properties": {
-        "fields": {"type": "object"},
-        "url": {"type": "string"},
-        "method": {"enum": ["GET", "POST"]},
-        "path": {"type": "string"},
-        "params": {"type": "object"},
-        "body": {"type": "object"},
-        "body_format": {"enum": ["form", "json"]},
+        "fields": {
+          "type": "object"
+        },
+        "url": {
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object"
+        },
+        "body": {
+          "type": "object"
+        },
+        "body_format": {
+          "enum": [
+            "form",
+            "json"
+          ]
+        },
         "response": {
           "type": "object",
           "description": "种子属性（FREE/2XFREE/做种数）在响应中的取值规则",
           "properties": {
-            "free_key": {"type": "string"},
-            "free_value": {"type": ["string", "number"]},
-            "2xfree_key": {"type": "string"},
-            "2xfree_value": {"type": ["string", "number"]},
+            "free_key": {
+              "type": "string"
+            },
+            "free_value": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "2xfree_key": {
+              "type": "string"
+            },
+            "2xfree_value": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
             "site_free_key": {
               "type": "string",
               "description": "站点级全站 FREE 活动规则的取值 JSON 路径（如 data.status.promotionRule.discount）"
             },
-            "site_free_value": {"type": ["string", "number"]},
+            "site_free_value": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
             "site_free_start_key": {
               "type": "string",
               "description": "站点级活动规则开始时间 JSON 路径，配置后需在当前时间之后才算生效"
@@ -212,12 +567,27 @@
               "type": "string",
               "description": "站点级活动规则结束时间 JSON 路径，配置后需在当前时间之前才算失效"
             },
-            "site_2xfree_key": {"type": "string"},
-            "site_2xfree_value": {"type": ["string", "number"]},
-            "site_2xfree_start_key": {"type": "string"},
-            "site_2xfree_end_key": {"type": "string"},
-            "peer_count_key": {"type": "string"},
-            "peer_count_type": {"type": "string"}
+            "site_2xfree_key": {
+              "type": "string"
+            },
+            "site_2xfree_value": {
+              "type": [
+                "string",
+                "number"
+              ]
+            },
+            "site_2xfree_start_key": {
+              "type": "string"
+            },
+            "site_2xfree_end_key": {
+              "type": "string"
+            },
+            "peer_count_key": {
+              "type": "string"
+            },
+            "peer_count_type": {
+              "type": "string"
+            }
           }
         }
       }
@@ -225,53 +595,128 @@
     "subtitle_config": {
       "type": "object",
       "properties": {
-        "type": {"enum": ["api", "html"]},
-        "list": {"$ref": "#/definitions/endpoint"},
-        "genlink": {"$ref": "#/definitions/endpoint"},
-        "download": {"$ref": "#/definitions/endpoint"}
+        "type": {
+          "enum": [
+            "api",
+            "html"
+          ]
+        },
+        "list": {
+          "$ref": "#/definitions/endpoint"
+        },
+        "genlink": {
+          "$ref": "#/definitions/endpoint"
+        },
+        "download": {
+          "$ref": "#/definitions/endpoint"
+        }
       }
     },
     "user_info_config": {
       "type": "object",
       "description": "用户信息解析配置",
       "properties": {
-        "type": {"type": "string", "enum": ["api", "html"]},
-        "page": {"type": "string", "description": "用户主页路径"},
-        "brief_page": {"type": "string", "description": "用户简要信息路径（做种/下载统计等）"},
-        "profile": {"$ref": "#/definitions/user_info_endpoint"},
-        "seeding": {"$ref": "#/definitions/user_info_seeding"},
-        "fields": {"type": "object"},
-        "bonus_labels": {"type": "array", "items": {"type": "string"}}
+        "type": {
+          "type": "string",
+          "enum": [
+            "api",
+            "html"
+          ]
+        },
+        "page": {
+          "type": "string",
+          "description": "用户主页路径"
+        },
+        "brief_page": {
+          "type": "string",
+          "description": "用户简要信息路径（做种/下载统计等）"
+        },
+        "profile": {
+          "$ref": "#/definitions/user_info_endpoint"
+        },
+        "seeding": {
+          "$ref": "#/definitions/user_info_seeding"
+        },
+        "fields": {
+          "type": "object"
+        },
+        "bonus_labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     },
     "user_info_endpoint": {
       "type": "object",
       "properties": {
-        "method": {"enum": ["GET", "POST"]},
-        "path": {"type": "string"},
-        "params": {"type": "object"},
-        "body": {"type": "object"},
+        "method": {
+          "enum": [
+            "GET",
+            "POST"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object"
+        },
+        "body": {
+          "type": "object"
+        },
         "response": {
           "type": "object",
           "properties": {
             "field_mapping": {
               "type": "object",
               "properties": {
-                "user_id": {"$ref": "#/definitions/field_mapping"},
-                "userid": {"$ref": "#/definitions/field_mapping"},
-                "username": {"$ref": "#/definitions/field_mapping"},
-                "upload": {"$ref": "#/definitions/field_mapping"},
-                "download": {"$ref": "#/definitions/field_mapping"},
-                "ratio": {"$ref": "#/definitions/field_mapping"},
-                "bonus": {"$ref": "#/definitions/field_mapping"},
-                "user_level": {"$ref": "#/definitions/field_mapping"},
-                "join_at": {"$ref": "#/definitions/field_mapping"},
-                "seeding": {"$ref": "#/definitions/field_mapping"},
-                "seeding_size": {"$ref": "#/definitions/field_mapping"},
-                "leeching": {"$ref": "#/definitions/field_mapping"},
-                "leeching_size": {"$ref": "#/definitions/field_mapping"},
-                "message_unread": {"$ref": "#/definitions/field_mapping"},
-                "site_favicon": {"$ref": "#/definitions/field_mapping"}
+                "user_id": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "userid": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "username": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "upload": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "download": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "ratio": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "bonus": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "user_level": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "join_at": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "seeding": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "seeding_size": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "leeching": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "leeching_size": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "message_unread": {
+                  "$ref": "#/definitions/field_mapping"
+                },
+                "site_favicon": {
+                  "$ref": "#/definitions/field_mapping"
+                }
               }
             }
           }
@@ -281,35 +726,91 @@
     "user_info_seeding": {
       "type": "object",
       "properties": {
-        "type": {"type": "string", "enum": ["api", "html"]},
-        "method": {"enum": ["GET", "POST"]},
-        "path": {"type": "string"},
-        "body": {"type": "object"},
-        "page": {"type": "string"},
-        "page_start": {"type": "integer"},
-        "list_selector": {"type": "string"},
-        "size_selector": {"type": "string"},
-        "seeders_selector": {"type": "string"},
-        "total_regex": {"type": "string"},
+        "type": {
+          "type": "string",
+          "enum": [
+            "api",
+            "html"
+          ]
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST"
+          ]
+        },
+        "path": {
+          "type": "string"
+        },
+        "body": {
+          "type": "object"
+        },
+        "page": {
+          "type": "string"
+        },
+        "page_start": {
+          "type": "integer"
+        },
+        "list_selector": {
+          "type": "string"
+        },
+        "size_selector": {
+          "type": "string"
+        },
+        "seeders_selector": {
+          "type": "string"
+        },
+        "total_regex": {
+          "type": "string"
+        },
         "response": {
           "type": "object",
           "properties": {
-            "response_type": {"enum": ["single", "paginated"]},
-            "items_key": {"type": "string"},
-            "seeders_field": {"type": "string"},
-            "size_field": {"type": "string"},
-            "total_count_field": {"type": "string"}
+            "response_type": {
+              "enum": [
+                "single",
+                "paginated"
+              ]
+            },
+            "items_key": {
+              "type": "string"
+            },
+            "seeders_field": {
+              "type": "string"
+            },
+            "size_field": {
+              "type": "string"
+            },
+            "total_count_field": {
+              "type": "string"
+            }
           }
         },
         "pagination": {
           "type": "object",
           "properties": {
-            "type": {"enum": ["page_param", "offset", "none"]},
-            "page_key": {"type": "string"},
-            "page_param": {"type": "string"},
-            "total_pages_key": {"type": "string"},
-            "next_key": {"type": "string"},
-            "start_value": {"type": "integer"}
+            "type": {
+              "enum": [
+                "page_param",
+                "offset",
+                "none"
+              ]
+            },
+            "page_key": {
+              "type": "string"
+            },
+            "page_param": {
+              "type": "string"
+            },
+            "total_pages_key": {
+              "type": "string"
+            },
+            "next_key": {
+              "type": "string"
+            },
+            "start_value": {
+              "type": "integer"
+            }
           }
         }
       }
