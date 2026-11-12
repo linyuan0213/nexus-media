@@ -55,6 +55,32 @@ class Piggo(SiteSigninHandler):
                     text = str(session.execute("return document.body.innerText||''") or "")
                     if "已签到" in text:
                         return SigninResult.already(site)
+                    total_before = str(
+                        session.execute(
+                            "(()=>{const m=document.body.innerText.match(/累计签到(\\d+)天/);return m?m[1]:''})()"
+                        )
+                        or ""
+                    )
+                    # Piggo 日历的 Turnstile 由 nexus-chrome 求解；求解后页面会自动提交签到
+                    has_turnstile = bool(
+                        session.execute("return !!document.querySelector('input[name=cf-turnstile-response]')")
+                    )
+                    if has_turnstile:
+                        solved = session.turnstile(90)
+                        if not solved.get("solved"):
+                            return SigninResult.fail(site, "Cloudflare Turnstile 未通过")
+                        time.sleep(3)
+                        text = str(session.execute("return document.body.innerText||''") or "")
+                        if any(x in text for x in ("签到成功", "补签成功", "已签到")):
+                            return SigninResult.success(site)
+                        total_after = str(
+                            session.execute(
+                                "(()=>{const m=document.body.innerText.match(/累计签到(\\d+)天/);return m?m[1]:''})()"
+                            )
+                            or ""
+                        )
+                        if total_before and total_after and total_after != total_before:
+                            return SigninResult.success(site)
                     clicked = session.execute(
                         "(()=>{const b=document.querySelector('button.cal-att-pill.act')"
                         "||[...document.querySelectorAll('button')]"
@@ -62,6 +88,8 @@ class Piggo(SiteSigninHandler):
                         "if(!b)return '';b.click();return b.innerText.trim();})()"
                     )
                     if not clicked:
+                        if "累计签到" in text:
+                            return SigninResult.already(site)
                         return SigninResult.fail(site, "未找到日历签到按钮")
                     time.sleep(5)
                     text = str(session.execute("return document.body.innerText||''") or "")
