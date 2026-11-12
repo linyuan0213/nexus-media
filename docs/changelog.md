@@ -6,6 +6,7 @@
 - 站点：新增加密的 `CONFIG_SITE_API_CREDENTIAL`，支持 API Key 与 SPA 凭据分离；旧 `NOTE.api_credentials` 自动迁移。
 - 站点：CookieCloud 同步 local_storage/Cookie 到 SPA 凭据，支持 Piggo SPA 搜索和 M-Team 签到复用，增加新鲜度回退。
 - 站点：SPA 请求支持 HTTP/2、sign/HMAC、visitorId；下载、详情属性和搜索按 profile 回退。
+- 站点：刷流详情属性支持按 profile 回退；CookieCloud Cookie/localStorage 增加新鲜度判断。
 - 界面：站点编辑页增加接口模式和 SPA 凭据来源/同步时间展示。
 
 ### 修复

@@ -277,6 +277,7 @@ class CookieCloudPlugin:
                 ]
             )
             self._cache.set(f"cookie:{domain_url}", cookie_str)
+            self._cache.set(f"cookie_updated_at:{domain_url}", str(int(time.time())))
             result[domain_url] = cookie_str
 
         return result

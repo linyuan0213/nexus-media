@@ -80,7 +80,9 @@ def resolve_spa_credentials(site: Any, user_config: dict | None = None) -> SpaCr
             if isinstance(storage, dict) and storage:
                 local_storage = storage
                 updated_at = synced_at
-            cookie = cookie or str(adapter.get_cookie(domain) or "")
+            cookie_synced_at = adapter.get_cookie_updated_at(domain)
+            if not cookie_synced_at or now - cookie_synced_at <= max_age:
+                cookie = cookie or str(adapter.get_cookie(domain) or "")
             if local_storage:
                 break
     except Exception as exc:  # noqa: BLE001 - CookieCloud 是可选的

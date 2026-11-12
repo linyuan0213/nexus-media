@@ -66,7 +66,7 @@ class SiteConf:
         detail=None,
         note=None,
     ):
-        return self._get_site_engine().resolve_torrent_attr(
+        return self._get_site_engine().resolve_torrent_attr_with_fallback(
             torrent_url=torrent_url,
             cookie=cookie,
             api_key=api_key,

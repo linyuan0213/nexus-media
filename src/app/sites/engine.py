@@ -727,6 +727,26 @@ class SiteEngine:
             "doc": doc,
         }
 
+    def resolve_torrent_attr_with_fallback(self, torrent_url, **kwargs):
+        """按 torrent_attr capability 依次尝试 profile；单 profile 失败不误判为免费."""
+        site = self.get_by_url(torrent_url)
+        if not site or not (site.api and site.api.profiles):
+            return self.resolve_torrent_attr(torrent_url, **kwargs)
+        note = kwargs.get("note") or {}
+        candidates = engine_tools.api_profile_candidates(site, {"note": note}, "torrent_attr")
+        last_error: Exception | None = None
+        for name, candidate_api, _merged in candidates:
+            if not (getattr(candidate_api, "torrent_attr", None) or site.torrent_attr):
+                continue
+            try:
+                return self.resolve_torrent_attr(torrent_url, profile_override=name, **kwargs)
+            except TorrentAttrFetchError as exc:
+                last_error = exc
+                log.debug(f"[SiteEngine]torrent_attr profile {name} 失败，尝试下一个")
+        if last_error:
+            raise last_error
+        return self.resolve_torrent_attr(torrent_url, **kwargs)
+
     def resolve_torrent_attr(
         self,
         torrent_url,
@@ -740,6 +760,7 @@ class SiteEngine:
         browser_persistent=False,
         detail=None,
         note=None,
+        profile_override=None,
     ):
         ret = {"free": False, "2xfree": False, "hr": False, "peer_count": 0, "labels": ""}
         site = self.get_by_url(torrent_url)
@@ -759,7 +780,10 @@ class SiteEngine:
             "note": note or {},
         }
 
-        profile = engine_tools.resolve_api_profile(site, user_config, "torrent_attr")
+        if profile_override and site.api and profile_override in site.api.profiles:
+            profile = (profile_override, site.api.profiles[profile_override])
+        else:
+            profile = engine_tools.resolve_api_profile(site, user_config, "torrent_attr")
         profile_name, api_config = profile if profile else ("", site.api)
         user_config = engine_tools.profile_user_config(user_config, profile_name)
         cfg = (getattr(api_config, "torrent_attr", None) if api_config else None) or site.torrent_attr

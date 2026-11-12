@@ -27,6 +27,14 @@ class CookiecloudAdapter:
             return self._fix_backslash_escapes(data)
         return {}
 
+    def get_cookie_updated_at(self, domain_url: str) -> int:
+        """返回 Cookie 最近同步时间（epoch 秒），没有则为 0."""
+        value = self._cache.get(f"cookie_updated_at:{domain_url}")
+        try:
+            return int(value or 0)
+        except (TypeError, ValueError):
+            return 0
+
     def get_local_storage_updated_at(self, domain_url: str) -> int:
         """返回 localStorage 最近同步时间（epoch 秒），没有则为 0."""
         value = self._cache.get(f"local_storage_updated_at:{domain_url}")
