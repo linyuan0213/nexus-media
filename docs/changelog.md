@@ -2,7 +2,7 @@
 
 ### 修复
 
-- 站点：CookieCloud 同步合并 SPA 凭据，保留已有 Token 和 Visitor ID。
+- 站点：CookieCloud 同步更新 SPA Token 和 Visitor ID，缺失字段时保留已有值。
 - 订阅：RSS 预筛同时匹配标题和简介，避免英文标题资源漏订阅。
 - 订阅：RSS 默认轮询间隔调整为 10 分钟。
 
