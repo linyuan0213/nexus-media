@@ -51,6 +51,7 @@ class IndexerHelper:
         note=None,
         api_profile=None,
         api_credentials=None,
+        runtime_config=None,
     ):
         if not url:
             return None
@@ -79,6 +80,7 @@ class IndexerHelper:
                     note=note,
                     api_profile=api_profile,
                     api_credentials=api_credentials,
+                    runtime_config=runtime_config,
                 )
         return None
 
@@ -108,6 +110,7 @@ class IndexerConf:
         note=None,
         api_profile=None,
         api_credentials=None,
+        runtime_config=None,
     ):
         if not datas:
             return
@@ -140,3 +143,4 @@ class IndexerConf:
         self.note = note or {}
         self.api_profile = api_profile or ""
         self.api_credentials = api_credentials or {}
+        self.runtime_config = runtime_config or {}

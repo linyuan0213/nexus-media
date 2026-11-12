@@ -20,6 +20,7 @@ from app.indexer.schema import IndexerConfigSchema
 from app.infrastructure.progress import ProgressTracker
 from app.infrastructure.system_config import SystemConfig
 from app.sites.engine import SiteEngine
+from app.sites.runtime_config import SiteRuntimeConfig
 from app.sites.search_gate import SiteSearchBusyError, get_site_search_gate
 from app.sites.searcher_factory import create_searcher
 from app.sites.site_cache import SiteCache
@@ -146,6 +147,10 @@ class BuiltinIndexer(IndexerClientBase):
                 continue
 
             render = bool(site.get("chrome"))
+            site_def = self._site_engine.get_by_url(url) if url else None
+            runtime_config = {}
+            if site_def:
+                runtime_config = SiteRuntimeConfig.resolve(site_def, site, "search").as_search_config()["user_config"]
             indexer = self._indexer_helper.get_indexer(
                 url=url,
                 siteid=site.get("id"),
@@ -165,6 +170,7 @@ class BuiltinIndexer(IndexerClientBase):
                 note=site.get("note") or {},
                 api_profile=site.get("api_profile"),
                 api_credentials=site.get("api_credentials") or {},
+                runtime_config=runtime_config,
             )
             if indexer:
                 if indexer_id and (str(indexer.id) == str(indexer_id) or site.get("name") == indexer_id):
@@ -400,6 +406,16 @@ class BuiltinIndexer(IndexerClientBase):
 
     @staticmethod
     def _build_user_config(indexer):
+        runtime_config = getattr(indexer, "runtime_config", {}) or {}
+        if runtime_config:
+            user_config = dict(runtime_config)
+            user_config.setdefault("ua", getattr(indexer, "ua", "") or get_ua())
+            user_config.setdefault("domain", getattr(indexer, "domain", "") or "")
+            user_config.setdefault("chrome", getattr(indexer, "chrome", False))
+            user_config.setdefault("browser_render", getattr(indexer, "browser_render", False))
+            user_config.setdefault("browser_persistent", getattr(indexer, "browser_persistent", False))
+            user_config.setdefault("proxy", getattr(indexer, "proxy", False))
+            return user_config
         user_config = {
             "cookie": getattr(indexer, "cookie", "") or "",
             "ua": getattr(indexer, "ua", "") or get_ua(),

@@ -29,6 +29,7 @@ from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.sites import engine_connection, engine_download, engine_tools, engine_user_info
+from app.sites.runtime_config import ProfileRouter
 from app.sites.utils import is_logged_in
 from app.utils import JsonUtils
 from app.utils.browser_mode import build_browser_mode
@@ -510,7 +511,7 @@ class SiteEngine:
         if not tid:
             return None
         # profile 站点按 capability 顺序尝试；SPA 失败时可回退 official。
-        for name, api, merged_config in engine_tools.api_profile_candidates(site, user_config, "download"):
+        for name, api, merged_config in ProfileRouter.candidates(site, user_config, "download"):
             download_cfg = getattr(api, "download", None)
             if not download_cfg:
                 continue
@@ -733,7 +734,7 @@ class SiteEngine:
         if not site or not (site.api and site.api.profiles):
             return self.resolve_torrent_attr(torrent_url, **kwargs)
         note = kwargs.get("note") or {}
-        candidates = engine_tools.api_profile_candidates(site, {"note": note}, "torrent_attr")
+        candidates = ProfileRouter.candidates(site, {"note": note}, "torrent_attr")
         last_error: Exception | None = None
         for name, candidate_api, _merged in candidates:
             if not (getattr(candidate_api, "torrent_attr", None) or site.torrent_attr):
@@ -783,8 +784,9 @@ class SiteEngine:
         if profile_override and site.api and profile_override in site.api.profiles:
             profile = (profile_override, site.api.profiles[profile_override])
         else:
-            profile = engine_tools.resolve_api_profile(site, user_config, "torrent_attr")
-        profile_name, api_config = profile if profile else ("", site.api)
+            profile = ProfileRouter.resolve(site, user_config, "torrent_attr")
+        profile_name = profile[0] if profile else ""
+        api_config = profile[1] if profile else site.api
         user_config = engine_tools.profile_user_config(user_config, profile_name)
         cfg = (getattr(api_config, "torrent_attr", None) if api_config else None) or site.torrent_attr
 
@@ -1111,8 +1113,9 @@ class SiteEngine:
             return False, "未找到站点定义", 0
         user_config = user_config or {}
         if site.api:
-            profile = engine_tools.resolve_api_profile(site, user_config, "search")
-            profile_name, api = profile if profile else ("", site.api)
+            profile = ProfileRouter.resolve(site, user_config, "search")
+            profile_name = profile[0] if profile else ""
+            api = profile[1] if profile else site.api
             user_config = engine_tools.profile_user_config(user_config, profile_name)
             test_cfg = api.endpoints.get("test_connection") if api else None
             if not test_cfg:

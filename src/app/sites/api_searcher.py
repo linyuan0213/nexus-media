@@ -23,6 +23,7 @@ from app.media.metadata.registry import registry as metadata_registry
 from app.sites import engine_tools
 from app.sites.credential_provider import merge_spa_config
 from app.sites.engine import SiteDefinition
+from app.sites.runtime_config import ProfileRouter, SiteRuntimeConfig
 from app.sites.searchers import _TRANSFORMS
 from app.utils.config_tools import get_proxies
 from app.utils.json_utils import JsonUtils
@@ -37,7 +38,7 @@ class ApiSiteSearcher:
         self._site = site_def
         self._engine = site_engine
         self._raw_user_config = dict(user_config or {})
-        self._profile_candidates = engine_tools.api_profile_candidates(site_def, self._raw_user_config, "search")
+        self._profile_candidates = ProfileRouter.candidates(site_def, self._raw_user_config, "search")
         self._profile_index = 0
         self._profile_name = ""
         self._api = None
@@ -51,6 +52,14 @@ class ApiSiteSearcher:
             return False
         self._profile_index = index
         self._profile_name, self._api, self._user_config = self._profile_candidates[index]
+        self._runtime = SiteRuntimeConfig(
+            site=self._site,
+            site_info=self._raw_user_config,
+            capability="search",
+            profile_name=self._profile_name,
+            api=self._api,
+            user_config=self._user_config,
+        )
         if self._api and (self._api.auth or {}).get("spa"):
             self._user_config = merge_spa_config(self._user_config, self._site)
         self._auth_tokens = {}
