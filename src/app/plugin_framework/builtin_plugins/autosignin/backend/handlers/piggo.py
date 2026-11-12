@@ -34,12 +34,15 @@ class Piggo(SiteSigninHandler):
                 with BrowserSession(
                     site_key="piggo",
                     server_url=server_url,
-                    cookie=spa.cookie or ctx.cookie,
                     cleanup_auto_tabs=True,
                     slot_timeout=180.0,
                 ) as session:
                     tab = f"piggo_calendar_{uuid.uuid4().hex[:6]}"
-                    session.navigate("https://piggo.me/", tab_name=tab)
+                    session.navigate(
+                        "https://piggo.me/",
+                        tab_name=tab,
+                        cookie=spa.cookie or ctx.cookie,
+                    )
                     session.execute("localStorage.setItem('pig_token', %s)" % json.dumps(token))
                     session.navigate("https://piggo.me/calendar", tab_name=tab)
                     time.sleep(3)
