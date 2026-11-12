@@ -110,6 +110,32 @@ class TestLocalFilterQnmRecallGate:
         assert direct_results == []
         assert stats.index_sucess == 0
 
+    def test_description_alias_recovers_english_episode_title(self):
+        """英文单集标题 + 中文简介应通过 qnm 召回，不能因缺中文标题被拒绝。"""
+        rf = _make_filter()
+        match = MediaInfo(
+            cn_name="走马上任",
+            title="走马上任",
+            en_name="Zou.ma.shang.ren",
+            original_title="走马上任",
+            year="2026",
+            type=ProviderMediaType.SERIES,
+            tmdb_id=275297,
+            aliases=["Lets Go", "Let's Go", "走馬上任"],
+        )
+        candidates, direct_results, _stats = rf.local_filter(
+            [
+                _item(
+                    "Lets Go S01E24 2160p TX WEB-DL AAC2.0 HDR HFR H.265-MWeb",
+                    description="走马上任 | 2026 | 第1季第24集 | 2160p HDRVi 60FPS | 中国大陆 | 剧情 喜剧",
+                )
+            ],
+            filter_args={},
+            match_media=match,
+        )
+        assert len(candidates) == 1
+        assert direct_results == []
+
     def test_qnm_hit_cn_only_low_confidence_goes_to_identity_resolution(self):
         """qnm 命中但仅 cn_name（低置信）→ identity_anchored=False 走身份识别"""
         rf = _make_filter()

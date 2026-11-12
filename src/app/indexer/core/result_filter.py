@@ -619,6 +619,10 @@ class ResultFilter:
                 )
             else:
                 mi = cached_meta_info(title=torrent_name, subtitle=f"{labels} {description}")
+            # quick_name_match 会用 description 里的中文别名做召回；必须在身份门禁前写入，
+            # 否则英文标题的单集（如 Lets Go S01E24）会因缺少中文名被误拒绝。
+            if description and not getattr(mi, "description", None):
+                mi.description = description
             # 若标题未解析出中文名，尝试从 description 中提取与目标媒体匹配的中文短语
             if not mi.cn_name and description and match_media:
                 desc = str(description)
