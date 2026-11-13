@@ -313,7 +313,9 @@ class MessageCommandHandler:
 
         TokenCache.delete("search")
         if self._search_handler and self._thread_executor:
-            self._thread_executor.submit(self._search_handler.handle, msg, in_from, user_id, user_name, permissions)
+            self._thread_executor.submit(
+                self._search_handler.handle, msg, in_from, user_id, user_name, permissions, bound_user_id
+            )
             if self._message:
                 self._message.send_channel_msg(channel=in_from, title="正在处理，请稍候...", user_id=user_id or "")
 

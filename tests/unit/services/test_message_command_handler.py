@@ -35,7 +35,7 @@ class TestMessageCommandHandlerSearchCommands:
     )
     def test_search_command_routes_to_search_handler(self, handler, msg):
         """中文订阅/搜索/下载命令及 /rss、/ssa 应路由到搜索服务."""
-        handler.handle_message_job(msg, in_from=SearchType.WX, user_id="user1")
+        handler.handle_message_job(msg, in_from=SearchType.WX, user_id="user1", bound_user_id=1)
 
         handler._message.send_channel_msg.assert_called_once()
         call_args = handler._message.send_channel_msg.call_args
@@ -47,6 +47,7 @@ class TestMessageCommandHandlerSearchCommands:
         assert args[1] == msg
         assert args[2] == SearchType.WX
         assert args[3] == "user1"
+        assert args[6] == 1
 
     def test_exact_command_routes_to_mapped_func(self, handler):
         """精确命令如 /sub 应执行映射函数而不是搜索."""
@@ -62,12 +63,13 @@ class TestMessageCommandHandlerSearchCommands:
 
     def test_plain_text_routes_to_search_handler(self, handler):
         """普通文本无命令前缀时也走搜索服务."""
-        handler.handle_message_job("尼古猫猫", in_from=SearchType.WX, user_id="user1")
+        handler.handle_message_job("尼古猫猫", in_from=SearchType.WX, user_id="user1", bound_user_id=1)
 
         handler._thread_executor.submit.assert_called_once()
         _, args, _ = handler._thread_executor.submit.mock_calls[0]
         assert args[0] is handler._search_handler.handle
         assert args[1] == "尼古猫猫"
+        assert args[6] == 1
 
 
 class TestMessageCommandHandlerBuiltinCommands:

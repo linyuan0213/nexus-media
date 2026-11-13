@@ -535,7 +535,7 @@ class MessageSearchService:
         if len(media_list) == 1:
             media_info = media_list[0]
             if mtype == "SUBSCRIBE":
-                self._add_rss(in_from, media_info, user_id=user_id, user_name=user_name)
+                self._add_rss(in_from, media_info, user_id=user_id, user_name=user_name, bound_user_id=bound_user_id)
             else:
                 if media_info.douban_id:
                     title = media_info.get_title_string()
