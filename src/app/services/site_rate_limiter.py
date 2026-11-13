@@ -13,6 +13,9 @@ from app.utils.json_utils import JsonUtils
 class SiteRateLimiterService:
     """站点限流服务 — 按站点 ID 管理限流."""
 
+    DEFAULT_RATE = "10/m"
+    DEFAULT_BURST = 10
+
     def __init__(self, engine: RateLimitEngine | None = None):
         self._engine = engine or RateLimitEngine()
         self._site_rates: dict[str, tuple[str, int]] = {}
@@ -37,7 +40,13 @@ class SiteRateLimiterService:
         burst = note.get("rate_burst")
 
         if rate_str:
-            rate_str = str(rate_str)
+            rate_str = str(rate_str).strip().lower()
+            if rate_str in {"none", "off", "disabled"}:
+                with self._lock:
+                    had = self._site_rates.pop(site_id, None) is not None
+                if had:
+                    self._engine.reset(f"site:{site_id}", rate_str, burst)
+                return
         if burst is not None:
             burst = int(burst)
 
@@ -73,10 +82,9 @@ class SiteRateLimiterService:
                     burst = 1
 
         if not rate_str:
-            # 默认不限流
-            with self._lock:
-                self._site_rates.pop(site_id, None)
-            return
+            # 未配置时使用站点默认限流，避免无限速请求站点。
+            rate_str = self.DEFAULT_RATE
+            burst = self.DEFAULT_BURST
 
         if burst is None:
             # 默认 burst 等于 rate 的 count
@@ -89,7 +97,18 @@ class SiteRateLimiterService:
         burst = int(burst)
 
         with self._lock:
+            old = self._site_rates.get(site_id)
             self._site_rates[site_id] = (rate_str, burst)
+        key = f"site:{site_id}"
+        if old is not None and old != (rate_str, burst):
+            # 用户修改限流/突发容量后，旧桶令牌数不再代表新配置。
+            self._engine.reset(key, rate_str, burst)
+        elif old is None:
+            # 进程重启后 Redis 桶可能仍保留旧 burst；配置首次注册时校正。
+            current = self._engine.get_status(key) or {}
+            current_burst = int(current.get("burst") or 0)
+            if current_burst and current_burst != burst:
+                self._engine.reset(key, rate_str, burst)
 
     def check(self, site_id: str, timeout: float | None = 0) -> bool:
         """检查站点是否触发流控.
@@ -125,5 +144,29 @@ class SiteRateLimiterService:
         """获取站点限流状态."""
         if site_id:
             key = f"site:{site_id}"
-            return self._engine.get_status(key)
+            status = dict(self._engine.get_status(key) or {})
+            with self._lock:
+                config = self._site_rates.get(str(site_id))
+            if config:
+                burst = int(config[1])
+                status["burst"] = burst
+                if isinstance(status.get("tokens"), (int, float)):
+                    status["tokens"] = min(float(status["tokens"]), burst)
+                else:
+                    status["tokens"] = burst
+            return status
         return self._engine.get_status()
+
+    def get_all_statuses(self) -> dict[str, dict]:
+        """返回数字站点 ID 的限流配置和实时状态."""
+        with self._lock:
+            items = list(self._site_rates.items())
+        result: dict[str, dict] = {}
+        for key, (rate, burst) in items:
+            if not str(key).isdigit():
+                continue
+            status = dict(self.get_status(str(key)) or {})
+            status["rate_limit"] = rate
+            status["rate_burst"] = burst
+            result[str(key)] = status
+        return result

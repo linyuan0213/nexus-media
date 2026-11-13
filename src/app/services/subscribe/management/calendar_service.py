@@ -8,7 +8,10 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
+import log
+from app.db.repositories.subscribe_calendar_repo_adapter import SubscribeCalendarRepositoryAdapter
 from app.domain.media_types import ProviderMediaType
+from app.infrastructure.cache_system import get_cache_manager
 from app.media.metadata.gateway import MetadataContext, MetadataGateway
 from app.schemas.auth import UserContext
 
@@ -51,16 +54,24 @@ class SubscribeCalendarService:
         subscribe: SubscribeService,
         rss_task_service: RssTaskService,
         metadata_gateway: MetadataGateway | None = None,
+        calendar_event_repo: SubscribeCalendarRepositoryAdapter | None = None,
     ):
         self._media_info_service = media_info_service
         self._subscribe = subscribe
         self._rss_task_service = rss_task_service
         self._metadata_gateway = metadata_gateway
+        self._calendar_event_repo = calendar_event_repo or SubscribeCalendarRepositoryAdapter()
+        self._refreshing_users: set[int] = set()
+        self._refresh_executor = ThreadPoolExecutor(max_workers=1)
         self._episode_cache: dict[tuple[str, str, int], tuple[float, list[dict]]] = {}
         self._episode_cache_ttl = 600.0
         self._movie_cache: dict[str, tuple[float, dict | None]] = {}
         self._movie_cache_ttl = 600.0
         self._events_cache: dict[str, tuple[float, float, list[dict]]] = {}
+        self._last_good_events: dict[str, list[dict]] = {}
+        self._persistent_events = get_cache_manager().get_or_create(
+            "subscribe_calendar_events", cache_type="redis", ttl=86_400
+        )
         self._events_cache_ttl = 600.0
 
     def _context(self, user: UserContext | None, *, content_profile: str, purpose: str) -> MetadataContext:
@@ -215,8 +226,45 @@ class SubscribeCalendarService:
         return episodes
 
     def get_events(self, user: UserContext | None = None) -> list[dict]:
-        """获取订阅日历事件（并发抓取，避免 TMDB/插件源串行阻塞）."""
-        cache_key = f"user:{user.user_id if user else 0}"
+        """读取数据库日历事件；首次为空或超过 1 小时才后台刷新."""
+        if user is None:
+            return self._fetch_events(user)
+        user_id = int(user.user_id) if user.user_id else 0
+        stored = self._calendar_event_repo.get_user_events(user_id)
+        if stored:
+            updated_at = self._calendar_event_repo.get_user_updated_at(user_id)
+            if updated_at and (datetime.now() - updated_at).total_seconds() > 3600:
+                self._schedule_refresh(user_id, user)
+            return stored
+        return self.refresh_events(user)
+
+    def refresh_events(self, user: UserContext | None = None) -> list[dict]:
+        """从元数据源刷新并写入数据库；空结果不覆盖已有事件."""
+        events = self._fetch_events(user)
+        if events and user is not None and user.user_id:
+            self._calendar_event_repo.replace_user_events(int(user.user_id), events)
+        return events
+
+    def _schedule_refresh(self, user_id: int, user: UserContext | None) -> None:
+        if user_id in self._refreshing_users:
+            return
+        self._refreshing_users.add(user_id)
+
+        def _run() -> None:
+            try:
+                self.refresh_events(user)
+            except Exception as exc:  # noqa: BLE001
+                log.warn(f"[Calendar]后台刷新失败 user={user_id}: {exc}")
+            finally:
+                self._refreshing_users.discard(user_id)
+
+        self._refresh_executor.submit(_run)
+
+    def _fetch_events(self, user: UserContext | None = None) -> list[dict]:
+        """从元数据源实时聚合（由刷新任务/首次读取调用）."""
+        user_id = int(user.user_id) if user and user.user_id else 0
+        cache_key = f"user:{user_id}"
+        persistent = self._persistent_events if user_id else None
         movie_items = self.get_movie_items(user=user)
         tv_items = self.get_tv_items(user=user)
         poster_by_rssid = {
@@ -241,9 +289,9 @@ class SubscribeCalendarService:
             executor = ThreadPoolExecutor(max_workers=min(12, total))
             futures = [executor.submit(self._movie_events, movie, user) for movie in movie_items]
             futures.extend(executor.submit(self._tv_events, tv, user) for tv in tv_items)
-            done, pending = wait(futures, timeout=15.0)
+            done, pending = wait(futures, timeout=30.0)
             # 关键：不能 wait=True 退出，否则慢 provider 会继续阻塞 HTTP 响应。
-            executor.shutdown(wait=False, cancel_futures=True)
+            executor.shutdown(wait=False, cancel_futures=False)
             complete = not pending
             for future in done:
                 try:
@@ -251,12 +299,37 @@ class SubscribeCalendarService:
                 except Exception:  # noqa: BLE001 - 单个订阅失败不影响日历
                     continue
         events = [event for event in events if event.get("start")]
+        fallback = self._last_good_events.get(cache_key)
+        if not fallback and persistent is not None:
+            persisted = persistent.get(cache_key)
+            fallback = persisted if isinstance(persisted, list) else None
+
+        if complete and (events or not fallback):
+            if fallback and events and len(events) < len(fallback):
+                # 聚合结果比上次完整结果少时合并，避免限流导致旧事件消失。
+                merged = {
+                    str(event.get("id") or f"{event.get('start')}:{event.get('title')}"): event for event in fallback
+                }
+                for event in events:
+                    merged[str(event.get("id") or f"{event.get('start')}:{event.get('title')}")] = event
+                events = list(merged.values())
+            if events:
+                self._last_good_events[cache_key] = [dict(event) for event in events]
+                if persistent is not None:
+                    persistent.set(cache_key, events)
+        elif fallback:
+            # provider 限流/超时只影响部分订阅时，用最近一次完整结果补齐，避免事件凭空消失。
+            merged = {str(event.get("id") or f"{event.get('start')}:{event.get('title')}"): event for event in fallback}
+            for event in events:
+                merged[str(event.get("id") or f"{event.get('start')}:{event.get('title')}")] = event
+            events = list(merged.values())
         fill_posters(events)
         events.sort(key=lambda event: str(event.get("start") or ""))
         # 插件电影首次可能因插件尚未就绪而无日期；此时短缓存，避免错误结果锁 10 分钟。
         plugin_rssids = {item.get("rssid") for item in movie_items if not item.get("id")}
         has_plugin_event = any(event.get("rssid") in plugin_rssids for event in events)
-        ttl = self._events_cache_ttl if complete and (not plugin_rssids or has_plugin_event) else 30.0
+        # 不完整结果只短暂缓存，下一轮尽快重新聚合，避免慢订阅被缓存成“缺失”。
+        ttl = self._events_cache_ttl if complete and (not plugin_rssids or has_plugin_event) else 5.0
         self._events_cache[cache_key] = (time.monotonic(), ttl, events)
         return [dict(event) for event in events]
 

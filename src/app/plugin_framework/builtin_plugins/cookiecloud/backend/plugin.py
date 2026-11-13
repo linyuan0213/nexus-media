@@ -229,41 +229,102 @@ class CookieCloudPlugin:
         self._store_cookies_to_cache(contents if isinstance(contents, dict) else {})
         self.ctx.info("Cookie 同步 Redis 成功")
 
+    @staticmethod
+    def _normalize_cookie_domain(value: Any) -> str:
+        domain = str(value or "").strip().lower()
+        if "://" in domain:
+            domain = domain.split("://", 1)[1]
+        domain = domain.split("/", 1)[0].split(":", 1)[0].strip().lstrip(".")
+        return domain
+
+    def _site_domain_map(self) -> list[tuple[str, str]]:
+        """站点定义域名 -> 主域名；只处理已配置站点，未知域名不做公共后缀合并."""
+        try:
+            definitions = self._site_sync.list_definitions(private_only=True)
+        except Exception:
+            return []
+        mapping: list[tuple[str, str]] = []
+        for item in definitions:
+            if not isinstance(item, dict):
+                continue
+            primary = self._normalize_cookie_domain(item.get("domain"))
+            if not primary:
+                continue
+            aliases = [primary]
+            aliases.extend(self._normalize_cookie_domain(alias) for alias in (item.get("domain_aliases") or []))
+            for alias in aliases:
+                if alias:
+                    mapping.append((alias, primary))
+        # 更具体的域名优先，避免泛域名先命中。
+        mapping.sort(key=lambda pair: len(pair[0]), reverse=True)
+        return mapping
+
+    @staticmethod
+    def _resolve_site_domain(domain: str, mapping: list[tuple[str, str]]) -> str:
+        for source, primary in mapping:
+            if domain == source or domain.endswith(f".{source}"):
+                return primary
+        return domain
+
+    def _build_cookie_string(self, cookies: list[dict]) -> str:
+        rows: list[tuple[str, str, str, str]] = []
+        for cookie in cookies:
+            if not isinstance(cookie, dict):
+                continue
+            name = str(cookie.get("name") or "").strip()
+            if not name or name in self._ignore_cookies or not self._allow_cookie_name(name):
+                continue
+            rows.append(
+                (
+                    name,
+                    str(cookie.get("value") or ""),
+                    self._normalize_cookie_domain(cookie.get("domain")),
+                    str(cookie.get("path") or "/"),
+                )
+            )
+        # 同名 cookie 可能分别属于不同 path/domain；保留最具体路径，完全重复项只保留一条。
+        rows.sort(key=lambda item: len(item[3]), reverse=True)
+        seen: set[tuple[str, str, str]] = set()
+        parts: list[str] = []
+        for name, value, domain, path in rows:
+            key = (name, domain, path)
+            if key in seen:
+                continue
+            seen.add(key)
+            parts.append(f"{name}={value}")
+        return "; ".join(parts)
+
     def _store_cookies_to_cache(self, contents: dict):
-        domain_cookie_groups = defaultdict(list)
+        domain_cookie_groups: dict[str, list[dict]] = defaultdict(list)
         cookie_content = contents.get("cookie_data") or {}
-        for _site, cookies in cookie_content.items():
+        site_domain_map = self._site_domain_map()
+        for group, cookies in cookie_content.items():
+            if not isinstance(cookies, list):
+                continue
+            group_domain = self._normalize_cookie_domain(group)
             for cookie in cookies:
-                if not self._check_domain(cookie["domain"]):
+                if not isinstance(cookie, dict):
                     continue
-                raw_domain = cookie["domain"].lstrip(".")
-                domain_key = raw_domain
-                domain_cookie_groups[domain_key].append(cookie)
+                source_domain = self._normalize_cookie_domain(cookie.get("domain")) or group_domain
+                if not source_domain:
+                    continue
+                target_domain = self._resolve_site_domain(source_domain, site_domain_map)
+                if not self._check_domain(source_domain) and not self._check_domain(target_domain):
+                    continue
+                domain_cookie_groups[target_domain].append(cookie)
 
         result = {}
-        for domain, content_list in domain_cookie_groups.items():
+        for domain_url, content_list in domain_cookie_groups.items():
             if not content_list:
                 continue
 
-            domain_url = domain
-
-            cloudflare_cookie = True
-            for content in content_list:
-                if content["name"] != "cf_clearance":
-                    cloudflare_cookie = False
-                    break
-            if cloudflare_cookie:
+            names = {str(item.get("name") or "") for item in content_list if isinstance(item, dict)}
+            if names and names <= {"cf_clearance"}:
                 continue
 
-            cookie_str = ";".join(
-                [
-                    f"{content.get('name')}={content.get('value')}"
-                    for content in content_list
-                    if content.get("name")
-                    and content.get("name") not in self._ignore_cookies
-                    and self._allow_cookie_name(content.get("name"))
-                ]
-            )
+            cookie_str = self._build_cookie_string(content_list)
+            if not cookie_str:
+                continue
             self._cache.set(f"cookie:{domain_url}", cookie_str)
             self._cache.set(f"cookie_updated_at:{domain_url}", str(int(time.time())))
             result[domain_url] = cookie_str

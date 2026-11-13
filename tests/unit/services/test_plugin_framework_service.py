@@ -224,3 +224,28 @@ class TestPluginFrameworkContentProfileDefaults:
         config = {"content_profile_defaults": {"custom": {"default_search_source": "unknown"}}}
         merged = PluginFrameworkService._apply_content_profile_defaults(profiles, config)
         assert merged[0]["default_search_source"] == "source_a"
+
+
+class TestPluginStaleVersionCleanup:
+    def test_removes_old_version_dirs_but_keeps_current(self, tmp_path):
+        current = tmp_path / "demo-1.1.0"
+        old = tmp_path / "demo-1.0.0"
+        backup = tmp_path / "demo-1.0.0.bak-deadbeef"
+        other = tmp_path / "other-1.0.0"
+        for path in (current, old, backup, other):
+            path.mkdir()
+
+        repo = MagicMock()
+        repo.get_all_manifests.return_value = [
+            SimpleNamespace(ID="demo", PATH=str(current)),
+        ]
+        svc = PluginFrameworkService.__new__(PluginFrameworkService)
+        svc._repo = repo
+        svc._plugins_dir = str(tmp_path)
+
+        svc._cleanup_stale_plugin_versions()
+
+        assert current.exists()
+        assert other.exists()
+        assert not old.exists()
+        assert not backup.exists()

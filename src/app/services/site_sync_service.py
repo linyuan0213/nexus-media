@@ -59,12 +59,8 @@ class SiteSyncService:
             site_domain = StringUtils.get_url_domain(strict_url)
             if not site_domain:
                 continue
-            if domain_url in site_domain or site_domain in domain_url:
-                matched.append(site)
-                continue
-            site_suffix = ".".join(site_domain.split(".")[-2:])
-            domain_suffix = ".".join(domain_url.split(".")[-2:])
-            if site_suffix == domain_suffix:
+            # 父域 Cookie 可匹配子域站点；子域 Cookie 不能反向写回父域站点。
+            if domain_url == site_domain or site_domain.endswith(f".{domain_url}"):
                 matched.append(site)
         return matched
 

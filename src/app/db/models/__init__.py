@@ -153,6 +153,7 @@ from app.db.models.storage_backend import (
 
 # RSS相关模型
 from app.db.models.subscribe import (
+    SubscribeCalendarEvent,
     SubscribeHistory,
     SubscribeMovies,
     SubscribeSearchCursor,

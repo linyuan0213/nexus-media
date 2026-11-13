@@ -279,6 +279,8 @@ class AgentMemoryConfig(BaseModel):
     """记忆配置"""
 
     max_steps: int = 8
+    # 单轮对话模型请求总预算；0 表示回退到 max_steps + 1
+    request_limit: int = 16
     short_term: AgentShortTermMemoryConfig = Field(default_factory=AgentShortTermMemoryConfig)
     long_term: AgentLongTermMemoryConfig = Field(default_factory=AgentLongTermMemoryConfig)
 

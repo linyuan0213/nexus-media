@@ -376,7 +376,7 @@ class SubscribeRepository(BaseRepository):
         with self.session() as db:
             ret = db.query(SubscribeMovies.DESC).filter(SubscribeMovies.ID == int(rssid)).first()
             if ret:
-                return ret[0]
+                return str(ret[0] or "")
             return ""
 
     def update_rss_movie_tmdb(

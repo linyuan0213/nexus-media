@@ -58,14 +58,29 @@ class SiteFaviconService:
         if data:
             return data
         sites = self._cache.get_sites_by_name(site_name)
+        # 站点定义里的 favicon 是维护过的准确路径，优先于 /favicon.ico 猜测。
+        for site_def in self._site_engine.all_sites():
+            if site_def.name == site_name and site_def.favicon:
+                return _wrap_external_url(site_def.favicon)
+        for site in sites:
+            site_def = self._definition_for_site(site)
+            if site_def and site_def.favicon:
+                return _wrap_external_url(site_def.favicon)
         for site in sites:
             url = self._fallback_url(site)
             if url:
                 return url
-        for site_def in self._site_engine.all_sites():
-            if site_def.name == site_name and site_def.favicon:
-                return _wrap_external_url(site_def.favicon)
         return None
+
+    def _definition_for_site(self, site: dict):
+        """按站点名或地址查找站点定义."""
+        name = str(site.get("name") or "")
+        if name:
+            definition = self._site_engine.get_by_name(name)
+            if definition:
+                return definition
+        url = str(site.get("strict_url") or site.get("signurl") or site.get("rssurl") or "")
+        return self._site_engine.get_by_url(url) if url else None
 
     def get_all_favicons(self) -> dict[str, str]:
         """获取全部图标映射."""
@@ -75,10 +90,15 @@ class SiteFaviconService:
                 result[str(k)] = str(v)
         for site in self._cache.get_sites(public=True):
             name = site.get("name")
-            if name and name not in result:
-                url = self._fallback_url(site)
-                if url:
-                    result[name] = url
+            if not name or name in result:
+                continue
+            site_def = self._definition_for_site(site)
+            if site_def and site_def.favicon:
+                result[name] = _wrap_external_url(site_def.favicon)
+                continue
+            url = self._fallback_url(site)
+            if url:
+                result[name] = url
         for site_def in self._site_engine.all_sites():
             if site_def.favicon and site_def.name and site_def.name not in result:
                 result[site_def.name] = _wrap_external_url(site_def.favicon)

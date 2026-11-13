@@ -4,6 +4,7 @@
 """
 
 from sqlalchemy import BigInteger, ForeignKey, Integer, Sequence, String, Text, UniqueConstraint
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -70,7 +71,7 @@ class CONFIGSITEAPICREDENTIAL(Base):
     ID: Mapped[int] = mapped_column(Integer, Sequence("ID"), primary_key=True)
     SITE_ID: Mapped[int] = mapped_column(Integer, ForeignKey("CONFIG_SITE.ID", ondelete="CASCADE"), index=True)
     PROFILE: Mapped[str] = mapped_column(String(64))
-    DATA: Mapped[str] = mapped_column(Text)
+    DATA: Mapped[str] = mapped_column(Text().with_variant(MEDIUMTEXT(), "mysql"))
     UPDATED_AT: Mapped[str] = mapped_column(String(32), default="")
 
 

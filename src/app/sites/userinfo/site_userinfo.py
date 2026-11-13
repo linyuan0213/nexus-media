@@ -15,6 +15,7 @@ from app.infrastructure.distributed_lock.lock_manager import get_lock_manager
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.infrastructure.rate_limiter import MemoryTokenBucketBackend, RateLimitEngine
+from app.infrastructure.system_config import SystemConfig
 from app.infrastructure.thread import ThreadExecutor
 from app.sites.connectivity.site_favicon_service import SiteFaviconService
 from app.sites.engine import SiteEngine
@@ -59,6 +60,7 @@ class SiteUserInfo:
             max_workers=self._MAX_CONCURRENCY, name="site_refresh"
         )
         self._rate_limiter = rate_limiter or RateLimitEngine(backend=MemoryTokenBucketBackend())
+        self._system_config = SystemConfig()
         self._refresh()
 
     def _refresh(self):
@@ -311,6 +313,7 @@ class SiteUserInfo:
                 log.info("[Sites]站点数据统计无变化，跳过重复发送")
                 return
             self.message.send_user_statistics_message(string_list)
+            self._system_config.set(self._STATS_CONFIG_KEY, msg_text)
 
     @staticmethod
     def _display_width(text: str) -> int:
@@ -362,9 +365,17 @@ class SiteUserInfo:
         return [header, "", *rows], inc_uploads, inc_downloads
 
     _STATS_MSG_TYPE = "ptrefresh_date_message"
+    _STATS_CONFIG_KEY = "sites.stats.last_message"
 
     def _stats_message_unchanged(self, msg_text: str) -> bool:
-        """统计消息内容是否与最近一条同类型消息（持久化）一致."""
+        """统计消息内容是否与最近一次发送一致（SystemConfig 持久化，重启后仍有效）."""
+        try:
+            if hasattr(self, "_system_config"):
+                last = self._system_config.get(self._STATS_CONFIG_KEY)
+                if last is not None:
+                    return str(last).strip() == msg_text.strip()
+        except Exception as e:
+            log.debug(f"[Sites]统计消息持久化去重检查失败: {e}")
         try:
             items = self.message.recent_web_messages(user_id="", limit=20) if self.message is not None else []
             for item in reversed(items):

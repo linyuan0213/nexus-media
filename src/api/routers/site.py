@@ -444,6 +444,14 @@ def get_sites(
     return success(data=sites)
 
 
+@router.post("/sites/rate-status", response_model=CommonResponse, summary="获取站点限流实时状态")
+def get_site_rate_statuses(
+    user=Depends(require_any_permission("site:view", "site:manage")),
+    svc: SiteService = Depends(get_site_service),
+):
+    return success(data=svc.get_site_rate_statuses())
+
+
 @router.post("/sites/captcha", response_model=CommonResponse, summary="设置站点验证码")
 def set_site_captcha_code(
     req: SiteCaptchaRequest,

@@ -218,6 +218,7 @@ class TestDescTruncation:
             row = db.query(SubscribeTvs).filter(SubscribeTvs.ID == 1).first()
             assert row is not None
             assert row.DESC == long_desc[:200]
+            assert row.DESC is not None
             assert len(row.DESC) == 200
 
     def test_update_rss_movie_truncates_long_desc(self):
@@ -231,6 +232,7 @@ class TestDescTruncation:
             row = db.query(SubscribeMovies).filter(SubscribeMovies.ID == 1).first()
             assert row is not None
             assert row.DESC == long_desc[:200]
+            assert row.DESC is not None
             assert len(row.DESC) == 200
 
     def test_trim_desc_handles_none_and_short(self):

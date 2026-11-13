@@ -44,7 +44,7 @@ class DOWNLOADHISTORY(Base):
     TORRENT: Mapped[str] = mapped_column(String(255))
     ENCLOSURE: Mapped[str] = mapped_column(String(8192))
     SITE: Mapped[str] = mapped_column(String(255))
-    DESC: Mapped[str] = mapped_column(String(255))
+    DESC: Mapped[str | None] = mapped_column(Text, nullable=True)
     DOWNLOADER: Mapped[str] = mapped_column(String(255))
     DOWNLOAD_ID: Mapped[str] = mapped_column(String(255), index=True)
     SAVE_PATH: Mapped[str] = mapped_column(String(512), index=True)

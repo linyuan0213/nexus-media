@@ -45,13 +45,6 @@
           "help": "支持本地、WebDAV 和 Samba"
         },
         {
-          "key": "full",
-          "type": "switch",
-          "label": "是否完整版备份",
-          "default": false,
-          "help": "开启后会备份完整数据库，保留有历史记录"
-        },
-        {
           "key": "notify",
           "type": "switch",
           "label": "运行时通知",

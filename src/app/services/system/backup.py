@@ -1,123 +1,132 @@
-"""Backup services - 备份恢复业务."""
+"""系统备份服务：v2 原生 dump + Parquet，异步任务管理."""
+
+from __future__ import annotations
 
 import os
-import shutil
-import tempfile
+import threading
 import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from sqlalchemy import create_engine
-
+import log
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
-from app.core.settings import settings
-from app.db.database_factory import DatabaseFactory
-from app.db.migrate import export_database, export_to_file, import_database, import_from_file
-from app.infrastructure.temp import temp_manager
 from app.schemas.system import BackupRestoreResultDTO
+from app.services.system.backup_v2 import create_backup, restore_backup
 from app.utils import ExceptionUtils
 
 
 class BackupRestoreService:
-    """
-    备份恢复业务服务
-    负责解压备份文件、恢复配置、跨数据库类型导入数据
-    """
+    """备份恢复业务服务，后台任务串行执行."""
+
+    def __init__(self) -> None:
+        self._tasks: dict[str, dict] = {}
+        self._tasks_lock = threading.Lock()
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="backup-task")
+
+    @staticmethod
+    def _task_view(task: dict) -> dict:
+        return {key: value for key, value in task.items() if key != "file_path"}
+
+    def _set_task(self, task_id: str, **values) -> None:
+        with self._tasks_lock:
+            task = self._tasks.get(task_id)
+            if task is not None:
+                task.update(values)
+                task["updated_at"] = time.time()
+
+    def _create_task(self, kind: str) -> str:
+        task_id = uuid.uuid4().hex
+        with self._tasks_lock:
+            if len(self._tasks) > 30:
+                finished = sorted(
+                    (item for item in self._tasks.items() if item[1]["status"] in {"success", "failed"}),
+                    key=lambda item: item[1]["updated_at"],
+                )
+                for old_id, _ in finished[: len(self._tasks) - 30]:
+                    self._tasks.pop(old_id, None)
+            self._tasks[task_id] = {
+                "task_id": task_id,
+                "type": kind,
+                "status": "queued",
+                "message": "等待执行",
+                "file_name": "",
+                "created_at": time.time(),
+                "updated_at": time.time(),
+            }
+        return task_id
+
+    def start_backup(self) -> dict:
+        task_id = self._create_task("backup")
+        self._executor.submit(self._run_backup, task_id)
+        task = self.get_task(task_id)
+        assert task is not None
+        return task
+
+    def start_restore(self, filename: str) -> dict:
+        task_id = self._create_task("restore")
+        self._executor.submit(self._run_restore, task_id, filename)
+        task = self.get_task(task_id)
+        assert task is not None
+        return task
+
+    def get_task(self, task_id: str) -> dict | None:
+        with self._tasks_lock:
+            task = self._tasks.get(task_id)
+            return self._task_view(task) if task else None
+
+    def get_backup_file(self, task_id: str) -> Path | None:
+        with self._tasks_lock:
+            task = self._tasks.get(task_id)
+            if not task or task["type"] != "backup" or task["status"] != "success":
+                return None
+            path = Path(str(task.get("file_path") or ""))
+            return path if path.is_file() else None
+
+    def _run_backup(self, task_id: str) -> None:
+        self._set_task(task_id, status="running", message="正在导出数据库并打包")
+        try:
+            zip_file = backup()
+            if not zip_file:
+                self._set_task(task_id, status="failed", message="创建备份失败")
+                return
+            self._set_task(
+                task_id,
+                status="success",
+                message="备份完成",
+                file_name=os.path.basename(zip_file),
+                file_path=zip_file,
+            )
+        except Exception as exc:
+            ExceptionUtils.exception_traceback(exc)
+            self._set_task(task_id, status="failed", message=str(exc))
+
+    def _run_restore(self, task_id: str, filename: str) -> None:
+        self._set_task(task_id, status="running", message="正在恢复配置和数据库")
+        try:
+            result = self.restore_from_backup(filename)
+            if result.success:
+                self._set_task(task_id, status="success", message=result.message or "恢复成功")
+            else:
+                self._set_task(task_id, status="failed", message=result.message or "恢复失败")
+        except Exception as exc:
+            ExceptionUtils.exception_traceback(exc)
+            self._set_task(task_id, status="failed", message=str(exc))
 
     def restore_from_backup(self, filename: str) -> BackupRestoreResultDTO:
-        """
-        从备份文件恢复
-        :param filename: 上传的备份文件名
-        """
         if not filename:
             return BackupRestoreResultDTO(success=False, message="文件不存在")
-
-        data_path = settings.data_path
-        file_path = temp_manager.get_temp_path(filename)
-        temp_dir = None
-        target_engine = None
-        source_engine = None
-
-        try:
-            # 1. 解压到临时目录
-            temp_dir = tempfile.mkdtemp(prefix="restore_")
-            shutil.unpack_archive(file_path, temp_dir, format="zip")
-
-            # 2. 恢复运行时配置文件
-            for cfg_name in ["config.yaml"]:
-                src = os.path.join(temp_dir, cfg_name)
-                if os.path.exists(src):
-                    shutil.copy(src, data_path)
-
-            # 3. 判断备份中的数据库格式与当前数据库类型
-            json_backup = os.path.join(temp_dir, "user_db_export.json")
-            sqlite_backup = os.path.join(temp_dir, "user.db")
-
-            target_engine = DatabaseFactory.create_engine(pool_size=1, max_overflow=0)
-
-            if os.path.exists(json_backup):
-                import_from_file(target_engine, json_backup)
-            elif os.path.exists(sqlite_backup):
-                source_engine = create_engine(f"sqlite:///{sqlite_backup}?check_same_thread=False")
-                migrate_data = export_database(source_engine)
-                import_database(target_engine, migrate_data)
-            else:
-                return BackupRestoreResultDTO(success=False, message="备份文件中未找到数据库文件")
-
-            return BackupRestoreResultDTO(success=True, message="恢复成功")
-
-        except (ServiceError, RepositoryError, DomainError):
-            raise
-        except Exception as e:
-            ExceptionUtils.exception_traceback(e)
-            return BackupRestoreResultDTO(success=False, message=str(e))
-
-        finally:
-            # 恢复失败同样要释放连接池，避免残留连接占用 max_connections
-            if target_engine is not None:
-                target_engine.dispose()
-            if source_engine is not None:
-                source_engine.dispose()
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            if temp_dir and os.path.exists(temp_dir):
-                shutil.rmtree(temp_dir)
+        return restore_backup(filename)
 
 
-def backup(full_backup=False, bk_path=None):
-    """
-    @param full_backup  是否完整备份（保留参数兼容性，当前始终完整备份）
-    @param bk_path     自定义备份路径
-    """
+def backup(full_backup: bool = False, bk_path: str | None = None) -> str | None:
+    """创建 v2 备份；保留 full_backup 参数兼容旧调用."""
+    del full_backup
     try:
-        data_path = Path(settings.data_path)
-        backup_file = f"bk_{time.strftime('%Y%m%d%H%M%S')}"
-        if bk_path:
-            backup_path = Path(bk_path) / backup_file
-        else:
-            backup_path = data_path / "backup_file" / backup_file
-        backup_path.mkdir(parents=True)
-        config_file = data_path / "config.yaml"
-        if config_file.exists():
-            shutil.copy(str(config_file), backup_path)
-
-        db_type = DatabaseFactory._get_config_db_type()
-        engine = DatabaseFactory.create_engine(pool_size=1, max_overflow=0)
-        try:
-            if db_type == DatabaseFactory.SQLITE:
-                shutil.copy(f"{data_path}/user.db", backup_path)
-            export_to_file(engine, str(backup_path / "user_db_export.json"))
-        finally:
-            # 备份失败也必须释放连接池，否则每次失败都会叠一层完整连接池（pool_size + max_overflow 条槽位）
-            engine.dispose()
-
-        zip_file = str(backup_path) + ".zip"
-        if os.path.exists(zip_file):
-            zip_file = str(backup_path) + ".zip"
-        shutil.make_archive(str(backup_path), "zip", str(backup_path))
-        shutil.rmtree(str(backup_path))
-        return zip_file
+        return create_backup(bk_path)
     except (ServiceError, RepositoryError, DomainError):
         raise
-    except Exception as e:
-        ExceptionUtils.exception_traceback(e)
+    except Exception as exc:
+        log.error(f"[Backup]创建备份失败: {exc}")
+        ExceptionUtils.exception_traceback(exc)
         return None

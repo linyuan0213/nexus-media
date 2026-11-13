@@ -5,6 +5,7 @@ Plugin Framework Service
 
 import contextlib
 import os
+import re
 import shutil
 import tempfile
 import threading
@@ -71,6 +72,39 @@ class PluginFrameworkService:
         self._plugins_dir = os.path.join(settings.data_path, "plugins")
         if not os.path.exists(self._plugins_dir):
             os.makedirs(self._plugins_dir)
+        self._cleanup_stale_plugin_versions()
+
+    def _cleanup_stale_plugin_versions(self) -> None:
+        """删除已安装插件的历史版本目录，只保留数据库中的当前 path.
+
+        更新/重装可能中断或历史版本由旧逻辑遗留；这里以数据库 path 为准，
+        仅清理 ``<plugin_id>-*`` 目录，不触碰 builtin 和 plugins_data。
+        """
+        try:
+            manifests = self._repo.get_all_manifests()
+        except Exception as exc:  # noqa: BLE001 - 初始化阶段数据库可能尚未就绪
+            log.debug(f"[Plugin]跳过旧版本清理: {exc}")
+            return
+        if not os.path.isdir(self._plugins_dir):
+            return
+        for model in manifests:
+            plugin_id = str(getattr(model, "ID", "") or "")
+            keep_path = str(getattr(model, "PATH", "") or "")
+            if not plugin_id or not keep_path or "builtin_plugins" in keep_path:
+                continue
+            keep_real = os.path.realpath(keep_path)
+            prefix = f"{plugin_id}-"
+            for entry in os.listdir(self._plugins_dir):
+                path = os.path.join(self._plugins_dir, entry)
+                if not os.path.isdir(path) or not entry.startswith(prefix):
+                    continue
+                # 仅匹配 <id>-<version> 及其 .bak-*，避免误删同前缀的其它插件。
+                if not re.match(r"^v?\d", entry[len(prefix) :]):
+                    continue
+                if os.path.realpath(path) == keep_real:
+                    continue
+                shutil.rmtree(path, ignore_errors=True)
+                log.info(f"[Plugin]清理旧版本目录: {path}")
 
     def _get_hook_system(self):
         if self._hook_system is None:
@@ -650,6 +684,7 @@ class PluginFrameworkService:
                     shutil.rmtree(backup_dir, ignore_errors=True)
                 if existing and old_entity and old_entity.path and old_entity.path != target_dir:
                     shutil.rmtree(old_entity.path, ignore_errors=True)
+                self._cleanup_stale_plugin_versions()
 
             if reload_after_install:
                 threading.Thread(
@@ -756,6 +791,7 @@ class PluginFrameworkService:
         if purge_data:
             self._purge_plugin_data(plugin_id)
         self._plugin_registry.remove_plugin_cache(plugin_id)
+        self._cleanup_stale_plugin_versions()
 
         self._get_hook_system().emit("plugin.uninstall", {"plugin_id": plugin_id})
         log.info(f"[PluginFrameworkService] 插件卸载成功: {plugin_id}")

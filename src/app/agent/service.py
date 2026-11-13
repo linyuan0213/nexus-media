@@ -42,13 +42,17 @@ class AgentService:
             tool_executor=tool_executor,
             memory=conversation_store,
             max_steps=get_memory_config()["max_steps"],
+            request_limit=get_memory_config()["request_limit"],
             long_term=semantic_memory,
             extract_memory=get_memory_config()["long_term"]["extraction"] != "off",
         )
 
     def refresh_config(self) -> None:
-        """配置热重载时刷新启用状态与 Provider（无需重启，ChatAgent 每次调用经 svc 取 Provider）"""
+        """配置热重载时刷新启用状态、Provider 与对话预算（无需重启）."""
         self._refresh_config()
+        if self._chat_agent is not None:
+            memory = get_memory_config()
+            self._chat_agent.update_limits(memory["max_steps"], memory["request_limit"])
 
     @property
     def media_recognizer(self) -> MediaRecognizer:

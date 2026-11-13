@@ -3,9 +3,10 @@ RSS相关模型
 包含: 订阅历史、订阅电影、订阅种子、订阅剧集、订阅剧集分集
 """
 
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ForeignKey, Index, Integer, Sequence, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, Sequence, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.models.base import Base
@@ -25,7 +26,7 @@ class SubscribeHistory(Base):
     TMDBID: Mapped[str] = mapped_column(String(255))
     SEASON: Mapped[str] = mapped_column(String(255))
     IMAGE: Mapped[str] = mapped_column(String(255))
-    DESC: Mapped[str] = mapped_column(String(255))
+    DESC: Mapped[str | None] = mapped_column(Text, nullable=True)
     TOTAL: Mapped[int] = mapped_column(Integer)
     START: Mapped[int] = mapped_column(Integer)
     FINISH_TIME: Mapped[str] = mapped_column(String(255))
@@ -85,7 +86,7 @@ class SubscribeMovies(Base):
     STATE_UPDATED_AT: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     RETRY_COUNT: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     NEXT_RETRY_AT: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    DESC: Mapped[str] = mapped_column(String(255), nullable=True)
+    DESC: Mapped[str | None] = mapped_column(Text, nullable=True)
     NOTE: Mapped[str] = mapped_column(Text, nullable=True)
     ADD_DATE: Mapped[str | None] = mapped_column(String(255), nullable=True)
     IDENTITY_ID: Mapped[str | None] = mapped_column(String(26), nullable=True)
@@ -167,7 +168,7 @@ class SubscribeTvs(Base):
     STATE_UPDATED_AT: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     RETRY_COUNT: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     NEXT_RETRY_AT: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    DESC: Mapped[str] = mapped_column(String(255), nullable=True)
+    DESC: Mapped[str | None] = mapped_column(Text, nullable=True)
     NOTE: Mapped[str] = mapped_column(Text, nullable=True)
     ADD_DATE: Mapped[str | None] = mapped_column(String(255), nullable=True)
     IDENTITY_ID: Mapped[str | None] = mapped_column(String(26), nullable=True)
@@ -210,3 +211,22 @@ class SubscribeSearchCursor(Base):
     KIND: Mapped[str] = mapped_column(String(32), primary_key=True)
     POSITION: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     UPDATED_AT: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class SubscribeCalendarEvent(Base):
+    """订阅日历事件读模型；刷新任务写入，接口只读."""
+
+    __tablename__ = "SUBSCRIBE_CALENDAR_EVENTS"
+    __table_args__ = (
+        Index("UQ_SUBSCRIBE_CALENDAR_EVENT", "USER_ID", "EVENT_KEY", unique=True),
+        Index("INDX_SUBSCRIBE_CALENDAR_START", "USER_ID", "START"),
+    )
+
+    ID: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    USER_ID: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("RBAC_USERS.ID", ondelete="CASCADE"), nullable=True, index=True
+    )
+    EVENT_KEY: Mapped[str] = mapped_column(String(255), nullable=False)
+    START: Mapped[str] = mapped_column(String(10), nullable=False)
+    DATA: Mapped[str] = mapped_column(Text, nullable=False)
+    UPDATED_AT: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, nullable=False)

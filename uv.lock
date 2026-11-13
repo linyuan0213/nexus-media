@@ -2762,7 +2762,7 @@ wheels = [
 
 [[package]]
 name = "nexus-media"
-version = "5.11.2"
+version = "5.12.0"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
@@ -2799,6 +2799,7 @@ dependencies = [
     { name = "psutil" },
     { name = "psycopg2-binary" },
     { name = "pwdlib", extra = ["argon2"] },
+    { name = "pyarrow" },
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
     { name = "pyjwt", extra = ["crypto"] },
@@ -2825,6 +2826,7 @@ dependencies = [
     { name = "sqlite-vec" },
     { name = "srt" },
     { name = "tenacity" },
+    { name = "tomli-w" },
     { name = "transmission-rpc" },
     { name = "urllib3" },
     { name = "uvloop" },
@@ -2888,6 +2890,7 @@ requires-dist = [
     { name = "psutil", specifier = ">=6.1.1" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3.0" },
+    { name = "pyarrow", specifier = ">=26.0.0" },
     { name = "pydantic-ai", specifier = ">=1.107.0" },
     { name = "pydantic-settings", specifier = ">=2.14.0" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.14.0" },
@@ -2914,6 +2917,7 @@ requires-dist = [
     { name = "sqlite-vec", specifier = ">=0.1.9" },
     { name = "srt", specifier = ">=3.5.3" },
     { name = "tenacity", specifier = ">=9.1.4" },
+    { name = "tomli-w", specifier = ">=1.2.0" },
     { name = "transmission-rpc", specifier = ">=7.0.11" },
     { name = "urllib3", specifier = ">=2.8.0" },
     { name = "uvloop", specifier = ">=0.22.1" },

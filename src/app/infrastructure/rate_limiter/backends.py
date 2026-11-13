@@ -95,7 +95,11 @@ class MemoryTokenBucketBackend(RateLimitBackend):
         deadline = time.time() + timeout if timeout is not None else None
         while True:
             with self._lock:
-                bucket = self._buckets.setdefault(key, {"tokens": burst, "last_update": time.time()})
+                bucket = self._buckets.setdefault(
+                    key, {"tokens": burst, "last_update": time.time(), "rate": rate, "burst": burst}
+                )
+                bucket["rate"] = rate
+                bucket["burst"] = burst
                 self._stats.setdefault(key, {"blocked": 0, "waited": 0})
                 now = time.time()
                 bucket["tokens"] = min(burst, bucket["tokens"] + (now - bucket["last_update"]) * rate)
@@ -121,8 +125,16 @@ class MemoryTokenBucketBackend(RateLimitBackend):
             if key:
                 bucket = self._buckets.get(key, {})
                 stats = self._stats.get(key, {})
+                now = time.time()
+                tokens = float(bucket.get("tokens", 0))
+                if bucket:
+                    tokens = min(
+                        float(bucket.get("burst", 0) or 0),
+                        tokens + (now - float(bucket.get("last_update", now))) * float(bucket.get("rate", 0) or 0),
+                    )
                 return {
-                    "tokens": round(bucket.get("tokens", 0), 2),
+                    "tokens": round(tokens, 2),
+                    "burst": int(bucket.get("burst", 0) or 0),
                     "blocked": stats.get("blocked", 0),
                     "waited": stats.get("waited", 0),
                 }
@@ -134,6 +146,11 @@ class MemoryTokenBucketBackend(RateLimitBackend):
                 }
                 for k in self._buckets
             }
+
+    def reset(self, key: str) -> None:
+        with self._lock:
+            self._buckets.pop(key, None)
+            self._stats.pop(key, None)
 
 
 class MemorySlidingWindowBackend(RateLimitBackend):
@@ -212,11 +229,11 @@ class RedisTokenBucketBackend(RateLimitBackend):
     current_tokens = math.min(burst, current_tokens + (now - last_update) * rate / 1000.0)
     if current_tokens >= tokens then
         current_tokens = current_tokens - tokens
-        redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now)
+        redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now, 'rate', rate, 'burst', burst)
         redis.call('EXPIRE', key, math.ceil(burst / rate * 1000) + 1)
         return 1
     else
-        redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now)
+        redis.call('HMSET', key, 'tokens', current_tokens, 'last_update', now, 'rate', rate, 'burst', burst)
         return 0
     end
     """
@@ -259,7 +276,25 @@ class RedisTokenBucketBackend(RateLimitBackend):
         return True
 
     def get_status(self, key=None) -> dict:
-        return {}
+        if not key:
+            return {}
+        data = self._redis.hgetall(key)
+        if not data:
+            return {}
+        try:
+            tokens = float(data.get("tokens", 0))
+            last_update = float(data.get("last_update", 0) or 0)
+            rate = float(data.get("rate", 0) or 0)
+            burst = float(data.get("burst", 0) or 0)
+            if last_update and rate and burst:
+                tokens = min(burst, tokens + (time.time() * 1000 - last_update) * rate / 1000.0)
+            return {"tokens": round(tokens, 2), "burst": int(burst) if burst else None}
+        except (TypeError, ValueError):
+            return {}
+
+    def reset(self, key: str) -> None:
+        with contextlib.suppress(Exception):
+            self._redis.delete(key)
 
     def acquire_concurrency(self, key: str, limit: int, timeout: float | None = None) -> str | None:
         """分布式并发限流（zset 租约）：成员=令牌，分值=过期时间，跨实例共享同一 key.
@@ -298,6 +333,8 @@ class RateLimitEngine:
 
     def __init__(self, backend: RateLimitBackend | None = None, algorithm: str = "token_bucket"):
         self._algorithm = algorithm
+        self._runtime_stats: dict[str, dict] = {}
+        self._runtime_stats_lock = threading.Lock()
         self._sliding_window_backend: MemorySlidingWindowBackend | None = None
         if backend is None:
             redis = RedisTokenBucketBackend()
@@ -319,16 +356,29 @@ class RateLimitEngine:
         timeout: float | None = None,
         algorithm: str | None = None,
     ) -> bool:
-        """获取执行许可.
+        """获取执行许可并记录本次等待耗时."""
+        with self._runtime_stats_lock:
+            stat = self._runtime_stats.setdefault(key, {"waiting": 0, "last_wait_ms": 0.0})
+            stat["waiting"] += 1
+        started = time.perf_counter()
+        try:
+            return self._acquire_impl(key, rate, burst, tokens, timeout, algorithm)
+        finally:
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            with self._runtime_stats_lock:
+                stat["waiting"] = max(0, int(stat["waiting"]) - 1)
+                if elapsed_ms > 5:
+                    stat["last_wait_ms"] = round(elapsed_ms, 1)
 
-        :param key: 限流标识
-        :param rate: 速率字符串，如 '10/m', '2.5/s', '100/h'
-        :param burst: 突发容量，默认等于 rate 数值
-        :param tokens: 本次消耗令牌数
-        :param timeout: 最大等待秒数，None=不等待，0=立即返回
-        :param algorithm: 覆盖默认算法
-        :return: True=获得许可
-        """
+    def _acquire_impl(
+        self,
+        key: str,
+        rate: str,
+        burst: int | None,
+        tokens: int,
+        timeout: float | None,
+        algorithm: str | None,
+    ) -> bool:
         count, window = _parse_rate(rate)
         rate_per_sec = count / window
         if burst is None:
@@ -369,8 +419,25 @@ class RateLimitEngine:
         self._backend.release_concurrency(key, token)
 
     def get_status(self, key: str | None = None) -> dict:
-        """获取限流状态."""
-        return self._backend.get_status(key)
+        """获取限流状态（后端令牌数 + 当前进程等待状态）."""
+        status = dict(self._backend.get_status(key) or {})
+        if key:
+            with self._runtime_stats_lock:
+                runtime = dict(self._runtime_stats.get(key) or {})
+            status.update(runtime)
+        return status
+
+    def reset(self, key: str, rate: str | None = None, burst: int | None = None) -> None:
+        """站点限流配置变更时清空旧令牌桶，按新容量重新计数."""
+        reset = getattr(self._backend, "reset", None)
+        if callable(reset):
+            reset(key)
+        with self._runtime_stats_lock:
+            self._runtime_stats.pop(key, None)
+        if rate and burst:
+            # tokens=0 只初始化桶，不消耗可用令牌。
+            count, window = _parse_rate(rate)
+            self._backend.acquire(key, count / window, burst, 0, 0)
 
 
 # 兼容旧 API 的快捷类

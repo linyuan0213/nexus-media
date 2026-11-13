@@ -23,6 +23,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, TypeAdapter, create_model
 from pydantic_ai import Agent, BinaryContent
+from pydantic_ai.exceptions import UsageLimitExceeded
 from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
@@ -221,6 +222,7 @@ class PydanticChatAgent:
         tool_executor,
         memory: ConversationStore | None = None,
         max_steps: int = 8,
+        request_limit: int = 16,
         long_term: SemanticMemory | None = None,
         extract_memory: bool = True,
     ):
@@ -229,12 +231,18 @@ class PydanticChatAgent:
         self._conversation_store = memory
         self._memory = memory
         self._max_steps = max_steps
+        self._request_limit = request_limit
         self._long_term = long_term
         self._extract_memory = extract_memory
         # 有界执行器：记忆抽取走小线程池（2 workers），避免阻塞返回
         self._memory_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="agent-memory")
         # 按用户合并：同一用户仅保留一个待抽取任务，避免慢 LLM 抽取积压
         self._pending_extractions: set[str] = set()
+
+    def update_limits(self, max_steps: int, request_limit: int) -> None:
+        """配置热重载时更新工具循环和模型请求预算."""
+        self._max_steps = max_steps
+        self._request_limit = request_limit
 
     def close(self) -> None:
         """关闭内部线程池（热重载/释放时调用），避免 executor 泄漏."""
@@ -476,6 +484,9 @@ class PydanticChatAgent:
             )
         except AgentCancelledError:
             raise
+        except UsageLimitExceeded:
+            log.warn("[PydanticAgent]本轮模型请求预算已用完，已暂停工具循环")
+            return "本轮请求步骤过多，已暂停。请缩小任务范围或稍后重试。"
         except Exception as e:
             log.error(f"[PydanticAgent]运行出错: {e}")
             return f"请求出错: {e}"
@@ -597,12 +608,13 @@ class PydanticChatAgent:
             self._pending_extractions.discard(user_id)
 
     def _usage_limits(self) -> UsageLimits:
-        """单轮对话模型请求上限护栏（原 max_steps 配置此前未生效，实际退化为默认 50 次请求）.
+        """单轮对话模型请求上限护栏.
 
-        max_steps 语义≈工具循环步数，每步约消耗一次模型请求 → request_limit = max_steps + 1。
+        request_limit 是模型请求总预算；未配置时才回退到 max_steps + 1。
         """
         steps = max(2, int(self._max_steps or 8))
-        return UsageLimits(request_limit=steps + 1)
+        limit = int(self._request_limit or 0) or steps + 1
+        return UsageLimits(request_limit=max(1, limit))
 
     # ------------------------------------------------------------------ checkpoint
 

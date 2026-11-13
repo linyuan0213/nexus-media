@@ -6,6 +6,7 @@
 from typing import cast
 
 import pytest
+from pydantic_ai.exceptions import UsageLimitExceeded
 
 from app.agent.agents.memory import ConversationStore, Summarizer
 from app.agent.pydantic_agent import PydanticChatAgent
@@ -247,3 +248,42 @@ class TestPydanticChatAgent:
         assert len(agent._load_checkpoint("s5", "u5", "Telegram")) == 2
         agent.clear_checkpoint("s5", "u5", "Telegram")
         assert agent._load_checkpoint("s5", "u5", "Telegram") == []
+
+
+class TestUsageLimits:
+    def test_default_request_limit_has_headroom(self):
+        agent = PydanticChatAgent(svc=_FakeSvc(), tool_executor=_FakeExecutor(), max_steps=8)
+        assert agent._usage_limits().request_limit == 16
+
+    def test_explicit_request_limit_wins(self):
+        agent = PydanticChatAgent(
+            svc=_FakeSvc(),
+            tool_executor=_FakeExecutor(),
+            max_steps=8,
+            request_limit=24,
+        )
+        assert agent._usage_limits().request_limit == 24
+
+    def test_zero_request_limit_falls_back_to_steps(self):
+        agent = PydanticChatAgent(
+            svc=_FakeSvc(),
+            tool_executor=_FakeExecutor(),
+            max_steps=8,
+            request_limit=0,
+        )
+        assert agent._usage_limits().request_limit == 9
+
+    def test_update_limits_applies_without_restart(self):
+        agent = PydanticChatAgent(svc=_FakeSvc(), tool_executor=_FakeExecutor())
+        agent.update_limits(12, 24)
+        assert agent._usage_limits().request_limit == 24
+
+    def test_usage_limit_returns_friendly_message(self, monkeypatch):
+        agent = PydanticChatAgent(svc=_FakeSvc(), tool_executor=_FakeExecutor())
+
+        class _LimitAgent:
+            async def run(self, *args, **kwargs):
+                raise UsageLimitExceeded("The next request would exceed the request_limit of 9")
+
+        monkeypatch.setattr(agent, "_build_agent", lambda *args, **kwargs: _LimitAgent())
+        assert agent.chat_with_tools("测试") == "本轮请求步骤过多，已暂停。请缩小任务范围或稍后重试。"

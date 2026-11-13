@@ -15,6 +15,14 @@ from app.utils.path_utils import get_temp_path
 
 from ._autobackup.filestorage_client import FileClientFactory
 
+_BACKUP_PREFIXES = ("nexus_media_backup_", "bk_")
+
+
+def _is_backup_file(name: str) -> bool:
+    """兼容新备份名和历史 bk_ 备份名，只清理 zip."""
+    base = os.path.basename(str(name))
+    return base.endswith(".zip") and base.startswith(_BACKUP_PREFIXES)
+
 
 class AutoBackupPlugin:
     """自动备份插件"""
@@ -79,7 +87,6 @@ class AutoBackupPlugin:
         if not config.get("enabled") and not manual:
             return
         storage_type = config.get("storage_type", "local")
-        full = config.get("full", False)
         cnt = config.get("cnt")
         bk_path_cfg = config.get("bk_path")
         remote_path = config.get("remote_path", "")
@@ -100,7 +107,7 @@ class AutoBackupPlugin:
             os.makedirs(bk_path, exist_ok=True)
 
         # 生成备份文件
-        zip_file = do_backup(bk_path=bk_path, full_backup=bool(full))
+        zip_file = do_backup(bk_path=bk_path)
         if not zip_file:
             self.ctx.error("创建备份失败")
             return
@@ -135,14 +142,14 @@ class AutoBackupPlugin:
                 if cnt:
                     max_keep = int(cnt)
                     files = client.list_files(remote_dir)
-                    backup_files = [f for f in files if f and "bk_" in f and f.endswith(".zip")]
+                    backup_files = sorted(str(f) for f in files if _is_backup_file(str(f)))
                     bk_count = len(backup_files)
-                    sorted_files = sorted(backup_files)
-                    if len(sorted_files) > max_keep:
-                        del_count = len(sorted_files) - max_keep
-                        for file in sorted_files[:del_count]:
-                            client.delete_file(file)
-                            self.ctx.info(f"已删除远程备份：{file}")
+                    if len(backup_files) > max_keep:
+                        del_count = len(backup_files) - max_keep
+                        for file_name in backup_files[:del_count]:
+                            remote_file = f"{remote_dir}/{file_name}" if remote_dir else file_name
+                            client.delete_file(remote_file)
+                            self.ctx.info(f"已删除远程备份：{remote_file}")
 
             except Exception as e:
                 self.ctx.error(f"远程备份失败：{e!s}")
@@ -152,13 +159,20 @@ class AutoBackupPlugin:
         else:
             # 本地存储清理旧备份
             if cnt:
-                files = sorted(glob.glob(os.path.join(bk_path, "bk*")), key=os.path.getctime)
+                files = sorted(
+                    (
+                        file
+                        for file in glob.glob(os.path.join(bk_path, "*.zip"))
+                        if _is_backup_file(os.path.basename(file))
+                    ),
+                    key=os.path.getctime,
+                )
                 bk_count = len(files)
                 if len(files) > int(cnt):
                     del_count = len(files) - int(cnt)
-                    for i in range(del_count):
-                        os.remove(files[i])
-                        self.ctx.info(f"已删除本地备份：{files[i]}")
+                    for file in files[:del_count]:
+                        os.remove(file)
+                        self.ctx.info(f"已删除本地备份：{file}")
 
         # 发送通知
         if notify:

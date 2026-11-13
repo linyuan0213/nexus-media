@@ -122,7 +122,7 @@ class SiteService:
         basic: bool = False,
         source: str | None = None,
     ) -> Any:
-        return SiteCatalogService.get_sites(
+        result = SiteCatalogService.get_sites(
             sites=self._sites,
             site_engine=self._site_engine,
             indexer_site_config_repo=self._indexer_site_config_repo,
@@ -133,6 +133,24 @@ class SiteService:
             basic=basic,
             source=source,
         )
+        limiter = getattr(self._site_engine, "site_limiter", None)
+        if limiter is not None and isinstance(result, list):
+            for site in result:
+                site_id = site.get("id")
+                if site_id is None:
+                    continue
+                key = str(site_id)
+                rate = limiter.get_rate(key)
+                if rate:
+                    site["rate_limit"], site["rate_burst"] = rate
+                    status = dict(limiter.get_status(key) or {})
+                    status.setdefault("tokens", None)
+                    site["rate_status"] = status
+        return result
+
+    def get_site_rate_statuses(self) -> dict[str, dict]:
+        limiter = getattr(self._site_engine, "site_limiter", None)
+        return limiter.get_all_statuses() if limiter is not None else {}
 
     @staticmethod
     def _third_party_site_dict(row) -> dict:

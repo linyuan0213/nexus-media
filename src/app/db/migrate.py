@@ -15,11 +15,11 @@
 """
 
 import json
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import MetaData, inspect, text
+from sqlalchemy import Date, DateTime, Integer, MetaData, Time, inspect, text
 from sqlalchemy.engine import Engine
 
 from app.db.database_factory import DatabaseFactory
@@ -53,8 +53,22 @@ def _serialize_value(value: Any) -> Any:
     return value
 
 
-def _deserialize_value(value: Any) -> Any:
-    """将 JSON 值反序列化为数据库可接受类型（保持原样，由 SQLAlchemy 自动处理）"""
+def _deserialize_value(value: Any, column_type: Any = None) -> Any:
+    """将 JSON 值转换为目标列类型（ISO 时间字符串必须转回 datetime/date/time）."""
+    if not isinstance(value, str) or column_type is None:
+        return value
+    raw = value.strip()
+    if not raw:
+        return value
+    try:
+        if isinstance(column_type, DateTime):
+            return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if isinstance(column_type, Date):
+            return date.fromisoformat(raw)
+        if isinstance(column_type, Time):
+            return time.fromisoformat(raw)
+    except ValueError:
+        return value
     return value
 
 
@@ -135,6 +149,31 @@ def export_database(
     return export_data
 
 
+def _reset_postgresql_sequences(engine: Engine, table_names: list[str]) -> None:
+    """跨库恢复显式导入主键后，把 PostgreSQL SERIAL 序列推进到 MAX(ID)."""
+    if not DatabaseFactory.is_postgresql(engine):
+        return
+    metadata = MetaData()
+    metadata.reflect(bind=engine, only=table_names)
+    with engine.begin() as conn:
+        for table in metadata.sorted_tables:
+            for column in table.primary_key.columns:
+                if not isinstance(column.type, Integer):
+                    continue
+                quoted_table = _quote_identifier(engine, table.name)
+                quoted_col = _quote_identifier(engine, column.name)
+                try:
+                    conn.execute(
+                        text(
+                            f"SELECT setval(pg_get_serial_sequence('{quoted_table}', '{column.name}'), "
+                            f"COALESCE((SELECT MAX({quoted_col}) FROM {quoted_table}), 1), "
+                            f"(SELECT COUNT(*) > 0 FROM {quoted_table}))"  # nosec B608
+                        )
+                    )
+                except Exception as exc:
+                    ExceptionUtils.exception_traceback(exc)
+
+
 def _sort_tables_topological(engine: Engine, table_names: list[str]) -> list[str]:
     """
     按外键依赖关系对表进行拓扑排序（被依赖的表在前）
@@ -170,7 +209,8 @@ def import_database(
     tables_data = data.get("tables", {})
     table_names = list(tables_data.keys())
 
-    exclude = set(exclude_tables or [])
+    # Alembic revision 由目标库自己的迁移链维护，不能被备份内容覆盖。
+    exclude = set(exclude_tables or []) | {"alembic_version"}
     if include_tables:
         table_names = [t for t in table_names if t in include_tables]
     table_names = [t for t in table_names if t not in exclude]
@@ -257,6 +297,10 @@ def import_database(
                         if not row:
                             continue
                         try:
+                            for key, value in list(row.items()):
+                                column = sa_table.columns.get(key)
+                                if column is not None:
+                                    row[key] = _deserialize_value(value, column.type)
                             conn.execute(sa_table.insert(), [row])
                         except Exception as e:
                             # 跳过有问题的行，避免中断整个导入流程
@@ -272,6 +316,9 @@ def import_database(
         except Exception:
             trans.rollback()
             raise
+
+    # 显式导入主键后序列必须推进；放在提交之后，避免看不到未提交数据。
+    _reset_postgresql_sequences(engine, sorted_insert)
 
 
 def export_to_file(

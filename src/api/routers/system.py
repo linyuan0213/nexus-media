@@ -383,12 +383,44 @@ def restart(
 def backup(
     current_user: UserContext = Depends(require_permission("setting:update")),
 ):
-    """备份配置文件"""
+    """备份配置文件（同步接口，保留兼容）"""
 
     zip_file = do_backup()
     if not zip_file:
         return fail(msg="创建备份失败")
     return FileResponse(zip_file, filename=os.path.basename(zip_file))
+
+
+@router.post("/backup/start", response_model=CommonResponse, summary="创建后台备份任务")
+def start_backup(
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_backup_restore_service),
+):
+    return success(data=svc.start_backup())
+
+
+@router.get("/backup/tasks/{task_id}", response_model=CommonResponse, summary="查询备份恢复任务")
+def get_backup_task(
+    task_id: str,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_backup_restore_service),
+):
+    task = svc.get_task(task_id)
+    if not task:
+        return fail(msg="任务不存在或已过期")
+    return success(data=task)
+
+
+@router.get("/backup/download/{task_id}", summary="下载后台备份文件")
+def download_backup(
+    task_id: str,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_backup_restore_service),
+):
+    path = svc.get_backup_file(task_id)
+    if not path:
+        return fail(msg="备份文件尚未生成")
+    return FileResponse(path, filename=path.name)
 
 
 @router.post("/backup/upload", response_model=CommonResponse, summary="上传备份文件")
@@ -409,17 +441,30 @@ async def backup_upload(
         return fail(msg=str(e))
 
 
-@router.post("/backup/restore", response_model=CommonResponse, summary="恢复备份")
+@router.post("/backup/restore", response_model=CommonResponse, summary="恢复备份（同步接口，保留兼容）")
 def restory_backup(
     req: BackupRequest,
     current_user: UserContext = Depends(require_permission("setting:update")),
     svc=Depends(get_backup_restore_service),
 ):
     filename = req.file_name
+    if not filename:
+        return fail(msg="文件不存在")
     result = svc.restore_from_backup(filename)
     if result.success:
         return success(data=[], message=result.message)
     return fail(msg=result.message)
+
+
+@router.post("/backup/restore/start", response_model=CommonResponse, summary="创建后台恢复任务")
+def start_restore_backup(
+    req: BackupRequest,
+    current_user: UserContext = Depends(require_permission("setting:update")),
+    svc=Depends(get_backup_restore_service),
+):
+    if not req.file_name:
+        return fail(msg="请先上传备份文件")
+    return success(data=svc.start_restore(req.file_name))
 
 
 @router.post("/indexers", response_model=CommonResponse, summary="获取索引器配置信息")

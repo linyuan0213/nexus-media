@@ -36,6 +36,7 @@ from app.infrastructure.image_proxy import (
     resize_image,
 )
 from app.infrastructure.image_proxy.referer_registry import image_referer_registry
+from app.sites.engine import SiteEngine
 from app.utils.json_utils import JsonUtils
 
 router = APIRouter()
@@ -483,13 +484,45 @@ async def proxy_favicon_external(encoded_url: str):
     return await _serve_image(cache_path, favicon_url, referer=favicon_url, media_type="image/x-icon")
 
 
+def _favicon_media_type(url: str) -> str:
+    path = urllib.parse.urlparse(url).path.lower()
+    if path.endswith(".svg"):
+        return "image/svg+xml"
+    if path.endswith(".png"):
+        return "image/png"
+    if path.endswith((".jpg", ".jpeg")):
+        return "image/jpeg"
+    return "image/x-icon"
+
+
 @router.get("/favicon/{domain:path}", summary="代理站点 favicon")
 async def proxy_favicon(domain: str):
-    """代理站点 favicon.ico，下载到本地缓存并返回."""
+    """代理站点 favicon；优先使用站点定义中的准确图标地址."""
     favicon_url = f"https://{domain}/favicon.ico"
+    try:
+        site_def = SiteEngine().get_by_domain(domain) or SiteEngine().get_by_url(f"https://{domain}")
+    except Exception:
+        site_def = None
+    if site_def and site_def.favicon:
+        favicon_url = site_def.favicon
+
+    if favicon_url.startswith("data:"):
+        header, _, payload = favicon_url.partition(",")
+        try:
+            raw = base64.b64decode(payload) if ";base64" in header else urllib.parse.unquote(payload).encode()
+        except Exception as exc:
+            raise NexusError("获取图片失败", errcode=ErrorCode.IMAGE_FETCH_FAILED, http_status=404) from exc
+        media_type = header.removeprefix("data:").split(";", 1)[0] or "image/x-icon"
+        return Response(raw, media_type=media_type)
+
     _guard_image_url(favicon_url)
     cache_path = get_cache_path("favicon", domain)
-    return await _serve_image(cache_path, favicon_url, referer=f"https://{domain}", media_type="image/x-icon")
+    return await _serve_image(
+        cache_path,
+        favicon_url,
+        referer=f"https://{domain}",
+        media_type=_favicon_media_type(favicon_url),
+    )
 
 
 @router.get("/agent/{name}", summary="Agent 浏览器截图")

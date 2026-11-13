@@ -1,5 +1,6 @@
 """Tests for app.services.system package."""
 
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -38,23 +39,16 @@ class TestBackupRestoreService:
         assert "文件不存在" in result.message
 
     def test_backup_function(self):
-        with (
-            patch("app.services.system.backup.settings") as mock_settings,
-            patch("app.services.system.backup.DatabaseFactory._get_config_db_type", return_value="sqlite"),
-            patch("app.services.system.backup.DatabaseFactory.create_engine") as mock_engine,
-            patch("pathlib.Path.mkdir"),
-            patch("app.services.system.backup.shutil.copy"),
-            patch("app.services.system.backup.export_to_file"),
-            patch("app.services.system.backup.shutil.make_archive"),
-            patch("app.services.system.backup.shutil.rmtree"),
+        with patch(
+            "app.services.system.backup.create_backup",
+            return_value="/tmp/nexus_media_backup_2026-11-13_18-00-00.zip",
         ):
-            mock_settings.config_path = "/tmp/test_config"
-            mock_engine.return_value.dispose = MagicMock()
             from app.services.system.backup import backup
 
             result = backup()
             assert result is not None
             assert result.endswith(".zip")
+            assert "nexus_media_backup_" in result.rsplit("/", 1)[-1]
 
 
 class TestSystemConfigService:
@@ -373,3 +367,39 @@ class TestUtilityFunctions:
     def test_parse_brush_rule_string_empty(self):
         result = parse_brush_rule_string({})
         assert result == ""
+
+
+class TestBackupTasks:
+    @staticmethod
+    def _wait(svc, task_id):
+        for _ in range(200):
+            task = svc.get_task(task_id)
+            assert task is not None
+            if task["status"] in {"success", "failed"}:
+                return task
+            time.sleep(0.01)
+        raise AssertionError("backup task timeout")
+
+    def test_start_backup_returns_immediately_and_tracks_result(self, tmp_path):
+        zip_path = tmp_path / "backup.zip"
+        zip_path.write_bytes(b"zip")
+        svc = BackupRestoreService()
+        with patch("app.services.system.backup.backup", return_value=str(zip_path)):
+            started = svc.start_backup()
+            task = self._wait(svc, started["task_id"])
+
+        assert task["status"] == "success"
+        assert task["file_name"] == "backup.zip"
+        assert "file_path" not in task
+        assert svc.get_backup_file(task["task_id"]) == zip_path
+
+    def test_start_restore_tracks_failure(self):
+        from app.schemas.system import BackupRestoreResultDTO
+
+        svc = BackupRestoreService()
+        svc.restore_from_backup = MagicMock(return_value=BackupRestoreResultDTO(success=False, message="schema 未就绪"))
+        started = svc.start_restore("/tmp/backup.zip")
+        task = self._wait(svc, started["task_id"])
+
+        assert task["status"] == "failed"
+        assert task["message"] == "schema 未就绪"

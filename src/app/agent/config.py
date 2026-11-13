@@ -118,6 +118,7 @@ def get_memory_config() -> dict:
     long_term = mem.get("long_term") or {}
     return {
         "max_steps": mem.get("max_steps", 8),
+        "request_limit": int(mem.get("request_limit", 16)),
         "short_term": {
             "store": short.get("store", "db"),
             "max_tokens": short.get("max_tokens", 4000),

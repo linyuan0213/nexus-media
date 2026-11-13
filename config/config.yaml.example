@@ -306,6 +306,8 @@ agent:
   memory:
     # 工具循环步数上限
     max_steps: 8
+    # 单轮模型请求总预算（按模型往返计；0 表示回退 max_steps + 1）
+    request_limit: 16
     short_term:
       store: db
       # 会话 token 预算，超出触发滚动摘要

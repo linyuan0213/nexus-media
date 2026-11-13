@@ -7,10 +7,12 @@ from app.plugin_framework.builtin_plugins.cookiecloud.backend.plugin import (
 )
 
 
-def _make_plugin(site_def=None, test_result=True, probe=(1.0, 10.0)):
+def _make_plugin(site_def=None, test_result=True, probe=(1.0, 10.0), config=None):
     ctx = MagicMock()
+    ctx.get_config.return_value = config or {}
     sync = MagicMock()
     sync.resolve_definition.return_value = site_def
+    sync.list_definitions.return_value = []
     sync.test_connection.return_value = test_result
     sync.probe_domain.return_value = probe
     sync.get_credentials.return_value = {}
@@ -119,3 +121,138 @@ def test_spa_sync_preserves_existing_visitor_when_storage_lacks_it():
     assert args[2]["bearer_token"] == "new-token"
     assert args[2]["visitor_id"] == "manual-visitor"
     assert args[2]["local_storage"]["pig_token"] == "new-token"
+
+
+class TestCookieCacheAggregation:
+    """Cookie 字符串必须完整、不得重复拼接，并保留 CookieCloud 域名分组."""
+
+    def _cookie(self, name, value, domain, path="/"):
+        return {"name": name, "value": value, "domain": domain, "path": path}
+
+    def test_cookie_string_is_not_duplicated(self):
+        plugin = _make_plugin()
+        plugin._cache = MagicMock()
+
+        result = plugin._store_cookies_to_cache(
+            {
+                "cookie_data": {
+                    "discfan.net": [
+                        self._cookie("uid", "1", ".discfan.net"),
+                        self._cookie("pass", "2", "discfan.net"),
+                    ]
+                }
+            }
+        )
+
+        assert result["discfan.net"] == "uid=1; pass=2"
+        plugin._cache.set.assert_any_call("cookie:discfan.net", "uid=1; pass=2")
+
+    def test_cookiecloud_domain_groups_are_not_merged(self):
+        plugin = _make_plugin()
+        plugin._cache = MagicMock()
+
+        result = plugin._store_cookies_to_cache(
+            {
+                "cookie_data": {
+                    "v.qq.com": [self._cookie("v", "1", "v.qq.com")],
+                    "work.qq.com": [self._cookie("work", "2", "work.qq.com")],
+                }
+            }
+        )
+
+        assert result == {"v.qq.com": "v=1", "work.qq.com": "work=2"}
+
+    def test_configured_site_merges_parent_and_child_cookies(self):
+        plugin = _make_plugin()
+        plugin._site_sync.list_definitions.return_value = [{"domain": "https://discfan.net", "domain_aliases": []}]
+        plugin._cache = MagicMock()
+
+        result = plugin._store_cookies_to_cache(
+            {
+                "cookie_data": {
+                    "discfan.net": [self._cookie("uid", "1", ".discfan.net")],
+                    "www.discfan.net": [self._cookie("pass", "2", "www.discfan.net")],
+                }
+            }
+        )
+
+        assert result == {"discfan.net": "uid=1; pass=2"}
+
+    def test_unknown_sibling_domains_stay_separate(self):
+        plugin = _make_plugin()
+        plugin._cache = MagicMock()
+
+        result = plugin._store_cookies_to_cache(
+            {
+                "cookie_data": {
+                    "v.qq.com": [self._cookie("v", "1", "v.qq.com")],
+                    "work.qq.com": [self._cookie("work", "2", "work.qq.com")],
+                }
+            }
+        )
+
+        assert result == {"v.qq.com": "v=1", "work.qq.com": "work=2"}
+
+    def test_site_alias_maps_to_primary_domain(self):
+        plugin = _make_plugin()
+        plugin._site_sync.list_definitions.return_value = [
+            {"domain": "https://hhanclub.net", "domain_aliases": ["https://hhan.club"]}
+        ]
+        plugin._cache = MagicMock()
+
+        result = plugin._store_cookies_to_cache(
+            {
+                "cookie_data": {
+                    "hhan.club": [self._cookie("uid", "1", ".hhan.club")],
+                }
+            }
+        )
+
+        assert result == {"hhanclub.net": "uid=1"}
+
+    def test_name_filter_and_ignore_list_apply_once(self):
+        plugin = _make_plugin(config={"cookie_name_filter": "keep\nCookieAutoDeleteBrowsingDataCleanup"})
+        plugin._cache = MagicMock()
+
+        result = plugin._store_cookies_to_cache(
+            {
+                "cookie_data": {
+                    "discfan.net": [
+                        self._cookie("keep", "1", ".discfan.net"),
+                        self._cookie("drop", "2", ".discfan.net"),
+                        self._cookie("CookieAutoDeleteBrowsingDataCleanup", "x", ".discfan.net"),
+                    ]
+                }
+            }
+        )
+
+        assert result == {"discfan.net": "keep=1"}
+
+
+class TestSiteDomainMatching:
+    def test_sibling_subdomains_do_not_match(self):
+        from unittest.mock import MagicMock
+
+        from app.services.site_sync_service import SiteSyncService
+
+        svc = SiteSyncService.__new__(SiteSyncService)
+        svc._sites = MagicMock()
+        svc._sites.get_sites.return_value = [
+            {"strict_url": "https://v.qq.com"},
+            {"strict_url": "https://work.qq.com"},
+        ]
+
+        assert [s["strict_url"] for s in svc.find_sites_by_domain("v.qq.com")] == ["https://v.qq.com"]
+        assert [s["strict_url"] for s in svc.find_sites_by_domain("work.qq.com")] == ["https://work.qq.com"]
+
+    def test_parent_child_domains_still_match(self):
+        from unittest.mock import MagicMock
+
+        from app.services.site_sync_service import SiteSyncService
+
+        svc = SiteSyncService.__new__(SiteSyncService)
+        svc._sites = MagicMock()
+        svc._sites.get_sites.return_value = [{"strict_url": "https://pt.example.com"}]
+
+        assert svc.find_sites_by_domain("example.com")
+        assert not svc.find_sites_by_domain("sub.pt.example.com")

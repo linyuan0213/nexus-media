@@ -1,6 +1,6 @@
 [project]
 name = "nexus-media"
-version = "5.11.2"
+version = "5.12.0"
 description = "Nexus Media"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -72,6 +72,8 @@ dependencies = [
     "charset-normalizer>=3.5.2",
     "pyotp>=2.10.0",
     "qrcode>=8.2",
+    "pyarrow>=26.0.0",
+    "tomli-w>=1.2.0",
 ]
 
 [dependency-groups]
