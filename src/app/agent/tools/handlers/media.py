@@ -40,6 +40,7 @@ def media_search(
     if seeders:
         filter_args["seeders"] = seeders
     session_id = f"agent:{uuid4().hex[:12]}"
+    effective_user_id = int(user_id) if user_id and str(user_id).isdigit() else None
     sctx = SearchContext(
         keyword=query,
         session_id=session_id,
@@ -47,12 +48,12 @@ def media_search(
         filter_args=filter_args or None,
         persist=True,
         auto_download=False,
-        user_id=user_id,
+        user_id=str(effective_user_id) if effective_user_id else None,
     )
     _, _, total, _ = ctx.search_orchestrator.orchestrate(sctx)
     if not total:
         return ToolResult(success=True, data={"total": 0, "results": []})
-    rows = ctx.search_orchestrator.get_results(session_id, user_id)
+    rows = ctx.search_orchestrator.get_results(session_id, effective_user_id)
     return ToolResult(success=True, data={"total": total, "results": [_pick_result(r) for r in rows[:10]]})
 
 

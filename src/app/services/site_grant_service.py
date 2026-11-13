@@ -46,6 +46,9 @@ class SiteGrantService:
         """按用户 ID 查询可见站点（供后台/流水线仅有 user_id 的场景；None 或 0 视为系统上下文不过滤）"""
         if not user_id:
             return None
+        # 外部 IM 用户名（如 LinYuan）不是系统用户 ID，不能直接 int；无绑定时按无授权处理。
+        if not str(user_id).strip().isdigit():
+            return {}
         user_id = int(user_id)
         if SUPERADMIN_ROLE_CODE in self._rbac_service.get_user_role_codes(user_id):
             return None

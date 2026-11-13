@@ -392,7 +392,7 @@ class MessageSearchService:
         if intent == "DOWNLOAD":
             self._download_from_url(input_str, in_from, user_id, user_name)
         elif intent == "ASK":
-            self._chat(input_str, in_from, user_id, user_permissions)
+            self._chat(input_str, in_from, user_id, user_permissions, bound_user_id=bound_user_id)
         elif intent == "SUBSCRIBE":
             content = re.sub(r"订阅[:：\s]*", "", input_str)
             if not content.strip():
@@ -450,14 +450,21 @@ class MessageSearchService:
         meta_info.set_torrent_info(enclosure=url)
         self._downloader.download(media_info=meta_info, torrent_file=filepath, in_from=in_from, user_name=user_name)
 
-    def _chat(self, question: str, in_from: SearchType, user_id: str, user_permissions: list[str] | None = None):
+    def _chat(
+        self,
+        question: str,
+        in_from: SearchType,
+        user_id: str,
+        user_permissions: list[str] | None = None,
+        bound_user_id: int | None = None,
+    ):
         """AI 对话（支持工具调用）"""
         try:
             answer = self._chat_port.chat_with_tools(
                 question=question,
                 session_id=str(user_id),
                 channel=channel_key(in_from),
-                user_id=str(user_id),
+                user_id=str(bound_user_id or user_id),
                 user_permissions=user_permissions,
             )
         except (ServiceError, RepositoryError, DomainError):
