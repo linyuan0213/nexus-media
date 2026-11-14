@@ -1408,23 +1408,23 @@ def metadata_search(
     req: MetadataSearchRequest,
     current_user=Depends(require_any_permission("library:view", "library:manage")),
     gateway: MetadataGateway = Depends(get_metadata_gateway),
+    svc: MediaInfoService = Depends(get_media_info_service),
 ):
     request_type, content_profile = normalize_media_type_input(req.media_type, req.content_profile)
     media_type = ProviderMediaType.from_value(request_type) if request_type else None
     if media_type == ProviderMediaType.UNKNOWN:
         media_type = None
     context = _metadata_context(current_user, purpose="api.search", content_profile=content_profile)
-    return success(
-        data=gateway.search(
-            query=req.query,
-            context=context,
-            provider=req.provider,
-            media_type=media_type,
-            content_profile=content_profile,
-            limit=req.limit,
-            wait_timeout=req.timeout_seconds,
-        )
+    hits = gateway.search(
+        query=req.query,
+        context=context,
+        provider=req.provider,
+        media_type=media_type,
+        content_profile=content_profile,
+        limit=req.limit,
+        wait_timeout=req.timeout_seconds,
     )
+    return success(data=svc.enrich_search_hits(hits))
 
 
 @router.get("/lookup", response_model=CommonResponse, summary="统一元数据查询")

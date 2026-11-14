@@ -259,7 +259,7 @@ def _seasons(info: dict[str, Any], image_url: ImageUrlBuilder | None = None) -> 
 
 
 HOSTS = {"api.themoviedb.org", "image.tmdb.org"}
-RATE = 40
+RATE = 40  # TMDB 配额：40 次/分钟
 
 
 class TmdbProvider:

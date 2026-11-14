@@ -87,13 +87,15 @@ class ProviderRuntime:
         if rpm <= 0:
             return
         interval = 60.0 / rpm
+        burst = 4  # 40/min 下允许小幅突发，长期平均仍不超过配额
         try:
             engine = _shared_rate_engine()
             acquired = engine.acquire(
                 f"metadata:rate:{self.descriptor.provider_key}",
                 rate=f"{rpm}/m",
-                burst=1,
-                timeout=max(interval * 2, 5.0),
+                burst=burst,
+                # 批量订阅并发时允许排队，避免短暂排队被误判为 provider 熔断。
+                timeout=max(interval * 8, 30.0),
             )
         except Exception:  # noqa: BLE001 - Redis 初始化失败时退回进程内间隔
             with self._lock:

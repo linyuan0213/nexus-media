@@ -16,6 +16,7 @@ from app.domain.media_types import ProviderMediaType
 from .composer import MetadataComposer
 from .errors import (
     ProviderError,
+    ProviderRateLimited,
     ProviderSchemaError,
     ProviderTimeout,
     ProviderUnavailable,
@@ -164,6 +165,20 @@ class MetadataOrchestrator:
                     started = time.monotonic()
                     try:
                         record = future.result()
+                    except (ProviderRateLimited, ProviderUnavailable) as exc:
+                        # 限流/熔断是暂时状态，不计入 provider 熔断失败次数。
+                        record_provider_result(
+                            ref.provider,
+                            ok=False,
+                            latency_ms=int((time.monotonic() - started) * 1000),
+                        )
+                        record_event(
+                            "metadata.provider.skipped",
+                            provider=ref.provider,
+                            error=type(exc).__name__,
+                        )
+                        errors.append(exc)
+                        continue
                     except ProviderError as exc:
                         runtime.record_failure()
                         record_provider_result(

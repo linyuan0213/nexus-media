@@ -36,7 +36,7 @@ from app.media.metadata import (
     resolve_policy,
 )
 from app.media.metadata.aliases import select_aliases
-from app.media.metadata.errors import ProviderError
+from app.media.metadata.errors import ProviderError, ProviderRateLimited, ProviderUnavailable
 from app.media.metadata.legacy import parse_legacy_ref
 from app.media.metadata.metrics import record_degraded, record_event, record_snapshot
 from app.media.metadata.metrics import snapshot as metrics_snapshot
@@ -1185,6 +1185,10 @@ class MetadataService:
                     ),
                     None,
                 )
+            except (ProviderRateLimited, ProviderUnavailable) as exc:
+                # 限流/熔断不是 provider 健康失败，不能继续累计熔断计数。
+                log.warn(f"[Metadata]搜索暂时跳过 {descriptor.provider_key}: {exc}")
+                return []
             except ProviderError as exc:
                 runtime.record_failure()
                 log.warn(f"[Metadata]搜索失败 {descriptor.provider_key}: {exc}")
@@ -1543,6 +1547,10 @@ class MetadataService:
         try:
             runtime.acquire()
             records = target.episodes(ref, int(season or 1), None)
+        except (ProviderRateLimited, ProviderUnavailable) as exc:
+            # 限流/熔断属于暂时状态，不应把分集请求的排队失败算成 provider 故障。
+            log.warn(f"[Metadata]分集暂时跳过 {provider}:{external_id}: {exc}")
+            return []
         except Exception as exc:  # noqa: BLE001 - 单个来源分集失败不阻断日历
             try:
                 runtime.record_failure()

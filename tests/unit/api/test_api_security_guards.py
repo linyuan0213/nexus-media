@@ -47,21 +47,21 @@ class TestConfigMasking:
         assert _is_sensitive_key("app.tmdb_rate") is False
 
     def test_mask_sensitive(self):
-        flat = {"app.login_password": "secret", "app.tmdb_rate": "40/10s", "app.jwt_secret": ""}
+        flat = {"app.login_password": "secret", "app.tmdb_rate": "40/m", "app.jwt_secret": ""}
         masked = _mask_sensitive(dict(flat))
         assert masked["app.login_password"] == "******"
-        assert masked["app.tmdb_rate"] == "40/10s"
+        assert masked["app.tmdb_rate"] == "40/m"
         assert masked["app.jwt_secret"] == ""  # 空值不处理
 
     def test_strip_masked_dict(self):
         assert _strip_masked({"app": {"jwt_secret": "******", "keep": "1"}}) == {"app": {"keep": "1"}}
 
     def test_viewer_gets_masked_config(self):
-        flat = {"app.rmt_tmdbkey": "tmdb-key", "app.tmdb_rate": "40/10s"}
+        flat = {"app.rmt_tmdbkey": "tmdb-key", "app.tmdb_rate": "40/m"}
         user = UserContext(user_id=1, username="viewer", level=1, permissions=["setting:view"])
         result = _config_for_user(dict(flat), user)
         assert result["app.rmt_tmdbkey"] == "******"
-        assert result["app.tmdb_rate"] == "40/10s"
+        assert result["app.tmdb_rate"] == "40/m"
 
     def test_editor_gets_real_config(self):
         flat = {

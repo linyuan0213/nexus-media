@@ -2763,7 +2763,7 @@ wheels = [
 
 [[package]]
 name = "nexus-media"
-version = "5.12.1"
+version = "5.12.2"
 source = { virtual = "." }
 dependencies = [
     { name = "alembic" },

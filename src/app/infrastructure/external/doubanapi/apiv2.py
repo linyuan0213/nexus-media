@@ -1,9 +1,5 @@
-import base64
-import hashlib
-import hmac
 from datetime import datetime
 from random import choice
-from urllib import parse
 
 from app.infrastructure.cache_system import lru_cache_with_ttl
 from app.infrastructure.http.client import HttpClient
@@ -140,9 +136,7 @@ class DoubanApi:
             "brand/Android  rom/miui6  network/wifi platform/mobile nd/1"
         ),
     ]
-    _api_secret_key = "bf7dddc7c9cfe6f7"
-    _api_key = "0dad551ec0f84ed02907ff5c42e8ec70"
-    _base_url = "https://frodo.douban.com/api/v2"
+    _base_url = "https://m.douban.com/rexxar/api/v2"
 
     def __init__(self):
         pass
@@ -154,33 +148,17 @@ class DoubanApi:
         return cls._client
 
     @classmethod
-    def __sign(cls, url: str, ts: int, method="GET") -> str:
-        url_path = parse.urlparse(url).path
-        raw_sign = "&".join([method.upper(), parse.quote(url_path, safe=""), str(ts)])
-        return base64.b64encode(
-            hmac.new(cls._api_secret_key.encode(), raw_sign.encode(), hashlib.sha1).digest()
-        ).decode()
-
-    @classmethod
     @lru_cache_with_ttl(maxsize=256, ttl=3600)
     def __invoke(cls, url, **kwargs):
         req_url = cls._base_url + url
 
-        params = {"apiKey": cls._api_key}
-        if kwargs:
-            params.update(kwargs)
+        # rexxar 接口不接收 frodo 的 apiKey/_ts/_sig，保留业务参数即可。
+        params = {key: value for key, value in kwargs.items() if key != "_ts"}
 
-        ts = int(params.pop("_ts", int(datetime.strftime(datetime.now(), "%Y%m%d"))))
-        params.update(
-            {
-                "os_rom": "android",
-                "apiKey": cls._api_key,
-                "_ts": str(ts),
-                "_sig": cls.__sign(url=req_url, ts=ts),
-            }
-        )
-
-        headers = {"User-Agent": choice(cls._user_agents)}
+        headers = {
+            "User-Agent": choice(cls._user_agents),
+            "Referer": "https://m.douban.com/",
+        }
         resp = cls._get_client().get(url=req_url, params=params, headers=headers, raise_for_status=False)
         if resp.status_code != 200:
             raise Exception(f"豆瓣API返回错误，状态码：{resp.status_code}")

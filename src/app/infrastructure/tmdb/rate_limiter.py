@@ -15,8 +15,8 @@ from app.infrastructure.rate_limiter import RateLimitEngine
 
 
 def _tmdb_rate() -> str:
-    """TMDB 请求速率（app.tmdb_rate，默认 40/10s ≈ 4/s）"""
-    return str((settings.get("app") or {}).get("tmdb_rate") or "40/10s")
+    """TMDB 请求速率（app.tmdb_rate，默认 40/m ≈ 0.67/s）"""
+    return str((settings.get("app") or {}).get("tmdb_rate") or "40/m")
 
 
 def _retry_after_seconds(exc) -> float | None:

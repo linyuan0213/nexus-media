@@ -635,8 +635,58 @@ class MediaInfoService:
             for img_key in ["image", "poster", "backdrop"]:
                 if d.get(img_key):
                     d[img_key] = ImageProxy.get_proxy_image_url(d[img_key], use_proxy=True)
+            # 搜索结果也需要订阅状态，供卡片/操作按钮直接展示。
+            try:
+                mtype = media.type.value if media.type else d.get("media_type")
+                fav, rssid, _ = check_media_exists(
+                    self._media_server,
+                    self._subscribe,
+                    mtype=mtype,
+                    title=d.get("title") or media.title,
+                    year=d.get("year") or media.year,
+                    mediaid=d.get("mediaid") or d.get("tmdb_id") or d.get("tmdbid"),
+                    anchor_provider=d.get("anchor_provider"),
+                    anchor_external_id=d.get("anchor_external_id"),
+                )
+                d["fav"] = fav or "0"
+                d["rssid"] = rssid or ""
+            except Exception:  # noqa: BLE001 - 状态查询失败不阻断搜索结果
+                d["fav"] = "0"
+                d["rssid"] = ""
             results.append(d)
         return results
+
+    def enrich_search_hits(self, hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """给多源元数据搜索结果补齐当前用户的订阅/入库状态."""
+        for hit in hits:
+            ref = hit.get("ref") or {}
+            provider = str(ref.get("provider") or hit.get("provider") or "")
+            external_id = str(ref.get("external_id") or hit.get("external_id") or "")
+            media_type = str(hit.get("media_type") or hit.get("type") or "")
+            title = str(hit.get("title") or "")
+            year = str(hit.get("year") or "")
+            mediaid = external_id if provider == "tmdb" else None
+            if provider == "douban" and external_id:
+                mediaid = f"DB:{external_id}"
+            if provider == "bangumi" and external_id:
+                mediaid = f"BG:{external_id}"
+            try:
+                fav, rssid, _ = check_media_exists(
+                    self._media_server,
+                    self._subscribe,
+                    mtype=media_type,
+                    title=title,
+                    year=year,
+                    mediaid=mediaid,
+                    anchor_provider=provider or None,
+                    anchor_external_id=external_id or None,
+                )
+                hit["fav"] = fav or "0"
+                hit["rssid"] = rssid or ""
+            except Exception:  # noqa: BLE001 - 状态查询失败不阻断搜索
+                hit["fav"] = "0"
+                hit["rssid"] = ""
+        return hits
 
     def get_movie_calendar(self, tid, rssid) -> dict | None:
         """查询电影上映日期"""

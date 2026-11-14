@@ -20,7 +20,7 @@ _tmdb_local = threading.local()
 
 def _tmdb_rate() -> str:
     """TMDB 请求速率（令牌桶），来自 app.tmdb_rate 配置."""
-    return str((settings.get("app") or {}).get("tmdb_rate") or "40/10s")
+    return str((settings.get("app") or {}).get("tmdb_rate") or "40/m")
 
 
 def _proxy_url_from_settings() -> str | None:
@@ -125,6 +125,7 @@ class TMDb:
                 data=data,
                 rate_limit_key=f"tmdb:{self.api_key}",
                 rate_limit_rate=_tmdb_rate(),
+                rate_limit_burst=4,
                 rate_limit_timeout=60,
             )
 
