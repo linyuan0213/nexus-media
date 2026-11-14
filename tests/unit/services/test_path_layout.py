@@ -142,3 +142,19 @@ def test_existence_checker_anime_defaults_to_flat(tmp_path):
     _, ret_dir, file_exist, _ = checker.is_media_exists(str(tmp_path), media)
     assert file_exist is False
     assert ret_dir == str(tmp_path / "门牙 (2024)" / "Season 1")
+
+
+def test_naming_profile_with_category_skips_generic_category(monkeypatch):
+    from app.media.metadata.naming import NamingProfile
+    from app.services.transfer import path_resolver
+
+    monkeypatch.setattr(
+        path_resolver,
+        "list_naming_profiles",
+        lambda: [NamingProfile(key="custom.default", content_profile="custom", provides_category=True)],
+    )
+    resolver = _resolver(movie_category_flag=True)
+    media = _media(ProviderMediaType.MOVIE, category="通用分类", title="DEMO-138")
+    media.content_profile = "custom"
+
+    assert resolver.get_dest_path_by_info("/media/custom", media, None) == "/media/custom/DEMO-138 (2024)"

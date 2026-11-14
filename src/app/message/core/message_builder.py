@@ -42,7 +42,7 @@ def _type_label(media_info, profile: str) -> str:
         resolved = media_type_registry.resolve_profile(profile)
         if resolved is not None:
             return resolved.display_name
-    return media_info.type.display_name
+    return media_info.type.display_name if media_info is not None and media_info.type is not None else "未知"
 
 
 def _source_provider(item) -> str:

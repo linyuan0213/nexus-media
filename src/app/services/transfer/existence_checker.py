@@ -5,7 +5,7 @@ import os
 import log
 from app.core.constants import RMT_FAVTYPE, RMT_MEDIAEXT
 from app.domain.media_types import ProviderMediaType
-from app.services.transfer.path_resolver import safe_category_name
+from app.services.transfer.path_resolver import naming_profile_provides_category, safe_category_name
 from app.utils import PathUtils
 
 
@@ -83,7 +83,10 @@ class MediaExistenceChecker:
             dir_name, file_name = self._path_resolver.get_movie_dest_path(media, self._media)
             category = safe_category_name(getattr(media, "category", ""))
             layout_dirs = self._layout_dirs(
-                media_dest, dir_name, category, bool(self._path_resolver.movie_category_flag)
+                media_dest,
+                dir_name,
+                category,
+                bool(self._path_resolver.movie_category_flag) and not naming_profile_provides_category(media),
             )
             # 新文件始终落主布局；精选目录和旧布局只用于发现已存在的文件
             ret_dir_path = layout_dirs[0]
@@ -109,6 +112,7 @@ class MediaExistenceChecker:
             add_category = bool(self._path_resolver.tv_category_flag)
             if media.type == ProviderMediaType.ANIME:
                 add_category = bool(self._path_resolver.anime_category_flag)
+            add_category = add_category and not naming_profile_provides_category(media)
             layout_dirs = self._layout_dirs(media_dest, dir_name, category, add_category)
             # 新文件始终落主布局；旧布局只用于发现已存在的文件
             ret_dir_path = os.path.join(layout_dirs[0], season_name)
@@ -145,7 +149,11 @@ class MediaExistenceChecker:
                 fav_files = self._get_dir_files(fav_path, backend_id, RMT_MEDIAEXT)
                 category = safe_category_name(getattr(meta_info_obj, "category", ""))
                 for check_path in self._layout_dirs(
-                    dest_path, dir_name, category, bool(self._path_resolver.movie_category_flag)
+                    dest_path,
+                    dir_name,
+                    category,
+                    bool(self._path_resolver.movie_category_flag)
+                    and not naming_profile_provides_category(meta_info_obj),
                 ):
                     files = self._get_dir_files(check_path, backend_id, RMT_MEDIAEXT)
                     if len(files) > 0 or len(fav_files) > 0:
@@ -163,6 +171,7 @@ class MediaExistenceChecker:
                 dest_paths = self._path_resolver.tv_path
                 category_flag = self._path_resolver.tv_category_flag
                 backends = self._path_resolver._tv_backend or []
+            category_flag = category_flag and not naming_profile_provides_category(meta_info_obj)
             total_episodes = list(range(1, total_num + 1))
             exists_episodes = []
             for idx, dest_path in enumerate(dest_paths):

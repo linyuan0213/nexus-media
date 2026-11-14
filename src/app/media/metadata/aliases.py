@@ -6,7 +6,7 @@ import re
 
 from app.utils.chinese_utils import to_simplified
 
-_MAX_ALIASES = 4
+_MAX_ALIASES = 6
 _LATIN_RE = re.compile(r"[A-Za-z]{3,}")
 _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 _CHINESE_COUNTRIES = {"CN", "TW", "HK", "MO", "SG"}
@@ -27,7 +27,7 @@ def select_aliases(
     countries: list[str] | None = None,
     original_language: str | None = None,
 ) -> list[str]:
-    """中文标题 + 非中文发行国家的本土标题 + 英文别名，最多 3 个.
+    """中文标题 + 本土标题 + 英文/罗马音等拉丁别名，最多 6 个.
 
     中国发行作品的本土语言就是中文，不再额外保留一条“本土标题”。
     """
@@ -47,10 +47,13 @@ def select_aliases(
     add(title)
     if not _is_chinese_native(countries, original_language):
         add(original_title)
+    latin_count = 0
     for value in values:
         if _LATIN_RE.search(str(value or "")):
+            if latin_count >= 2:
+                break
             add(value)
-            break
+            latin_count += 1
     if len(result) < _MAX_ALIASES and not any(_LATIN_RE.search(item) for item in result):
         # 没有英文别名时，若英文原名存在则补上。
         add(original_title)

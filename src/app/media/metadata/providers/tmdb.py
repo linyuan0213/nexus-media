@@ -147,17 +147,24 @@ def tmdb_detail_to_record(
 
 
 def _aliases(info: dict[str, Any]) -> list[str]:
-    """提取多语言标题：also_known_as + alternative_titles + translations."""
-    values: list[str] = []
+    """提取多语言标题，优先英文/原始国家标题，避免区域译名挤占预筛."""
+    original_language = str(info.get("original_language") or "").lower()
+    original_country = "JP" if original_language == "ja" else ""
+    priority = {"US": 0, "GB": 1, "CN": 2, "TW": 2, "HK": 2}
+    if original_country:
+        priority[original_country] = 1
+
+    values: list[tuple[int, str]] = []
     raw = info.get("also_known_as") or []
     if isinstance(raw, list):
-        values.extend(str(item) for item in raw if item)
+        values.extend((3, str(item)) for item in raw if item)
     alternative = info.get("alternative_titles") or {}
     for key in ("titles", "results"):
         for item in alternative.get(key) or []:
             value = item.get("title") if hasattr(item, "get") else getattr(item, "title", None)
+            country = str(item.get("iso_3166_1") or "").upper() if hasattr(item, "get") else ""
             if value:
-                values.append(str(value))
+                values.append((priority.get(country, 4), str(value)))
     translations = (info.get("translations") or {}).get("translations") or []
     for item in translations:
         data = item.get("data") if hasattr(item, "get") else getattr(item, "data", None)
@@ -165,11 +172,12 @@ def _aliases(info: dict[str, Any]) -> list[str]:
             value = data.get("name") if hasattr(data, "get") else getattr(data, "name", None)
             value = value or (data.get("title") if hasattr(data, "get") else getattr(data, "title", None))
             if value:
-                values.append(str(value))
+                values.append((5, str(value)))
+    values.sort(key=lambda pair: pair[0])
     result: list[str] = []
     seen: set[str] = set()
-    for value in values:
-        text = str(value).strip()
+    for _, value in values:
+        text = value.strip()
         if text and text.casefold() not in seen:
             seen.add(text.casefold())
             result.append(text)

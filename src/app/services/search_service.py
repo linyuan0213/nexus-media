@@ -143,7 +143,7 @@ class SearchQueryBuilder:
         for alias_text in aliases:
             append_name(_strip_season_suffix(alias_text))
             append_name(alias_text)
-            if len(search_name_list) >= 6:
+            if len(search_name_list) >= 4:
                 break
 
         # 开启多语言搜索

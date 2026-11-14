@@ -35,6 +35,8 @@ class NamingProfile:
     default_tv: str = ""
     default_tv_season: str = ""
     templates: dict[str, str] = field(default_factory=dict)
+    # 该 profile 的模板已经包含分类目录，核心转移不再额外拼接通用分类目录。
+    provides_category: bool = False
 
     def field_keys(self) -> set[str]:
         return {item.key for item in self.fields}

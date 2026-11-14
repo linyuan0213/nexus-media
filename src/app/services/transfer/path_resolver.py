@@ -24,6 +24,14 @@ from app.storage.config_models import LocalStorageConfig
 from app.utils import NumberUtils, PathUtils, StringUtils, SystemUtils
 
 
+def naming_profile_provides_category(media: Any, snapshot: Any = None) -> bool:
+    """命名 profile 若声明自带分类目录，核心不再叠加通用分类目录."""
+    profile = str(getattr(snapshot, "content_profile", None) or getattr(media, "content_profile", None) or "").strip()
+    if not profile or profile == "default":
+        return False
+    return any(item.content_profile == profile and item.provides_category for item in list_naming_profiles())
+
+
 def safe_category_name(value: Any) -> str:
     """分类目录只允许单段相对名称，避免子目录/路径穿越."""
     category = str(value or "").strip()
@@ -522,17 +530,18 @@ class TransferPathResolver:
         if not dest or not meta_info:
             return None
         category = safe_category_name(getattr(meta_info, "category", ""))
+        profile_has_category = naming_profile_provides_category(meta_info, snapshot)
         if meta_info.type == ProviderMediaType.MOVIE:
             dir_name, _ = self.get_movie_dest_path(meta_info, media_service, snapshot)
-            if self._movie_category_flag and category:
+            if self._movie_category_flag and category and not profile_has_category:
                 return os.path.join(dest, category, dir_name)
             return os.path.join(dest, dir_name)
         dir_name, season_name, _ = self.get_tv_dest_path(meta_info, media_service, snapshot)
         if meta_info.type == ProviderMediaType.SERIES:
-            if self._tv_category_flag and category:
+            if self._tv_category_flag and category and not profile_has_category:
                 return os.path.join(dest, category, dir_name, season_name)
             return os.path.join(dest, dir_name, season_name)
-        if self._anime_category_flag and category:
+        if self._anime_category_flag and category and not profile_has_category:
             return os.path.join(dest, category, dir_name, season_name)
         return os.path.join(dest, dir_name, season_name)
 

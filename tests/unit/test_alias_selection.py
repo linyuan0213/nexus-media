@@ -27,7 +27,7 @@ def test_chinese_release_does_not_add_extra_native_alias():
         countries=["CN"],
         original_language="zh",
     )
-    assert values == ["流浪地球", "The Wandering Earth"]
+    assert values == ["流浪地球", "The Wandering Earth", "The Wandering Earth II"]
 
 
 def test_chinese_release_keeps_traditional_variant():
@@ -41,7 +41,7 @@ def test_chinese_release_keeps_traditional_variant():
     assert values == ["学生会也有洞！", "Seitokai ni mo Ana wa Aru!", "學生會也有洞！"]
 
 
-def test_select_aliases_dedupes_and_limits_three():
-    values = select_aliases("标题", "标题", ["别名", "English Title", "Another"])
-    assert values == ["标题", "English Title"]
-    assert len(values) <= 3
+def test_select_aliases_dedupes_and_limits_latin_aliases():
+    values = select_aliases("标题", "标题", ["别名", "English Title", "Another Title"])
+    assert values == ["标题", "English Title", "Another Title"]
+    assert len(values) <= 6
