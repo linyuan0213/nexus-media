@@ -1,13 +1,10 @@
 """Subscribe matcher — 判断种子是否命中用户订阅清单."""
 
 import log
-from app.core.settings import settings
 from app.db.repositories.config_repo_adapter import FilterGroupRepositoryAdapter, FilterRuleRepositoryAdapter
-from app.domain.media_ref import media_identity_key, normalize_identity_key
+from app.domain.media_ref import canonical_metadata_ref, normalize_identity_key
 from app.domain.media_types import ProviderMediaType
 from app.indexer.core.filter_engine import IndexerFilterEngine
-from app.media.identity.matcher import get_target_matcher
-from app.media.models import MediaInfo
 from app.sites.site_cache import SiteCache
 from app.sites.siteconf import SiteConf
 from app.utils import StringUtils
@@ -27,14 +24,31 @@ class SubscribeMatcher:
         self._site_cache = site_cache
         self._site_conf = site_conf or SiteConf(site_engine=None)
 
-    @staticmethod
-    def _use_unified_match() -> bool:
-        """ADR-014 P3：订阅匹配统一走 TargetMatcher（ID 判等 + edition 距离）"""
-        return bool(settings.get("laboratory").get("target_matcher"))
+    @classmethod
+    def _match_identity(cls, media_info, rss_info) -> bool:
+        """按统一引用判等；metadata_ref/identity_id/anchor/tmdb 都可作为同一身份的别名."""
+        target_refs: list[str] = []
+        metadata_ref = str(rss_info.get("metadata_ref") or "").strip()
+        if metadata_ref:
+            target_refs.append(metadata_ref)
+        identity_id = str(rss_info.get("identity_id") or "").strip()
+        if identity_id:
+            target_refs.append(f"id:{identity_id}")
+        provider = str(rss_info.get("anchor_provider") or "").strip()
+        external = str(rss_info.get("anchor_external_id") or "").strip()
+        if provider and external:
+            target_refs.append(f"{provider}:{external}")
+        tmdbid = str(rss_info.get("tmdbid") or "").strip()
+        if tmdbid.isdigit():
+            target_refs.append(f"tmdb:{tmdbid}")
+        media_ref = canonical_metadata_ref(media_info)
+        if not media_ref or not target_refs:
+            return False
+        media_key = normalize_identity_key(media_ref)
+        return any(media_key == normalize_identity_key(ref) for ref in target_refs)
 
-    @staticmethod
-    def _match_identity(media_info, rss_info) -> bool:
-        """按统一引用判等；metadata_ref 优先于旧 tmdbid。"""
+    def _match_tmdb(self, media_info, rss_info) -> bool:
+        """统一身份匹配；metadata_ref/identity_id 优先，标题只作无身份回退。"""
         target_ref = str(rss_info.get("metadata_ref") or "").strip()
         if not target_ref:
             provider = str(rss_info.get("anchor_provider") or "").strip()
@@ -43,22 +57,19 @@ class SubscribeMatcher:
                 target_ref = f"{provider}:{external}"
             elif str(rss_info.get("tmdbid") or "").strip().isdigit():
                 target_ref = f"tmdb:{rss_info['tmdbid']}"
-        if not target_ref:
-            return False
-        return normalize_identity_key(media_identity_key(media_info)) == normalize_identity_key(target_ref)
-
-    def _match_tmdb(self, media_info, rss_info) -> bool:
-        """兼容入口：有统一引用时只做身份判等。"""
-        if rss_info.get("metadata_ref") or rss_info.get("anchor_provider"):
-            return self._match_identity(media_info, rss_info)
-        tmdbid = rss_info.get("tmdbid")
-        if not self._use_unified_match():
-            return str(getattr(media_info, "tmdb_id", None)) == str(tmdbid)
-        target = MediaInfo(tmdb_id=tmdbid, title=rss_info.get("name") or "", year=rss_info.get("year"))
-        result = get_target_matcher().match(media_info, target)
-        if not result.matched and result.reason != "no_identity":
-            log.debug(f"[SubscribeMatcher]{rss_info.get('name')} 身份不匹配: {result.reason}")
-        return result.matched
+        media_ref = canonical_metadata_ref(media_info)
+        if media_ref and target_ref:
+            matched = normalize_identity_key(media_ref) == normalize_identity_key(target_ref)
+            if not matched:
+                log.debug(f"[SubscribeMatcher]{rss_info.get('name')} 身份不匹配: {media_ref} != {target_ref}")
+            return matched
+        # 识别层没有产出任何统一身份（例如 TMDB/内容库查询失败）时，
+        # 才允许标题+年份回退；有身份但不同则必须拒绝，避免跨作品误配。
+        name = str(rss_info.get("name") or "")
+        if name and self._fuzzy_name_match(name, media_info):
+            log.debug(f"[SubscribeMatcher]{name} 无统一身份，按标题回退匹配")
+            return True
+        return False
 
     @staticmethod
     def _filter_signature(rss_info: dict) -> tuple:
@@ -78,7 +89,19 @@ class SubscribeMatcher:
         """规范化子串匹配：防正则注入、大小写/标点鲁棒（替代裸 re.search）"""
         if not name:
             return True
-        search_title = f"{media_info.rev_string or ''} {media_info.title} {media_info.year}"
+        parts = [
+            str(getattr(media_info, "rev_string", "") or ""),
+            str(getattr(media_info, "title", "") or ""),
+            str(getattr(media_info, "year", "") or ""),
+        ]
+        for attr in ("cn_name", "en_name", "original_title"):
+            value = getattr(media_info, attr, "")
+            if isinstance(value, str) and value:
+                parts.append(value)
+        aliases = getattr(media_info, "aliases", [])
+        if isinstance(aliases, list):
+            parts.extend(str(item) for item in aliases if item)
+        search_title = " ".join(parts)
         n = StringUtils.handler_special_chars(name).upper().strip()
         t = StringUtils.handler_special_chars(search_title).upper().strip()
         return bool(n) and n in t

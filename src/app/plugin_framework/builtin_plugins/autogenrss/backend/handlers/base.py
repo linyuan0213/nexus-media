@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.plugin_framework.context import PluginContext
-from app.utils.browser_mode import build_browser_mode
+from app.utils.browser_mode import browser_site_key, build_browser_mode
 from app.utils.config_tools import get_proxies
 from app.utils.json_utils import JsonUtils
 from app.utils.string_utils import StringUtils
@@ -130,7 +130,7 @@ class SiteRssGenHandler(ABC):
         if ctx.raw.get("chrome"):
             browser = build_browser_mode(
                 ctx.raw,
-                site_key=ctx.site_id,
+                site_key=browser_site_key(ctx.raw, ctx.site_url),
                 proxy_url=ctx.proxy_url,
                 render_html=False,
             )

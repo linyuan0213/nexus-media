@@ -275,6 +275,23 @@ class AgentLongTermMemoryConfig(BaseModel):
     extraction: str = "on_session_end"  # on_session_end | on_turn_end | off
 
 
+class NetTestTargetConfig(BaseModel):
+    """自定义连通性测试目标."""
+
+    key: str
+    label: str = ""
+    url: str
+    category: str = "external"
+    requires_auth: bool = False
+    probe: str = "http"
+
+
+class NetTestConfig(BaseModel):
+    """网络连通性测试配置."""
+
+    extra_targets: list[NetTestTargetConfig] = Field(default_factory=list)
+
+
 class AgentMemoryConfig(BaseModel):
     """记忆配置"""
 
@@ -460,6 +477,7 @@ class AppSettings(BaseSettings):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
     queue: QueueConfig = Field(default_factory=QueueConfig)
+    nettest: NetTestConfig = Field(default_factory=NetTestConfig)
     message_governor: MessageGovernorConfig = Field(default_factory=MessageGovernorConfig)
 
     @field_validator("agent", mode="before")

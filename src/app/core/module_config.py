@@ -17,16 +17,6 @@ class ModuleConf:
         "pix": {"8k": r"8K", "4k": r"4K|2160P|X2160", "1080p": r"1080[PIX]|X1080", "720p": r"720P"},
     }
 
-    # 网络测试对象，TMDB API除外
-    NETTEST_TARGETS = [
-        "www.themoviedb.org",
-        "image.tmdb.org",
-        "webservice.fanart.tv",
-        "api.telegram.org",
-        "qyapi.weixin.qq.com",
-        "frodo.douban.com",
-    ]
-
     @staticmethod
     def get_enum_name(enum, value):
         """

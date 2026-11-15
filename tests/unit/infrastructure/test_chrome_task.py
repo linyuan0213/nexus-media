@@ -73,3 +73,37 @@ def test_page_close_is_idempotent():
         pass
     page.close()
     assert session.closed == [page.name]
+
+
+class _RetrySession(_FakeSession):
+    def __init__(self):
+        super().__init__()
+        self.navigate_calls = 0
+
+    def navigate(self, url, **kwargs):
+        self.navigate_calls += 1
+        self.calls.append(("navigate", url, kwargs["tab_name"]))
+        self.active = kwargs["tab_name"]
+        if self.navigate_calls == 1:
+            return {"url": url, "html": "", "challenge": {"solved": False}}
+        return {"url": url, "html": "<html><title>ok</title></html>", "challenge": {"solved": True}}
+
+
+def test_page_retry_closes_old_tab_before_reload(monkeypatch):
+    session = _RetrySession()
+    page = BrowserPage(_task(session), "https://example.com/page")
+    monkeypatch.setattr("app.infrastructure.chrome.task.time.sleep", lambda _: None)
+    assert "ok" in page.load("https://example.com/page")
+    assert session.navigate_calls == 2
+    assert session.closed == [page.name]
+
+
+def test_closed_page_cannot_load_again():
+    page = BrowserPage(_task(_FakeSession()), "https://example.com/page")
+    page.close()
+    try:
+        page.load("https://example.com/page")
+    except Exception as exc:
+        assert "已关闭" in str(exc)
+    else:
+        raise AssertionError("关闭后的 BrowserPage 不应继续导航")

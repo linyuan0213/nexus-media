@@ -26,10 +26,17 @@ def _make_session_key(site_key: str, browser: BrowserModeConfig) -> str:
     ``render_html`` 是请求模式，不影响 Cookie 与会话状态，因此不计入 session_key。
     这样 ``render_html=False`` 过盾后产生的 Cookie 可以被 ``render_html=True`` 复用。
     """
-    config_hash = hashlib.md5(
-        f"{browser.fingerprint_profile}:{browser.fp_profile_id}:{browser.user_agent}:{browser.proxy_url}".encode()
-    ).hexdigest()[:8]
-    return f"{site_key}:{config_hash}"
+    identity = "\x1f".join(
+        (
+            str(site_key or ""),
+            str(browser.fingerprint_profile or ""),
+            str(browser.fp_profile_id or ""),
+            str(browser.user_agent or ""),
+            str(browser.proxy_url or ""),
+        )
+    )
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:16]
+    return f"{site_key}:{digest}"
 
 
 class _ChromeServerClient:
@@ -200,13 +207,9 @@ class _BaseChromeTransport:
         return self._build_response(request, payload)
 
     def close(self) -> None:
-        # 持久会话：保留浏览器会话（含挑战/2FA 认证态），供后续请求复用；
-        # 非持久会话在关闭时删除，释放浏览器标签页
-        if not self._browser.persistent_session:
-            try:
-                self._server.delete_session(self._session_key)
-            except Exception as e:  # noqa: BLE001
-                log.debug(f"[ChromeTransport] 关闭会话 {self._session_key} 失败: {e}")
+        # Transport 只释放自己的客户端，不删除共享 session：同一 session 可能被
+        # 搜索、签到、userinfo 等并发操作复用，删除会打断其他调用方。
+        # 非持久 session 由 nexus-chrome 的空闲 TTL 回收。
         self._server.close()
 
 

@@ -19,14 +19,16 @@ from urllib.parse import urljoin
 from lxml import etree
 
 import log
+from app.domain.browser_operation import BROWSER_METRICS, BrowserOperationContext
 from app.infrastructure.chrome.challenge import is_challenge
+from app.infrastructure.chrome.diagnostics import capture_failure_screenshot
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.sites.http import site_rate_limit
 from app.sites.userinfo.providers import discuz, gazelle, nexus_php, small_horse, unit3d
 from app.utils import StringUtils
-from app.utils.browser_mode import build_browser_mode
+from app.utils.browser_mode import browser_site_key, build_browser_mode
 from app.utils.config_tools import get_proxies
 from app.utils.json_utils import JsonUtils
 
@@ -72,6 +74,8 @@ class ConfigHtmlUserInfo:
         self._session: Any = session
         self._index_html: str = json_data or ""
         self._base_url_str: str = self.site_url.rstrip("/") if self.site_url else ""
+        self._browser_key: str = browser_site_key({"domain": self.site_url}, getattr(site_def, "id", "") or "")
+        self._operation_context = BrowserOperationContext.create("userinfo", self._browser_key or self.site_name)
         self._site_engine: Any = site_engine
         self._api_key: str | None = api_key
         self._bearer_token: str | None = bearer_token
@@ -422,11 +426,19 @@ class ConfigHtmlUserInfo:
                 if client is not None and with_browser is not None:
                     client.close()
 
+        operation = getattr(self, "_operation_context", None) or BrowserOperationContext.create(
+            "userinfo", self._base_url_str or self.site_name
+        )
+        log.info(f"[UserInfo] event=userinfo_fetch_start {operation.fields(url=str(url).split('?', 1)[0])}")
         text = _request()
+        if text and is_challenge(text):
+            BROWSER_METRICS.record_challenge("unknown", solved=False)
         # 站点开启“浏览器自动化”(emulate) 时：直连失败/疑似挑战页自动降级 chrome 渲染再取一次
         if (text is None or is_challenge(text)) and self._emulate:
-            site_key = str(getattr(self._def, "id", "") or "")
-            if site_key:
+            browser_key = getattr(self, "_browser_key", "") or browser_site_key(
+                {"domain": self._base_url_str}, getattr(self._def, "id", "") or ""
+            )
+            if browser_key:
                 try:
                     text = _request(
                         build_browser_mode(
@@ -436,13 +448,21 @@ class ConfigHtmlUserInfo:
                                 "browser_render": True,
                                 "browser_persistent": bool(getattr(self, "_browser_persistent", False)),
                             },
-                            site_key=site_key,
+                            site_key=browser_key,
                             proxy_url=proxy_url,
                             render_html=True,
                         )
                     )
                 except Exception:
                     text = None
+        if text is None:
+            BROWSER_METRICS.record_failure("userinfo")
+            if getattr(self, "_session", None) is not None:
+                capture_failure_screenshot(self._session, operation, "userinfo_fetch_error")
+        log.info(
+            f"[UserInfo] event=userinfo_fetch_done "
+            f"{operation.fields(url=str(url).split('?', 1)[0], text_len=len(text or ''))}"
+        )
         return text
 
 

@@ -12,7 +12,7 @@ from loguru import logger
 from app.core.exceptions import ValidationError
 from app.media.display_image_policy import transform_display_image
 from app.media.metadata.models import DiscoveryPage
-from app.media.metadata.providers.discovery import BangumiDiscovery, DoubanDiscovery, TmdbDiscovery
+from app.media.metadata.providers.discovery_builtin import register_builtin_discovery_providers
 from app.media.metadata.registry import MetadataRegistry
 from app.media.metadata.registry import registry as global_registry
 from app.services.library_presence_service import LibraryPresenceService
@@ -173,8 +173,8 @@ class DiscoveryService:
         with self._builtin_lock:
             if self._builtin_ready:
                 return
-            self._registry.register_discovery_provider(DoubanDiscovery())
-            if self._media_service is not None:
-                self._registry.register_discovery_provider(TmdbDiscovery(self._media_service))
-            self._registry.register_discovery_provider(BangumiDiscovery())
+            register_builtin_discovery_providers(
+                self._registry,
+                media_service=self._media_service,
+            )
             self._builtin_ready = True

@@ -12,7 +12,9 @@ import uuid
 from typing import Any
 
 import log
+from app.domain.browser_operation import BROWSER_METRICS, BrowserOperationContext
 from app.infrastructure.chrome.challenge import is_challenge, wait_challenge_clear
+from app.infrastructure.chrome.diagnostics import capture_failure_screenshot
 from app.infrastructure.chrome.session import BrowserSession
 
 
@@ -54,6 +56,17 @@ class BrowserPage:
     def __exit__(self, *exc: Any) -> None:
         self.close()
 
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise BrowserPageError(f"页面已关闭: {self.name}")
+
+    def _close_tab_only(self) -> None:
+        """关闭当前 tab 但保持 BrowserPage 可继续导航，用于强制真正重新过盾."""
+        try:
+            self.session.close_tab(self.name)
+        except Exception as exc:  # noqa: BLE001
+            log.debug(f"[BrowserPage] 重试前关闭标签页失败 {self.name}: {exc}")
+
     def load(
         self,
         url: str,
@@ -62,10 +75,14 @@ class BrowserPage:
         referer: str | None = None,
         timeout: int | None = None,
     ) -> str:
-        """导航并确保脱离挑战；挑战失败时刷新重试（默认两次）。"""
+        """导航并确保脱离挑战；失败重试时关闭旧 tab，避免同 URL 复用旧挑战页。"""
+        self._ensure_open()
         self.url = url
         last_error = ""
         for attempt in range(self.retries + 1):
+            if attempt:
+                self._close_tab_only()
+                time.sleep(min(2**attempt, 4))
             try:
                 data = self.session.navigate(
                     url,
@@ -79,6 +96,10 @@ class BrowserPage:
                 log.warn(f"[BrowserPage] 导航失败 attempt={attempt + 1}: {url}: {exc}")
                 continue
             html = str(data.get("html") or "")
+            if not html.strip():
+                last_error = "页面内容为空，无法确认是否已脱离挑战"
+                log.warn(f"[BrowserPage] 空页面 attempt={attempt + 1}: {url}")
+                continue
             challenge = data.get("challenge") or {}
             if is_challenge(html) or challenge.get("solved") is False:
                 html = wait_challenge_clear(
@@ -87,41 +108,57 @@ class BrowserPage:
                     timeout=self.task.challenge_timeout,
                     tab_name=self.name,
                 )
+            if not html.strip():
+                last_error = "挑战后页面内容为空"
+                continue
             if not is_challenge(html):
                 self._html = html
                 self.task._last_url = str(data.get("url") or url)
                 return html
             last_error = "Cloudflare/挑战未通过"
+            BROWSER_METRICS.record_challenge("html", solved=False)
             log.warn(f"[BrowserPage] 挑战未通过 attempt={attempt + 1}/{self.retries + 1}: {url}")
+        operation = getattr(self.session, "operation_context", None)
+        if operation is not None:
+            capture_failure_screenshot(self.session, operation, "challenge_failed", tab_name=self.name)
         raise BrowserPageError(last_error or f"页面加载失败: {url}")
 
     def refresh(self) -> str:
+        self._ensure_open()
+        self._close_tab_only()
         return self.load(self.url, cookie=self.cookie, referer=self.referer)
 
     def html(self) -> str:
+        self._ensure_open()
         self._html = self.session.html(self.name)
         return self._html
 
     def current_page(self) -> dict[str, Any]:
+        self._ensure_open()
         return self.session.current_page(self.name)
 
     def click(self, selector: str) -> None:
+        self._ensure_open()
         self._activate()
         self.session.click(selector)
 
     def input(self, selector: str, text: str) -> None:
+        self._ensure_open()
         self._activate()
         self.session.input(selector, text)
 
     def execute(self, script: str) -> Any:
+        self._ensure_open()
         self._activate()
         return self.session.execute(script, tab_name=self.name)
 
     def turnstile(self, timeout: int = 25) -> dict[str, Any]:
+        self._ensure_open()
         self._activate()
         return self.session.turnstile(timeout=timeout)
 
     def screenshot(self, full_page: bool = False) -> dict[str, Any]:
+        self._ensure_open()
         self._activate()
         return self.session.screenshot(tab_name=self.name, full_page=full_page)
 
@@ -176,6 +213,7 @@ class BrowserTask:
         challenge_timeout: int = 120,
         challenge_retries: int = 1,
         timeout: float = 60.0,
+        operation_context: BrowserOperationContext | None = None,
     ) -> None:
         self.session = BrowserSession(
             site_key,
@@ -186,6 +224,7 @@ class BrowserTask:
             fp_profile_id=fp_profile_id,
             persist=persist,
             timeout=timeout,
+            operation_context=operation_context,
         )
         self.navigate_timeout = navigate_timeout
         self.challenge_timeout = challenge_timeout

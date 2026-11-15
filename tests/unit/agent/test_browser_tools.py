@@ -195,3 +195,19 @@ class TestWaitChallenge:
 
         html = wait_challenge_clear(cast(BrowserSession, None), "<html>正常页面</html>")
         assert "正常页面" in html
+
+
+class TestSessionLifecycle:
+    def test_browser_fetch_releases_session_context(self):
+        class _Tracked(_FakeSession):
+            exited = False
+
+            def __exit__(self, *exc):
+                self.exited = True
+                return False
+
+        fake = _Tracked()
+        with patch("app.agent.tools.handlers.browser._open_session", return_value=fake):
+            result = browser_fetch(_CTX, "https://example.com")
+        assert result.success
+        assert fake.exited is True

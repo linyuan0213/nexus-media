@@ -29,19 +29,42 @@ class AutoBackupPlugin:
 
     def __init__(self, ctx: PluginContext):
         self.ctx = ctx
+        self._sync_connectivity_target()
 
     def _get_config(self):
         """读取全部配置"""
         return self.ctx.get_config() or {}
 
+    def _sync_connectivity_target(self) -> None:
+        """远程备份配置变化时同步连通性测试目标."""
+        config = self._get_config()
+        storage_type = str(config.get("storage_type") or "local")
+        base_url = str(config.get("base_url") or "").strip()
+        enabled = bool(config.get("enabled"))
+        if enabled and storage_type in {"webdav", "samba"} and base_url.startswith(("http://", "https://")):
+            self.ctx.register_connectivity_targets(
+                [
+                    {
+                        "key": "backup.remote",
+                        "label": "远程备份存储",
+                        "url": base_url,
+                        "category": "backup",
+                    }
+                ]
+            )
+        else:
+            self.ctx.unregister_connectivity_targets()
+
     def on_enable(self):
         """启用插件"""
         self.ctx.info("自动备份插件已启用")
+        self._sync_connectivity_target()
         self._start_service()
 
     def on_disable(self):
         """禁用插件"""
         self.ctx.info("自动备份插件已禁用")
+        self.ctx.unregister_connectivity_targets()
         self._stop_service()
 
     def on_hook(self, event, data):

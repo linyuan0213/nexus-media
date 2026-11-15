@@ -9,7 +9,7 @@ from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.sites.http import site_rate_limit
 from app.sites.utils import is_logged_in
-from app.utils.browser_mode import build_browser_mode
+from app.utils.browser_mode import browser_site_key, build_browser_mode
 from app.utils.config_tools import get_proxies
 
 
@@ -33,7 +33,7 @@ def test_html_connection(engine, site, user_config, base_url=None):
     browser = (
         build_browser_mode(
             site_info=user_config,
-            site_key=site.id,
+            site_key=browser_site_key({"domain": base_url or site.domain}, site.id),
             proxy_url=proxy_url,
             render_html=bool(user_config.get("browser_render")),
         )

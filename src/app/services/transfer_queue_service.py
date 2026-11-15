@@ -8,6 +8,7 @@ from typing import Any
 import log
 from app.core.settings import settings
 from app.db.repositories.lifecycle_repository import LifecycleRepository
+from app.db.repositories.transfer_repository import TransferRepository
 from app.domain.entities.transfer_task import SourceType, TransferTask
 from app.domain.lifecycle import LifecycleStage, LifecycleStatus
 from app.domain.media_types import MediaKind, media_type_registry
@@ -27,10 +28,12 @@ class TransferQueueService:
         max_workers: int = 2,
         queue_name: str = "transfer",
         lifecycle: LifecycleProjector | None = None,
+        transfer_repo: TransferRepository | None = None,
     ):
         self._pipeline = pipeline
         self._client_factory = client_factory
         self._lifecycle = lifecycle
+        self._transfer_repo = transfer_repo
         self._max_workers = max(1, int(max_workers))
         self._queue_name = queue_name
         self._queue: TaskQueue | None = None
@@ -77,6 +80,9 @@ class TransferQueueService:
         self.start()
         if self._queue is None:
             return False
+        if self._is_already_transferred(payload):
+            log.info(f"[TransferQueue]跳过已有目标记录的重复转移: {payload.get('path')}")
+            return True
         if self._is_library_done(payload):
             log.info(f"[TransferQueue]跳过已入库的重复转移: {payload.get('downloader_id')}:{payload.get('task_id')}")
             return True
@@ -96,6 +102,17 @@ class TransferQueueService:
             return True
         except Exception as exc:  # noqa: BLE001
             log.warn(f"[TransferQueue]入队失败，回退直连: {exc}")
+            return False
+
+    def _is_already_transferred(self, payload: dict[str, Any]) -> bool:
+        path = str(payload.get("path") or "").strip()
+        if not path:
+            return False
+        try:
+            repo = self._transfer_repo or TransferRepository()
+            return repo.has_present_destination(path)
+        except Exception as exc:  # noqa: BLE001 - 查询失败时继续原有幂等流程
+            log.debug(f"[TransferQueue]持久转移记录查询失败: {exc}")
             return False
 
     def _is_library_done(self, payload: dict[str, Any]) -> bool:
@@ -121,6 +138,9 @@ class TransferQueueService:
 
     def _handle_task(self, task: Task) -> dict[str, Any]:
         payload = task.payload
+        if self._is_already_transferred(payload):
+            log.info(f"[TransferQueue]跳过已有目标记录的旧转移任务 {task.id} path={payload.get('path')}")
+            return {"success": True, "skipped": True}
         if self._is_library_done(payload):
             log.info(f"[TransferQueue]跳过已入库的旧转移任务 {task.id} identity={payload.get('identity_id')}")
             return {"success": True, "skipped": True}

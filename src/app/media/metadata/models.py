@@ -101,6 +101,7 @@ class ProviderDescriptor(BaseModel):
     default_subscription_policy: str = ""
     virtual: bool = False
     uniqueid_fallback: str = ""
+    connectivity_targets: tuple[Any, ...] = ()
 
 
 class ImageAsset(BaseModel):
@@ -299,6 +300,7 @@ class DiscoveryItem(BaseModel):
     backdrop: str | None = None
     rating: dict[str, float] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
+    countries: list[str] = Field(default_factory=list)
     anchor_ref: ProviderRef | None = None
     actions: list[str] = Field(default_factory=list)
     extra: dict[str, Any] = Field(default_factory=dict)

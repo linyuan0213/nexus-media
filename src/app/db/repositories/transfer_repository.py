@@ -48,6 +48,27 @@ class TransferRepository(BaseRepository):
             )
         return ret > 0
 
+    def has_present_destination(self, source_path: str) -> bool:
+        """源文件已有成功转移记录（目标未标记删除）时，跳过重复转移."""
+        path = os.path.normpath(str(source_path or ""))
+        if not path:
+            return False
+        with self.session() as db:
+            count = (
+                db.query(TRANSFERHISTORY)
+                .filter(
+                    TRANSFERHISTORY.SOURCE_PATH == path,
+                    TRANSFERHISTORY.DEST_FILENAME.isnot(None),
+                    TRANSFERHISTORY.DEST_FILENAME != "",
+                    or_(
+                        TRANSFERHISTORY.DEST_STATE.is_(None),
+                        TRANSFERHISTORY.DEST_STATE.notin_(("missing", "deleted")),
+                    ),
+                )
+                .count()
+            )
+        return count > 0
+
     def update_transfer_history_date(
         self, source_path: str, source_filename: str, dest_path: str, dest_filename: str, date: str
     ) -> None:
