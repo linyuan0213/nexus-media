@@ -7,12 +7,16 @@
 from __future__ import annotations
 
 import asyncio
+import time
+import uuid
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 import httpx2
 
 import log
+from app.domain.browser_operation import BROWSER_METRICS, BrowserOperationContext
+from app.infrastructure.chrome.diagnostics import capture_failure_screenshot
 from app.infrastructure.chrome.limits import browser_slot
 from app.utils.browser_mode import get_chrome_api_key
 from app.utils.session_key import to_session_id
@@ -35,6 +39,7 @@ class _BaseBrowserSession:
         api_key: str | None = None,
         persist: bool = True,
         cleanup_auto_tabs: bool = False,
+        operation_context: BrowserOperationContext | None = None,
     ):
         self.site_key = site_key
         self.server_url = server_url.rstrip("/")
@@ -55,6 +60,26 @@ class _BaseBrowserSession:
         self._sid = quote(self.session_id, safe="")
         # 未显式传入时读取全局配置（laboratory.chrome_admin_token）
         self._api_key = api_key if api_key is not None else get_chrome_api_key()
+        # 一次 BrowserSession 逻辑操作共享 trace/op id，便于串联 navigate/fetch/close。
+        self.operation_context = operation_context or BrowserOperationContext.create("browser", site_key)
+        self.operation_id = self.operation_context.trace_id or uuid.uuid4().hex[:12]
+        self._op_started_at = time.monotonic()
+
+    def _log_fields(self, **fields: Any) -> str:
+        context = getattr(self, "operation_context", None)
+        base = {
+            "trace": getattr(context, "trace_id", ""),
+            "op": getattr(context, "operation", "browser"),
+            "site": getattr(self, "site_key", ""),
+            "session": getattr(self, "session_id", ""),
+        }
+        base.update(fields)
+        return " ".join(f"{key}={value!r}" for key, value in base.items())
+
+    @staticmethod
+    def _safe_url(url: str) -> str:
+        parsed = urlparse(str(url or ""))
+        return f"{parsed.scheme}://{parsed.netloc}{parsed.path}" if parsed.scheme else str(url or "").split("?", 1)[0]
 
     def _auth_headers(self) -> dict[str, str]:
         """认证请求头：nexus-chrome 启用 AUTH_PASSWORD 时必须携带。"""
@@ -81,6 +106,7 @@ class BrowserSession(_BaseBrowserSession):
         self._client = httpx2.Client(timeout=self.timeout, follow_redirects=True, headers=self._auth_headers())
 
     def __enter__(self) -> BrowserSession:
+        log.info(f"[BrowserSession] event=enter {self._log_fields()}")
         # 浏览器并发闸门：占满时阻塞等待，避免 chrome 实例/标签页被挤爆
         self._slot = browser_slot(timeout=getattr(self, "slot_timeout", 30.0))
         self._slot.__enter__()
@@ -96,11 +122,17 @@ class BrowserSession(_BaseBrowserSession):
         return self
 
     def __exit__(self, *exc: Any) -> None:
+        started = time.monotonic()
         try:
             if getattr(self, "_cleanup_auto_tabs", False):
                 self.close_auto_tabs()
             self.close()
         finally:
+            log.info(
+                f"[BrowserSession] event=exit {self._log_fields()} "
+                f"duration_ms={int((time.monotonic() - getattr(self, '_op_started_at', time.monotonic())) * 1000)} "
+                f"close_ms={int((time.monotonic() - started) * 1000)}"
+            )
             slot = self._slot
             self._slot = None
             if slot is not None:
@@ -131,9 +163,40 @@ class BrowserSession(_BaseBrowserSession):
             "timeout": timeout,
             "local_storage": local_storage,
         }
-        response = self._client.post(self._session_url(f"/sessions/{self._sid}/navigate"), json=payload)
-        response.raise_for_status()
-        return response.json().get("data", {})
+        started = time.monotonic()
+        log.info(
+            f"[BrowserSession] event=navigate_start "
+            f"{self._log_fields(url=self._safe_url(url), tab=tab_name, timeout=timeout)}"
+        )
+        try:
+            response = self._client.post(self._session_url(f"/sessions/{self._sid}/navigate"), json=payload)
+            response.raise_for_status()
+            data = response.json().get("data", {})
+        except Exception as exc:
+            log.warn(
+                f"[BrowserSession] event=navigate_error "
+                f"{self._log_fields(url=self._safe_url(url), tab=tab_name, error=type(exc).__name__)} "
+                f"duration_ms={int((time.monotonic() - started) * 1000)}"
+            )
+            if getattr(self, "operation_context", None) is not None:
+                capture_failure_screenshot(self, self.operation_context, "navigate_error", tab_name=tab_name)
+            raise
+        challenge = data.get("challenge") or {}
+        challenge_type = str(challenge.get("type") or "").lower()
+        if challenge_type and challenge_type != "none":
+            BROWSER_METRICS.record_challenge(challenge_type, bool(challenge.get("solved")))
+        fields = self._log_fields(
+            url=self._safe_url(url),
+            tab=tab_name,
+            final_url=self._safe_url(str(data.get("url") or "")),
+            challenge_type=challenge.get("type"),
+            solved=challenge.get("solved"),
+            html_len=len(str(data.get("html") or "")),
+        )
+        log.info(
+            f"[BrowserSession] event=navigate_done {fields} duration_ms={int((time.monotonic() - started) * 1000)}"
+        )
+        return data
 
     def html(self, tab_name: str | None = None) -> str:
         return str(self.current_page(tab_name).get("html") or "")
@@ -165,23 +228,76 @@ class BrowserSession(_BaseBrowserSession):
 
     def turnstile(self, timeout: int = 25) -> dict[str, Any]:
         """显式求解页面内嵌 Turnstile（点击复选框并等待 token）."""
-        response = self._client.post(self._session_url(f"/sessions/{self._sid}/turnstile"), params={"timeout": timeout})
-        response.raise_for_status()
-        return (response.json() or {}).get("data") or {}
+        started = time.monotonic()
+        log.info(f"[BrowserSession] event=turnstile_start {self._log_fields(timeout=timeout)}")
+        try:
+            response = self._client.post(
+                self._session_url(f"/sessions/{self._sid}/turnstile"), params={"timeout": timeout}
+            )
+            response.raise_for_status()
+            data = (response.json() or {}).get("data") or {}
+        except Exception as exc:
+            log.warn(
+                f"[BrowserSession] event=turnstile_error "
+                f"{self._log_fields(timeout=timeout, error=type(exc).__name__)} "
+                f"duration_ms={int((time.monotonic() - started) * 1000)}"
+            )
+            if getattr(self, "operation_context", None) is not None:
+                capture_failure_screenshot(self, self.operation_context, "turnstile_error")
+            raise
+        log.info(
+            f"[BrowserSession] event=turnstile_done "
+            f"{self._log_fields(timeout=timeout, solved=data.get('solved'))} "
+            f"duration_ms={int((time.monotonic() - started) * 1000)}"
+        )
+        return data
 
     def execute(self, script: str, tab_name: str | None = None) -> Any:
         payload = {"script": script}
         if tab_name:
             payload["tab_name"] = tab_name
-        response = self._client.post(self._session_url(f"/sessions/{self._sid}/execute"), json=payload)
-        response.raise_for_status()
-        return response.json().get("data", {}).get("result")
+        last_exc: Exception | None = None
+        for attempt in range(2):
+            try:
+                response = self._client.post(self._session_url(f"/sessions/{self._sid}/execute"), json=payload)
+                response.raise_for_status()
+                return response.json().get("data", {}).get("result")
+            except Exception as exc:
+                last_exc = exc
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                if status == 500 and attempt == 0:
+                    log.warn(
+                        f"[BrowserSession] event=execute_retry "
+                        f"{self._log_fields(tab=tab_name, script_len=len(script), status=status)}"
+                    )
+                    time.sleep(0.5)
+                    continue
+                detail = str(getattr(getattr(exc, "response", None), "text", "") or "")
+                raise RuntimeError(f"浏览器脚本执行失败 status={status}: {detail[:500]}") from exc
+        raise RuntimeError("浏览器脚本执行失败") from last_exc
 
     def fetch(self, url: str, method: str = "GET", **kwargs: Any) -> dict[str, Any]:
         payload = {"url": url, "method": method, **kwargs}
-        response = self._client.post(self._session_url(f"/sessions/{self._sid}/fetch"), json=payload)
-        response.raise_for_status()
-        return response.json().get("data", {})
+        started = time.monotonic()
+        try:
+            response = self._client.post(self._session_url(f"/sessions/{self._sid}/fetch"), json=payload)
+            response.raise_for_status()
+            data = response.json().get("data", {})
+        except Exception as exc:
+            log.warn(
+                f"[BrowserSession] event=fetch_error "
+                f"{self._log_fields(url=self._safe_url(url), method=method, error=type(exc).__name__)} "
+                f"duration_ms={int((time.monotonic() - started) * 1000)}"
+            )
+            raise
+        fields = self._log_fields(
+            url=self._safe_url(url),
+            method=method,
+            status=data.get("status_code"),
+            body_len=len(str(data.get("body") or "")),
+        )
+        log.info(f"[BrowserSession] event=fetch_done {fields} duration_ms={int((time.monotonic() - started) * 1000)}")
+        return data
 
     def list_tabs(self) -> list[dict[str, Any]]:
         """列出会话内标签页（名称 + URL）."""

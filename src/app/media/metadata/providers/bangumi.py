@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Protocol
 
+from app.domain.connectivity import ConnectivityTarget
 from app.domain.media_types import MediaKind, ProviderMediaType, provider_media_type_of
 from app.media.external.bangumi import Bangumi
 
@@ -194,6 +195,16 @@ class BangumiProvider:
         source_tiers=frozenset({SourceTier.API}),
         allowed_hosts=frozenset(HOSTS),
         rate_limit_per_minute=RATE,
+        connectivity_targets=(
+            ConnectivityTarget(
+                "api.bgm.tv",
+                "Bangumi",
+                "https://api.bgm.tv/v0/subjects/1",
+                "metadata",
+                use_proxy=True,
+                order=21,
+            ),
+        ),
     )
 
     def __init__(self, client: _BangumiClientLike | None = None) -> None:

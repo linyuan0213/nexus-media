@@ -17,7 +17,7 @@ from app.infrastructure.chrome.challenge import (
 from app.sites.siteconf import SiteConf
 from app.sites.utils import is_logged_in
 from app.utils import ExceptionUtils
-from app.utils.browser_mode import get_chrome_server_url
+from app.utils.browser_mode import browser_site_key, get_chrome_server_url
 
 from .base import SigninResult, SiteSigninContext, SiteSigninHandler
 
@@ -61,7 +61,7 @@ class BrowserSigninHandler(SiteSigninHandler):
             lab = settings.get("laboratory") or {}
             fp_profile_id = str(lab.get("chrome_fp_profile_id") or "") or None
             with BrowserSession(
-                site_key=site,
+                site_key=browser_site_key(ctx.raw, ctx.site_url),
                 server_url=server_url,
                 fp_profile_id=fp_profile_id,
                 cleanup_auto_tabs=True,
@@ -91,7 +91,7 @@ class BrowserSigninHandler(SiteSigninHandler):
             lab = settings.get("laboratory") or {}
             fp_profile_id = str(lab.get("chrome_fp_profile_id") or "") or None
             with BrowserSession(
-                site_key=site,
+                site_key=browser_site_key(ctx.raw, ctx.site_url),
                 server_url=server_url,
                 fp_profile_id=fp_profile_id,
                 cleanup_auto_tabs=True,

@@ -167,6 +167,7 @@ class BuiltinIndexer(IndexerClientBase):
                 render=render,
                 chrome=site.get("chrome"),
                 browser_render=site.get("browser_render"),
+                browser_persistent=site.get("browser_persistent"),
                 note=site.get("note") or {},
                 api_profile=site.get("api_profile"),
                 api_credentials=site.get("api_credentials") or {},

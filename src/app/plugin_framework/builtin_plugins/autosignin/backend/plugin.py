@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime
 from typing import Any
 
@@ -25,6 +26,7 @@ class AutoSignInPlugin:
         self._rate_limit_engine = rate_limit_engine or RateLimitEngine()
         self._site_cache = site_cache
         self._agent_service = agent_service
+        self._run_lock = threading.Lock()
 
     def _get_config(self):
         return self.ctx.get_config() or {}
@@ -72,12 +74,18 @@ class AutoSignInPlugin:
         self.ctx.info("手动触发站点签到")
         if not self._get_config().get("enabled"):
             return
-        self._engine.run(
-            self._get_config(),
-            get_history=self._get_history,
-            update_history=self._update_history,
-            delete_history=self._delete_history,
-        )
+        if not self._run_lock.acquire(blocking=False):
+            self.ctx.info("签到任务正在执行，跳过重复触发")
+            return
+        try:
+            self._engine.run(
+                self._get_config(),
+                get_history=self._get_history,
+                update_history=self._update_history,
+                delete_history=self._delete_history,
+            )
+        finally:
+            self._run_lock.release()
 
     def _start_service(self):
         config = self._get_config()

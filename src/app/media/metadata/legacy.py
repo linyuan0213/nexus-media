@@ -44,4 +44,7 @@ def parse_legacy_ref(raw_id: str | None, media_type: ProviderMediaType) -> Provi
     if parsed is None:
         return None
     provider, external_id = parsed
+    # 无前缀的普通文本不是 TMDB ID；插件 descriptor 的 {id} 格式可能误匹配任意文本。
+    if provider == "tmdb" and not value.isdigit() and ":" not in value:
+        return None
     return ProviderRef(provider=provider, external_id=external_id, media_type=media_type)

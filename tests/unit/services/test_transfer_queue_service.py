@@ -129,3 +129,14 @@ def _wait_until(predicate, timeout: float = 3.0) -> None:
             return
         time.sleep(0.01)
     raise AssertionError("condition not met in time")
+
+
+def test_submit_skips_when_source_has_present_destination():
+    queue = MagicMock()
+    repo = MagicMock()
+    repo.has_present_destination.return_value = True
+    service = TransferQueueService(_FakePipeline(), _FakeFactory(_FakeClient()), transfer_repo=repo)
+    service._queue = queue
+
+    assert service.submit({"downloader_id": "4", "task_id": "task-old", "path": "/downloads/Demo"})
+    queue.enqueue.assert_not_called()

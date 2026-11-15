@@ -357,6 +357,7 @@ class DownloadRepository(BaseRepository):
         num: int = 30,
         page: int = 1,
         user=None,
+        keyword: str | None = None,
     ) -> list[DOWNLOADHISTORY]:
         """
         查询下载历史
@@ -413,14 +414,21 @@ class DownloadRepository(BaseRepository):
                 ),
                 else_=func.concat("download:", DOWNLOADHISTORY.ID),
             )
-            sub_query = (
-                db.query(
-                    group_key.label("group_key"),
-                    func.max(DOWNLOADHISTORY.DATE).label("max_date"),
+            keyword_filter = None
+            if keyword and str(keyword).strip():
+                pattern = f"%{str(keyword).strip()}%"
+                keyword_filter = or_(
+                    DOWNLOADHISTORY.TITLE.ilike(pattern),
+                    DOWNLOADHISTORY.SITE.ilike(pattern),
+                    DOWNLOADHISTORY.SE.ilike(pattern),
                 )
-                .group_by(group_key)
-                .subquery()
+            sub_query_obj = db.query(
+                group_key.label("group_key"),
+                func.max(DOWNLOADHISTORY.DATE).label("max_date"),
             )
+            if keyword_filter is not None:
+                sub_query_obj = sub_query_obj.filter(keyword_filter)
+            sub_query = sub_query_obj.group_by(group_key).subquery()
 
             owner_filter = None
             if user is not None and not user.is_superadmin:
@@ -430,6 +438,8 @@ class DownloadRepository(BaseRepository):
                 base = db.query(DOWNLOADHISTORY).filter(date < DOWNLOADHISTORY.DATE)
                 if owner_filter is not None:
                     base = base.filter(owner_filter)
+                if keyword_filter is not None:
+                    base = base.filter(keyword_filter)
                 return (
                     base.join(
                         sub_query,
@@ -446,6 +456,8 @@ class DownloadRepository(BaseRepository):
                 base = db.query(DOWNLOADHISTORY)
                 if owner_filter is not None:
                     base = base.filter(owner_filter)
+                if keyword_filter is not None:
+                    base = base.filter(keyword_filter)
                 return (
                     base.join(
                         sub_query,

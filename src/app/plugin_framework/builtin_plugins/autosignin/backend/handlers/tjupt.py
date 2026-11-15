@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import uuid
 from io import BytesIO
 from typing import cast
 
@@ -19,7 +20,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninHandler,
 )
 from app.utils import StringUtils
-from app.utils.browser_mode import get_chrome_server_url, get_default_fp_profile_id
+from app.utils.browser_mode import browser_site_key, get_chrome_server_url, get_default_fp_profile_id
 from app.utils.chinese_utils import to_simplified
 from app.utils.json_utils import JsonUtils
 from app.utils.path_utils import get_temp_path
@@ -164,13 +165,14 @@ class Tjupt(SiteSigninHandler):
             self._plugin_ctx.info("Chrome 服务器未配置或未启用，跳过 Google 识图")
             return SigninResult.fail(site, "未配置 Chrome 服务器")
         with BrowserSession(
-            site_key="tjupt",
+            site_key=browser_site_key(ctx.raw, ctx.site_url),
             server_url=server_url,
             fp_profile_id=get_default_fp_profile_id(),
             cleanup_auto_tabs=True,
         ) as session:
-            session.navigate(image_search_url)
-            html_text = session.html()
+            tab_name = f"auto_tjupt_image_{uuid.uuid4().hex[:8]}"
+            session.navigate(image_search_url, tab_name=tab_name)
+            html_text = session.html(tab_name)
         search_results = BeautifulSoup(html_text, "lxml").find_all("div", class_="UAiK1e")
         if not search_results:
             self._plugin_ctx.info("Google识图失败，未获取到识图结果")

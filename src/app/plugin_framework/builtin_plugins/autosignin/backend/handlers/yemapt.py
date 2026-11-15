@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import time
+import uuid
 
 from app.infrastructure.chrome import BrowserSession
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import (
@@ -16,7 +17,7 @@ from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base impor
     SiteSigninContext,
     SiteSigninHandler,
 )
-from app.utils.browser_mode import get_chrome_server_url, get_default_fp_profile_id
+from app.utils.browser_mode import browser_site_key, get_chrome_server_url, get_default_fp_profile_id
 
 _CHECKIN_PATH = "/#/user/growth?tab=checkIn"
 _CHECKIN_DEFAULT_BASE = "https://www.yemapt.org"
@@ -51,15 +52,16 @@ class YemaPT(SiteSigninHandler):
         self._plugin_ctx.info(f"[{site}] 开始浏览器签到（ALTCHA）: {checkin_url}")
         try:
             with BrowserSession(
-                site_key=site,
+                site_key=browser_site_key(ctx.raw, ctx.site_url),
                 server_url=server_url,
                 fp_profile_id=get_default_fp_profile_id(),
                 cleanup_auto_tabs=True,
             ) as session:
                 # 1. 打开签到页（SPA hash 路由），等待渲染
-                session.navigate(checkin_url, cookie=ctx.cookie)
+                tab_name = f"auto_yemapt_{uuid.uuid4().hex[:8]}"
+                session.navigate(checkin_url, cookie=ctx.cookie, tab_name=tab_name)
                 time.sleep(_PAGE_SETTLE)
-                html_text = session.html() or ""
+                html_text = session.html(tab_name) or ""
 
                 if self._already_signed(html_text):
                     return SigninResult.already(site)
@@ -80,7 +82,7 @@ class YemaPT(SiteSigninHandler):
                 time.sleep(_PAGE_SETTLE)
 
                 # 5. 判定结果
-                html_text = session.html() or ""
+                html_text = session.html(tab_name) or ""
                 if self._already_signed(html_text):
                     return SigninResult.success(site)
                 return SigninResult.fail(site, "点击签到后未生效")

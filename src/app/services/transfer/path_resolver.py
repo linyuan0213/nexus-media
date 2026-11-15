@@ -24,6 +24,17 @@ from app.storage.config_models import LocalStorageConfig
 from app.utils import NumberUtils, PathUtils, StringUtils, SystemUtils
 
 
+def dedupe_path_segments(value: str) -> str:
+    """折叠相邻重复目录，例如 FC2/FC2 只保留一层."""
+    parts = str(value or "").split("/")
+    result: list[str] = []
+    for part in parts:
+        if result and part and result[-1] == part:
+            continue
+        result.append(part)
+    return "/".join(result)
+
+
 def naming_profile_provides_category(media: Any, snapshot: Any = None) -> bool:
     """命名 profile 若声明自带分类目录，核心不再叠加通用分类目录."""
     profile = str(getattr(snapshot, "content_profile", None) or getattr(media, "content_profile", None) or "").strip()
@@ -498,7 +509,7 @@ class TransferPathResolver:
         format_dict = self.get_format_dict(media_info, media_service, snapshot)
         profile_format = self._profile_movie_format(media_info)
         if profile_format:
-            rendered = render(profile_format, format_dict).strip("/")
+            rendered = dedupe_path_segments(render(profile_format, format_dict).strip("/"))
             dir_name, file_name = os.path.split(rendered)
             source = str(getattr(media_info, "org_string", "") or "")
             part = re.search(

@@ -66,14 +66,16 @@ def canonical_metadata_ref(media: Any) -> str:
     """返回新的统一引用；不再把数字/DB:/BG: 当作运行时主键。"""
     if media is None:
         return ""
-    explicit = str(getattr(media, "metadata_ref", "") or "").strip()
-    if explicit:
-        return explicit
-    identity_id = str(getattr(media, "identity_id", "") or "").strip()
-    if identity_id:
-        return f"id:{identity_id}"
-    provider = str(getattr(media, "anchor_provider", "") or "").strip().lower()
-    external = str(getattr(media, "anchor_external_id", "") or "").strip()
+    explicit = getattr(media, "metadata_ref", "")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()
+    identity_id = getattr(media, "identity_id", "")
+    if isinstance(identity_id, str) and identity_id.strip():
+        return f"id:{identity_id.strip()}"
+    provider = getattr(media, "anchor_provider", "")
+    provider = provider.strip().lower() if isinstance(provider, str) else ""
+    external = getattr(media, "anchor_external_id", "")
+    external = external.strip() if isinstance(external, str) else ""
     if provider and external:
         return f"{provider}:{external}"
     if provider == "tmdb" or not provider:

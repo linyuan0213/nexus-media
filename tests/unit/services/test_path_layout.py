@@ -1,5 +1,7 @@
 """媒体库平铺/分类两种目录结构测试."""
 
+from typing import Any
+
 import pytest
 
 from app.domain.media_types import ProviderMediaType
@@ -158,3 +160,34 @@ def test_naming_profile_with_category_skips_generic_category(monkeypatch):
     media.content_profile = "custom"
 
     assert resolver.get_dest_path_by_info("/media/custom", media, None) == "/media/custom/DEMO-138 (2024)"
+
+
+def test_adjacent_duplicate_directories_are_collapsed():
+    from app.services.transfer.path_resolver import dedupe_path_segments
+
+    assert dedupe_path_segments("FC2/FC2/FC2-PPV-1") == "FC2/FC2-PPV-1"
+    assert dedupe_path_segments("A/B/B/C") == "A/B/C"
+
+
+def test_browser_session_key_ignores_render_mode():
+    from app.domain.browser_mode import BrowserModeConfig
+    from app.utils.browser_mode import make_session_key
+
+    base: dict[str, Any] = dict(
+        enabled=True,
+        server_url="http://chrome",
+        site_key="https://example.test",
+        fingerprint_profile="stealth",
+        render_html=False,
+    )
+    a = BrowserModeConfig(**base)
+    b = BrowserModeConfig(**{**base, "render_html": True})
+    assert make_session_key("https://example.test", a) == make_session_key("https://example.test", b)
+
+
+def test_browser_site_key_is_stable_across_site_info_shapes():
+    from app.utils.browser_mode import browser_site_key
+
+    assert browser_site_key({"signurl": "https://1337x.to"}) == "https://1337x.to"
+    assert browser_site_key({"domain": "https://1337x.to/"}) == "https://1337x.to"
+    assert browser_site_key({}, "1337x") == "1337x"

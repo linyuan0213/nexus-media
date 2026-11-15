@@ -343,6 +343,14 @@ def get_message_client_profile_templates(
     return success(data={"profiles": message_template_registry.list_profiles()})
 
 
+@router.get("/net_test/targets", response_model=CommonResponse, summary="网络连通性测试目标")
+def net_test_targets(
+    current_user: UserContext = Depends(require_any_permission("setting:view", "setting:update")),
+    svc=Depends(get_net_test_service),
+):
+    return success(data=svc.targets())
+
+
 @router.post("/net_test", response_model=CommonResponse, summary="网络连通性测试")
 def net_test(
     req: NetTestRequest,

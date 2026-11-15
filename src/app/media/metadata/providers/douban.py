@@ -11,6 +11,7 @@ from typing import Any, Protocol
 
 import log
 from app.core.settings import settings
+from app.domain.connectivity import ConnectivityTarget
 from app.domain.media_types import MediaKind, ProviderMediaType, provider_media_type_of
 from app.infrastructure.external.doubanapi.apiv2 import DoubanApi
 from app.infrastructure.external.doubanapi.episode_queue import episode_queue
@@ -59,7 +60,7 @@ def douban_detail_to_record(
     seasons: Sequence[SeasonRecord] | None = None,
     episodes: Sequence[EpisodeRecord] | None = None,
 ) -> ProviderRecord:
-    """把豆瓣 frodo detail 字典映射为规范记录."""
+    """把豆瓣 rexxar detail 字典映射为规范记录."""
     genres = list(info.get("genres") or [])
     provider_type, content_profile = classify_provider_media_type(
         provider_media_type_of(media_type),
@@ -210,8 +211,12 @@ HOSTS = {
 RATE = 20
 
 
+def _probe_douban() -> None:
+    DoubanApi().movie_showing(count=1)
+
+
 class DoubanProvider:
-    """豆瓣 provider adapter（frodo API；HTML 分集能力后续接入）."""
+    """豆瓣 provider adapter（rexxar API；HTML 分集能力后续接入）."""
 
     descriptor = ProviderDescriptor(
         provider_key="douban",
@@ -236,6 +241,18 @@ class DoubanProvider:
         media_kinds=frozenset({MediaKind.MOVIE, MediaKind.EPISODIC}),
         rate_limit_per_minute=RATE,
         source_tiers=frozenset({SourceTier.API, SourceTier.HTML}),
+        connectivity_targets=(
+            ConnectivityTarget(
+                "m.douban.com",
+                "m.douban.com",
+                "https://m.douban.com/rexxar/api/v2/subject_collection/movie_showing/items?start=0&count=1",
+                "metadata",
+                False,
+                "douban",
+                probe_fn=_probe_douban,
+                order=20,
+            ),
+        ),
     )
 
     def __init__(

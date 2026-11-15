@@ -5,11 +5,14 @@ import contextlib
 import hashlib
 import threading
 from collections.abc import Callable
-from typing import Any
+from dataclasses import replace
+from typing import Any, cast
 
 import httpx2
 
 import log
+from app.infrastructure.http.backends.base import is_tls_transport_error
+from app.infrastructure.http.backends.curl_cffi_backend import AsyncCurlCffiBackend
 from app.infrastructure.http.browser_transport import AsyncChromeTransport
 from app.infrastructure.http.cache import HttpCacheConfig
 from app.infrastructure.http.config import HttpClientConfig
@@ -36,7 +39,7 @@ class _AsyncClientPool:
 
     def __init__(self):
         self._lock = threading.RLock()
-        self._clients: dict[tuple, tuple[httpx2.AsyncClient, int]] = {}
+        self._clients: dict[tuple, tuple[Any, int]] = {}
 
     def _make_key(self, config: HttpClientConfig) -> tuple:
         headers = tuple(sorted((config.default_headers or {}).items()))
@@ -69,9 +72,12 @@ class _AsyncClientPool:
             config.max_connections,
             config.max_keepalive,
             config.enable_http2,
+            config.backend,
+            config.impersonate or "",
+            config.max_buffered_size,
         ) + browser_key
 
-    def acquire(self, config: HttpClientConfig, builder: Callable[[], httpx2.AsyncClient]) -> httpx2.AsyncClient:
+    def acquire(self, config: HttpClientConfig, builder: Callable[[], Any]) -> Any:
         key = self._make_key(config)
         with self._lock:
             client, count = self._clients.get(key, (None, 0))
@@ -133,9 +139,23 @@ class AsyncHttpClient:
         self._cache = cache
         self._middlewares = middlewares or []
         self._client = _pool.acquire(self._config, self._build_client)
+        self._curl_config: HttpClientConfig | None = None
+        self._curl_client: AsyncCurlCffiBackend | None = None
         self._closed = False
 
-    def _build_client(self) -> httpx2.AsyncClient:
+    def _ensure_curl_client(self) -> AsyncCurlCffiBackend:
+        if self._curl_client is None:
+            curl_config = replace(self._config, backend="curl_cffi")
+            self._curl_config = curl_config
+            self._curl_client = cast(
+                AsyncCurlCffiBackend,
+                _pool.acquire(curl_config, lambda: AsyncCurlCffiBackend(curl_config)),
+            )
+        return cast(AsyncCurlCffiBackend, self._curl_client)
+
+    def _build_client(self) -> Any:
+        if self._config.backend == "curl_cffi" and not (self._config.browser and self._config.browser.enabled):
+            return AsyncCurlCffiBackend(self._config)
         limits = httpx2.Limits(
             max_connections=self._config.max_connections,
             max_keepalive_connections=self._config.max_keepalive,
@@ -231,14 +251,31 @@ class AsyncHttpClient:
             for mw in self._middlewares:
                 tmp_request = mw.process_request(tmp_request)
 
+        result: httpx2.Response | None = None
         try:
             result = await self._retry(_do_request)
-        except httpx2.HTTPError as e:
-            err = HttpClientError.from_httpx(e)
-            if isinstance(err, HttpSSLError):
-                log.warn(f"[AsyncHttpClient]SSL/TLS 请求失败: {method} {redact_url(str(url))} - {redact_text(err)}")
-                raise err
-            raise err from e
+        except Exception as e:
+            if self._config.backend == "auto" and self._config.backend_retry_on_tls and is_tls_transport_error(e):
+                log.warn(
+                    f"[AsyncHttpClient]TLS 指纹连接失败，切换 curl_cffi: "
+                    f"{method} {redact_url(str(url))} - {redact_text(e)}"
+                )
+                try:
+                    curl = self._ensure_curl_client()
+                    result = await self._retry(lambda: curl.request(method, url, **kwargs))
+                except Exception as curl_exc:
+                    e = curl_exc
+            if result is None:
+                if isinstance(e, httpx2.HTTPError):
+                    err = HttpClientError.from_httpx(e)
+                    if isinstance(err, HttpSSLError):
+                        log.warn(
+                            f"[AsyncHttpClient]SSL/TLS 请求失败: {method} {redact_url(str(url))} - {redact_text(err)}"
+                        )
+                    raise err from e
+                raise HttpClientError(str(e)) from e
+        if result is None:
+            raise HttpClientError("HTTP 请求未产生响应")
 
         for mw in self._middlewares:
             result = mw.process_response(result)
@@ -279,6 +316,10 @@ class AsyncHttpClient:
             return
         self._closed = True
         _pool.release(self._config)
+        if self._curl_config is not None:
+            _pool.release(self._curl_config)
+            self._curl_config = None
+            self._curl_client = None
 
     async def close(self) -> None:
         self._release()

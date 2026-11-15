@@ -77,6 +77,14 @@ database:
   # sync_workers: 4
   # sync_workers_max: 8
 # 【任务队列】：Redis Streams 持久队列；Redis 明确禁用时退回内存队列
+nettest:
+  # 额外外部依赖连通性测试目标；provider/插件也会动态注册
+  extra_targets: []
+    # - key: api.example.com
+    #   label: api.example.com
+    #   url: https://api.example.com/health
+    #   use_proxy: false
+
 queue:
   # auto：Redis 启用则用 Redis，明确禁用则用内存；redis：强制 Redis；memory：强制内存
   backend: auto

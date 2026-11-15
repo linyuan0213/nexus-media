@@ -1,6 +1,7 @@
 """HTTP 客户端配置."""
 
 from dataclasses import dataclass, field
+from typing import Literal
 
 import httpx2
 
@@ -26,6 +27,13 @@ class HttpClientConfig:
 
     # 代理
     proxy_url: str | None = None
+
+    # 传输后端：auto 先 httpx，TLS 指纹失败后切 curl_cffi；curl_cffi 直接使用浏览器指纹
+    backend: Literal["auto", "httpx", "curl_cffi"] = "auto"
+    impersonate: str | None = None
+    backend_retry_on_tls: bool = True
+    # curl_cffi 缓冲上限；下载/流式接口应保持 httpx
+    max_buffered_size: int = 10 * 1024 * 1024
 
     # 默认请求头
     default_headers: dict[str, str] | None = None
