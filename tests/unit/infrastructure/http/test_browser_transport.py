@@ -38,3 +38,11 @@ class TestHttpClientConfig:
     def test_timeout_default(self):
         cfg = HttpClientConfig()
         assert cfg.timeout == 120.0
+
+
+def test_to_session_id_is_collision_resistant():
+    from app.utils.session_key import to_session_id
+
+    assert to_session_id("https://a.example") != to_session_id("https://b.example")
+    assert to_session_id("站点甲") != to_session_id("站点乙")
+    assert to_session_id("plain_safe_id") == "plain_safe_id"

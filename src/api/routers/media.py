@@ -234,6 +234,7 @@ class GetCategoryConfigRequest(BaseModel):
 class GetDownloadedRequest(BaseModel):
     page: int | None = None
     page_size: int | None = Field(default=30, ge=1, le=200)
+    keyword: str | None = None
     user_id: int | None = None  # superadmin 按归属用户过滤
 
 
@@ -741,7 +742,12 @@ def get_downloaded(
     scoped_user = current_user
     if req.user_id and current_user.is_superadmin:
         scoped_user = current_user.model_copy(update={"user_id": req.user_id, "role_codes": []})
-    items = svc.get_download_history(page=req.page or 1, num=req.page_size or 30, user=scoped_user)
+    items = svc.get_download_history(
+        page=req.page or 1,
+        num=req.page_size or 30,
+        keyword=req.keyword,
+        user=scoped_user,
+    )
     if items:
         return success(
             data=[

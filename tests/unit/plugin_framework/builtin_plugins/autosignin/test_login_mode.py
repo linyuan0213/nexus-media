@@ -277,3 +277,17 @@ class TestTurnstileFailureReason:
     def test_generic_pending(self):
         reason = BrowserSigninHandler._turnstile_failure_reason("<div class='cf-turnstile'></div>")
         assert "未通过" in reason
+
+
+def test_signin_skips_when_distributed_lock_held():
+    engine = TestSignerLoginDispatch._engine()
+    lock = MagicMock()
+    lock.acquire.return_value = False
+    lock.last_error = None
+    manager = MagicMock()
+    manager.create_lock.return_value = lock
+    with patch(
+        "app.plugin_framework.builtin_plugins.autosignin.backend.signer.get_lock_manager",
+        return_value=manager,
+    ):
+        assert engine._signin_site({"id": "1", "name": "测试站"}) == ""

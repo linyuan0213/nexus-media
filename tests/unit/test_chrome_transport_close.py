@@ -40,11 +40,12 @@ def _transport(monkeypatch, persistent: bool) -> tuple[ChromeTransport, _FakeSer
 
 
 class TestChromeTransportClose:
-    def test_close_deletes_non_persistent_session(self, monkeypatch):
+    def test_close_never_deletes_shared_session(self, monkeypatch):
+        """Transport 只释放自己的客户端；共享 session 由服务端 TTL 回收。"""
         transport, fake = _transport(monkeypatch, persistent=False)
         assert ChromeTransport.close.__qualname__.startswith("_BaseChromeTransport")
         transport.close()
-        assert fake.deleted == ["site-x"]
+        assert fake.deleted == []
         assert fake.closed is True
 
     def test_close_keeps_persistent_session(self, monkeypatch):

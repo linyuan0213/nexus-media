@@ -107,8 +107,12 @@ def _open_session(site_key: str | None) -> BrowserSession:
 
 
 def _close_session(session: BrowserSession) -> None:
-    """关闭会话但不删除：保留已通过人机验证/登录的 Cookie，供后续访问复用"""
-    session.close(delete_session=False)
+    """释放会话资源并归还并发槽。
+
+    ``_open_session`` 手动调用了 ``__enter__``，这里必须走 ``__exit__``；
+    只调用 ``close()`` 会泄漏全局浏览器并发名额。
+    """
+    session.__exit__(None, None, None)
 
 
 def browser_fetch(ctx: ToolContext, url: str, site_key: str | None = None, timeout: int = 30) -> ToolResult:

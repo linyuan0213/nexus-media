@@ -21,7 +21,7 @@ from app.sites.connectivity.site_favicon_service import SiteFaviconService
 from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.utils import ExceptionUtils, JsonUtils, StringUtils
-from app.utils.browser_mode import build_browser_mode
+from app.utils.browser_mode import browser_site_key, build_browser_mode
 from app.utils.config_tools import get_proxies
 
 lock = Lock()
@@ -230,8 +230,13 @@ class SiteUserInfo:
             if rate_config:
                 rl_kwargs = {"rate_limit_key": f"site:{site_id}", "rate_limit_rate": rate_config[0]}
         browser = build_browser_mode(
-            site_info={"chrome": emulate, "ua": ua, "browser_render": False},
-            site_key=site_name or url,
+            site_info={
+                "chrome": emulate,
+                "ua": ua,
+                "browser_render": False,
+                "browser_persistent": browser_persistent,
+            },
+            site_key=browser_site_key({}, url or site_name),
             proxy_url=proxy_url,
             render_html=False,
         )

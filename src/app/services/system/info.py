@@ -7,10 +7,10 @@ import psutil
 
 from app.core.exceptions import DomainError, RepositoryError, ServiceError
 from app.core.settings import settings
+from app.domain.connectivity import ConnectivityTarget
 from app.domain.engine.brush_rule_engine import BrushRuleEngine
 from app.domain.enums import ProgressKey
 from app.domain.media_types import normalize_media_type_input
-from app.infrastructure.external.doubanapi import DoubanApi
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.progress import ProgressTracker
@@ -26,6 +26,7 @@ from app.schemas.system import (
 )
 from app.services.rbac.service import RBACService
 from app.services.search_subject import SearchSubject
+from app.services.system.connectivity_registry import list_targets, resolve_target
 from app.services.web import WebUtils
 from app.utils.config_tools import get_proxies
 from version import APP_VERSION
@@ -126,50 +127,37 @@ class NetTestService:
     网络连通性测试业务服务
     """
 
-    def test(self, target: str) -> NetTestResultDTO:
-        """测试指定目标的网络连通性.
+    @staticmethod
+    def targets() -> list[dict]:
+        """返回当前内置、配置和插件注册的测试目标."""
+        return [target.as_dict() for target in list_targets()]
 
-        语义：仅 HTTP 2xx 视为连通成功；401/404/403 等非 2xx 及连接层错误
-        （超时 / SSL / 拒绝 / DNS）均判为失败。
-        需要 api_key 的目标（TMDB / LLM）会带上已配置的 key 做真实请求。
-        """
+    def test(self, target: str) -> NetTestResultDTO:
+        """测试指定目标的网络连通性."""
+        target_info = resolve_target(target)
         proxies = get_proxies()
         proxy_url = proxies.get("http") if proxies else None
         start_time = datetime.datetime.now()
+        success = False
+        if target_info is None:
+            # 兼容手动输入域名/URL；注册目标仍优先使用各自的 provider probe。
+            text = str(target or "").strip()
+            if not text or any(ch.isspace() for ch in text):
+                return NetTestResultDTO(success=False, time_ms=0)
+            url = text if "://" in text else f"https://{text}"
+            if not url.startswith(("http://", "https://")):
+                return NetTestResultDTO(success=False, time_ms=0)
+            target_info = ConnectivityTarget(key=text, label=text, url=url)
         try:
-            if target == "frodo.douban.com":
-                DoubanApi().movie_showing(count=1)
-            elif target == "api.themoviedb.org":
-                # TMDB API：用已配置的 key 做真实请求
-                tmdb_host = settings.get("app").get("tmdb_domain") or "api.themoviedb.org"
-                tmdb_key = settings.get("app").get("rmt_tmdbkey") or ""
-                HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=5)).get(
-                    f"https://{tmdb_host}/3/configuration",
-                    params={"api_key": tmdb_key},
-                )
-            elif target == "api.openai.com":
-                # LLM API：用已配置的 provider（api_url + api_key）做真实请求
-                prov = self._get_llm_provider()
-                base = (prov.get("api_url") or "https://api.openai.com").rstrip("/")
-                headers = {}
-                if prov.get("api_key"):
-                    headers["Authorization"] = f"Bearer {prov['api_key']}"
-                HttpClient(config=HttpClientConfig(timeout=5)).get(f"{base}/models", headers=headers)
+            if target_info.probe_fn is not None:
+                target_info.probe_fn()
             else:
-                if target == "image.tmdb.org":
-                    target = target + "/t/p/w500/wwemzKWzjKYJFfCeiB57q3r4Bcm.png"
-                if target == "qyapi.weixin.qq.com":
-                    target = target + "/cgi-bin/message/send"
-                target = "https://" + target
-                if (
-                    target.find("themoviedb") != -1
-                    or target.find("telegram") != -1
-                    or target.find("fanart") != -1
-                    or target.find("tmdb") != -1
-                ):
-                    HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=5)).get(target)
-                else:
-                    HttpClient(config=HttpClientConfig(timeout=5)).get(target)
+                HttpClient(
+                    config=HttpClientConfig(
+                        proxy_url=proxy_url if target_info.use_proxy else None,
+                        timeout=5,
+                    )
+                ).get(target_info.url)
             success = True
         except Exception:
             success = False

@@ -14,14 +14,10 @@ from app.media.metadata import (
     ProviderDescriptor,
     ProviderRef,
 )
-from app.media.metadata.providers.discovery import (
-    BangumiDiscovery,
-    DoubanDiscovery,
-    TmdbDiscovery,
-    _douban_discovery_item,
-    _tmdb_discovery_item,
-    season_range,
-)
+from app.media.metadata.providers.bangumi_discovery import BangumiDiscovery
+from app.media.metadata.providers.discovery import season_range
+from app.media.metadata.providers.douban_discovery import DoubanDiscovery, _douban_discovery_item
+from app.media.metadata.providers.tmdb_discovery import TmdbDiscovery, _tmdb_discovery_item
 from app.media.metadata.registry import MetadataRegistry
 from app.services.discovery_service import DiscoveryService
 
@@ -280,3 +276,103 @@ def test_discovery_service_caches_items():
     service.clear_cache()
     service.items("fake-cache", "hot")
     assert provider.calls == 2
+
+
+def test_discovery_item_country_facets_and_filter():
+    from app.media.metadata.providers.discovery import (
+        _country_facets,
+        _country_filter,
+    )
+
+    item = DiscoveryItem(
+        provider="bangumi",
+        ref=ProviderRef(provider="bangumi", external_id="1"),
+        title="日本动画",
+        countries=["日本"],
+    )
+    assert _country_facets([item])[0].value == "日本"
+    assert len(_country_filter([item], "日本")) == 1
+    assert _country_filter([item], "美国") == []
+
+
+def test_discovery_feeds_include_country_facet():
+    from app.media.metadata.providers.bangumi_discovery import BangumiDiscovery
+    from app.media.metadata.providers.douban_discovery import DoubanDiscovery
+    from app.media.metadata.providers.tmdb_discovery import TmdbDiscovery
+
+    douban = DoubanDiscovery(api=_FakeDoubanApi())
+    tmdb = TmdbDiscovery(None)
+    bangumi = BangumiDiscovery(None)
+    assert all("country" in feed.facets for feed in douban.feeds(None))
+    assert all("country" in feed.facets for feed in tmdb.feeds(None))
+    assert all("country" in feed.facets for feed in bangumi.feeds(None))
+
+
+class _FakeBangumiClient:
+    def calendar(self):
+        return [
+            {
+                "weekday": {"id": 1},
+                "items": [
+                    {
+                        "id": 577237,
+                        "name": "仙逆剧场版 弑仙之战",
+                        "name_cn": "仙逆剧场版 弑仙之战",
+                        "air_date": "2026-10-01",
+                        "images": {"large": "https://img/cover.webp"},
+                        "rating": {"score": 8.0},
+                    }
+                ],
+            }
+        ]
+
+    def detail(self, external_id):
+        return {"tags": [{"name": "国产"}, {"name": "国漫"}]}
+
+
+def test_bangumi_uses_subject_tags_for_country():
+    provider = BangumiDiscovery(client=_FakeBangumiClient())
+    page = provider.items("calendar", 1, {}, None)
+    assert page.items[0].countries == ["中国"]
+    assert page.facets["country"][0].value == "中国"
+
+
+def test_bangumi_prefers_majority_japan_tags_over_single_bad_china_tag():
+    class _MouseClient(_FakeBangumiClient):
+        def detail(self, external_id):
+            return {
+                "meta_tags": ["日本", "漫画改"],
+                "tags": [
+                    {"name": "日本", "count": 22},
+                    {"name": "国产", "count": 1},
+                ],
+            }
+
+    provider = BangumiDiscovery(client=_MouseClient())
+    page = provider.items("calendar", 1, {}, None)
+    assert page.items[0].countries == ["日本"]
+
+
+def test_country_filter_keeps_all_country_options():
+    class _TwoCountryClient:
+        def calendar(self):
+            return [
+                {
+                    "weekday": {"id": 1},
+                    "items": [
+                        {"id": 1, "name": "日本动画", "air_date": "2026-10-01", "images": {}, "rating": {}},
+                        {"id": 2, "name": "国产动画", "air_date": "2026-10-02", "images": {}, "rating": {}},
+                    ],
+                }
+            ]
+
+        def detail(self, external_id):
+            if str(external_id) == "2":
+                return {"tags": [{"name": "国产", "count": 10}]}
+            return {"tags": [{"name": "日本", "count": 10}]}
+
+    provider = BangumiDiscovery(client=_TwoCountryClient())
+    page = provider.items("calendar", 1, {"country": "日本"}, None)
+    assert [item.title for item in page.items] == ["日本动画"]
+    country_values = {facet.value for facet in page.facets["country"]}
+    assert {"日本", "中国"} <= country_values

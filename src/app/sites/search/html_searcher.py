@@ -17,9 +17,11 @@ from urllib.parse import quote
 from lxml import etree
 
 import log
+from app.domain.browser_operation import BROWSER_METRICS, BrowserOperationContext
 from app.domain.media_type_utils import ProviderMediaTypeMapper
 from app.domain.media_types import ProviderMediaType
 from app.infrastructure.chrome.challenge import has_pending_turnstile, is_challenge
+from app.infrastructure.chrome.diagnostics import capture_failure_screenshot
 from app.infrastructure.chrome.site_lock import site_serial
 from app.infrastructure.chrome.task import browser_task
 from app.infrastructure.http import CookieAuth, HttpClient, HttpClientConfig
@@ -27,7 +29,7 @@ from app.sites.config.site_definition import SiteDefinition
 from app.sites.http import site_rate_limit
 from app.sites.search.api_searcher import ApiSiteSearcher
 from app.sites.search.searchers import _TRANSFORMS, _css_to_xpath, _resolve_jinja
-from app.utils.browser_mode import build_browser_mode, get_chrome_server_url, make_session_key
+from app.utils.browser_mode import browser_site_key, build_browser_mode, get_chrome_server_url
 from app.utils.config_tools import get_proxies
 
 
@@ -41,6 +43,7 @@ class HtmlSiteSearcher:
         self._user_config = user_config or {}
         self._site_engine = site_engine
         self.last_error: str = ""
+        self._operation_context: BrowserOperationContext | None = None
 
     def search(
         self,
@@ -53,19 +56,33 @@ class HtmlSiteSearcher:
         if not self._site.html:
             return []
         self.last_error = ""
+        self._operation_context = BrowserOperationContext.create("search", self._domain() or self._site.name)
+        operation = self._operation_context
+        log.info(f"[HtmlSiteSearcher] event=search_start {operation.fields(keyword=keyword, page=page)}")
         is_browse = not keyword
         url = self._build_url(keyword, page, mtype, page_size)
         if not url:
             return []
 
         html_text = self._fetch_html(url)
-        if not html_text:
-            return []
-
-        result = self._parse_html(html_text, is_browse=is_browse)
+        if html_text and is_challenge(html_text):
+            BROWSER_METRICS.record_challenge("unknown", solved=False)
+        result = self._parse_html(html_text, is_browse=is_browse) if html_text else []
         # 关键词搜索且结果为空：站点搜索表单受 CF/Turnstile 保护（普通 GET 不生效），
         # 走浏览器交互：过盾 → 填词 → 点提交 → 取结果
-        if not result and keyword and bool(self._user_config.get("chrome")):
+        # 合法空结果不再触发浏览器表单回退；只有页面缺失或明确处于挑战/内嵌验证时才走表单搜索。
+        needs_browser_form = (
+            not result
+            and keyword
+            and bool(self._user_config.get("chrome"))
+            and (
+                not html_text
+                or is_challenge(html_text)
+                or has_pending_turnstile(html_text)
+                or not self._has_result_structure(html_text)
+            )
+        )
+        if needs_browser_form:
             form_html = self._browser_form_search(keyword)
             if form_html:
                 parsed = self._parse_html(form_html, is_browse=False)
@@ -79,6 +96,9 @@ class HtmlSiteSearcher:
                 retried = self._parse_html(rendered, is_browse=is_browse)
                 if retried:
                     result = retried
+        log.info(
+            f"[HtmlSiteSearcher] event=search_done {operation.fields(keyword=keyword, page=page, results=len(result))}"
+        )
         return result
 
     @staticmethod
@@ -89,6 +109,25 @@ class HtmlSiteSearcher:
 
     def _domain(self) -> str:
         return (self._user_config.get("domain") or self._site.domain or "").rstrip("/")
+
+    def _has_result_structure(self, html_text: str) -> bool:
+        """页面是否包含站点配置的搜索结果容器（合法空结果仍有容器）。"""
+        if not html_text:
+            return False
+        try:
+            doc = etree.HTML(html_text)
+            if doc is None:
+                return False
+            cfg = self._site.html
+            parser_type = self._cfg_get(cfg, "parser_type", "flat")
+            torrents_cfg = self._cfg_get(cfg, "torrents", {})
+            if parser_type == "nested":
+                selector = self._cfg_get(self._cfg_get(torrents_cfg, "container", {}), "selector", "")
+            else:
+                selector = self._cfg_get(self._cfg_get(torrents_cfg, "list", {}), "selector", "")
+            return bool(selector and doc.cssselect(selector))
+        except Exception:
+            return False
 
     def _build_url(
         self, keyword: str, page: int, mtype: ProviderMediaType | None, page_size: int | None = None
@@ -171,10 +210,8 @@ class HtmlSiteSearcher:
         search_url = self._build_url(keyword, 0, None, None)
         if not search_url:
             return None
-        search_cfg = self._cfg_get(self._site.html or {}, "search", {}) or {}
-        paths = search_cfg.get("paths") or []
-        base_path = str((paths[0].get("path") if paths else "torrents.php") or "torrents.php")
-        base_url = f"{domain.rstrip('/')}/{base_path.lstrip('/')}"
+        # 先用站点首页触发/完成挑战，再在同一会话加载真实搜索 URL。
+        base_url = f"{domain.rstrip('/')}/"
         proxies = get_proxies() if self._user_config.get("proxy") else None
         proxy_url = proxies.get("http") if isinstance(proxies, dict) else None
         browser_cfg = build_browser_mode(
@@ -184,11 +221,11 @@ class HtmlSiteSearcher:
                 "browser_render": True,
                 "browser_persistent": bool(self._user_config.get("browser_persistent", True)),
             },
-            site_key=domain,
+            site_key=browser_site_key(self._user_config, domain),
             proxy_url=proxy_url,
             render_html=True,
         )
-        session_id = make_session_key(domain, browser_cfg) if browser_cfg else domain
+        session_id = browser_cfg.session_key if browser_cfg and browser_cfg.session_key else domain
         fp_profile_id = browser_cfg.fp_profile_id if browser_cfg else None
         fingerprint = browser_cfg.fingerprint_profile if browser_cfg else "stealth"
         cookie = self._user_config.get("cookie") or ""
@@ -214,6 +251,8 @@ class HtmlSiteSearcher:
                 log.debug(f"[HtmlSiteSearcher]{self._site.name} 复用会话请求失败: {e}")
             return None
 
+        operation = self._operation_context or BrowserOperationContext.create("search", domain or self._site.name)
+        task = None
         try:
             with browser_task(
                 session_id,
@@ -223,8 +262,10 @@ class HtmlSiteSearcher:
                 fp_profile_id=fp_profile_id,
                 fingerprint=fingerprint,
                 persist=True,
-                navigate_timeout=60,
-                challenge_timeout=120,
+                navigate_timeout=180,
+                challenge_timeout=180,
+                timeout=180,
+                operation_context=operation,
             ) as task:
                 session = task.session
                 # 1) 过盾后的并发路径：已有 clearance 时直接请求，无需拿站点锁
@@ -251,6 +292,8 @@ class HtmlSiteSearcher:
                         return _accept_results(page.html())
         except Exception as e:  # noqa: BLE001
             log.warn(f"[HtmlSiteSearcher]{self._site.name} 浏览器搜索失败: {e}")
+            if task is not None:
+                capture_failure_screenshot(task.session, operation, "search_browser_error")
             return None
 
     def _fetch_html(self, url, force_browser: bool = False):
@@ -310,7 +353,7 @@ class HtmlSiteSearcher:
                     "browser_render": True if (force_browser or has_pending_turnstile(html or "")) else render,
                     "browser_persistent": bool(self._user_config.get("browser_persistent", True)),
                 },
-                site_key=self._user_config.get("domain") or self._site.domain or "",
+                site_key=browser_site_key(self._user_config, self._site.domain or ""),
                 proxy_url=proxy_url,
                 render_html=render,
             )
@@ -357,6 +400,15 @@ class HtmlSiteSearcher:
                 rows = html_doc.cssselect(list_selector)
             except Exception:
                 rows = []
+        if not rows and ":has(" not in list_selector:
+            for fallback_selector in ("table.table-list tr", "table tbody tr"):
+                try:
+                    candidate = html_doc.cssselect(fallback_selector)
+                except Exception:
+                    candidate = []
+                if candidate:
+                    rows = candidate
+                    break
 
         results = []
         for row in rows:
@@ -534,6 +586,19 @@ class HtmlSiteSearcher:
                         result[fname] = first_pass.get(fname, "")
             else:
                 result[fname] = first_pass.get(fname, "")
+        if not result.get("title") and not result.get("title_default"):
+            # 通用兜底：大多数 PT 站点详情链接包含 /torrent/ 或 magnet。
+            try:
+                anchors = element.cssselect('a[href*="/torrent/"]')
+            except Exception:
+                anchors = []
+            for anchor in anchors:
+                title = "".join(anchor.xpath(".//text()")).strip()
+                href = anchor.get("href") or ""
+                if title and href:
+                    result["title"] = title
+                    result["details"] = href
+                    break
         if not result.get("title") and not result.get("title_default"):
             return None
         return result

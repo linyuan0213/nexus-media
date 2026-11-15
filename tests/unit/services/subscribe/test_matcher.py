@@ -1,12 +1,11 @@
 """SubscribeMatcher 单元测试."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from app.domain.media_types import ProviderMediaType
 from app.media.identity.matcher import TargetMatcher
-from app.media.identity.models import Work
 from app.services.subscribe.matcher import SubscribeMatcher
 
 
@@ -16,6 +15,14 @@ def _make_media_info(mtype, title, year, tmdb_id=None):
     media_info.title = title
     media_info.year = year
     media_info.tmdb_id = tmdb_id
+    media_info.metadata_ref = None
+    media_info.identity_id = None
+    media_info.anchor_provider = None
+    media_info.anchor_external_id = None
+    media_info.cn_name = None
+    media_info.en_name = None
+    media_info.original_title = None
+    media_info.aliases = []
     media_info.rev_string = title
     media_info.org_string = f"{title} {year}"
     media_info.get_name.return_value = title
@@ -204,17 +211,9 @@ class TestUnifiedMatching:
         """同一 tmdb_id → id_match 命中"""
         media_info = _make_media_info(ProviderMediaType.SERIES, "Ghost In The Shell", "2026", tmdb_id=255358)
         rss_tvs = {1: {"name": "攻壳机动队", "year": "2026", "season": "S01", "tmdbid": "255358", "fuzzy_match": False}}
-        with (
-            patch("app.services.subscribe.matcher.settings") as mock_settings,
-            patch(
-                "app.services.subscribe.matcher.get_target_matcher",
-                return_value=_unified_target_matcher(),
-            ),
-        ):
-            mock_settings.get.return_value = {"target_matcher": True}
-            match_flag, match_msg, match_info = matcher.match(
-                media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False
-            )
+        match_flag, match_msg, match_info = matcher.match(
+            media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False
+        )
         assert match_flag is True
         assert match_info["name"] == "攻壳机动队"
 
@@ -222,44 +221,14 @@ class TestUnifiedMatching:
         """不同 tmdb_id 且无 franchise 关系 → 拒绝"""
         media_info = _make_media_info(ProviderMediaType.SERIES, "Ghost In The Shell", "2026", tmdb_id=62070)
         rss_tvs = {1: {"name": "攻壳机动队", "year": "2026", "season": "S01", "tmdbid": "255358", "fuzzy_match": False}}
-        with (
-            patch("app.services.subscribe.matcher.settings") as mock_settings,
-            patch(
-                "app.services.subscribe.matcher.get_target_matcher",
-                return_value=_unified_target_matcher(),
-            ),
-        ):
-            mock_settings.get.return_value = {"target_matcher": True}
-            match_flag, _, _ = matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
+        match_flag, _, _ = matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
         assert match_flag is False
 
     def test_same_franchise_different_edition_rejected(self, matcher):
         """同 franchise 不同 edition（SAC_2045 vs 2026 新剧）→ 可解释拒绝"""
-        works = {
-            62070: Work(
-                source="tmdb",
-                work_id=62070,
-                franchise="ghostintheshell",
-                official_titles=["Ghost in the Shell SAC_2045"],
-            ),
-            255358: Work(
-                source="tmdb",
-                work_id=255358,
-                franchise="ghostintheshell",
-                official_titles=["Ghost in the Shell"],
-            ),
-        }
         media_info = _make_media_info(ProviderMediaType.SERIES, "Ghost In The Shell SAC_2045", "2020", tmdb_id=62070)
         rss_tvs = {1: {"name": "攻壳机动队", "year": "2026", "season": "S01", "tmdbid": "255358", "fuzzy_match": False}}
-        with (
-            patch("app.services.subscribe.matcher.settings") as mock_settings,
-            patch(
-                "app.services.subscribe.matcher.get_target_matcher",
-                return_value=_unified_target_matcher(works),
-            ),
-        ):
-            mock_settings.get.return_value = {"target_matcher": True}
-            match_flag, _, _ = matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
+        match_flag, _, _ = matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
         assert match_flag is False
 
 
@@ -397,3 +366,69 @@ class TestSubscribeProviderMediaTypePropagation:
         )
         assert flag is True
         assert media_info.type == ProviderMediaType.SERIES
+
+
+def test_tmdb_lookup_failure_falls_back_to_title(matcher):
+    """TMDB 未匹配到 id 时，标题/年份一致仍应命中订阅。"""
+    media_info = _make_media_info(ProviderMediaType.ANIME, "学生会也有洞！", "2026", tmdb_id=0)
+    rss_tvs = {
+        1: {
+            "name": "学生会也有洞！",
+            "year": "2026",
+            "season": "S01",
+            "tmdbid": "283938",
+            "fuzzy_match": False,
+        }
+    }
+    match_flag, _, match_info = matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
+    assert match_flag is True
+    assert match_info["tmdbid"] == "283938"
+
+
+def test_tmdb_lookup_failure_does_not_match_other_title(matcher):
+    media_info = _make_media_info(ProviderMediaType.ANIME, "别的动画", "2026", tmdb_id=0)
+    rss_tvs = {
+        1: {
+            "name": "学生会也有洞！",
+            "year": "2026",
+            "season": "S01",
+            "tmdbid": "283938",
+            "fuzzy_match": False,
+        }
+    }
+    match_flag, _, _ = matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
+    assert match_flag is False
+
+
+def test_unified_metadata_ref_matches_without_tmdb(matcher):
+    media_info = _make_media_info(ProviderMediaType.ANIME, "学生会也有洞！", "2026", tmdb_id=0)
+    media_info.metadata_ref = "id:01M69GB47DAN6XX463AZ8XZXP6"
+    rss_tvs = {
+        1: {
+            "name": "学生会也有洞！",
+            "year": "2026",
+            "season": "S01",
+            "tmdbid": "283938",
+            "metadata_ref": "id:01M69GB47DAN6XX463AZ8XZXP6",
+            "fuzzy_match": False,
+        }
+    }
+    match_flag, _, _ = matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
+    assert match_flag is True
+
+
+def test_unified_metadata_ref_conflict_is_rejected(matcher):
+    media_info = _make_media_info(ProviderMediaType.ANIME, "学生会也有洞！", "2026", tmdb_id=0)
+    media_info.metadata_ref = "id:OTHER"
+    rss_tvs = {
+        1: {
+            "name": "学生会也有洞！",
+            "year": "2026",
+            "season": "S01",
+            "tmdbid": "283938",
+            "metadata_ref": "id:01M69GB47DAN6XX463AZ8XZXP6",
+            "fuzzy_match": False,
+        }
+    }
+    match_flag, _, _ = matcher.match(media_info, {}, rss_tvs, "test_site", None, "", False, "", {}, False)
+    assert match_flag is False

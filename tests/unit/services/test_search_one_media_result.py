@@ -27,7 +27,7 @@ def _make_searcher() -> Searcher:
 class TestSearchOneMediaReturn:
     """电影：即使还有其它候选未下载，也应返回已下载项（供订阅判定完成）."""
 
-    def _run(self, media_type: ProviderMediaType):
+    def _run(self, media_type: ProviderMediaType, deferred: bool = False):
         searcher = _make_searcher()
         downloaded = MagicMock(name="downloaded")
         leftover = MagicMock(name="leftover")
@@ -38,7 +38,9 @@ class TestSearchOneMediaReturn:
             patch("app.services.search_service.SearchExecutor") as executor_cls,
             patch("app.services.search_service.SearchResultDeduplicator") as dedup_cls,
             patch("app.services.search_service.SearchResultProcessor") as processor_cls,
+            patch("app.services.search_service.get_site_search_gate") as gate_cls,
         ):
+            gate_cls.return_value.was_deferred_since.return_value = deferred
             executor_cls.return_value.execute.return_value = [downloaded, leftover]
             dedup_cls.deduplicate.side_effect = lambda items: items
             processor = processor_cls.return_value
@@ -57,6 +59,11 @@ class TestSearchOneMediaReturn:
     def test_tv_still_returns_none_with_leftovers(self):
         (first, _no_exists, _total, download_count), _downloaded = self._run(ProviderMediaType.SERIES)
         assert first is None
+        assert download_count == 1
+
+    def test_partial_site_deferral_keeps_available_results(self):
+        """一个站点排队超时不能丢弃其它站点已经搜到的集。"""
+        (_first, _no_exists, _total, download_count), _downloaded = self._run(ProviderMediaType.SERIES, deferred=True)
         assert download_count == 1
 
 

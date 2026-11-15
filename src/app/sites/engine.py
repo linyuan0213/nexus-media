@@ -23,6 +23,7 @@ from lxml import etree
 import log
 from app.core.root_path import get_project_root
 from app.core.settings import settings
+from app.domain.browser_operation import BROWSER_METRICS, BrowserOperationContext
 from app.infrastructure.chrome.challenge import is_challenge
 from app.infrastructure.http.auth import CookieAuth
 from app.infrastructure.http.client import HttpClient
@@ -36,7 +37,7 @@ from app.sites.http import auth_headers, endpoint_client, site_rate_limit, spa_s
 from app.sites.userinfo import engine_user_info
 from app.sites.utils import is_logged_in
 from app.utils import JsonUtils
-from app.utils.browser_mode import build_browser_mode
+from app.utils.browser_mode import browser_site_key, build_browser_mode
 from app.utils.config_tools import get_proxies
 
 # 详情页/页面抓取限流退避：站点连续返回空/失败时，串行化并放缓后续请求，
@@ -837,6 +838,11 @@ class SiteEngine:
         proxy_url = proxies.get("http") if proxies else None
         site = self.get_by_url(url)
         site_id = str(site.id) if site is not None else ""
+        operation = BrowserOperationContext.create(
+            "detail",
+            browser_site_key({"domain": getattr(site, "domain", "") or url}, site_id),
+        )
+        log.info(f"[SiteEngine] event=detail_start {operation.fields(url=url)}")
         pace_wait = 0.0
         if site_id:
             interval = _page_fetch_interval(site_id)
@@ -901,7 +907,10 @@ class SiteEngine:
                             "browser_render": True,
                             "browser_persistent": bool(user_config.get("browser_persistent")),
                         },
-                        site_key=site.id,
+                        site_key=browser_site_key(
+                            {"domain": getattr(site, "domain", "") or ""},
+                            getattr(site, "id", "") or "",
+                        ),
                         proxy_url=proxy_url,
                         render_html=True,
                     )
@@ -910,9 +919,16 @@ class SiteEngine:
                     text, final_url = text2, final2
             except Exception as e:
                 log.debug(f"[SiteEngine]浏览器降级抓取失败: {e}")
+        if text and is_challenge(text):
+            BROWSER_METRICS.record_challenge("unknown", solved=False)
         if site_id:
             blocked = text is None and "login" not in str(final_url).lower()
             _record_page_fetch_result(site_id, ok=not blocked)
+            if blocked:
+                BROWSER_METRICS.record_failure("detail")
+        log.info(
+            f"[SiteEngine] event=detail_done {operation.fields(url=url, final_url=final_url, text_len=len(text or ''))}"
+        )
         return text, final_url
 
     # ---- 连接测试 ----

@@ -3,6 +3,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 
+from app.infrastructure.distributed_lock import get_lock_manager
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers._browser import BrowserSigninHandler
 from app.plugin_framework.builtin_plugins.autosignin.backend.handlers.base import SigninResult, SiteSigninContext
 from app.plugin_framework.builtin_plugins.autosignin.backend.registry import HandlerRegistry
@@ -115,6 +116,26 @@ class SigninEngine:
             )
 
     def _signin_site(self, site_info: dict) -> str:
+        """按站点+日期获取分布式执行权，避免 cron/手动/多 worker 重复签到."""
+        site_id = str(site_info.get("id") or "")
+        site_name = str(site_info.get("name") or site_id)
+        today = datetime.today().strftime("%Y-%m-%d")
+        lock_key = f"autosignin:{site_id}:{today}"
+        lock = get_lock_manager().create_lock(lock_key, ttl_seconds=3600)
+        acquired = lock.acquire()
+        if not acquired and lock.last_error is not None:
+            # Redis/DB 锁后端不可用时不能阻断签到；退回进程内执行，仍由插件 run 锁防重。
+            self.ctx.warn(f"站点 {site_name} 分布式锁不可用，降级执行: {lock.last_error}")
+            return self._signin_site_locked(site_info)
+        if not acquired:
+            self.ctx.info(f"站点 {site_name} 今日签到已在其他任务执行，跳过重复执行")
+            return ""
+        try:
+            return self._signin_site_locked(site_info)
+        finally:
+            lock.release()
+
+    def _signin_site_locked(self, site_info: dict) -> str:
         site_ctx = SiteSigninContext.from_site_info(site_info, self._site_engine)
         self.ctx.debug(
             f"开始处理站点 {site_ctx.site} (输入id={site_info.get('id')}, "

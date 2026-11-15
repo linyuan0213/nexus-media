@@ -359,8 +359,10 @@ class DownloaderCore:
 
     # ---------- 历史记录 ----------
 
-    def get_download_history(self, date=None, hid=None, num=30, page=1, user=None):
-        return self._download_core.get_download_history(date=date, hid=hid, num=num, page=page, user=user)
+    def get_download_history(self, date=None, hid=None, num=30, page=1, user=None, keyword=None):
+        return self._download_core.get_download_history(
+            date=date, hid=hid, num=num, page=page, user=user, keyword=keyword
+        )
 
     def get_download_history_by_title(self, title):
         return self._download_core.get_download_history_by_title(title=title)

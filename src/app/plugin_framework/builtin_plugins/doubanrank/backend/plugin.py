@@ -38,6 +38,16 @@ class DoubanRankPlugin:
         self._rsshelper = RssHelper(site_engine=ctx.site_engine)
         self._media = self.ctx.media_service
         self._event = Event()
+        ctx.register_connectivity_targets(
+            [
+                {
+                    "key": "rsshub.app",
+                    "label": "RSSHub",
+                    "url": "https://rsshub.app/",
+                    "category": "rss",
+                }
+            ]
+        )
         self._douban_address = {
             "movie-ustop": "https://rsshub.app/douban/movie/ustop",
             "movie-weekly": "https://rsshub.app/douban/movie/weekly",

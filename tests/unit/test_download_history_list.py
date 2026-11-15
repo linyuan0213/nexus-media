@@ -110,3 +110,21 @@ def test_queued_history_can_be_promoted_to_real_download_id():
     assert row.DOWNLOAD_ID == "real-task-1"
     assert row.STATE == "downloading"
     assert row.SAVE_PATH == "/downloads"
+
+
+def test_recent_downloads_keyword_filters_title_site_and_episode():
+    session = sessionmaker(bind=get_engine())()
+    session.add_all(
+        [
+            _row("2026-11-02 09:00:00", title="学生会也有洞！", identity="id-a", se="S01E07"),
+            _row("2026-11-02 10:00:00", title="另一部动画", identity="id-b", se="S01E01"),
+        ]
+    )
+    session.commit()
+    session.close()
+
+    rows = DownloadRepository().get_download_history(num=30, page=1, keyword="学生会")
+    assert [row.TITLE for row in rows] == ["学生会也有洞！"]
+
+    rows = DownloadRepository().get_download_history(num=30, page=1, keyword="E01")
+    assert [row.TITLE for row in rows] == ["另一部动画"]

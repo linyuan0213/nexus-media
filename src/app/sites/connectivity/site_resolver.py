@@ -12,7 +12,7 @@ from app.sites.engine import SiteEngine
 from app.sites.site_cache import SiteCache
 from app.sites.utils import is_logged_in
 from app.utils import JsonUtils, StringUtils
-from app.utils.browser_mode import build_browser_mode
+from app.utils.browser_mode import browser_site_key, build_browser_mode
 from app.utils.config_tools import get_proxies, get_ua
 
 
@@ -57,7 +57,7 @@ class SiteResolver:
             browser = (
                 build_browser_mode(
                     site_info=site_info,
-                    site_key=site_info.get("domain") or site_info.get("name") or site_url,
+                    site_key=browser_site_key(site_info, site_url),
                     proxy_url=proxy_url,
                 )
                 if site_info.get("chrome")
@@ -131,7 +131,7 @@ class SiteResolver:
         proxy_url = get_proxies().get("http") if proxy and get_proxies() else None
         browser = build_browser_mode(
             site_info=site_info,
-            site_key=site_info.get("domain") or site_info.get("name") or site_url,
+            site_key=browser_site_key(site_info, site_url),
             proxy_url=proxy_url,
         )
         res = HttpClient(

@@ -66,6 +66,11 @@ def wait_challenge_clear(
     html_text = initial_html
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
+        if not html_text.strip():
+            # 空 HTML 不是“已通过”：CDP 读取失败或页面跳转中必须继续读取。
+            time.sleep(CHALLENGE_POLL_INTERVAL)
+            html_text = session.html(tab_name) if tab_name else session.html()
+            continue
         if _is_challenge(html_text):
             time.sleep(CHALLENGE_POLL_INTERVAL)
             html_text = session.html(tab_name) if tab_name else session.html()

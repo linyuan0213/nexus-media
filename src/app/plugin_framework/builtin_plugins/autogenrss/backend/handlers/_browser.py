@@ -8,7 +8,7 @@ from lxml import etree
 from app.infrastructure.chrome import BrowserSession
 from app.plugin_framework.context import PluginContext
 from app.sites.utils import is_logged_in
-from app.utils.browser_mode import get_chrome_server_url, get_default_fp_profile_id
+from app.utils.browser_mode import browser_site_key, get_chrome_server_url, get_default_fp_profile_id
 
 from .base import SiteRssGenContext, SiteRssGenHandler, SiteRssGenResult
 
@@ -38,7 +38,7 @@ class BrowserRssGenHandler(SiteRssGenHandler):
         self._plugin_ctx.info(f"开始浏览器RSS生成：{site}")
         try:
             with BrowserSession(
-                site_key=site,
+                site_key=browser_site_key(ctx.raw, ctx.site_url),
                 server_url=server_url,
                 fp_profile_id=get_default_fp_profile_id(),
                 cleanup_auto_tabs=True,

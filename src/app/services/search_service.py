@@ -552,8 +552,12 @@ class Searcher:
             return None, no_exists, 0, 0
 
         if in_from == SearchType.SUBSCRIBE and get_site_search_gate().was_deferred_since(search_started):
-            log.warn(f"[Searcher]{search_name_list} 站点限流/排队超时，本轮延迟，不回退低优先站点")
-            return None, no_exists, len(media_list), 0
+            if not media_list:
+                log.warn(f"[Searcher]{search_name_list} 站点限流/排队超时，本轮延迟，不回退低优先站点")
+                return None, no_exists, 0, 0
+            # 只要已有站点返回了结果就继续处理；延迟的站点下一轮再补，不能因为
+            # 某个低优先站点排队超时把已经搜到的目标集整轮丢弃。
+            log.warn(f"[Searcher]{search_name_list} 部分站点延迟，使用本轮已有 {len(media_list)} 条结果")
 
         processor = SearchResultProcessor(
             downloader=self.downloader,

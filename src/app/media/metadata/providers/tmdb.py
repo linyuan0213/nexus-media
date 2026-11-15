@@ -8,13 +8,18 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Any, Protocol
 
+from app.core.settings import settings
+from app.domain.connectivity import ConnectivityTarget
 from app.domain.media_types import MediaKind, ProviderMediaType, media_kind_of, provider_media_type_of
 from app.infrastructure.cache_system import lru_cache_with_ttl
+from app.infrastructure.http.client import HttpClient
+from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.image_proxy import ImageProxy
 from app.media.lookup.tmdb_client import TmdbClient
 from app.media.lookup.tmdb_detail import TmdbDetail
 from app.media.lookup.tmdb_search import TmdbSearch
 from app.media.lookup.tmdb_season import TmdbSeason
+from app.utils.config_tools import get_proxies
 
 from ..errors import ProviderNotFound
 from ..models import (
@@ -262,6 +267,17 @@ HOSTS = {"api.themoviedb.org", "image.tmdb.org"}
 RATE = 40  # TMDB 配额：40 次/分钟
 
 
+def _probe_tmdb() -> None:
+    proxies = get_proxies()
+    proxy_url = proxies.get("http") if proxies else None
+    tmdb_host = settings.get("app").get("tmdb_domain") or "api.themoviedb.org"
+    tmdb_key = settings.get("app").get("rmt_tmdbkey") or ""
+    HttpClient(config=HttpClientConfig(proxy_url=proxy_url, timeout=5)).get(
+        f"https://{tmdb_host}/3/configuration",
+        params={"api_key": tmdb_key},
+    )
+
+
 class TmdbProvider:
     """TMDB provider adapter（包装现有 TmdbDetail/TmdbSeason/TmdbSearch）."""
 
@@ -291,6 +307,35 @@ class TmdbProvider:
         source_tiers=frozenset({SourceTier.API}),
         allowed_hosts=frozenset(HOSTS),
         rate_limit_per_minute=RATE,
+        connectivity_targets=(
+            ConnectivityTarget(
+                "api.themoviedb.org",
+                "api.themoviedb.org",
+                "https://api.themoviedb.org/3/configuration",
+                "metadata",
+                True,
+                "tmdb",
+                use_proxy=True,
+                probe_fn=_probe_tmdb,
+                order=10,
+            ),
+            ConnectivityTarget(
+                "www.themoviedb.org",
+                "www.themoviedb.org",
+                "https://www.themoviedb.org/",
+                "metadata",
+                use_proxy=True,
+                order=11,
+            ),
+            ConnectivityTarget(
+                "image.tmdb.org",
+                "image.tmdb.org",
+                "https://image.tmdb.org/t/p/w500/wwemzKWzjKYJFfCeiB57q3r4Bcm.png",
+                "metadata",
+                use_proxy=True,
+                order=12,
+            ),
+        ),
     )
 
     def __init__(

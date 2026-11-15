@@ -6,20 +6,50 @@
 from __future__ import annotations
 
 import hashlib
+from urllib.parse import urlsplit
 
 from app.core.settings import settings
 from app.domain.browser_mode import BrowserModeConfig
 
 
+def canonical_site_key(value: str | None) -> str:
+    """把站点 URL/域名/ID 统一成浏览器会话键的主域名."""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if "://" in text:
+        parsed = urlsplit(text)
+        return f"{parsed.scheme}://{parsed.netloc}".lower()
+    return text.lower()
+
+
+def browser_site_key(site_info: dict | None, fallback: str | None = None) -> str:
+    """按站点配置的域名/签到地址生成稳定 session key，避免 name/id/url 分裂会话."""
+    info = site_info or {}
+    for key in ("domain", "signurl", "rssurl", "strict_url"):
+        value = canonical_site_key(info.get(key))
+        if value:
+            return value
+    return canonical_site_key(fallback)
+
+
 def make_session_key(site_key: str, browser: BrowserModeConfig) -> str:
     """会话隔离键包含站点标识与浏览器配置指纹.
 
-    配置变化(UA/代理/指纹画像/渲染模式)会自动换新 session.
+    站点配置由所有用户共享，因此不再加入用户维度；渲染模式只影响请求结果，
+    不影响浏览器 Cookie/clearance，不参与 session key。
     """
-    config_hash = hashlib.md5(  # noqa: S303
-        f"{browser.fingerprint_profile}:{browser.fp_profile_id}:{browser.user_agent}:{browser.proxy_url}:{browser.render_html}".encode()
-    ).hexdigest()[:8]
-    return f"{site_key}:{config_hash}"
+    identity = "\x1f".join(
+        (
+            str(site_key or ""),
+            str(browser.fingerprint_profile or ""),
+            str(browser.fp_profile_id or ""),
+            str(browser.user_agent or ""),
+            str(browser.proxy_url or ""),
+        )
+    )
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:16]
+    return f"{site_key}:{digest}"
 
 
 def get_chrome_server_url() -> str | None:

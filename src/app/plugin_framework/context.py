@@ -33,6 +33,7 @@ from app.media.message_image_policy import (
 from app.media.metadata.registry import registry as metadata_registry
 from app.media.scraper.processor_registry import scraper_processor_registry
 from app.plugin_framework import api_registry
+from app.services.system.connectivity_registry import register_plugin_targets, unregister_plugin_targets
 from app.utils.json_utils import JsonUtils
 
 
@@ -301,6 +302,13 @@ class PluginContext:
         """注销该插件的所有消息命令"""
         self._message.clear_plugin_commands(self._plugin_id)
 
+    def register_connectivity_targets(self, targets: list[Any]) -> None:
+        """注册插件依赖的外部连通性测试目标."""
+        register_plugin_targets(self._plugin_id, targets)
+
+    def unregister_connectivity_targets(self) -> None:
+        unregister_plugin_targets(self._plugin_id)
+
     def register_api(
         self,
         path: str,
@@ -415,6 +423,7 @@ class PluginContext:
         metadata_registry.unregister_plugin(self._plugin_id)
         unregister_plugin_indexers(self._plugin_id)
         unregister_plugin_contributions(self._plugin_id)
+        unregister_plugin_targets(self._plugin_id)
         self.unregister_all_title_filters()
         self._category_contributions.clear()
 
