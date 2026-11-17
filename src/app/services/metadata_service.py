@@ -617,7 +617,7 @@ class MetadataService:
         if media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
             try:
                 season = int(getattr(media_info, "get_season_seq", lambda: 0)() or 0) or None
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 season = None
         if ref is not None:
             if season:
@@ -1119,7 +1119,7 @@ class MetadataService:
         if media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
             try:
                 season = int(getattr(media_info, "get_season_seq", lambda: 0)() or 0)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 season = 0
             if season:
                 scope = f"season={season}"
@@ -1169,6 +1169,16 @@ class MetadataService:
                 # 只有显式携带权限集时才继续检查 provider 专属权限。
                 if permissions is not None and "*" not in permissions and required not in permissions:
                     continue
+                # 普通搜索默认不拉取垂类私有源（如 adult）；只有请求画像匹配
+                # 或显式指定 provider 时才启用，避免普通搜索被浏览器抓取拖慢。
+                if not provider:
+                    profiles = {
+                        str(value).strip().lower()
+                        for value in getattr(descriptor, "content_profiles", ()) or ()
+                        if str(value).strip()
+                    }
+                    if profiles and content_profile.strip().lower() not in profiles:
+                        continue
             selected.append(item)
 
         def search_one(item: Any) -> list[dict[str, Any]]:
@@ -1671,7 +1681,7 @@ class MetadataService:
             raw = self._detail_cache.get("__version__")
             try:
                 version = int(str(raw)) if raw is not None else DETAIL_CACHE_VERSION
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 version = DETAIL_CACHE_VERSION
             if version < DETAIL_CACHE_VERSION:
                 version = DETAIL_CACHE_VERSION
@@ -1684,7 +1694,7 @@ class MetadataService:
             raw = self._detail_cache.get("__version__")
             try:
                 current = int(str(raw)) if raw is not None else DETAIL_CACHE_VERSION
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 current = DETAIL_CACHE_VERSION
             version = current + 1
             self._detail_cache.set("__version__", version)

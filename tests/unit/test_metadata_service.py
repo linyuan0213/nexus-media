@@ -795,7 +795,7 @@ def test_compose_for_media_recomposes_cached_snapshot_missing_poster():
 
 
 class _PrivateSearchProvider:
-    def __init__(self):
+    def __init__(self, content_profiles: set[str] | None = None):
         self.called = False
         self.descriptor = ProviderDescriptor(
             provider_key="private_demo",
@@ -804,6 +804,7 @@ class _PrivateSearchProvider:
             provider_media_types=frozenset({ProviderMediaType.MOVIE}),
             media_kinds=frozenset({MediaKind.MOVIE}),
             visibility="private",
+            content_profiles=frozenset(content_profiles or ()),
         )
 
     def search(self, query, ctx):
@@ -870,3 +871,16 @@ def test_metadata_context_superadmin_is_unrestricted():
     assert ctx.allow_private is True
     assert ctx.permissions is None
     assert ctx.permission_set() is None
+
+
+def test_private_search_provider_needs_matching_content_profile():
+    provider = _PrivateSearchProvider({"adult"})
+    registry = MetadataRegistry()
+    registry.register_provider(provider)
+    svc = MetadataService(registry=registry, identity_repo=_FakeSnapshotRepo(), register_builtins=False)
+
+    assert svc.search(query="default", allow_private=True, permissions=None) == []
+    assert provider.called is False
+
+    assert svc.search(query="adult", content_profile="adult", allow_private=True, permissions=None) == []
+    assert provider.called is True
