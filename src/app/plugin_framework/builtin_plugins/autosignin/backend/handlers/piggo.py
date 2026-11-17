@@ -31,7 +31,7 @@ class Piggo(SiteSigninHandler):
         if isinstance(user, str):
             try:
                 user = json.loads(user)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 return None
         if not isinstance(user, dict) or not user.get("id"):
             return None
@@ -292,14 +292,13 @@ class Piggo(SiteSigninHandler):
                     )
                     try:
                         pills = json.loads(pill_texts or "[]")
-                    except (TypeError, ValueError):
+                    except TypeError, ValueError:
                         pills = []
                     pill_signed = any(self._is_signed_pill(t) for t in pills)
                     if pill_signed:
                         return SigninResult.already(site)
 
                     self._dismiss_tour(session)
-                    self._preload_turnstile(session)
                     total_before = str(
                         session.execute(
                             "(()=>{const m=document.body.innerText.match(/累计签到(\\d+)天/);return m?m[1]:''})()"
@@ -339,7 +338,7 @@ class Piggo(SiteSigninHandler):
                     )
                     try:
                         pills = json.loads(pill_texts or "[]")
-                    except (TypeError, ValueError):
+                    except TypeError, ValueError:
                         pills = []
                     signed = any(self._is_signed_pill(t) for t in pills)
                     total_after = str(
