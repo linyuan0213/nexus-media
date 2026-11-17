@@ -1226,7 +1226,18 @@ class MetadataService:
         # 会重试到 120s。用独立 daemon 线程硬超时，避免卡死线程长期占用搜索线程池。
         effective_timeout = wait_timeout or (20.0 if len(selected) == 1 else 8.0)
         tasks = {item.descriptor.provider_key: (lambda item=item: search_one(item)) for item in selected}
-        payload_map, timed_out = run_parallel_with_timeout(tasks, effective_timeout)
+        provider_timeouts = {
+            item.descriptor.provider_key: min(
+                effective_timeout,
+                float(getattr(item.descriptor, "timeout_seconds", effective_timeout) or effective_timeout),
+            )
+            for item in selected
+        }
+        payload_map, timed_out = run_parallel_with_timeout(
+            tasks,
+            effective_timeout,
+            timeouts=provider_timeouts,
+        )
         for provider_key, payloads in payload_map.items():
             hits.extend(payloads)
         for provider_key in timed_out:

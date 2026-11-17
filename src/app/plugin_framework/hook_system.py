@@ -3,8 +3,7 @@ Hook System - 全局事件钩子系统
 插件通过注册钩子来响应系统事件
 """
 
-from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import log
 from app.db.repositories.plugin_framework_repository import PluginFrameworkRepository
@@ -24,7 +23,7 @@ class HookSystem:
         self,
         plugin_sandbox: "PluginSandbox | None" = None,
         repo: PluginFrameworkRepository | None = None,
-        executor: ThreadPoolExecutor | None = None,
+        executor: Any = None,
     ):
 
         self._plugin_sandbox = plugin_sandbox

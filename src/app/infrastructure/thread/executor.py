@@ -135,7 +135,12 @@ class ThreadExecutor:
 
         return self.pool.map(_wrapper, iterable, timeout=timeout)
 
-    def shutdown(self, wait: bool = True, timeout: float | None = None):
+    def shutdown(
+        self,
+        wait: bool = True,
+        timeout: float | None = None,
+        cancel_futures: bool = False,
+    ):
         """关闭线程池.
 
         :param wait: 是否等待所有任务完成
@@ -152,11 +157,11 @@ class ThreadExecutor:
             remaining = self.active_count
             if remaining > 0:
                 log.info(f"[ThreadExecutor]线程池关闭超时: {self._name} (remaining={remaining})")
-                self._pool.shutdown(wait=False, cancel_futures=True)
+                self._pool.shutdown(wait=False, cancel_futures=cancel_futures or True)
             else:
                 self._pool.shutdown(wait=False)
         else:
-            self._pool.shutdown(wait=False, cancel_futures=True)
+            self._pool.shutdown(wait=False, cancel_futures=cancel_futures or True)
         self._pool = None
 
     def __enter__(self):
