@@ -1,6 +1,6 @@
 """数据库备份 v2：原生 dump + Parquet 跨库快照 + TOML manifest."""
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import gzip
 import hashlib
