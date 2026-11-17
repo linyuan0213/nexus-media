@@ -1,6 +1,11 @@
 """OpenAI / OpenAI 兼容提供商"""
 
+from __future__ import annotations
+
 from typing import Any
+
+# Python 3.15+ 延迟加载可选 OpenAI SDK；旧版本忽略。
+__lazy_modules__ = {"openai"}
 
 from openai import APIStatusError, AsyncOpenAI, OpenAI
 
@@ -144,7 +149,7 @@ class OpenAIProvider(BaseProvider):
         for tc in message.tool_calls or []:
             try:
                 args = JsonUtils.loads(tc.function.arguments or "{}")
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 args = {}
             calls.append(
                 ToolCall(name=tc.function.name or "", arguments=args if isinstance(args, dict) else {}, id=tc.id or "")
@@ -210,7 +215,7 @@ class OpenAIProvider(BaseProvider):
             entry = tool_entries[idx]
             try:
                 args = JsonUtils.loads(entry["arguments"] or "{}")
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 args = {}
             calls.append(ToolCall(name=entry["name"], arguments=args if isinstance(args, dict) else {}, id=entry["id"]))
         return ChatToolResponse(
@@ -298,7 +303,7 @@ class OpenAIProvider(BaseProvider):
                 entry = tool_entries[idx]
                 try:
                     args = JsonUtils.loads(entry["arguments"] or "{}")
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     args = {}
                 calls.append(
                     ToolCall(name=entry["name"], arguments=args if isinstance(args, dict) else {}, id=entry["id"])

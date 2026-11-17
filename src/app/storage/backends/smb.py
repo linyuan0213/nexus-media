@@ -4,6 +4,9 @@ import shutil
 from collections.abc import Iterator
 from typing import BinaryIO
 
+# Python 3.15+ 延迟加载可选 SMB 依赖；旧版本忽略。
+__lazy_modules__ = {"smbclient", "smbclient.path", "smbclient.shutil"}
+
 from smbclient import (
     copyfile,
     makedirs,

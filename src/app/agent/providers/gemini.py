@@ -1,7 +1,12 @@
 """Google Gemini 提供商"""
 
+from __future__ import annotations
+
 import warnings
 from typing import Any
+
+# Python 3.15+ 延迟加载可选 Gemini SDK；旧版本忽略。
+__lazy_modules__ = {"google", "google.genai", "google.genai.errors"}
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", DeprecationWarning)

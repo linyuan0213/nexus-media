@@ -8,6 +8,10 @@ from typing import overload
 from urllib import parse
 
 import cn2an
+
+# Python 3.15+ 延迟加载可选日期解析器；旧版本忽略。
+__lazy_modules__ = {"dateparser"}
+
 import dateparser
 import dateutil.parser
 
