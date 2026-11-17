@@ -98,8 +98,11 @@ class SyncPathEntity:
         """校验硬链接是否跨盘，返回错误信息或 None"""
         if not dest:
             return None
-        common = os.path.commonprefix([source, dest])
-        if not common or common == "/":
+        try:
+            common = os.path.commonpath([os.path.abspath(source), os.path.abspath(dest)])
+        except ValueError:
+            return "硬链接不能跨盘"
+        if not common or common == os.path.sep:
             return "硬链接不能跨盘"
         return None
 
