@@ -1,6 +1,6 @@
 """数据库备份 v2：原生 dump + Parquet 跨库快照 + TOML manifest."""
 
-from __future__ import annotations
+from __future__ import annotations  # noqa: I001
 
 import gzip
 import hashlib
@@ -11,13 +11,17 @@ import sqlite3
 import subprocess
 import tempfile
 import time
-import tomllib
 import zipfile
 from collections.abc import Iterator
 from datetime import date, datetime
 from datetime import time as dt_time
 from pathlib import Path
 from typing import Any, cast
+
+import tomllib
+
+# Python 3.15+ 延迟加载可选备份依赖；旧版本忽略该声明，保持 eager。
+__lazy_modules__ = {"pyarrow", "pyarrow.parquet"}
 
 import pyarrow as pa
 import pyarrow.parquet as pq

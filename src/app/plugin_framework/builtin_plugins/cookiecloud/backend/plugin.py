@@ -10,10 +10,12 @@ from collections import defaultdict
 from typing import Any
 
 from app.infrastructure.cache_system import get_cache_manager
+from app.infrastructure.chrome import BrowserSession
 from app.infrastructure.http.client import HttpClient
 from app.infrastructure.http.config import HttpClientConfig
 from app.infrastructure.http.exceptions import HttpClientError
 from app.plugin_framework.context import PluginContext
+from app.utils.browser_mode import browser_site_key, get_chrome_server_url
 from app.utils.json_utils import JsonUtils
 from app.utils.string_utils import StringUtils
 
@@ -617,14 +619,45 @@ class CookieCloudPlugin:
                     self.ctx.warn(f"[CookieCloud]Cookie 失效 {domain_url}")
                 return success
 
-            # 无站点定义，或 api_key/bearer 站点（Cookie 仅用于 HTML 页面）：
-            # 改为校验页面登录态
+            # 无站点定义，或 api_key/bearer/SPA 站点：HTTP 探测无法判断 SPA
+            # 登录态，优先用真实浏览器校验，避免把新 Cookie 误判为失效。
+            if self._verify_cookie_in_browser(domain_url, cookie_str):
+                return True
             rate, _ = self._site_sync.probe_domain(domain_url, cookie_str, attempts=1)
             if rate <= 0:
                 self.ctx.warn(f"[CookieCloud]Cookie 失效 {domain_url}")
             return rate > 0
         except Exception as e:
             self.ctx.warn(f"[CookieCloud]验证异常 {domain_url}: {e}")
+            return False
+
+    def _verify_cookie_in_browser(self, domain_url: str, cookie_str: str) -> bool:
+        """SPA/api_key 站点用 Chrome 判断登录态，HTTP 探测不适用于前端路由."""
+        try:
+            matches = self._find_matching_sites(domain_url)
+            site = matches[0] if matches else {"domain": domain_url}
+            sign_url = str(site.get("sign_url") or f"https://{domain_url}")
+            server = get_chrome_server_url()
+            if not server:
+                return False
+            with BrowserSession(
+                site_key=browser_site_key(site, sign_url),
+                server_url=server,
+                cleanup_auto_tabs=True,
+                slot_timeout=30,
+            ) as session:
+                tab = "auto_cookie_verify"
+                session.navigate(sign_url, cookie=cookie_str, tab_name=tab, timeout=20)
+                time.sleep(4)
+                current = str(session.current_page(tab).get("url") or "")
+                if "/login" in current.lower():
+                    return False
+                body = str(session.execute("return document.body.innerText||''", tab_name=tab) or "")
+                if any(text in body for text in ("用户登录", "请登录", "登录后")):
+                    return False
+                return True
+        except Exception as exc:  # noqa: BLE001
+            self.ctx.debug(f"[CookieCloud]浏览器校验失败 {domain_url}: {exc}")
             return False
 
     def _persist_spa_local_storage(self, domain_url: str, raw_site: str, storage: dict) -> None:

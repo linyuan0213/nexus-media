@@ -617,7 +617,7 @@ class MetadataService:
         if media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
             try:
                 season = int(getattr(media_info, "get_season_seq", lambda: 0)() or 0) or None
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 season = None
         if ref is not None:
             if season:
@@ -1119,7 +1119,7 @@ class MetadataService:
         if media_type in {ProviderMediaType.SERIES, ProviderMediaType.ANIME}:
             try:
                 season = int(getattr(media_info, "get_season_seq", lambda: 0)() or 0)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 season = 0
             if season:
                 scope = f"season={season}"
@@ -1169,6 +1169,16 @@ class MetadataService:
                 # 只有显式携带权限集时才继续检查 provider 专属权限。
                 if permissions is not None and "*" not in permissions and required not in permissions:
                     continue
+                # 普通搜索默认不拉取垂类私有源；只有请求画像匹配
+                # 或显式指定 provider 时才启用，避免普通搜索被浏览器抓取拖慢。
+                if not provider:
+                    profiles = {
+                        str(value).strip().lower()
+                        for value in getattr(descriptor, "content_profiles", ()) or ()
+                        if str(value).strip()
+                    }
+                    if profiles and content_profile.strip().lower() not in profiles:
+                        continue
             selected.append(item)
 
         def search_one(item: Any) -> list[dict[str, Any]]:
@@ -1216,7 +1226,18 @@ class MetadataService:
         # 会重试到 120s。用独立 daemon 线程硬超时，避免卡死线程长期占用搜索线程池。
         effective_timeout = wait_timeout or (20.0 if len(selected) == 1 else 8.0)
         tasks = {item.descriptor.provider_key: (lambda item=item: search_one(item)) for item in selected}
-        payload_map, timed_out = run_parallel_with_timeout(tasks, effective_timeout)
+        provider_timeouts = {
+            item.descriptor.provider_key: min(
+                effective_timeout,
+                float(getattr(item.descriptor, "timeout_seconds", effective_timeout) or effective_timeout),
+            )
+            for item in selected
+        }
+        payload_map, timed_out = run_parallel_with_timeout(
+            tasks,
+            effective_timeout,
+            timeouts=provider_timeouts,
+        )
         for provider_key, payloads in payload_map.items():
             hits.extend(payloads)
         for provider_key in timed_out:
@@ -1671,7 +1692,7 @@ class MetadataService:
             raw = self._detail_cache.get("__version__")
             try:
                 version = int(str(raw)) if raw is not None else DETAIL_CACHE_VERSION
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 version = DETAIL_CACHE_VERSION
             if version < DETAIL_CACHE_VERSION:
                 version = DETAIL_CACHE_VERSION
@@ -1684,7 +1705,7 @@ class MetadataService:
             raw = self._detail_cache.get("__version__")
             try:
                 current = int(str(raw)) if raw is not None else DETAIL_CACHE_VERSION
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 current = DETAIL_CACHE_VERSION
             version = current + 1
             self._detail_cache.set("__version__", version)

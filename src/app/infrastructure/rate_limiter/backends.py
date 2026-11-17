@@ -289,7 +289,7 @@ class RedisTokenBucketBackend(RateLimitBackend):
             if last_update and rate and burst:
                 tokens = min(burst, tokens + (time.time() * 1000 - last_update) * rate / 1000.0)
             return {"tokens": round(tokens, 2), "burst": int(burst) if burst else None}
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return {}
 
     def reset(self, key: str) -> None:
@@ -393,13 +393,24 @@ class RateLimitEngine:
         # Lua 脚本内部已处理 ms→s 转换，rate 应为每秒令牌数
         backend_rate = rate_per_sec
         if timeout is not None and timeout > 0:
+            # 内存后端本身支持精确 sleep，直接交给后端等待，去掉引擎层 50ms 轮询。
+            if isinstance(self._backend, MemoryTokenBucketBackend):
+                return self._backend.acquire(key, backend_rate, burst, tokens, timeout)
             deadline = time.time() + timeout
             while True:
                 if self._backend.acquire(key, backend_rate, burst, tokens, 0):
                     return True
-                if time.time() >= deadline:
+                remaining = deadline - time.time()
+                if remaining <= 0:
                     return False
-                time.sleep(0.05)
+                # Redis 后端无法阻塞等待，按当前令牌数估算下一次可用时间，
+                # 避免固定 50ms 高频轮询；上限 250ms 以便限流配置变化后及时恢复。
+                wait = 0.05
+                status = self._backend.get_status(key) or {}
+                current = float(status.get("tokens") or 0)
+                if backend_rate > 0:
+                    wait = max(0.01, (tokens - current) / backend_rate)
+                time.sleep(min(0.25, remaining, wait))
         return self._backend.acquire(key, backend_rate, burst, tokens, timeout)
 
     def try_acquire(self, key: str, rate: str = "10/m", tokens: int = 1) -> bool:

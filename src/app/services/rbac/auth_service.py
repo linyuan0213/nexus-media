@@ -2,7 +2,7 @@
 
 import json
 
-import pyotp
+from pyotp.totp import TOTP
 
 from app.core.settings import settings
 from app.infrastructure.security import check_password_hash, generate_password_hash
@@ -116,14 +116,14 @@ class RBACAuthService:
         if not code:
             return False
         secret = str(getattr(user, "TOTP_SECRET", "") or "").strip()
-        if secret and pyotp.TOTP(secret).verify(code, valid_window=1):
+        if secret and TOTP(secret).verify(code, valid_window=1):
             return True
         raw_codes = getattr(user, "TOTP_RECOVERY_CODES", None)
         if not raw_codes:
             return False
         try:
             codes = json.loads(raw_codes)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return False
         remaining = []
         matched = False

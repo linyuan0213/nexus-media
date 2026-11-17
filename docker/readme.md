@@ -2,7 +2,7 @@
 
 ## 镜像特点
 
-- 基于 Debian（`python:3.14-slim-trixie`）
+- 基于 Debian（`python:3.15-slim-trixie`）
 - 支持 amd64 / arm64 架构
 - 内嵌 nginx 反代，后端容器统一 **8080** 端口对外（内部服务监听 3000）
 - 非 root 用户运行（nexus:nexus，UID 911，可用 PUID/PGID 覆盖）

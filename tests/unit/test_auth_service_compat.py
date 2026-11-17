@@ -1,4 +1,4 @@
-"""auth_service Python 3.14 兼容性单元测试."""
+"""auth_service Python 3.14/3.15 兼容性单元测试."""
 
 from __future__ import annotations
 

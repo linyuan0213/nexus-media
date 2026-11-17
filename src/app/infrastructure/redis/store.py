@@ -36,10 +36,14 @@ class RedisStore:
     def _ensure_connection(self) -> StrictRedis | None:
         if not getattr(redis_cfg, "enabled", True):
             return None
+        # 高频搜索/限流路径先走无锁快路径，避免每个 Redis 命令都争用同一把锁。
+        if self._available and self._client is not None:
+            now = time.time()
+            if now - self._last_ok < self._RECHECK_INTERVAL:
+                return self._client
         with self._lock:
             now = time.time()
             if self._available and self._client is not None:
-                # 快速路径：近期已确认可用则直接复用，不再 PING
                 if now - self._last_ok < self._RECHECK_INTERVAL:
                     return self._client
                 try:

@@ -42,8 +42,13 @@ def run_with_timeout(fn: Callable[[], T], timeout: float, *, name: str = "task")
 def run_parallel_with_timeout(
     tasks: dict[str, Callable[[], T]],
     timeout: float,
+    *,
+    timeouts: dict[str, float] | None = None,
 ) -> tuple[dict[str, T], set[str]]:
-    """并行执行多个任务，返回（成功结果, 超时/失败任务名）."""
+    """并行执行多个任务，返回（成功结果, 超时/失败任务名）.
+
+    可为单个任务指定更短的 deadline，慢 provider 不会阻止其它结果返回。
+    """
     results: dict[str, T] = {}
     finished: set[str] = set()
     failed: set[str] = set()
@@ -65,10 +70,14 @@ def run_parallel_with_timeout(
         threading.Thread(target=runner, args=(task_name, fn), name=f"{task_name}-timeout", daemon=True)
         for task_name, fn in tasks.items()
     ]
+    started = time.monotonic()
     for thread in threads:
         thread.start()
-    deadline = time.monotonic() + timeout
-    for thread in threads:
-        thread.join(timeout=max(0.0, deadline - time.monotonic()))
+    deadline = started + timeout
+    for thread, task_name in zip(threads, tasks, strict=False):
+        task_deadline = deadline
+        if timeouts and task_name in timeouts:
+            task_deadline = min(task_deadline, started + max(0.0, timeouts[task_name]))
+        thread.join(timeout=max(0.0, task_deadline - time.monotonic()))
     timed_out = set(tasks) - finished
     return results, timed_out | failed

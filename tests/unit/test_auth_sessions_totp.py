@@ -3,8 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pyotp
 import pytest
+from pyotp.totp import TOTP
 
 from app.db import init_db
 from app.schemas.auth import UserContext
@@ -98,12 +98,12 @@ def test_totp_setup_enable_and_disable():
     assert ok and data["secret"]
     assert data["qr_data_uri"].startswith("data:image/svg+xml;base64,")
     user.TOTP_SECRET = data["secret"]
-    ok, enabled = svc.enable_totp(7, pyotp.TOTP(data["secret"]).now())
+    ok, enabled = svc.enable_totp(7, TOTP(data["secret"]).now())
     assert ok and len(enabled["recovery_codes"]) == 8
     user.TOTP_ENABLED = 1
 
     assert svc.totp_status(7)["enabled"] is True
-    ok, _ = svc.disable_totp(7, "pw", pyotp.TOTP(data["secret"]).now())
+    ok, _ = svc.disable_totp(7, "pw", TOTP(data["secret"]).now())
     assert ok
 
 

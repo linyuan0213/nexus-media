@@ -3,6 +3,9 @@
 from collections.abc import Iterator
 from typing import BinaryIO
 
+# Python 3.15+ 延迟加载可选云存储依赖；旧版本忽略。
+__lazy_modules__ = {"boto3"}
+
 import boto3
 
 from app.storage.backends.base import FileInfo, StorageBackend, StorageConfig

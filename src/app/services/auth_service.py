@@ -19,6 +19,7 @@ import qrcode
 from loguru import logger
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
+from pyotp.totp import TOTP
 from qrcode.image.svg import SvgPathImage
 
 from app.core.exceptions import RepositoryError, ServiceError
@@ -79,7 +80,7 @@ class AuthService:
         try:
             permissions = list(self._rbac_service.get_user_permissions(user.ID) or [])
             role_codes = list(self._rbac_service.get_user_role_codes(user.ID) or [])
-        except (ServiceError, RepositoryError):
+        except ServiceError, RepositoryError:
             permissions = []
             role_codes = []
 
@@ -226,7 +227,7 @@ class AuthService:
             TOTP_ENABLED=0,
             TOTP_RECOVERY_CODES=None,
         )
-        uri = pyotp.TOTP(secret).provisioning_uri(name=user.USERNAME, issuer_name="Nexus Media")
+        uri = TOTP(secret).provisioning_uri(name=user.USERNAME, issuer_name="Nexus Media")
         buffer = io.BytesIO()
         qrcode.make(uri, image_factory=SvgPathImage, border=2).save(buffer)
         qr_data_uri = "data:image/svg+xml;base64," + base64.b64encode(buffer.getvalue()).decode()
@@ -237,7 +238,7 @@ class AuthService:
         if not user:
             return False, {"message": "用户不存在"}
         secret = str(getattr(user, "TOTP_SECRET", "") or "")
-        if not secret or not pyotp.TOTP(secret).verify(str(code or "").strip(), valid_window=1):
+        if not secret or not TOTP(secret).verify(str(code or "").strip(), valid_window=1):
             return False, {"message": "验证码错误"}
         recovery_codes = [secrets.token_hex(4) for _ in range(8)]
         hashed = [self.hash_password(item) for item in recovery_codes]
@@ -253,7 +254,7 @@ class AuthService:
         if not user or not self.verify_password(password, user.PASSWORD_HASH or ""):
             return False, "密码错误"
         secret = str(getattr(user, "TOTP_SECRET", "") or "")
-        if not secret or not pyotp.TOTP(secret).verify(str(code or "").strip(), valid_window=1):
+        if not secret or not TOTP(secret).verify(str(code or "").strip(), valid_window=1):
             return False, "验证码错误"
         self._rbac_service.update_user(
             user_id,
@@ -297,7 +298,7 @@ class AuthService:
             try:
                 permissions = list(self._rbac_service.get_user_permissions(user_id) or [])
                 role_codes = list(self._rbac_service.get_user_role_codes(user_id) or [])
-            except (ServiceError, RepositoryError):
+            except ServiceError, RepositoryError:
                 permissions = []
                 role_codes = []
 
@@ -318,7 +319,7 @@ class AuthService:
             self._session_repo.touch_session(session_id, refresh_jti=new_jti, login_ip=login_ip)
             return self.create_token_pair(ctx, session_id=session_id, refresh_jti=new_jti)
 
-        except (jwt.InvalidTokenError, ValueError):
+        except jwt.InvalidTokenError, ValueError:
             return None
 
     @staticmethod
@@ -328,7 +329,7 @@ class AuthService:
             payload = jwt.decode(token, _SECRET_KEY, algorithms=[_ALGORITHM])
         except jwt.ExpiredSignatureError:
             return None, "expired"
-        except (jwt.InvalidTokenError, ValueError):
+        except jwt.InvalidTokenError, ValueError:
             return None, "invalid"
         if payload.get("type") != "access":
             return None, "invalid"

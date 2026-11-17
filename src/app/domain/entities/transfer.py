@@ -61,8 +61,11 @@ class TransferHistoryEntity:
         """源和目标是否在同一盘（简单字符串前缀判断）"""
         if not self.source_path or not self.dest_path:
             return False
-        common = os.path.commonprefix([self.source_path, self.dest_path])
-        return bool(common and common != "/")
+        try:
+            common = os.path.commonpath([os.path.abspath(self.source_path), os.path.abspath(self.dest_path)])
+        except ValueError:
+            return False
+        return bool(common and common != os.path.sep)
 
     @property
     def is_season_pack(self) -> bool:
