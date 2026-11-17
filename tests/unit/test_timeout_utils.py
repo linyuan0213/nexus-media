@@ -47,3 +47,17 @@ class TestRunParallelWithTimeout:
 
         assert results == {"good": 1}
         assert failed == {"bad"}
+
+
+def test_parallel_task_can_have_shorter_timeout():
+    import time
+
+    started = time.monotonic()
+    results, timed_out = run_parallel_with_timeout(
+        {"slow": lambda: time.sleep(0.3), "fast": lambda: "ok"},
+        1.0,
+        timeouts={"slow": 0.05, "fast": 1.0},
+    )
+    assert results["fast"] == "ok"
+    assert "slow" in timed_out
+    assert time.monotonic() - started < 0.25

@@ -5,6 +5,9 @@ import re
 import time
 from typing import Any, cast
 
+# Python 3.15+ 延迟加载下载器 SDK；旧版本忽略。
+__lazy_modules__ = {"qbittorrentapi", "bencode"}
+
 import qbittorrentapi
 from bencode import bdecode, bencode
 
@@ -148,7 +151,7 @@ class Qbittorrent(_IDownloadClient):
             except qbittorrentapi.LoginFailed as e:
                 log.error(f"[{self.client_name}]{self.name} 登录失败：{e}")
             return qbt
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -160,7 +163,7 @@ class Qbittorrent(_IDownloadClient):
             return False
         try:
             return bool(self.qbc.transfer_info())
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -205,7 +208,7 @@ class Qbittorrent(_IDownloadClient):
             else:
                 self.qbc.torrent_categories.create_category(name=name, save_path=save_path)
                 log.info(f"[{self.client_name}]{self.name} 创建分类：{name}，路径：{save_path}")
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -244,7 +247,7 @@ class Qbittorrent(_IDownloadClient):
             for torrent in torrents:
                 try:
                     torrent_list.append(self.torrent_properties(torrent=torrent))
-                except (InfrastructureError, NetworkError):
+                except InfrastructureError, NetworkError:
                     raise
                 except Exception:
                     log.warn(f"[Qbittorrent]获取种子 {torrent.get('hash', '')} 属性失败，跳过")
@@ -268,7 +271,7 @@ class Qbittorrent(_IDownloadClient):
                         results.append(torrent)
                 return results or [], False
             return torrent_list or [], False
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             self._log_conn_error(f"[{self.client_name}]{self.name} 获取种子失败：{err!s}")
@@ -310,7 +313,7 @@ class Qbittorrent(_IDownloadClient):
             for torrent in torrent_list:
                 torrent.avg_upload_speed = self._get_torrent_avg_upload_speed(torrent.id)
             return torrent_list or [], False
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             self._log_conn_error(f"[{self.client_name}]{self.name} sync 失败，回退全量接口：{err!s}")
@@ -339,7 +342,7 @@ class Qbittorrent(_IDownloadClient):
             try:
                 torrents = self.qbc.torrents_info(status_filter=status_filter)
                 break
-            except (InfrastructureError, NetworkError):
+            except InfrastructureError, NetworkError:
                 raise
             except Exception as err:
                 # 403 会话失效：重登一次后重试；仍失败或连接类错误则优雅降级
@@ -425,7 +428,7 @@ class Qbittorrent(_IDownloadClient):
         try:
             self.qbc.torrents_delete_tags(torrent_hashes=ids, tags=tag)
             return True
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -437,7 +440,7 @@ class Qbittorrent(_IDownloadClient):
         try:
             self.qbc.torrents_add_tags(tags="已整理", torrent_hashes=ids)
             return True
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -455,7 +458,7 @@ class Qbittorrent(_IDownloadClient):
                 self.qbc.torrents_remove_tags(old_tags, torrent_hashes=ids)
                 self.qbc.torrents_add_tags(tags, torrent_hashes=ids)
             return True
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -466,7 +469,7 @@ class Qbittorrent(_IDownloadClient):
             return
         try:
             self.qbc.torrents_set_force_start(enable=True, torrent_hashes=ids)
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -488,7 +491,7 @@ class Qbittorrent(_IDownloadClient):
     def __get_last_add_torrentid_by_tag(self, tag, status=None):
         try:
             torrents, _ = self.get_torrents(status=status, tag=tag)
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -522,7 +525,7 @@ class Qbittorrent(_IDownloadClient):
                     info = torrent.get("info")
                     info_encoded = bencode(info)
                     return hashlib.sha1(info_encoded, usedforsecurity=False).hexdigest().lower()
-            except (InfrastructureError, NetworkError):
+            except InfrastructureError, NetworkError:
                 raise
             except Exception as err:
                 log.debug(f"[{Qbittorrent.client_name}]计算种子hash失败: {err!s}")
@@ -539,7 +542,7 @@ class Qbittorrent(_IDownloadClient):
             torrents, error = self.get_torrents(ids=[torrent_hash])
             if not error and torrents:
                 return True, torrent_hash
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             log.debug(f"[{self.client_name}]{self.name} 检查种子存在性失败: {err!s}")
@@ -684,7 +687,7 @@ class Qbittorrent(_IDownloadClient):
                 if success_count is not None:
                     try:
                         ret_ok = int(success_count or 0) > 0
-                    except (TypeError, ValueError):
+                    except TypeError, ValueError:
                         ret_ok = False
                     if not ret_ok:
                         detail = f"qBittorrent 5.2+ 返回 success_count={success_count}（重复种子/路径非法/已被拒绝）"
@@ -704,7 +707,7 @@ class Qbittorrent(_IDownloadClient):
                     f"qBittorrent 返回: {qbc_ret!r}（重复种子会返回 Fails.，需确认是否已在下载器中）"
                 )
             return ret_ok
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -753,7 +756,7 @@ class Qbittorrent(_IDownloadClient):
             return False
         try:
             return self.qbc.torrents_resume(torrent_hashes=ids)
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -764,7 +767,7 @@ class Qbittorrent(_IDownloadClient):
             return False
         try:
             return self.qbc.torrents_pause(torrent_hashes=ids)
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -778,7 +781,7 @@ class Qbittorrent(_IDownloadClient):
         try:
             self.qbc.torrents_delete(delete_files=delete_file, torrent_hashes=ids)
             return True
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -805,7 +808,7 @@ class Qbittorrent(_IDownloadClient):
                 priority=0,
             )
             return True
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -816,7 +819,7 @@ class Qbittorrent(_IDownloadClient):
             return None
         try:
             return self.qbc.torrents_files(torrent_hash=tid)
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -834,7 +837,7 @@ class Qbittorrent(_IDownloadClient):
                 priority=kwargs.get("priority"),
             )
             return True
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -849,7 +852,7 @@ class Qbittorrent(_IDownloadClient):
         ret_dirs = []
         try:
             categories = self.qbc.torrents_categories(requests_args={"timeout": (10, 30)}) or {}
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -868,7 +871,7 @@ class Qbittorrent(_IDownloadClient):
                 default_path = self.qbc.app_default_save_path()
                 if default_path:
                     dirs.append(str(default_path))
-            except (InfrastructureError, NetworkError):
+            except InfrastructureError, NetworkError:
                 raise
             except Exception as err:
                 ExceptionUtils.exception_traceback(err)
@@ -903,7 +906,7 @@ class Qbittorrent(_IDownloadClient):
                 upload_limit = upload_limit * 1024
                 if self.qbc.transfer.upload_limit != upload_limit:
                     self.qbc.transfer.upload_limit = upload_limit
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -914,7 +917,7 @@ class Qbittorrent(_IDownloadClient):
             return None
         try:
             info = self.qbc.transfer_info()
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -940,7 +943,7 @@ class Qbittorrent(_IDownloadClient):
             return False
         try:
             return self.qbc.torrents_recheck(torrent_hashes=ids)
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -954,7 +957,7 @@ class Qbittorrent(_IDownloadClient):
             if not status:
                 return
             return status.get("free_space_on_disk")
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -969,7 +972,7 @@ class Qbittorrent(_IDownloadClient):
         except qbittorrentapi.NotFound404Error:
             # 种子已被删除/清理（删种或整理竞态）：属正常，静默忽略
             return None
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -994,7 +997,7 @@ class Qbittorrent(_IDownloadClient):
             self.qbc.torrents_add_trackers(torrent_hashes=torrent_hash, urls=urls)
         except qbittorrentapi.NotFound404Error:
             return
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -1006,7 +1009,7 @@ class Qbittorrent(_IDownloadClient):
             self.qbc.torrents_remove_trackers(torrent_hashes=torrent_hash, urls=urls)
         except qbittorrentapi.NotFound404Error:
             return
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -1018,7 +1021,7 @@ class Qbittorrent(_IDownloadClient):
             self.qbc.torrents_edit_tracker(torrent_hash=torrent_hash, original_url=old_url, new_url=new_url)
         except qbittorrentapi.NotFound404Error:
             return
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             ExceptionUtils.exception_traceback(err)
@@ -1071,7 +1074,7 @@ class Qbittorrent(_IDownloadClient):
         try:
             properties = self.qbc.torrents_properties(torrent_hash=torrent_hash)
             return properties
-        except (InfrastructureError, NetworkError):
+        except InfrastructureError, NetworkError:
             raise
         except Exception as err:
             if self._reauth_if_forbidden(err):

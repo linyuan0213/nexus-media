@@ -3,6 +3,9 @@ from functools import lru_cache
 from typing import Any
 from urllib.parse import quote, quote_plus
 
+# Python 3.15+ 延迟加载可选 Plex SDK；旧版本忽略。
+__lazy_modules__ = {"plexapi", "plexapi.media", "plexapi.myplex", "plexapi.server"}
+
 from plexapi import media
 from plexapi.myplex import MyPlexAccount
 from plexapi.server import PlexServer
@@ -114,7 +117,7 @@ class Plex(_IMediaClient):
             if self._host and self._token:
                 try:
                     self._plex = PlexServer(self._host, self._token)
-                except (InfrastructureError, NetworkError, MediaServerError):
+                except InfrastructureError, NetworkError, MediaServerError:
                     raise
                 except Exception as e:  # type: ignore[unreachable]
                     ExceptionUtils.exception_traceback(e)
@@ -123,7 +126,7 @@ class Plex(_IMediaClient):
             elif self._username and self._password and self._servername:
                 try:
                     self._plex = MyPlexAccount(self._username, self._password).resource(self._servername).connect()
-                except (InfrastructureError, NetworkError, MediaServerError):
+                except InfrastructureError, NetworkError, MediaServerError:
                     raise
                 except Exception as e:  # type: ignore[unreachable]
                     ExceptionUtils.exception_traceback(e)
@@ -181,7 +184,7 @@ class Plex(_IMediaClient):
                     event_date = his.lastViewedAt.strftime("%Y-%m-%d %H:%M:%S")
                     activity = {"type": event_type, "event": event_str, "date": event_date}
                     ret_array.append(activity)
-        except (InfrastructureError, NetworkError, MediaServerError):
+        except InfrastructureError, NetworkError, MediaServerError:
             raise
         except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
@@ -301,7 +304,7 @@ class Plex(_IMediaClient):
                 if image is not None and hasattr(image, "key") and image.key.startswith("http"):
                     return image.key
             return None
-        except (InfrastructureError, NetworkError, MediaServerError):
+        except InfrastructureError, NetworkError, MediaServerError:
             raise
         except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
@@ -325,7 +328,7 @@ class Plex(_IMediaClient):
             for image in images:
                 if image is not None and hasattr(image, "key") and image.key.startswith("http"):
                     return image.key
-        except (InfrastructureError, NetworkError, MediaServerError):
+        except InfrastructureError, NetworkError, MediaServerError:
             raise
         except Exception as e:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(e)
@@ -366,7 +369,7 @@ class Plex(_IMediaClient):
         if not self._libraries:
             try:
                 self._libraries = self._plex.library.sections()
-            except (InfrastructureError, NetworkError, MediaServerError):
+            except InfrastructureError, NetworkError, MediaServerError:
                 raise
             except Exception as err:  # type: ignore[unreachable]
                 ExceptionUtils.exception_traceback(err)
@@ -395,7 +398,7 @@ class Plex(_IMediaClient):
         """
         判断这个path属于哪个媒体库
         多个媒体库配置的目录不应有重复和嵌套,
-        使用os.path.commonprefix([path, location]) == location应该没问题
+        使用 os.path.commonpath([path, location]) == location 判断媒体库归属
         """
         if path is None:
             return "", ""
@@ -405,9 +408,13 @@ class Plex(_IMediaClient):
             for lib in libraries:
                 if hasattr(lib, "locations") and lib.locations:
                     for location in lib.locations:
-                        if os.path.commonprefix([dir_path, location]) == location:
+                        try:
+                            common = os.path.commonpath([os.path.abspath(dir_path), os.path.abspath(location)])
+                        except ValueError:
+                            continue
+                        if common == os.path.abspath(location):
                             return lib.key, dir_path
-        except (InfrastructureError, NetworkError, MediaServerError):
+        except InfrastructureError, NetworkError, MediaServerError:
             raise
         except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
@@ -421,7 +428,7 @@ class Plex(_IMediaClient):
             return []
         try:
             self._libraries = self._plex.library.sections()
-        except (InfrastructureError, NetworkError, MediaServerError):
+        except InfrastructureError, NetworkError, MediaServerError:
             raise
         except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
@@ -511,7 +518,7 @@ class Plex(_IMediaClient):
                 return {}
             ids = self.__get_ids(item.guids)
             return {"ProviderIds": {"Tmdb": ids["tmdb_id"], "Imdb": ids["imdb_id"]}}
-        except (InfrastructureError, NetworkError, MediaServerError):
+        except InfrastructureError, NetworkError, MediaServerError:
             raise
         except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)
@@ -558,7 +565,7 @@ class Plex(_IMediaClient):
                         "tvdbid": ids["tvdb_id"],
                         "path": path,
                     }
-        except (InfrastructureError, NetworkError, MediaServerError):
+        except InfrastructureError, NetworkError, MediaServerError:
             raise
         except Exception as err:  # type: ignore[unreachable]
             ExceptionUtils.exception_traceback(err)

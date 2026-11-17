@@ -1,7 +1,7 @@
 # Nexus Media 后端 Dockerfile
 # 纯后端构建，前端由独立服务提供
 
-FROM python:3.14-slim-trixie AS builder
+FROM python:3.15-slim-trixie AS builder
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -9,7 +9,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # 编译依赖
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    gcc libffi-dev libxml2-dev libxslt1-dev libssl-dev libpq-dev \
+    build-essential gcc libffi-dev libxml2-dev libxslt1-dev libssl-dev libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /nexus-media
@@ -25,7 +25,7 @@ RUN uv venv .venv \
     && uv sync --frozen --no-cache --no-install-package nexus-media
 
 # ==================== 运行时 ====================
-FROM python:3.14-slim-trixie
+FROM python:3.15-slim-trixie
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 

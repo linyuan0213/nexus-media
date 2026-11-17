@@ -1,7 +1,6 @@
 """基础设施 Builder — 创建 Layer 1 对象。"""
 
 import os
-from concurrent.futures import ThreadPoolExecutor
 
 import log
 from app.db.database_factory import DatabaseFactory
@@ -62,9 +61,9 @@ def build_infrastructure() -> InfrastructureObjects:
         hook_workers = int(os.environ.get("PLUGIN_HOOK_WORKERS", "8"))
     except ValueError:
         hook_workers = 8
-    plugin_hook_executor = ThreadPoolExecutor(
+    plugin_hook_executor = ThreadExecutor.named(
+        "plugin-hook",
         max_workers=max(1, min(hook_workers, 32)),
-        thread_name_prefix="plugin-hook",
     )
     hook_system = HookSystem(plugin_sandbox=None, executor=plugin_hook_executor)
     indexer_helper = IndexerHelper()
