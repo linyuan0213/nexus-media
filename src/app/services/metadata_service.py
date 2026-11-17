@@ -1169,7 +1169,7 @@ class MetadataService:
                 # 只有显式携带权限集时才继续检查 provider 专属权限。
                 if permissions is not None and "*" not in permissions and required not in permissions:
                     continue
-                # 普通搜索默认不拉取垂类私有源（如 adult）；只有请求画像匹配
+                # 普通搜索默认不拉取垂类私有源；只有请求画像匹配
                 # 或显式指定 provider 时才启用，避免普通搜索被浏览器抓取拖慢。
                 if not provider:
                     profiles = {

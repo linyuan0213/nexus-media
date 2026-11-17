@@ -874,7 +874,7 @@ def test_metadata_context_superadmin_is_unrestricted():
 
 
 def test_private_search_provider_needs_matching_content_profile():
-    provider = _PrivateSearchProvider({"adult"})
+    provider = _PrivateSearchProvider({"niche"})
     registry = MetadataRegistry()
     registry.register_provider(provider)
     svc = MetadataService(registry=registry, identity_repo=_FakeSnapshotRepo(), register_builtins=False)
@@ -882,5 +882,5 @@ def test_private_search_provider_needs_matching_content_profile():
     assert svc.search(query="default", allow_private=True, permissions=None) == []
     assert provider.called is False
 
-    assert svc.search(query="adult", content_profile="adult", allow_private=True, permissions=None) == []
+    assert svc.search(query="niche", content_profile="niche", allow_private=True, permissions=None) == []
     assert provider.called is True
