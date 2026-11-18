@@ -1,7 +1,7 @@
 /** CookieCloud 插件前端 */
 
 export default function(host) {
-  const { h, ref, onMounted } = host.Vue;
+  const { h, ref, onMounted, onUnmounted } = host.Vue;
   const IconifyIcon = host.IconifyIcon;
   const rc = host.api;
 
@@ -10,6 +10,14 @@ export default function(host) {
     setup() {
       const loading = ref(false);
       const records = ref([]);
+      const isMobile = ref(
+        typeof window !== 'undefined' ? window.innerWidth <= 640 : false,
+      );
+
+      function syncViewport() {
+        isMobile.value =
+          typeof window !== 'undefined' ? window.innerWidth <= 640 : false;
+      }
 
       async function fetchData() {
         loading.value = true;
@@ -23,7 +31,14 @@ export default function(host) {
         }
       }
 
-      onMounted(fetchData);
+      onMounted(() => {
+        window.addEventListener('resize', syncViewport);
+        fetchData();
+      });
+
+      onUnmounted(() => {
+        window.removeEventListener('resize', syncViewport);
+      });
 
       function renderIcon(icon, size) {
         return IconifyIcon ? h(IconifyIcon, { icon, style: { fontSize: size || '1rem' } }) : null;
@@ -55,8 +70,9 @@ export default function(host) {
       }
 
       return () => {
+        var mobile = isMobile.value;
         var header = h('div', {
-          style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' },
+          style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' },
         }, [
           h('div', { style: { display: 'flex', alignItems: 'center', gap: '0.5rem' } }, [
             renderIcon('lucide:history', '1.25rem'),
@@ -95,14 +111,15 @@ export default function(host) {
           ]);
         }
 
-        return h('div', { style: { padding: '1.5rem' } }, [
+        return h('div', { class: 'cc-sync-history', style: { padding: '1.5rem' } }, [
           header,
           ...records.value.map(function(r, idx) {
             var stats = h('div', {
-              style: { display: 'flex', gap: '1rem', marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid hsl(var(--border) / 0.4)', backgroundColor: 'hsl(var(--card))' },
+              class: 'cc-sync-stats',
+              style: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', marginBottom: '1rem', padding: '0.75rem 1rem', borderRadius: '0.75rem', border: '1px solid hsl(var(--border) / 0.4)', backgroundColor: 'hsl(var(--card))' },
             }, [
               h('div', {}, [h('span', { style: { fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))' } }, r.time)]),
-              h('div', { style: { display: 'flex', gap: '1rem', marginLeft: 'auto' } }, [
+              h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem', marginLeft: mobile ? '0' : 'auto' } }, [
                 h('span', { style: { fontSize: '0.75rem', color: 'hsl(var(--success))' } }, '更新 ' + r.update_ok),
                 h('span', { style: { fontSize: '0.75rem', color: 'hsl(var(--primary))' } }, '新增 ' + r.add_ok),
                 h('span', { style: { fontSize: '0.75rem', color: 'hsl(var(--destructive))' } }, '失败 ' + r.failed),
@@ -112,32 +129,52 @@ export default function(host) {
             var thStyle = { padding: '0.5rem 0.75rem', fontSize: '0.6875rem', fontWeight: 700, color: 'hsl(var(--muted-foreground))', textAlign: 'left', borderBottom: '1px solid hsl(var(--border) / 0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' };
             var tdStyle = { padding: '0.5rem 0.75rem', fontSize: '0.75rem', color: 'hsl(var(--card-foreground))', borderBottom: '1px solid hsl(var(--border) / 0.15)' };
 
-            var table = h('div', {
-              style: { borderRadius: '0.75rem', border: '1px solid hsl(var(--border) / 0.4)', overflow: 'hidden', backgroundColor: 'hsl(var(--card))' },
-            }, [
-              h('div', {
-                style: { display: 'grid', gridTemplateColumns: 'minmax(80px, auto) 1fr 150px 80px', backgroundColor: 'hsl(var(--accent) / 0.3)' },
-              }, [
-                h('div', { style: thStyle }, '操作'),
-                h('div', { style: thStyle }, '站点'),
-                h('div', { style: thStyle }, '域名'),
-                h('div', { style: { ...thStyle, textAlign: 'center' } }, '状态'),
-              ]),
-              ...(r.results || []).map(function(item) {
+            var table = mobile
+              ? h('div', {
+                  style: { borderRadius: '0.75rem', border: '1px solid hsl(var(--border) / 0.4)', overflow: 'hidden', backgroundColor: 'hsl(var(--card))' },
+                }, (r.results || []).map(function(item, itemIndex) {
                 return h('div', {
-                  key: item.domain + idx,
-                  style: { display: 'grid', gridTemplateColumns: 'minmax(80px, auto) 1fr 150px 80px', alignItems: 'center' },
+                  key: item.domain + idx + itemIndex,
+                  class: 'cc-sync-record-card',
+                  style: { display: 'flex', flexDirection: 'column', gap: '0.45rem', padding: '0.75rem', borderTop: itemIndex > 0 ? '1px solid hsl(var(--border) / 0.2)' : 'none' },
+                  }, [
+                    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' } }, [
+                      renderActionBadge(item.action),
+                      renderStatusBadge(item.status),
+                    ]),
+                    h('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 } }, [
+                      h('span', { style: { fontWeight: 600, color: 'hsl(var(--card-foreground))' } }, item.site || item.domain),
+                      item.reason ? h('span', { style: { fontSize: '0.6875rem', color: 'hsl(var(--muted-foreground))', overflowWrap: 'anywhere' } }, item.reason) : null,
+                      h('span', { style: { fontFamily: 'monospace', fontSize: '0.6875rem', color: 'hsl(var(--muted-foreground))', overflowWrap: 'anywhere' } }, item.domain),
+                    ]),
+                  ]);
+                }))
+              : h('div', {
+                  style: { borderRadius: '0.75rem', border: '1px solid hsl(var(--border) / 0.4)', overflow: 'hidden', backgroundColor: 'hsl(var(--card))' },
                 }, [
-                  h('div', { style: tdStyle }, renderActionBadge(item.action)),
-                  h('div', { style: tdStyle }, [
-                    h('span', { style: { fontWeight: 500 } }, item.site || item.domain),
-                    item.reason ? h('span', { style: { marginLeft: '0.5rem', fontSize: '0.6875rem', color: 'hsl(var(--muted-foreground))' } }, item.reason) : null,
+                  h('div', {
+                    style: { display: 'grid', gridTemplateColumns: 'minmax(80px, auto) 1fr 150px 80px', backgroundColor: 'hsl(var(--accent) / 0.3)' },
+                  }, [
+                    h('div', { style: thStyle }, '操作'),
+                    h('div', { style: thStyle }, '站点'),
+                    h('div', { style: thStyle }, '域名'),
+                    h('div', { style: { ...thStyle, textAlign: 'center' } }, '状态'),
                   ]),
-                  h('div', { style: { ...tdStyle, fontFamily: 'monospace', fontSize: '0.6875rem', color: 'hsl(var(--muted-foreground))' } }, item.domain),
-                  h('div', { style: { ...tdStyle, textAlign: 'center' } }, renderStatusBadge(item.status)),
+                  ...(r.results || []).map(function(item) {
+                    return h('div', {
+                      key: item.domain + idx,
+                      style: { display: 'grid', gridTemplateColumns: 'minmax(80px, auto) 1fr 150px 80px', alignItems: 'center' },
+                    }, [
+                      h('div', { style: tdStyle }, renderActionBadge(item.action)),
+                      h('div', { style: tdStyle }, [
+                        h('span', { style: { fontWeight: 500 } }, item.site || item.domain),
+                        item.reason ? h('span', { style: { marginLeft: '0.5rem', fontSize: '0.6875rem', color: 'hsl(var(--muted-foreground))' } }, item.reason) : null,
+                      ]),
+                      h('div', { style: { ...tdStyle, fontFamily: 'monospace', fontSize: '0.6875rem', color: 'hsl(var(--muted-foreground))' } }, item.domain),
+                      h('div', { style: { ...tdStyle, textAlign: 'center' } }, renderStatusBadge(item.status)),
+                    ]);
+                  }),
                 ]);
-              }),
-            ]);
 
             return h('div', { key: r.time, style: { marginBottom: '1.25rem' } }, [stats, table]);
           }),

@@ -156,6 +156,8 @@ class DefaultSubscribeSettingSaveRequest(BaseModel):
 class GetSubscribeHistoryRequest(BaseModel):
     type: str | None = None
     content_profile: str | None = None
+    page: int = 1
+    page_size: int = 20
 
 
 # ---------------------------------------------------------------------------
@@ -679,9 +681,26 @@ def get_rss_history(
     user: UserContext = Depends(require_any_permission("subscription:view", "subscription:manage")),
     svc: SubscribeHistoryService = Depends(get_subscribe_history_service),
 ):
-    parsed, profile = _resolve_type_and_profile(req.type, req.content_profile)
-    mtype = ProviderMediaType.MOVIE.value if parsed == ProviderMediaType.MOVIE else ProviderMediaType.SERIES.value
-    return success(data=svc.get_history(mtype=mtype, user=user, content_profile=profile))
+    if (req.type or "").strip().lower() == "all":
+        mtype = None
+        profile = None
+    else:
+        parsed, profile = _resolve_type_and_profile(req.type, req.content_profile)
+        mtype = ProviderMediaType.MOVIE.value if parsed == ProviderMediaType.MOVIE else ProviderMediaType.SERIES.value
+    rows = svc.get_history(mtype=mtype, user=user, content_profile=profile)
+    total = len(rows)
+    page_size = max(1, min(req.page_size, 100))
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    page = max(1, min(req.page, total_pages))
+    start = (page - 1) * page_size
+    return success(
+        data={
+            "items": rows[start : start + page_size],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }
+    )
 
 
 @router.post("/tv/items", response_model=CommonResponse, summary="获取电视剧 RSS 订阅项")
