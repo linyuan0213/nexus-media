@@ -2,13 +2,14 @@
 
 import time
 import uuid
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from api.deps import get_current_user
+from api.deps import get_current_user, get_system_config_service
 from api.exception_handlers import register_exception_handlers
 from api.routers import system as system_router
 from app.infrastructure.progress import ProgressTracker
@@ -101,3 +102,108 @@ class TestSystemRouter:
             assert b"100" in body
         finally:
             ProgressTracker._process_detail.pop(key, None)
+
+
+class TestAppearanceBackgroundRouter:
+    @pytest.fixture
+    def context(self, tmp_path, monkeypatch):
+        saved = {}
+        cfg = MagicMock()
+        cfg.get.side_effect = lambda key: saved.get(key)
+        cfg.set.side_effect = lambda key, value: saved.__setitem__(key, value)
+        monkeypatch.setattr(system_router, "settings", SimpleNamespace(data_path=str(tmp_path)))
+
+        app = FastAPI()
+        register_exception_handlers(app)
+        app.include_router(system_router.router, prefix="/api/system")
+        user = UserContext(user_id=1, username="tester", level=0, permissions=["setting:update"])
+        app.dependency_overrides[get_current_user] = lambda: user
+        app.dependency_overrides[get_system_config_service] = lambda: cfg
+        with TestClient(app) as client:
+            yield client, cfg, saved, tmp_path
+
+    def test_read_empty_and_save_device_urls(self, context):
+        client, _cfg, saved, _tmp_path = context
+        empty = client.get("/api/system/appearance/background")
+        empty_slot = {"url": None, "source": None, "updated_at": None}
+        assert empty.json()["data"] == {"desktop": empty_slot, "mobile": empty_slot}
+
+        desktop = client.post(
+            "/api/system/appearance/background",
+            json={"url": "https://example.com/desktop.jpg", "device": "desktop"},
+        )
+        mobile = client.post(
+            "/api/system/appearance/background",
+            json={"url": "https://example.com/mobile.jpg", "device": "mobile"},
+        )
+        assert desktop.status_code == mobile.status_code == 200
+        data = mobile.json()["data"]
+        assert data["desktop"]["url"].endswith("desktop.jpg")
+        assert data["mobile"]["url"].endswith("mobile.jpg")
+        assert saved["appearance.background"]["desktop"]["source"] == "url"
+
+    def test_legacy_single_background_is_desktop(self, context):
+        client, _cfg, saved, _tmp_path = context
+        saved["appearance.background"] = {
+            "url": "/static/backgrounds/legacy.png",
+            "source": "upload",
+            "updated_at": "2026-01-01T00:00:00+00:00",
+        }
+        data = client.get("/api/system/appearance/background").json()["data"]
+        assert data["desktop"]["url"].endswith("/file/legacy.png")
+        assert data["mobile"]["url"] is None
+
+    def test_upload_mobile_and_clear_only_mobile(self, context):
+        client, _cfg, saved, tmp_path = context
+        saved["appearance.background"] = {
+            "desktop": {"url": "https://example.com/desktop.jpg", "source": "url", "updated_at": None}
+        }
+        content = b"\x89PNG\r\n\x1a\n" + b"test-image"
+        response = client.post(
+            "/api/system/appearance/background/upload",
+            data={"device": "mobile"},
+            files={"file": ("poster.png", content, "image/png")},
+        )
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["mobile"]["source"] == "upload"
+        assert data["desktop"]["url"].endswith("desktop.jpg")
+        filename = data["mobile"]["url"].rsplit("/", maxsplit=1)[-1]
+        assert (tmp_path / "static" / "backgrounds" / filename).read_bytes() == content
+
+        cleared = client.delete("/api/system/appearance/background?device=mobile")
+        assert cleared.json()["data"]["mobile"]["url"] is None
+        assert cleared.json()["data"]["desktop"]["url"].endswith("desktop.jpg")
+
+    def test_reject_invalid_image_and_url(self, context, monkeypatch):
+        client, _cfg, _saved, _tmp_path = context
+        bad_image = client.post(
+            "/api/system/appearance/background/upload",
+            files={"file": ("fake.png", b"not-an-image", "image/png")},
+        )
+        assert bad_image.json()["code"] != 0
+
+        bad_url = client.post(
+            "/api/system/appearance/background",
+            json={"url": "/static/backgrounds/../../secret"},
+        )
+        assert bad_url.json()["code"] != 0
+
+        monkeypatch.setattr(system_router, "_APPEARANCE_BACKGROUND_MAX_BYTES", 8)
+        too_large = client.post(
+            "/api/system/appearance/background/upload",
+            files={"file": ("large.png", b"\x89PNG\r\n\x1a\n1", "image/png")},
+        )
+        assert too_large.json()["code"] != 0
+
+    def test_write_requires_permission(self, tmp_path):
+        app = FastAPI()
+        register_exception_handlers(app)
+        app.include_router(system_router.router, prefix="/api/system")
+        user = UserContext(user_id=2, username="viewer", level=0, permissions=[])
+        app.dependency_overrides[get_current_user] = lambda: user
+        app.dependency_overrides[get_system_config_service] = lambda: MagicMock()
+        with TestClient(app) as client:
+            assert client.get("/api/system/appearance/background").status_code == 200
+            assert client.post("/api/system/appearance/background", json={"url": "/static/a.png"}).status_code == 403
+            assert client.delete("/api/system/appearance/background").status_code == 403
