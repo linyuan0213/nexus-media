@@ -31,7 +31,7 @@ class SubscribeHistoryService:
 
     def get_history(
         self,
-        mtype: str,
+        mtype: str | None,
         user: UserContext | None = None,
         content_profile: str | None = None,
     ) -> list[dict]:
