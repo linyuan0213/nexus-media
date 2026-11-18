@@ -2,16 +2,20 @@
 # shellcheck shell=bash
 
 function __fixuser {
+    PUID="${PUID:-0}"
+    PGID="${PGID:-0}"
 
     echo "以PUID=${PUID}，PGID=${PGID}的身份启动程序..."
 
-    # 更改 nexus userid 和 groupid
-    groupmod -o -g "$PGID" nexus
-    usermod -o -u "$PUID" nexus
-
-    # 创建目录、权限设置
-    # WORKDIR 在构建时已用 --chown=nexus:nexus COPY，此处只处理运行时挂载卷和特殊文件
-    chown -R nexus:nexus "${HOME}" /config /etc/hosts 2>/dev/null || true
+    if [ "$PUID" != "0" ] || [ "$PGID" != "0" ]; then
+        # 更改 nexus userid 和 groupid
+        groupmod -o -g "$PGID" nexus
+        usermod -o -u "$PUID" nexus
+        # 仅在非 root 运行时整理挂载卷权限，避免每次启动递归扫描 HOME
+        chown -R nexus:nexus "${HOME}" /config /etc/hosts 2>/dev/null || true
+    else
+        chown nexus:nexus /etc/hosts 2>/dev/null || true
+    fi
 
     # nginx 以 nexus 身份运行（PUID/PGID 非 0 时非 root），需保证其临时/日志/pid 目录可写，
     # 否则会报 mkdir() "/var/lib/nginx/body" failed (13: Permission denied)
