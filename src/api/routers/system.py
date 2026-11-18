@@ -9,9 +9,12 @@ import os
 import re
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
+from urllib.parse import unquote, urlsplit
 
-from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
@@ -48,6 +51,7 @@ from app.agent.providers.openai import OpenAIProvider
 from app.core.error_codes import ErrorCode
 from app.core.exceptions import AuthError, DomainError, PermissionDenied, ResourceNotFoundError, ServiceError
 from app.core.root_path import get_project_root
+from app.core.settings import settings
 from app.domain.enums import SystemConfigKey
 from app.indexer.registry import get_all_clients as get_all_indexers
 from app.infrastructure.cache_system import TokenCache
@@ -147,6 +151,11 @@ class SystemConfigRequest(BaseModel):
     value: str | None = None
 
 
+class AppearanceBackgroundRequest(BaseModel):
+    url: str
+    device: Literal["desktop", "mobile"] = "desktop"
+
+
 class ScraperConfigRequest(BaseModel):
     scraper_nfo: dict | None = None
     scraper_pic: dict | None = None
@@ -220,9 +229,164 @@ def _extract_data(payload: BaseModel) -> dict:
     return d
 
 
+_APPEARANCE_BACKGROUND_KEY = "appearance.background"
+_APPEARANCE_BACKGROUND_MAX_BYTES = 10 * 1024 * 1024
+_APPEARANCE_FILE_RE = re.compile(r"^[0-9a-f]{32}\.(?:jpg|png|webp)$")
+_APPEARANCE_FILE_PREFIX = "/api/system/appearance/background/file/"
+_APPEARANCE_IMAGE_TYPES = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+
+
+def _empty_appearance_slot() -> dict[str, str | None]:
+    return {"url": None, "source": None, "updated_at": None}
+
+
+def _normalize_appearance_slot(value: object) -> dict[str, str | None]:
+    if not isinstance(value, dict) or not value.get("url"):
+        return _empty_appearance_slot()
+    url = str(value["url"])
+    if url.startswith("/static/backgrounds/"):
+        url = _APPEARANCE_FILE_PREFIX + url.rsplit("/", 1)[-1]
+    return {
+        "url": url,
+        "source": str(value.get("source") or "url"),
+        "updated_at": str(value.get("updated_at") or "") or None,
+    }
+
+
+def _appearance_background_data(cfg: SystemConfig) -> dict[str, dict[str, str | None]]:
+    saved = cfg.get(_APPEARANCE_BACKGROUND_KEY)
+    if isinstance(saved, dict) and saved.get("url"):
+        return {"desktop": _normalize_appearance_slot(saved), "mobile": _empty_appearance_slot()}
+    if not isinstance(saved, dict):
+        saved = {}
+    return {
+        "desktop": _normalize_appearance_slot(saved.get("desktop")),
+        "mobile": _normalize_appearance_slot(saved.get("mobile")),
+    }
+
+
+def _save_appearance_background(
+    cfg: SystemConfig,
+    url: str,
+    source: str,
+    device: Literal["desktop", "mobile"],
+) -> dict[str, dict[str, str | None]]:
+    value = _appearance_background_data(cfg)
+    value[device] = {
+        "url": url,
+        "source": source,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    cfg.set(_APPEARANCE_BACKGROUND_KEY, value)
+    return value
+
+
+def _normalize_appearance_url(raw_url: str) -> str | None:
+    url = raw_url.strip()
+    if not url or len(url) > 2048 or "\\" in url:
+        return None
+    parsed = urlsplit(url)
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return url
+    if parsed.scheme or parsed.netloc or not parsed.path.startswith(("/static/", "/img/", _APPEARANCE_FILE_PREFIX)):
+        return None
+    if any(part in {".", ".."} for part in unquote(parsed.path).split("/")):
+        return None
+    return url
+
+
+def _appearance_image_extension(content: bytes, content_type: str | None) -> str | None:
+    mime = (content_type or "").split(";", maxsplit=1)[0].strip().lower()
+    extension = _APPEARANCE_IMAGE_TYPES.get(mime)
+    if extension == ".jpg" and content.startswith(b"\xff\xd8\xff"):
+        return extension
+    if extension == ".png" and content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return extension
+    if extension == ".webp" and content.startswith(b"RIFF") and content[8:12] == b"WEBP":
+        return extension
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Router Endpoints
 # ---------------------------------------------------------------------------
+
+
+@router.get("/appearance/background", response_model=CommonResponse, summary="获取应用背景海报")
+def get_appearance_background(
+    _current_user: UserContext = Depends(get_current_user),
+    cfg: SystemConfig = Depends(get_system_config_service),
+):
+    return success(data=_appearance_background_data(cfg))
+
+
+@router.post("/appearance/background", response_model=CommonResponse, summary="保存应用背景海报 URL")
+def save_appearance_background(
+    req: AppearanceBackgroundRequest,
+    _current_user: UserContext = Depends(require_permission("setting:update")),
+    cfg: SystemConfig = Depends(get_system_config_service),
+):
+    url = _normalize_appearance_url(req.url)
+    if not url:
+        return fail(code=ErrorCode.PARAM_VALIDATION_FAILED, msg="请输入有效的 HTTP(S)、/static 或 /img 图片地址")
+    return success(data=_save_appearance_background(cfg, url, "url", req.device), message="背景海报已保存")
+
+
+@router.post("/appearance/background/upload", response_model=CommonResponse, summary="上传应用背景海报")
+async def upload_appearance_background(
+    file: UploadFile = File(...),
+    device: Literal["desktop", "mobile"] = Form("desktop"),
+    _current_user: UserContext = Depends(require_permission("setting:update")),
+    cfg: SystemConfig = Depends(get_system_config_service),
+):
+    content = await file.read(_APPEARANCE_BACKGROUND_MAX_BYTES + 1)
+    await file.close()
+    if len(content) > _APPEARANCE_BACKGROUND_MAX_BYTES:
+        return fail(code=ErrorCode.PARAM_VALIDATION_FAILED, msg="背景图片不能超过 10MB")
+    if not content:
+        return fail(code=ErrorCode.PARAM_VALIDATION_FAILED, msg="上传图片不能为空")
+    extension = _appearance_image_extension(content, file.content_type)
+    if not extension:
+        return fail(code=ErrorCode.PARAM_VALIDATION_FAILED, msg="仅支持 JPG、PNG 或 WebP 图片")
+
+    background_dir = Path(settings.data_path) / "static" / "backgrounds"
+    try:
+        background_dir.mkdir(parents=True, exist_ok=True)
+        filename = f"{uuid.uuid4().hex}{extension}"
+        (background_dir / filename).write_bytes(content)
+    except OSError as exc:
+        log.error(f"保存应用背景图片失败: {exc}")
+        return fail(code=ErrorCode.FILE_OPERATION_FAILED, msg="背景图片保存失败")
+    return success(
+        data=_save_appearance_background(cfg, f"{_APPEARANCE_FILE_PREFIX}{filename}", "upload", device),
+        message="背景海报上传成功",
+    )
+
+
+@router.get("/appearance/background/file/{filename}", summary="读取应用背景海报文件")
+def get_appearance_background_file(filename: str):
+    if not _APPEARANCE_FILE_RE.fullmatch(filename):
+        raise HTTPException(status_code=404)
+    path = Path(settings.data_path) / "static" / "backgrounds" / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(path)
+
+
+@router.delete("/appearance/background", response_model=CommonResponse, summary="清除应用背景海报")
+def clear_appearance_background(
+    device: Literal["desktop", "mobile"] = "desktop",
+    _current_user: UserContext = Depends(require_permission("setting:update")),
+    cfg: SystemConfig = Depends(get_system_config_service),
+):
+    value = _appearance_background_data(cfg)
+    value[device] = _empty_appearance_slot()
+    cfg.set(_APPEARANCE_BACKGROUND_KEY, value)
+    return success(data=value, message="背景海报已清除")
 
 
 @router.post("/info", response_model=CommonResponse, summary="获取系统基本信息")
