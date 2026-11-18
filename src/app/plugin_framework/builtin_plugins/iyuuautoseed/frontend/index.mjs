@@ -17,6 +17,13 @@ export default function(host) {
       const forms = reactive({});
       const results = reactive({});
       const binding = ref('');
+      const isMobile = ref(
+        typeof window !== 'undefined' ? window.innerWidth <= 640 : false,
+      );
+      function syncViewport() {
+        isMobile.value =
+          typeof window !== 'undefined' ? window.innerWidth <= 640 : false;
+      }
 
       async function fetchData() {
         loading.value = true;
@@ -38,7 +45,10 @@ export default function(host) {
         }
       }
 
-      onMounted(fetchData);
+      onMounted(() => {
+        window.addEventListener('resize', syncViewport);
+        fetchData();
+      });
 
       async function bind(row) {
         const form = forms[row.site] || {};
@@ -189,10 +199,11 @@ export default function(host) {
       }
 
       return function() {
+        const mobile = isMobile.value;
         const header = h('div', {
-          style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' },
+          style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' },
         }, [
-          h('div', {}, [
+          h('div', { style: { flex: mobile ? '1 1 100%' : '0 1 auto', minWidth: 0 } }, [
             h('div', { style: { display: 'flex', alignItems: 'center', gap: '0.5rem' } }, [
               renderIcon('lucide:link', '1.25rem', { color: 'hsl(var(--primary))' }),
               h('h2', { style: { fontSize: '1.125rem', fontWeight: 700, color: 'hsl(var(--foreground))' } }, '绑定站点'),
@@ -203,14 +214,20 @@ export default function(host) {
           ]),
           h('button', {
             onClick: fetchData,
+            title: '刷新',
+            'aria-label': '刷新',
             style: {
-              display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-              height: '2rem', padding: '0 0.875rem',
-              borderRadius: '0.5rem', border: '1px solid hsl(var(--border))',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+              height: '2.25rem', flexShrink: 0, marginLeft: 'auto',
+              width: mobile ? '2.25rem' : undefined,
+              padding: mobile ? '0' : '0 0.875rem',
+              borderRadius: '0.625rem', border: '1px solid hsl(var(--border))',
               background: 'hsl(var(--card))', color: 'hsl(var(--foreground))',
-              cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 500,
+              cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 500, whiteSpace: 'nowrap',
             },
-          }, [renderIcon('lucide:refresh-cw', '0.875rem'), '刷新']),
+          }, mobile
+            ? [renderIcon('lucide:refresh-cw', '1rem')]
+            : [renderIcon('lucide:refresh-cw', '0.875rem'), '刷新']),
         ]);
 
         if (loading.value) {
