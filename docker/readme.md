@@ -5,7 +5,7 @@
 - 基于 Debian（`python:3.15-slim-trixie`）
 - 支持 amd64 / arm64 架构
 - 内嵌 nginx 反代，后端容器统一 **8080** 端口对外（内部服务监听 3000）
-- 非 root 用户运行（nexus:nexus，UID 911，可用 PUID/PGID 覆盖）
+- 非 root 用户运行（nexus:nexus，默认 UID/GID 1000，可用 PUID/PGID 覆盖）
 - s6-overlay 进程管理，支持优雅退出
 - 数据库迁移在容器启动时自动执行（`alembic upgrade head`，幂等，无需独立 migration 容器）
 - ADR-025 之前的 TMDB/DB:/BG: 历史数据会在启动时自动补齐 anchor/identity；完成标记在 data/.migrations，重复启动不会重复扫全表

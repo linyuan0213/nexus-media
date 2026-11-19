@@ -1,7 +1,11 @@
 #!/usr/bin/with-contenv bash
 # shellcheck shell=bash
 
-umask ${UMASK}
+UMASK_VALUE="${UMASK:-000}"
+if [[ ! "$UMASK_VALUE" =~ ^[0-7]{1,4}$ ]]; then
+    UMASK_VALUE=000
+fi
+umask "$UMASK_VALUE"
 
 # 先执行 migration（单独运行容器时生效；compose 中由 migration 服务负责，backend 设 SKIP_MIGRATION=true 跳过）
 if [ "${SKIP_MIGRATION:-false}" != "true" ]; then

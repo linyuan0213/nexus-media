@@ -69,8 +69,8 @@ ENV S6_SERVICES_GRACETIME=30000 \
     NEXUS_PORT=3000 \
     WORKDIR="/nexus-media"
 
-RUN groupadd -r -g 911 nexus \
-    && useradd -r -g nexus -d ${HOME} -s /bin/bash -u 911 nexus \
+RUN groupadd -o -r -g 1000 nexus \
+    && useradd -o -r -g nexus -d ${HOME} -s /bin/bash -u 1000 nexus \
     && mkdir -p ${WORKDIR} ${HOME} /data/logs \
     && echo "nexus ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
