@@ -7,12 +7,20 @@ function __fixuser {
 
     echo "以PUID=${PUID}，PGID=${PGID}的身份启动程序..."
 
-    if [ "$PUID" != "0" ] || [ "$PGID" != "0" ]; then
-        # 更改 nexus userid 和 groupid
-        groupmod -o -g "$PGID" nexus
-        usermod -o -u "$PUID" nexus
-        # 仅在非 root 运行时整理挂载卷权限，避免每次启动递归扫描 HOME
-        chown -R nexus:nexus "${HOME}" /config /etc/hosts 2>/dev/null || true
+    if ! [[ "$PUID" =~ ^[0-9]+$ ]]; then PUID=0; fi
+    if ! [[ "$PGID" =~ ^[0-9]+$ ]]; then PGID=0; fi
+
+    current_uid="$(id -u nexus 2>/dev/null || echo 1000)"
+    current_gid="$(id -g nexus 2>/dev/null || echo 1000)"
+    if [ "$PUID" != "$current_uid" ] || [ "$PGID" != "$current_gid" ]; then
+        # 更改 nexus userid 和 groupid；镜像若继承了被污染的 0:0 账号，
+        # usermod 会因 PID 1 占用而失败，此时兜底写入 passwd/group。
+        groupmod -o -g "$PGID" nexus 2>/dev/null ||             sed -i "s/^nexus:x:[0-9]*:/nexus:x:${PGID}:/" /etc/group
+        usermod -o -u "$PUID" nexus 2>/dev/null ||             sed -i "s/^nexus:x:[0-9]*:[0-9]*:/nexus:x:${PUID}:${PGID}:/" /etc/passwd
+        if [ "$PUID" != "0" ] || [ "$PGID" != "0" ]; then
+            # 仅在非 root 运行时整理挂载卷权限，避免每次启动递归扫描 HOME
+            chown -R nexus:nexus "${HOME}" /config /etc/hosts 2>/dev/null || true
+        fi
     else
         chown nexus:nexus /etc/hosts 2>/dev/null || true
     fi
