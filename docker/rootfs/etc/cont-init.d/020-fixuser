@@ -10,8 +10,8 @@ function __fixuser {
     if ! [[ "$PUID" =~ ^[0-9]+$ ]]; then PUID=0; fi
     if ! [[ "$PGID" =~ ^[0-9]+$ ]]; then PGID=0; fi
 
-    current_uid="$(id -u nexus 2>/dev/null || echo 911)"
-    current_gid="$(id -g nexus 2>/dev/null || echo 911)"
+    current_uid="$(id -u nexus 2>/dev/null || echo 1000)"
+    current_gid="$(id -g nexus 2>/dev/null || echo 1000)"
     if [ "$PUID" != "$current_uid" ] || [ "$PGID" != "$current_gid" ]; then
         # 更改 nexus userid 和 groupid；镜像若继承了被污染的 0:0 账号，
         # usermod 会因 PID 1 占用而失败，此时兜底写入 passwd/group。
