@@ -1,0 +1,2542 @@
+<!DOCTYPE html><html lang="zh" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Nexus Media 多功能媒体库管理工具使用文档">
+      
+      
+      
+        <link rel="canonical" href="https://linyuan0213.github.io/nexus-media/decisions/ADR-026-media-lifecycle-read-model/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>ADR-026: 媒体生命周期读模型与流转页面 - Nexus Media 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-026-媒体生命周期读模型与流转页面" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href="../.." title="Nexus Media 文档" class="md-header__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Nexus Media 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-026: 媒体生命周期读模型与流转页面
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到深色模式" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="切换到深色模式" for="__palette_1" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="切换到浅色模式" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="切换到浅色模式" for="__palette_0" hidden="">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required="">
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"></path></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"></path></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix="">
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Nexus Media 文档" class="md-nav__button md-logo" aria-label="Nexus Media 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    Nexus Media 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/linyuan0213/nexus-media" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"></path></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix="">
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    首页
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    安装部署
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3">
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    使用指南
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    使用指南
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    基础配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    资源搜索与探索
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sites/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    站点配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../filter_rules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    过滤规则
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../download_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../downloaders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    下载器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_servers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体服务器
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../directory_sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    目录同步
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体库
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../media_organization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    媒体整理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rss/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RSS 订阅
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../indexers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    索引器配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../notifications/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    通知渠道配置
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../message_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    消息通知模板
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    服务与调度
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../storage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    存储后端
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../users/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    用户与权限
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4">
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    插件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件使用
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../plugin_development_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    插件开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5">
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    开发者
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    开发者
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix="">
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    本地开发
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    架构文档
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent-mvp-detailed-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI 助手设计
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    常见问题
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    更新日志
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+      
+        <li class="md-nav__item">
+  <a href="#status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#date" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Goals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lifecycle-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lifecycle Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lifecycle Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#电影与电视剧" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        电影与电视剧
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#media_lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MEDIA_LIFECYCLE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#media_lifecycle_event" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MEDIA_LIFECYCLE_EVENT
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trace-and-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trace and Run
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Trace and Run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trace
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#status-mapping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Mapping
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Status Mapping">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#taskstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TaskStatus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Download
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#subscribe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subscribe
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transfer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scrape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scrape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Library
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#projector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Projector
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Projector">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inputs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#write-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Write rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#推荐事件类型" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        推荐事件类型
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reconciliation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reconciliation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API Design
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Design">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#列表" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        列表
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#详情时间线" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        详情/时间线
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#操作第二阶段" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        操作（第二阶段）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#权限" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        权限
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frontend-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend Contract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rollout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollout
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Rollout">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-0基础" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 0：基础
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1投影与查询" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1：投影与查询
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2页面" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2：页面
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3操作与对账" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3：操作与对账
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceptance Criteria
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/linyuan0213/nexus-media/edit/master/docs/decisions/ADR-026-media-lifecycle-read-model.md" title="编辑此页" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"></path></svg>
+    </a>
+  
+  
+
+
+<h1 id="adr-026-媒体生命周期读模型与流转页面">ADR-026: 媒体生命周期读模型与流转页面<a class="headerlink" href="#adr-026-媒体生命周期读模型与流转页面" title="Permanent link">¶</a></h1>
+<h2 id="status">Status<a class="headerlink" href="#status" title="Permanent link">¶</a></h2>
+<p>Proposed</p>
+<h2 id="date">Date<a class="headerlink" href="#date" title="Permanent link">¶</a></h2>
+<p>2026-11-02</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">¶</a></h2>
+<p>下载、转移、刮削已经拆成持久队列，异步阶段变多，但状态仍分散在各领域：</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>当前状态模型</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>任务队列</td>
+<td><code>TaskStatus</code> 枚举</td>
+<td><code>src/app/infrastructure/task_queue/models.py</code></td>
+</tr>
+<tr>
+<td>下载器</td>
+<td><code>TorrentStatus</code> 枚举</td>
+<td><code>src/app/schemas/download.py</code></td>
+</tr>
+<tr>
+<td>下载历史</td>
+<td>自由字符串 <code>STATE</code></td>
+<td><code>DOWNLOAD_HISTORY.STATE</code></td>
+</tr>
+<tr>
+<td>转移历史</td>
+<td>无总状态，只有源/目标存在性</td>
+<td><code>TRANSFER_HISTORY.SOURCE_STATE/DEST_STATE</code></td>
+</tr>
+<tr>
+<td>未知转移</td>
+<td><code>Y/N</code> 字符串</td>
+<td><code>TRANSFER_UNKNOWN.STATE</code></td>
+</tr>
+<tr>
+<td>同步历史</td>
+<td>无状态</td>
+<td><code>SYNC_HISTORY</code></td>
+</tr>
+<tr>
+<td>刮削</td>
+<td>只复用队列 <code>TaskStatus</code></td>
+<td><code>ScrapeQueueService</code></td>
+</tr>
+<tr>
+<td>订阅</td>
+<td>单字母 <code>SubscribeState</code></td>
+<td><code>D/S/R/C/E/N</code></td>
+</tr>
+<tr>
+<td>重命名任务</td>
+<td>独立字符串状态</td>
+<td><code>planned/running/completed/cancelled/interrupted</code></td>
+</tr>
+<tr>
+<td>入库</td>
+<td>实时判断，无持久化状态</td>
+<td><code>LibraryPresenceService</code></td>
+</tr>
+</tbody>
+</table>
+<p>这会导致：</p>
+<ol>
+<li>同一个“失败”在下载、转移、订阅里语义不同；</li>
+<li>队列任务 ACK 后，刮削状态可能没有长期记录；</li>
+<li>无法回答“这部电影/这一集现在卡在哪一步”；</li>
+<li>无法统一统计各阶段耗时、失败率和重试次数；</li>
+<li>页面需要同时拼接下载、转移、同步、订阅、媒体服务器多个来源，仍然不可靠。</li>
+</ol>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">¶</a></h2>
+<p>新增一套<strong>只读生命周期读模型（read model）</strong>，不替换现有领域状态，也不让生命周期服务参与业务决策。</p>
+<div class="highlight"><pre><span></span><code>领域状态 / 事件 / 历史表
+        ↓ 映射
+LifecycleProjector（唯一写入者）
+        ↓
+MEDIA_LIFECYCLE（当前状态）
+MEDIA_LIFECYCLE_EVENT（时间线）
+        ↓
+只读 API + 流转页面
+</code></pre></div>
+<p>核心原则：</p>
+<ol>
+<li><strong>领域状态仍是业务事实源</strong>：下载器、订阅、转移、刮削继续使用自己的状态。</li>
+<li><strong>生命周期是投影</strong>：只做观测和展示，不阻止或驱动下载/转移/刮削。</li>
+<li><strong>页面操作只调用原业务服务</strong>：重试、取消、手动识别仍走现有入口。</li>
+<li><strong>一个 projector 写入</strong>：其他模块禁止直接写生命周期表。</li>
+<li><strong>trace/run 贯穿异步链路</strong>：同一部电影/同一集的生命周期可串联。</li>
+</ol>
+<h2 id="goals">Goals<a class="headerlink" href="#goals" title="Permanent link">¶</a></h2>
+<ol>
+<li>统一回答“识别 → 下载 → 转移 → 刮削 → 入库”当前在哪一步。</li>
+<li>保留失败、重试、排队、死信和时间线。</li>
+<li>支持电影单条、电视剧按季/集聚合。</li>
+<li>支持重新下载、重新刮削、多次运行，不混淆历史。</li>
+<li>可通过历史表回填，事件丢失时可对账修复。</li>
+<li>不改变现有下载/转移/刮削行为和状态语义。</li>
+</ol>
+<h2 id="non-goals">Non-Goals<a class="headerlink" href="#non-goals" title="Permanent link">¶</a></h2>
+<ul>
+<li>不实现第二套工作流引擎。</li>
+<li>不让生命周期状态成为订阅完成、下载准入或转移判断的依据。</li>
+<li>不把 <code>TorrentStatus</code>、<code>SubscribeState</code> 等强行改成同一个枚举。</li>
+<li>不在第一版覆盖播放、字幕、洗版、重命名全部状态。</li>
+<li>不对每次进度轮询写事件；只记录阶段转换和关键失败/重试。</li>
+</ul>
+<h2 id="lifecycle-model">Lifecycle Model<a class="headerlink" href="#lifecycle-model" title="Permanent link">¶</a></h2>
+<h3 id="stage">Stage<a class="headerlink" href="#stage" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">LifecycleStage</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+    <span class="n">IDENTIFIED</span> <span class="o">=</span> <span class="s2">"identified"</span>
+    <span class="n">SUBSCRIBED</span> <span class="o">=</span> <span class="s2">"subscribed"</span>
+    <span class="n">SEARCHING</span> <span class="o">=</span> <span class="s2">"searching"</span>
+    <span class="n">DOWNLOAD_QUEUED</span> <span class="o">=</span> <span class="s2">"download_queued"</span>
+    <span class="n">DOWNLOADING</span> <span class="o">=</span> <span class="s2">"downloading"</span>
+    <span class="n">DOWNLOADED</span> <span class="o">=</span> <span class="s2">"downloaded"</span>
+    <span class="n">TRANSFER_QUEUED</span> <span class="o">=</span> <span class="s2">"transfer_queued"</span>
+    <span class="n">TRANSFERRING</span> <span class="o">=</span> <span class="s2">"transferring"</span>
+    <span class="n">TRANSFERRED</span> <span class="o">=</span> <span class="s2">"transferred"</span>
+    <span class="n">SCRAPE_QUEUED</span> <span class="o">=</span> <span class="s2">"scrape_queued"</span>
+    <span class="n">SCRAPING</span> <span class="o">=</span> <span class="s2">"scraping"</span>
+    <span class="n">SCRAPED</span> <span class="o">=</span> <span class="s2">"scraped"</span>
+    <span class="n">IN_LIBRARY</span> <span class="o">=</span> <span class="s2">"in_library"</span>
+</code></pre></div>
+<h3 id="status_1">Status<a class="headerlink" href="#status_1" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">LifecycleStatus</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+    <span class="n">QUEUED</span> <span class="o">=</span> <span class="s2">"queued"</span>
+    <span class="n">RUNNING</span> <span class="o">=</span> <span class="s2">"running"</span>
+    <span class="n">SUCCEEDED</span> <span class="o">=</span> <span class="s2">"succeeded"</span>
+    <span class="n">FAILED</span> <span class="o">=</span> <span class="s2">"failed"</span>
+    <span class="n">RETRYING</span> <span class="o">=</span> <span class="s2">"retrying"</span>
+    <span class="n">BLOCKED</span> <span class="o">=</span> <span class="s2">"blocked"</span>
+    <span class="n">CANCELLED</span> <span class="o">=</span> <span class="s2">"cancelled"</span>
+    <span class="n">DEAD</span> <span class="o">=</span> <span class="s2">"dead"</span>
+</code></pre></div>
+<p>说明：</p>
+<ul>
+<li><code>BLOCKED</code> 用于等待人工处理（例如缺少元数据、路径冲突）。</li>
+<li><code>DEAD</code> 用于队列超过最大重试次数。</li>
+<li>生命周期状态只描述当前阶段，不替代下载器的 <code>Paused/Seeding</code> 等细节。</li>
+</ul>
+<h3 id="电影与电视剧">电影与电视剧<a class="headerlink" href="#电影与电视剧" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>电影：IDENTITY_ID + SEASON=0 + EPISODE=0
+电视剧/动漫：IDENTITY_ID + SEASON + EPISODE
+整季/整剧状态：由单集状态聚合
+</code></pre></div>
+<p>聚合规则建议：</p>
+<ul>
+<li>任意单集 <code>DEAD/FAILED</code> → 整剧 <code>FAILED</code>（<code>has_errors=true</code>）</li>
+<li>存在未完成单集 → 整剧 <code>RUNNING</code> 或 <code>QUEUED</code></li>
+<li>全部单集 <code>IN_LIBRARY</code> → 整剧 <code>IN_LIBRARY</code></li>
+<li>未开播/未监控单集不参与完成度</li>
+</ul>
+<h2 id="data-model">Data Model<a class="headerlink" href="#data-model" title="Permanent link">¶</a></h2>
+<h3 id="media_lifecycle">MEDIA_LIFECYCLE<a class="headerlink" href="#media_lifecycle" title="Permanent link">¶</a></h3>
+<p>当前状态快照，按身份 + 季 + 集唯一。</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>bigint</td>
+<td>主键</td>
+</tr>
+<tr>
+<td>IDENTITY_ID</td>
+<td>varchar(26)</td>
+<td>媒体身份（ADR-014/025）</td>
+</tr>
+<tr>
+<td>MEDIA_TYPE</td>
+<td>varchar(16)</td>
+<td>movie/tv/anime</td>
+</tr>
+<tr>
+<td>SEASON</td>
+<td>int</td>
+<td>电影为 0</td>
+</tr>
+<tr>
+<td>EPISODE</td>
+<td>int</td>
+<td>电影为 0</td>
+</tr>
+<tr>
+<td>TITLE</td>
+<td>varchar(255)</td>
+<td>展示标题（冗余）</td>
+</tr>
+<tr>
+<td>YEAR</td>
+<td>varchar(8)</td>
+<td>年份</td>
+</tr>
+<tr>
+<td>POSTER</td>
+<td>varchar(1024)</td>
+<td>海报 URL</td>
+</tr>
+<tr>
+<td>STAGE</td>
+<td>varchar(32)</td>
+<td><code>LifecycleStage</code></td>
+</tr>
+<tr>
+<td>STATUS</td>
+<td>varchar(16)</td>
+<td><code>LifecycleStatus</code></td>
+</tr>
+<tr>
+<td>RUN_ID</td>
+<td>varchar(64)</td>
+<td>本次获取运行</td>
+</tr>
+<tr>
+<td>TRACE_ID</td>
+<td>varchar(64)</td>
+<td>贯穿异步链路</td>
+</tr>
+<tr>
+<td>PROGRESS</td>
+<td>int</td>
+<td>0-100，仅展示</td>
+</tr>
+<tr>
+<td>SOURCE_PROVIDER</td>
+<td>varchar(64)</td>
+<td>资源来源/元数据来源</td>
+</tr>
+<tr>
+<td>CONTENT_PROFILE</td>
+<td>varchar(64)</td>
+<td>内容画像</td>
+</tr>
+<tr>
+<td>USER_ID</td>
+<td>bigint nullable</td>
+<td>归属用户</td>
+</tr>
+<tr>
+<td>STAGE_STARTED_AT</td>
+<td>datetime</td>
+<td>当前阶段开始</td>
+</tr>
+<tr>
+<td>LAST_EVENT_AT</td>
+<td>datetime</td>
+<td>最近事件</td>
+</tr>
+<tr>
+<td>NEXT_RETRY_AT</td>
+<td>datetime nullable</td>
+<td>下次重试</td>
+</tr>
+<tr>
+<td>RETRY_COUNT</td>
+<td>int</td>
+<td>当前阶段重试次数</td>
+</tr>
+<tr>
+<td>LAST_ERROR</td>
+<td>text nullable</td>
+<td>最近错误</td>
+</tr>
+<tr>
+<td>CREATED_AT / UPDATED_AT</td>
+<td>datetime</td>
+<td>审计</td>
+</tr>
+</tbody>
+</table>
+<p>唯一约束：</p>
+<div class="highlight"><pre><span></span><code>UNIQUE(IDENTITY_ID, SEASON, EPISODE)
+</code></pre></div>
+<p>索引：</p>
+<div class="highlight"><pre><span></span><code>(USER_ID, STATUS, LAST_EVENT_AT)
+(STAGE, STATUS, LAST_EVENT_AT)
+(TRACE_ID)
+</code></pre></div>
+<h3 id="media_lifecycle_event">MEDIA_LIFECYCLE_EVENT<a class="headerlink" href="#media_lifecycle_event" title="Permanent link">¶</a></h3>
+<p>只追加时间线。</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>bigint</td>
+<td>主键</td>
+</tr>
+<tr>
+<td>EVENT_KEY</td>
+<td>varchar(128)</td>
+<td>幂等键，唯一</td>
+</tr>
+<tr>
+<td>IDENTITY_ID</td>
+<td>varchar(26)</td>
+<td>身份</td>
+</tr>
+<tr>
+<td>SEASON / EPISODE</td>
+<td>int</td>
+<td>集维度</td>
+</tr>
+<tr>
+<td>RUN_ID</td>
+<td>varchar(64)</td>
+<td>运行</td>
+</tr>
+<tr>
+<td>TRACE_ID</td>
+<td>varchar(64)</td>
+<td>链路</td>
+</tr>
+<tr>
+<td>STAGE</td>
+<td>varchar(32)</td>
+<td>阶段</td>
+</tr>
+<tr>
+<td>EVENT_TYPE</td>
+<td>varchar(64)</td>
+<td>如 download.started</td>
+</tr>
+<tr>
+<td>STATUS</td>
+<td>varchar(16)</td>
+<td>统一状态</td>
+</tr>
+<tr>
+<td>MESSAGE</td>
+<td>varchar(512)</td>
+<td>展示信息</td>
+</tr>
+<tr>
+<td>PAYLOAD</td>
+<td>json/text</td>
+<td>队列、任务 ID、路径、错误摘要</td>
+</tr>
+<tr>
+<td>USER_ID</td>
+<td>bigint nullable</td>
+<td>归属用户，权限过滤</td>
+</tr>
+<tr>
+<td>OCCURRED_AT</td>
+<td>datetime</td>
+<td>事件发生时间</td>
+</tr>
+<tr>
+<td>CREATED_AT</td>
+<td>datetime</td>
+<td>入库时间</td>
+</tr>
+</tbody>
+</table>
+<p>唯一约束：</p>
+<div class="highlight"><pre><span></span><code>UNIQUE(EVENT_KEY)
+</code></pre></div>
+<p>事件保留建议：</p>
+<ul>
+<li>当前状态永久保留</li>
+<li>事件默认保留 180 天，可配置</li>
+<li>只记录阶段转换、失败、重试、完成，不记录每次进度轮询</li>
+</ul>
+<h2 id="trace-and-run">Trace and Run<a class="headerlink" href="#trace-and-run" title="Permanent link">¶</a></h2>
+<h3 id="run">Run<a class="headerlink" href="#run" title="Permanent link">¶</a></h3>
+<p>一次“获取该媒体”的完整尝试：</p>
+<div class="highlight"><pre><span></span><code>一次订阅/手动下载/补下载 = 一个 run
+</code></pre></div>
+<p><code>RUN_ID</code> 在搜索或订阅创建下载意图时生成。重新下载、重新刮削时可创建新 <code>RUN_ID</code>，但生命周期事件仍可按 <code>IDENTITY_ID + SEASON + EPISODE</code> 聚合查看。</p>
+<h3 id="trace">Trace<a class="headerlink" href="#trace" title="Permanent link">¶</a></h3>
+<p><code>TRACE_ID</code> 用于跨队列和事件串联，必须进入：</p>
+<ul>
+<li>搜索/下载意图</li>
+<li>download 队列 payload</li>
+<li>downloader 任务记录</li>
+<li>transfer/sync 队列 payload</li>
+<li>scrape 队列 payload</li>
+<li>最终 <code>transfer_finished</code> / <code>media.scraped</code> 事件</li>
+</ul>
+<p>规则：</p>
+<div class="highlight"><pre><span></span><code>trace_id 不由 worker 重新生成
+下游任务必须继承上游 trace_id
+</code></pre></div>
+<h2 id="status-mapping">Status Mapping<a class="headerlink" href="#status-mapping" title="Permanent link">¶</a></h2>
+<p>映射集中在一个模块，例如：</p>
+<div class="highlight"><pre><span></span><code>src/app/domain/lifecycle.py
+</code></pre></div>
+<p>禁止在各 service 内散落映射。</p>
+<h3 id="taskstatus">TaskStatus<a class="headerlink" href="#taskstatus" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>TaskStatus.QUEUED     -&gt; QUEUED
+TaskStatus.RUNNING    -&gt; RUNNING
+TaskStatus.SUCCEEDED  -&gt; SUCCEEDED
+TaskStatus.FAILED     -&gt; FAILED
+TaskStatus.CANCELLED  -&gt; CANCELLED
+TaskStatus.DEAD       -&gt; DEAD
+</code></pre></div>
+<h3 id="download">Download<a class="headerlink" href="#download" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>DOWNLOAD_HISTORY.STATE:
+  queued      -&gt; DOWNLOAD_QUEUED / QUEUED
+  downloading -&gt; DOWNLOADING / RUNNING
+  completed   -&gt; DOWNLOADED / SUCCEEDED
+  error       -&gt; DOWNLOADING / FAILED
+
+TorrentStatus:
+  Pending/Queued -&gt; DOWNLOAD_QUEUED / QUEUED
+  Downloading    -&gt; DOWNLOADING / RUNNING
+  Checking       -&gt; DOWNLOADING / RUNNING
+  Paused/Stopped -&gt; DOWNLOADING / BLOCKED
+  Error          -&gt; DOWNLOADING / FAILED
+  Uploading      -&gt; DOWNLOADED / SUCCEEDED
+</code></pre></div>
+<h3 id="subscribe">Subscribe<a class="headerlink" href="#subscribe" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>D -&gt; SUBSCRIBED / QUEUED
+S -&gt; SEARCHING / RUNNING
+R -&gt; SUBSCRIBED / RUNNING
+C -&gt; DOWNLOADED / SUCCEEDED
+E -&gt; SUBSCRIBED / FAILED
+N -&gt; SUBSCRIBED / CANCELLED
+</code></pre></div>
+<h3 id="transfer">Transfer<a class="headerlink" href="#transfer" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>transfer queue queued/running/succeeded/dead
+  -&gt; TRANSFER_QUEUED/TRANSFERRING/TRANSFERRED/TRANSFER_QUEUED(dead)
+
+TRANSFER_HISTORY:
+  SOURCE_STATE/DEST_STATE present -&gt; TRANSFERRED / SUCCEEDED
+  missing/deleted                 -&gt; TRANSFERRED / FAILED or BLOCKED
+</code></pre></div>
+<h3 id="scrape">Scrape<a class="headerlink" href="#scrape" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>scrape queue queued/running -&gt; SCRAPE_QUEUED/SCRAPING
+scrape success              -&gt; SCRAPED / SUCCEEDED
+scrape dead                 -&gt; SCRAPING / DEAD
+</code></pre></div>
+<h3 id="library">Library<a class="headerlink" href="#library" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>LibraryPresenceService present -&gt; IN_LIBRARY / SUCCEEDED
+</code></pre></div>
+<h2 id="projector">Projector<a class="headerlink" href="#projector" title="Permanent link">¶</a></h2>
+<h3 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">¶</a></h3>
+<ol>
+<li>现有领域事件（EventBus）</li>
+<li>队列任务状态变化（入队/开始/失败/完成）</li>
+<li>下载/转移/同步/订阅历史表</li>
+<li><code>LibraryPresenceService</code> 对账结果</li>
+</ol>
+<h3 id="write-rules">Write rules<a class="headerlink" href="#write-rules" title="Permanent link">¶</a></h3>
+<ul>
+<li>仅 <code>LifecycleProjector</code> 写两张生命周期表</li>
+<li>事件幂等：<code>EVENT_KEY</code> 唯一，重复直接忽略</li>
+<li>当前状态更新必须比较 <code>OCCURRED_AT</code> 或版本，避免旧事件覆盖新状态</li>
+<li>一个事务内：写事件 + 更新当前快照</li>
+<li>未知阶段/状态写 <code>unknown</code> 并告警，不静默丢弃</li>
+</ul>
+<h3 id="推荐事件类型">推荐事件类型<a class="headerlink" href="#推荐事件类型" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code>lifecycle.identified
+lifecycle.subscribed
+lifecycle.search.started
+lifecycle.download.queued
+lifecycle.download.started
+lifecycle.download.completed
+lifecycle.download.failed
+lifecycle.transfer.queued
+lifecycle.transfer.started
+lifecycle.transfer.completed
+lifecycle.transfer.failed
+lifecycle.scrape.queued
+lifecycle.scrape.started
+lifecycle.scrape.completed
+lifecycle.scrape.failed
+lifecycle.library.present
+lifecycle.library.missing
+</code></pre></div>
+<h3 id="reconciliation">Reconciliation<a class="headerlink" href="#reconciliation" title="Permanent link">¶</a></h3>
+<p>事件不能作为唯一来源：</p>
+<ul>
+<li>下载历史、转移历史、同步历史仍可能先写/后写</li>
+<li>队列 ACK 后任务状态可能消失</li>
+<li>进程重启可能丢事件</li>
+</ul>
+<p>因此增加定时对账：</p>
+<div class="highlight"><pre><span></span><code>每 5 分钟：
+  1. 扫描最近 24h 的 DOWNLOAD_HISTORY / TRANSFER_HISTORY / SUBSCRIBE_HISTORY
+  2. 对比生命周期当前状态
+  3. 缺失事件补写
+  4. 长期停在 RUNNING 且无心跳的任务标记 BLOCKED
+  5. 记录 projection lag / unknown state 指标
+</code></pre></div>
+<h2 id="api-design">API Design<a class="headerlink" href="#api-design" title="Permanent link">¶</a></h2>
+<h3 id="列表">列表<a class="headerlink" href="#列表" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">GET /api/media/lifecycle?stage=&amp;status=&amp;media_type=&amp;user_id=&amp;keyword=&amp;page=&amp;pagenum=</span>
+</code></pre></div>
+<p>返回：</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"items"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">"identity_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"示例电影"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"media_type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"movie"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"season"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"episode"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"stage"</span><span class="p">:</span><span class="w"> </span><span class="s2">"downloading"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"running"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"progress"</span><span class="p">:</span><span class="w"> </span><span class="mi">42</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"stage_started_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-11-02T10:00:00+08:00"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"elapsed_seconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">380</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"retry_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"last_error"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"source_provider"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tmdb"</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">"trace_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">"total"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="详情时间线">详情/时间线<a class="headerlink" href="#详情时间线" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">GET /api/media/lifecycle/{identity_id}?season=&amp;episode=</span>
+<span class="err">GET /api/media/lifecycle/{identity_id}/events?season=&amp;episode=&amp;limit=200</span>
+</code></pre></div>
+<p>时间线事件返回：</p>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"stage"</span><span class="p">:</span><span class="w"> </span><span class="s2">"scraping"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"running"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"正在生成 NFO 和海报"</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"occurred_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"elapsed_seconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">"payload"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">"queue"</span><span class="p">:</span><span class="w"> </span><span class="s2">"scrape:file"</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"task_id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">"attempt"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="操作第二阶段">操作（第二阶段）<a class="headerlink" href="#操作第二阶段" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><span class="err">POST /api/media/lifecycle/{identity_id}/retry</span>
+<span class="err">POST /api/media/lifecycle/{identity_id}/cancel</span>
+<span class="err">POST /api/media/lifecycle/{identity_id}/identify</span>
+</code></pre></div>
+<p>这些接口必须委托原服务，不允许生命周期服务直接改业务状态。</p>
+<h3 id="权限">权限<a class="headerlink" href="#权限" title="Permanent link">¶</a></h3>
+<p>遵循 ADR-021：</p>
+<ul>
+<li>普通用户：<code>USER_ID</code> 过滤</li>
+<li>超级管理员：全部</li>
+<li>共享站点/公共库按现有可见性</li>
+<li>payload 中禁止返回下载器凭据、Cookie、密钥</li>
+</ul>
+<h2 id="frontend-contract">Frontend Contract<a class="headerlink" href="#frontend-contract" title="Permanent link">¶</a></h2>
+<p>页面建议：</p>
+<div class="highlight"><pre><span></span><code>/media/lifecycle
+</code></pre></div>
+<p>组件：</p>
+<div class="highlight"><pre><span></span><code>LifecyclePage
+├── LifecycleStats
+├── LifecycleFilters
+├── LifecycleTable
+└── LifecycleDrawer
+    ├── LifecycleTimeline
+    ├── EpisodeMatrix
+    └── LifecycleActions
+</code></pre></div>
+<p>设计原型：</p>
+<div class="highlight"><pre><span></span><code>frontend/design/media-lifecycle.html
+</code></pre></div>
+<p>前端状态颜色遵循 Tabler 变量：</p>
+<div class="highlight"><pre><span></span><code>--tblr-primary  #206bc4
+--tblr-success  #2fb344
+--tblr-danger   #d63939
+--tblr-warning  #f76707
+--tblr-info     #4299e1
+--tblr-teal     #0ca678
+</code></pre></div>
+<h2 id="rollout">Rollout<a class="headerlink" href="#rollout" title="Permanent link">¶</a></h2>
+<h3 id="phase-0基础">Phase 0：基础<a class="headerlink" href="#phase-0基础" title="Permanent link">¶</a></h3>
+<ul>
+<li>新增 <code>LifecycleStage</code> / <code>LifecycleStatus</code> / 映射模块</li>
+<li>所有队列 payload、事件补 <code>run_id</code> / <code>trace_id</code></li>
+<li>映射单元测试</li>
+</ul>
+<h3 id="phase-1投影与查询">Phase 1：投影与查询<a class="headerlink" href="#phase-1投影与查询" title="Permanent link">¶</a></h3>
+<ul>
+<li>新增两张表与迁移</li>
+<li><code>LifecycleProjector</code></li>
+<li>列表、详情、时间线只读 API</li>
+<li>历史回填脚本</li>
+</ul>
+<h3 id="phase-2页面">Phase 2：页面<a class="headerlink" href="#phase-2页面" title="Permanent link">¶</a></h3>
+<ul>
+<li>生命周期列表</li>
+<li>详情抽屉</li>
+<li>电视剧集矩阵</li>
+<li>SSE 或轮询更新</li>
+</ul>
+<h3 id="phase-3操作与对账">Phase 3：操作与对账<a class="headerlink" href="#phase-3操作与对账" title="Permanent link">¶</a></h3>
+<ul>
+<li>重试/取消/手动识别</li>
+<li>定时对账</li>
+<li>阶段耗时、失败率、卡住任务统计</li>
+</ul>
+<h2 id="acceptance-criteria">Acceptance Criteria<a class="headerlink" href="#acceptance-criteria" title="Permanent link">¶</a></h2>
+<ol>
+<li>重复事件不会产生重复生命周期事件。</li>
+<li>旧事件不会覆盖新阶段。</li>
+<li>同一电影两次下载可通过 <code>RUN_ID</code> 区分。</li>
+<li>电视剧可按季/集查看，整季状态由单集聚合。</li>
+<li>删除队列 stream 条目后，生命周期时间线仍可查询。</li>
+<li>投影丢失后可通过历史表回填恢复。</li>
+<li>普通用户无法看到其他用户的生命周期。</li>
+<li>生命周期页面操作不会直接修改业务表。</li>
+</ol>
+<h2 id="risks">Risks<a class="headerlink" href="#risks" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>缓解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>映射漂移</td>
+<td>集中映射模块 + 测试 + unknown 告警</td>
+</tr>
+<tr>
+<td>trace 断链</td>
+<td>队列 payload/event 强制继承，启动校验</td>
+</tr>
+<tr>
+<td>投影滞后</td>
+<td>5 分钟对账 + lag 指标</td>
+</tr>
+<tr>
+<td>重复事件</td>
+<td>EVENT_KEY 唯一 + 事务更新</td>
+</tr>
+<tr>
+<td>运行混淆</td>
+<td>RUN_ID + 事件保留</td>
+</tr>
+<tr>
+<td>数据膨胀</td>
+<td>事件 180 天保留，当前状态永久</td>
+</tr>
+<tr>
+<td>权限泄露</td>
+<td>API 统一 owner scope + payload 脱敏</td>
+</tr>
+</tbody>
+</table>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h2>
+<ul>
+<li>ADR-014：媒体身份解析与匹配架构</li>
+<li>ADR-021：多用户数据权限</li>
+<li>ADR-025：多源元数据订阅与刮削架构</li>
+<li><code>src/app/infrastructure/task_queue/models.py</code></li>
+<li><code>src/app/services/scrape_queue_service.py</code></li>
+<li><code>src/app/services/transfer_queue_service.py</code></li>
+<li><code>frontend/design/media-lifecycle.html</code></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden="">
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"></path></svg>
+  回到页面顶部
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.indexes", "navigation.top", "navigation.footer", "search.highlight", "search.suggest", "content.action.edit", "content.tabs.link", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
